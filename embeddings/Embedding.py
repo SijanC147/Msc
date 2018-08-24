@@ -1,4 +1,5 @@
 import numpy as np
+from utils import tokenize_phrase
 
 class Embedding:
 
@@ -29,7 +30,7 @@ class Embedding:
 
         all_mapped_ids = list()
         for phrase in phrases:
-            phrase_mapped_ids = list([*self.embedding_dict].index(w) for w in phrase.lower().split() if w in [*self.embedding_dict])
+            phrase_mapped_ids = list([*self.embedding_dict].index(w) for w in tokenize_phrase(phrase.lower()) if w in [*self.embedding_dict])
             all_mapped_ids.append(phrase_mapped_ids)
         
         if type(phrases) is str:
