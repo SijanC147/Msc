@@ -6,7 +6,7 @@ class Embedding:
     def __init__(self, embedding_path):
         embeddings = {}
 
-        with open('embeddings/'+embedding_path, "r", encoding='utf-8') as f:
+        with open('embeddings/data/'+embedding_path, "r", encoding='utf-8') as f:
             for line in f:
                 values = line.strip().split()
                 word = values[0]

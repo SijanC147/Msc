@@ -2,9 +2,9 @@ import tensorflow as tf
 
 def get_raw_dataset(mode):
     if (mode=='train'):
-        dataset = tf.data.TextLineDataset('datasets/Dong2014/train.txt')
+        dataset = tf.data.TextLineDataset('datasets/data/Dong2014/train.txt')
     elif (mode=='test'):
-        dataset = tf.data.TextLineDataset('datasets/Dong2014/test.txt')
+        dataset = tf.data.TextLineDataset('datasets/data/Dong2014/test.txt')
     else:
         raise ValueError('mode has to be train or test')
 

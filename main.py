@@ -1,7 +1,7 @@
 import tensorflow as tf
 
-from datasets.Dong2014 import dong2014
-from embeddings.GloVe.GloVe import GloVe 
+from datasets import dong2014
+from embeddings.GloVe import GloVe 
 
 dataset = dong2014.get_raw_dataset(mode='test')
 iterator = dataset.make_one_shot_iterator()

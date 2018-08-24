@@ -1,8 +1,4 @@
 # Ignore everything in this directory
 *
-# Do not ignore sub directories
-!**/
 # Except this file
 !.gitignore
-# Except any python files
-!*.py
