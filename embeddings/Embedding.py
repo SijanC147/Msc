@@ -1,6 +1,8 @@
 import re
 import numpy as np
+import tensorflow as tf
 from utils import tokenize_phrase
+
 
 class Embedding:
 
@@ -33,3 +35,9 @@ class Embedding:
             left_mapped_ids = list([*self.embedding_dict].index(w) for w in tokenize_phrase(re.match(r"(.*)"+re.escape(separate_on)+"(.*)",phrase).group(1).lower()) if w in [*self.embedding_dict])
             right_mapped_ids = list([*self.embedding_dict].index(w) for w in tokenize_phrase(re.match(r"(.*)"+re.escape(separate_on)+"(.*)",phrase).group(2).lower()) if w in [*self.embedding_dict])
             return left_mapped_ids, right_mapped_ids
+
+    def set_embedding_matrix_variable(self):
+        with tf.variable_scope('shared', reuse=tf.AUTO_REUSE):
+            embedding_matrix = tf.get_variable(name='embedding_matrix', shape=[27,25], initializer=tf.constant_initializer(self.get_embedding_vectors()), trainable=False)
+        
+        return embedding_matrix

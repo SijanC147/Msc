@@ -7,7 +7,7 @@ class Dong2014(Dataset):
         super().__init__('Dong2014/'+train_file, 'Dong2014/'+eval_file, 'Dong2014/'+debug_file)
     
     def get_features_and_labels(self, mode='debug'):
-        file_path = super().__get_file(mode)
+        file_path = super()._get_file(mode)
 
         features = {
             'sentence' : [],
