@@ -6,9 +6,11 @@
     "**/.hg": true,
     "**/CVS": true,
     "**/.DS_Store": true,
+    "**/.vscode": true,
     "**/__pycache__": true,
     "**/.ipynb_checkpoints": true,
     "**/*.ipynb": true,
+    "**/_ipynbs": true,
     ".python-version": true
   },
 }

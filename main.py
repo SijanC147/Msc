@@ -1,13 +1,13 @@
 import tensorflow as tf
 
-from datasets import dong2014
+from datasets.Dong2014 import Dong2014
 from embeddings.GloVe import GloVe 
 
 # dataset = dong2014.get_raw_dataset(mode='test')
 # iterator = dataset.make_one_shot_iterator()
 # next_element = iterator.get_next()
 
-# myGloveTest = GloVe('twitterMicro')
+myGloveTest = GloVe('twitterMicro')
 # phrases = ['Hello my name is Sean.', 'The iPhone has a great display, samsung can suck a dick, their battery explodes❗️', 'I love deep learning ♥']
 
 # embedding_matrix = tf.constant(myGloveTest.get_embedding_vectors(), name='embedding_matrix')
@@ -24,4 +24,4 @@ from embeddings.GloVe import GloVe
 
 # features, labels = dong2014.prep_for_input_fn('test')
 
-# print('got here')
+print('got here')

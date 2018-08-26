@@ -1,10 +1,18 @@
 import tensorflow as tf
 
+def eval_input_fn(features, labels, batch_size):
+    pass
+
+def train_input_fn(features, labels, batch_size):
+    pass
+
 class LSTM:
 
     def __init__(self, feature_columns, **params):
         self.feature_columns = feature_columns
         self.params = params
+        self.train_input_fn = train_input_fn
+        self.eval_input_fn = eval_input_fn
 
 
     def set_feature_columns(self,feature_columns):

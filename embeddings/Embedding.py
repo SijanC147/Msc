@@ -1,3 +1,4 @@
+import re
 import numpy as np
 from utils import tokenize_phrase
 
@@ -24,16 +25,11 @@ class Embedding:
     def get_embedding_vocab(self):
         return np.asarray([*self.embedding_dict])
 
-    def map_embedding_ids(self, phrases):
-        if type(phrases) is str:
-            phrases = [phrases]
-
-        all_mapped_ids = list()
-        for phrase in phrases:
-            phrase_mapped_ids = list([*self.embedding_dict].index(w) for w in tokenize_phrase(phrase.lower()) if w in [*self.embedding_dict])
-            all_mapped_ids.append(phrase_mapped_ids)
-        
-        if type(phrases) is str:
-            return all_mapped_ids[0]
+    def map_embedding_ids(self, phrase, separate_on=""):
+        phrase = str(phrase, 'utf-8') if type(phrase)!=str else phrase
+        if len(separate_on)==0:
+            return list([*self.embedding_dict].index(w) for w in tokenize_phrase(phrase.lower()) if w in [*self.embedding_dict])
         else:
-            return all_mapped_ids
+            left_mapped_ids = list([*self.embedding_dict].index(w) for w in tokenize_phrase(re.match(r"(.*)"+re.escape(separate_on)+"(.*)",phrase).group(1).lower()) if w in [*self.embedding_dict])
+            right_mapped_ids = list([*self.embedding_dict].index(w) for w in tokenize_phrase(re.match(r"(.*)"+re.escape(separate_on)+"(.*)",phrase).group(2).lower()) if w in [*self.embedding_dict])
+            return left_mapped_ids, right_mapped_ids
