@@ -4,7 +4,7 @@ import numpy as np
 
 from datasets.Dong2014 import Dong2014
 from embeddings.GloVe import GloVe
-from utils import embed_and_concat
+from utils import embed_and_concat, get_embedding_matrix_variable
 
 glove = GloVe('twitterMicro')
 dong = Dong2014()
@@ -26,6 +26,8 @@ params = {
 }
 
 def train_input_fn(features, labels, batch_size):
+    glove.set_embedding_matrix_variable()
+
     left_contexts =  tf.data.Dataset.from_generator(lambda: features['mappings']['left'], output_shapes=[None], output_types=tf.int32)
     targets = tf.data.Dataset.from_generator(lambda: features['mappings']['target'], output_shapes=[None], output_types=tf.int32)
     right_contexts = tf.data.Dataset.from_generator(lambda: features['mappings']['right'], output_shapes=[None], output_types=tf.int32)
@@ -46,12 +48,17 @@ def train_input_fn(features, labels, batch_size):
 
 def model_fn(features, labels, mode, params=params):
 
-    initial_value = np.random.randn(27, 25).astype(np.float32)
-    embedding_matrix = tf.get_variable("embedding_matrix", [27,25], initializer=tf.constant_initializer(initial_value))
+    # initial_value = np.random.randn(27, 25).astype(np.float32)
+    # embedding_matrix = tf.get_variable("embedding_matrix", [27,25], initializer=tf.constant_initializer(initial_value))
+    # with tf.variable_scope('shared', reuse=tf.AUTO_REUSE):
+    #     embedding_matrix = tf.get_variable("embedding_matrix", [glove.get_vocab_size(), glove.get_embedding_dim()])
+    # embedding_matrix = glove.set_embedding_matrix_variable()
 
     def init_embedding_matrix_fn(scaffold, session):
-        session.run(embedding_matrix.initializer)
-        print('got here')
+        pass
+        # session.run(embedding_matrix.initializer, {embedding_matrix.initial_value: glove.get_embedding_vectors()})
+        # print(session.run(embedding_matrix))
+        # print(tf.trainable_variables())
     scaffold = tf.train.Scaffold(init_fn=init_embedding_matrix_fn)
 
     input_layer, sequence_length = tf.contrib.feature_column.sequence_input_layer(

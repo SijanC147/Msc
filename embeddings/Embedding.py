@@ -27,6 +27,12 @@ class Embedding:
     def get_embedding_vocab(self):
         return np.asarray([*self.embedding_dict])
 
+    def get_vocab_size(self):
+        return len(self.embedding_dict)
+
+    def get_embedding_dim(self):
+        return int((self.get_embedding_vectors().size)/self.get_vocab_size())
+
     def map_embedding_ids(self, phrase, separate_on=""):
         phrase = str(phrase, 'utf-8') if type(phrase)!=str else phrase
         if len(separate_on)==0:
@@ -38,6 +44,6 @@ class Embedding:
 
     def set_embedding_matrix_variable(self):
         with tf.variable_scope('shared', reuse=tf.AUTO_REUSE):
-            embedding_matrix = tf.get_variable(name='embedding_matrix', shape=[27,25], initializer=tf.constant_initializer(self.get_embedding_vectors()), trainable=False)
+            embedding_matrix = tf.get_variable(name='embedding_matrix', shape=[self.get_vocab_size(),self.get_embedding_dim()], initializer=tf.constant_initializer(self.get_embedding_vectors()), trainable=False)
         
         return embedding_matrix
