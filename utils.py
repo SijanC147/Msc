@@ -18,11 +18,11 @@ def tokenize_phrase(phrase, backend='spacy'):
 
 def get_embedding_matrix_variable():
     with tf.variable_scope('shared', reuse=tf.AUTO_REUSE):
-        embedding_matrix = tf.get_variable('embedding_matrix')
+        embedding_matrix = tf.get_variable('embedding_matrix', [27,25])
     return embedding_matrix
 
 def embed_target_and_average(target):
-    embedding_matrix= get_embedding_matrix_variable()
+    embedding_matrix = get_embedding_matrix_variable()
     target_embedding = tf.cond(tf.shape(target)[0]>1, lambda: tf.reduce_mean(tf.nn.embedding_lookup(embedding_matrix, target), axis=0, keepdims=True),lambda: tf.nn.embedding_lookup(embedding_matrix, target))
     return target_embedding
 
