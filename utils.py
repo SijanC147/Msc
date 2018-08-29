@@ -15,6 +15,8 @@ def tokenize_phrase(phrase, backend='spacy'):
             if token.text!='\uFE0F': 
                 tokens_list.append(token.text)
         return tokens_list
+    elif backend=='vanilla':
+        return(phrase.split())
 
 def get_embedding_matrix_variable():
     with tf.variable_scope('shared', reuse=tf.AUTO_REUSE):

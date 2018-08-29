@@ -2,9 +2,14 @@ from embeddings.Embedding import Embedding
 
 class GloVe(Embedding):
 
-    def __init__(self, version):
+    def __init__(self, alias, version):
         path = 'GloVe/'
-        if version == 'twitterMicro':
-            path += 'glove.twitter.27B/glove.twitter.Micro.25d.txt'
+        if alias == 'twitter':
+            if version == 'Debug':
+                path += 'glove.'+alias+'.27B/glove.'+alias+'.'+version+'.25d.txt'
+            else:
+                path += 'glove.'+alias+'.27B/glove.'+alias+'.27B.'+version+'d.txt'
+        else:
+            path = 'glove.'+alias+'/glove.'+alias+'.'+version+'d.txt'
 
-        super().__init__(embedding_path=path)
+        super().__init__(path=path, alias=alias, version=version)
