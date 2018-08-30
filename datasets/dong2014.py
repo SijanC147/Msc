@@ -6,8 +6,8 @@ from datasets.Dataset import Dataset
 
 class Dong2014(Dataset):
 
-    def __init__(self, embedding, rebuild_corpus=False, parent_folder='Dong2014', train_file='train.txt', eval_file='test.txt', debug_file='micro.txt'):
-        super().__init__(embedding, parent_folder, train_file, eval_file, debug_file)
+    def __init__(self, rebuild_corpus=False, parent_folder='Dong2014', train_file='train.txt', eval_file='test.txt', debug_file='micro.txt'):
+        super().__init__(parent_folder, train_file, eval_file, debug_file)
         self.vocabulary_corpus = self.get_vocabulary_corpus(rebuild=rebuild_corpus)
 
     def get_vocabulary_corpus(self, rebuild=False):

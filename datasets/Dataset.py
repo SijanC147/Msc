@@ -9,18 +9,13 @@ from abc import ABC, abstractmethod
 
 class Dataset(ABC):
 
-    def __init__(self, embedding, parent_folder, train_file_path, eval_file_path, debug_file_path=""):
-        self.embedding = embedding
+    def __init__(self, parent_folder, train_file_path, eval_file_path, debug_file_path=""):
         self.parent_directory = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', parent_folder)
         self.train_file_path = os.path.join(self.parent_directory, train_file_path)
         self.eval_file_path = os.path.join(self.parent_directory, eval_file_path)
         self.debug_file_path = os.path.join(self.parent_directory, debug_file_path)
         self.generated_data_directory = os.path.join(self.parent_directory, 'generated')
         self.corpus_file_path = os.path.join(self.parent_directory, self.generated_data_directory, 'corpus.csv')
-        self.generated_embedding_directory = os.path.join(self.generated_data_directory, type(self.embedding).__name__, self.embedding.get_alias())
-        self.embedding_id_file_path = os.path.join(self.generated_embedding_directory, 'words_to_ids.csv')
-        self.projection_labels_file_path = os.path.join(self.generated_embedding_directory, 'tensorboard_projection_labels.tsv')
-        self.partial_embedding_file_path = os.path.join(self.generated_embedding_directory, 'partial_'+self.embedding.get_version()+'.txt')
 
     @abstractmethod
     def get_vocabulary_corpus(self, rebuild=False):
@@ -37,6 +32,13 @@ class Dataset(ABC):
             return self.eval_file_path
         else:
             return self.debug_file_path
+
+    def set_embedding(self, embedding):
+        self.embedding = embedding
+        self.generated_embedding_directory = os.path.join(self.generated_data_directory, type(self.embedding).__name__, self.embedding.get_alias())
+        self.embedding_id_file_path = os.path.join(self.generated_embedding_directory, 'words_to_ids.csv')
+        self.projection_labels_file_path = os.path.join(self.generated_embedding_directory, 'tensorboard_projection_labels.tsv')
+        self.partial_embedding_file_path = os.path.join(self.generated_embedding_directory, 'partial_'+self.embedding.get_version()+'.txt')
     
     def get_save_file_path(self, mode):
         return os.path.join(self.generated_embedding_directory, 'features_labels_'+mode+'.pkl')
