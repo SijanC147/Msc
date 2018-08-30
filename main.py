@@ -1,18 +1,22 @@
 from experiments.Experiment import Experiment
 from datasets.Dong2014 import Dong2014
 from embeddings.GloVe import GloVe
-from models.Tang2016a.LSTM import LSTM
+from models.Tang2016a.TCLSTM import TCLSTM
 
 glove = GloVe(alias='42B', version='300')
 dong = Dong2014()
-lstm = LSTM()
+tclstm = TCLSTM()
 
 exp = Experiment(
     name='trying this shit out',
     dataset=dong,
     embedding=glove,
-    model=lstm
+    model=tclstm
 )
 
-exp.run_experiment('train', 10, 10)
+exp.run_experiment(
+    mode='train', 
+    steps=10, 
+    batch_size=10
+    )
 

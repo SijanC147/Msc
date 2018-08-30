@@ -31,7 +31,12 @@ def embed_target_and_average(target):
 def embed_and_concat(left, target, right):
     embedding_matrix = get_embedding_matrix_variable() 
     left_embedded = tf.nn.embedding_lookup(embedding_matrix, left)
-    target_embedding = embed_target_and_average(target)
+    target_embedding = tf.nn.embedding_lookup(embedding_matrix, target)
     right_embedding = tf.nn.embedding_lookup(embedding_matrix, right)
 
     return tf.concat([left_embedded, target_embedding, right_embedding], axis=0)
+
+def embed_from_ids(ids_tensor):
+    embedding_matrix = get_embedding_matrix_variable()
+    embedding = tf.nn.embedding_lookup(embedding_matrix, ids_tensor)
+    return embedding
