@@ -1,4 +1,5 @@
 import fileinput
+import time
 import os
 import re
 from datasets.Dataset import Dataset
@@ -24,21 +25,8 @@ class Dong2014(Dataset):
         return self.generate_vocabulary_corpus(all_documents)
 
     def get_mapped_features_and_labels(self, mode='debug'):
-        file_path = self.get_file(mode)
 
-        if self.partial_embedding_file_exists():
-            self.embedding.load_embeddings_from_path(path=self.partial_embedding_file_path)
-        else:
-            self.embedding.filter_on_corpus([*self.vocabulary_corpus])
-            partial_embedding_dict = self.embedding.get_embedding_dictionary()
-            os.makedirs(self.generated_embedding_directory, exist_ok=True)
-            with open(self.partial_embedding_file_path, 'w+') as f:
-                for word in [*partial_embedding_dict]:
-                    f.write(word + ' ' + ' '.join(partial_embedding_dict[word].astype(str)) + '\n')
-            with open(self.projection_labels_file_path) as f:
-                f.write('Words')
-                for word in [*partial_embedding_dict]:
-                    f.write(word + '\n')
+        self.load_embedding_from_corpus(self.vocabulary_corpus)
 
         if self.features_labels_save_file_exists(mode):
             features, labels = self.load_features_and_labels_from_save(mode)
@@ -57,10 +45,13 @@ class Dong2014(Dataset):
             labels = []
 
             token_to_ids_dict = self.get_word_to_id_dict(self.vocabulary_corpus)
+            file_path = self.get_file(mode)
             lines = open(file_path, 'r').readlines()
+
+            total_time = 0
             for index in range(0, len(lines), 3):
-                if (index%15==0):
-                    print(index)
+
+                start = time.time()
 
                 sentence = lines[index].strip()
                 features['sentence'].append(sentence)
@@ -75,6 +66,10 @@ class Dong2014(Dataset):
 
                 label = lines[index+2].strip()
                 labels.append(int(label))
+
+                total_time += (time.time()-start)
+                if(index%60==0):
+                    print("Processed {0}/{1} lines ({2:.2f}%) tot:{3:.3f}s avg:{4:.3f}s/line".format(index+3, len(lines), ((index+3)/len(lines))*100, total_time, total_time/(index+3)))
 
             self.save_features_and_labels(mode, features, labels)            
 

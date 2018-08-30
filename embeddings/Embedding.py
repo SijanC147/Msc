@@ -24,6 +24,8 @@ class Embedding:
                 word = values[0]
                 embedding = np.asarray(values[1:], dtype='float32')
                 self.embedding_dict[word] = embedding
+        
+        return self.embedding_dict
 
     def get_alias(self):
         return self.alias
@@ -72,4 +74,5 @@ class Embedding:
     def filter_on_corpus(self, tokens):
         self.load_embeddings_from_path()
         self.embedding_dict = {token: self.embedding_dict[token] for token in tokens if token in [*self.embedding_dict]}
+        return self.embedding_dict
 

@@ -16,7 +16,7 @@ class Dataset(ABC):
         self.eval_file_path = os.path.join(self.parent_directory, eval_file_path)
         self.debug_file_path = os.path.join(self.parent_directory, debug_file_path)
         self.generated_data_directory = os.path.join(self.parent_directory, 'generated')
-        self.corpus_file_path = os.path.join(self.parent_directory, 'corpus.csv')
+        self.corpus_file_path = os.path.join(self.parent_directory, self.generated_data_directory, 'corpus.csv')
         self.generated_embedding_directory = os.path.join(self.generated_data_directory, type(self.embedding).__name__, self.embedding.get_alias())
         self.embedding_id_file_path = os.path.join(self.generated_embedding_directory, 'words_to_ids.csv')
         self.projection_labels_file_path = os.path.join(self.generated_embedding_directory, 'tensorboard_projection_labels.tsv')
@@ -50,6 +50,9 @@ class Dataset(ABC):
     def partial_embedding_file_exists(self):
         return os.path.exists(self.partial_embedding_file_path)
     
+    def projection_labels_file_exists(self):
+        return os.path.exists(self.projection_labels_file_path)
+
     def features_labels_save_file_exists(self, mode):
         return os.path.exists(self.get_save_file_path(mode))
     
@@ -95,6 +98,19 @@ class Dataset(ABC):
         
         return vocabulary_corpus
 
+    def generate_partial_embedding_file(self, partial_embedding):
+        os.makedirs(self.generated_embedding_directory, exist_ok=True)
+        with open(self.partial_embedding_file_path, 'w+') as f:
+            for word in [*partial_embedding]:
+                f.write(word + ' ' + ' '.join(partial_embedding[word].astype(str)) + '\n')
+
+    def generate_projection_labels_file(self, partial_embedding):
+        os.makedirs(self.generated_embedding_directory, exist_ok=True)
+        with open(self.projection_labels_file_path, 'w+') as f:
+            f.write('Words')
+            for word in [*partial_embedding]:
+                f.write(word + '\n')
+
     def get_word_to_id_dict(self, vocabulary_corpus):
         token_to_ids_dict = {}
         if self.embedding_id_file_exists():
@@ -115,3 +131,13 @@ class Dataset(ABC):
                 for word in [*token_to_ids_dict]:
                     writer.writerow({'word': word, 'id': token_to_ids_dict[word]})
         return token_to_ids_dict
+
+    def load_embedding_from_corpus(self, vocabulary_corpus, force_rebuild_partial = False, force_rebuild_projection = False):
+        if self.partial_embedding_file_exists() and not(force_rebuild_partial):
+            partial_embedding_dict = self.embedding.load_embeddings_from_path(path=self.partial_embedding_file_path)
+        else:
+            partial_embedding_dict = self.embedding.filter_on_corpus([*vocabulary_corpus])
+            self.generate_partial_embedding_file(partial_embedding_dict)
+        
+        if not(self.projection_labels_file_exists()) or force_rebuild_projection:
+            self.generate_projection_labels_file(partial_embedding_dict)

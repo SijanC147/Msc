@@ -10,6 +10,6 @@ class GloVe(Embedding):
             else:
                 path += 'glove.'+alias+'.27B/glove.'+alias+'.27B.'+version+'d.txt'
         else:
-            path = 'glove.'+alias+'/glove.'+alias+'.'+version+'d.txt'
+            path += 'glove.'+alias+'/glove.'+alias+'.'+version+'d.txt'
 
         super().__init__(path=path, alias=alias, version=version)
