@@ -7,14 +7,14 @@ glove = GloVe(alias='42B', version='300')
 dong = Dong2014()
 tclstm = TCLSTM()
 
-exp = Experiment(
+experiment = Experiment(
     name='trying this shit out',
     dataset=dong,
     embedding=glove,
     model=tclstm
 )
 
-exp.run_experiment(
+experiment.run(
     mode='train', 
     steps=10, 
     batch_size=10

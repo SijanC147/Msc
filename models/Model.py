@@ -4,10 +4,13 @@ import inspect
 from abc import ABC, abstractmethod
 
 class Model(ABC):
-    def __init__(self, source_dataset=None, embedding=None, model_dir=None):
-        self.dataset = source_dataset
-        self.model_dir = model_dir
-        self.embedding = embedding 
+    def __init__(
+        self, 
+        dataset=None, 
+        embedding=None, 
+        model_dir=None
+    ):
+        self.assign_external_sources(embedding=embedding, dataset=dataset, model_dir=model_dir)
         self.estimator = None
 
     @abstractmethod
@@ -29,6 +32,20 @@ class Model(ABC):
     @abstractmethod
     def set_model_fn(self, model_fn):
         self.model_fn = model_fn
+
+    def assign_external_sources(self, embedding, dataset, model_dir):
+        self.set_embedding(embedding)
+        self.set_dataset(dataset)
+        self.set_model_dir(model_dir)
+
+    def set_embedding(self, embedding):
+        self.embedding = embedding
+
+    def set_dataset(self, dataset):
+        self.dataset = dataset
+
+    def set_model_dir(self, model_dir):
+        self.model_dir = model_dir
 
     def train(self, steps, batch_size=None, hooks=None):
         batch = batch_size if batch_size!=None else self.params['batch_size']
@@ -59,7 +76,7 @@ class Model(ABC):
             hooks=hooks
         )
 
-    def initialize_defaults_for_model(self):
+    def initialize_internal_defaults(self):
         self.set_params(None)
         self.set_feature_columns(None)
         self.set_train_input_fn(None)

@@ -6,7 +6,10 @@ from utils import embed_and_concat,get_embedding_matrix_variable
 
 class LSTM(Model):
     def __init__(
-        self, 
+        self,
+        dataset = None,
+        embedding = None,
+        model_dir = None,
         max_seq_length = 80, 
         n_out_classes = 3, 
         learning_rate = 0.01,
@@ -18,7 +21,7 @@ class LSTM(Model):
         self.learning_rate = learning_rate
         self.dropout_rate = dropout_rate
         self.hidden_units = hidden_units
-        super().__init__()
+        super().__init__(dataset=dataset, embedding=embedding, model_dir=model_dir)
 
     def set_params(self, params):
         default_params = {
