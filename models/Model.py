@@ -4,18 +4,13 @@ import inspect
 from abc import ABC, abstractmethod
 
 class Model(ABC):
-    def __init__(
-        self, 
-        dataset=None, 
-        embedding=None, 
-        model_dir=None
-    ):
-        self.assign_external_sources(embedding=embedding, dataset=dataset, model_dir=model_dir)
+    def __init__(self, embedding=None, dataset=None, model_dir=None):
+        self.connect_external_sources(embedding=embedding, dataset=dataset, model_dir=model_dir)
         self.estimator = None
 
     @abstractmethod
     def set_params(self, params):
-        self.params = params
+        self.params = {'feature_columns': self.feature_columns, **params}
 
     @abstractmethod
     def set_feature_columns(self, feature_columns):
@@ -33,7 +28,11 @@ class Model(ABC):
     def set_model_fn(self, model_fn):
         self.model_fn = model_fn
 
-    def assign_external_sources(self, embedding, dataset, model_dir):
+    def initialize_with_external_sources(self, embedding, dataset, model_dir):
+        self.connect_external_sources(embedding, dataset, model_dir)
+        self.initialize_internal_defaults()
+    
+    def connect_external_sources(self, embedding, dataset, model_dir):
         self.set_embedding(embedding)
         self.set_dataset(dataset)
         self.set_model_dir(model_dir)
@@ -77,8 +76,8 @@ class Model(ABC):
         )
 
     def initialize_internal_defaults(self):
-        self.set_params(None)
         self.set_feature_columns(None)
+        self.set_params(None)
         self.set_train_input_fn(None)
         self.set_eval_input_fn(None)
         self.set_model_fn(None) 
