@@ -33,6 +33,9 @@ class Dataset(ABC):
         else:
             return self.debug_file_path
 
+    def initialize_with_embedding(self, embedding):
+        self.set_embedding(embedding)
+
     def set_embedding(self, embedding):
         self.embedding = embedding
         self.generated_embedding_directory = os.path.join(self.generated_data_directory, type(self.embedding).__name__, self.embedding.get_alias())
