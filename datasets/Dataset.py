@@ -9,7 +9,11 @@ from abc import ABC, abstractmethod
 
 class Dataset(ABC):
 
-    def __init__(self, parent_folder, train_file_path, eval_file_path, debug_file_path="", embedding=None, rebuild_corpus=False):
+    def __init__(self, train_file_path, eval_file_path, parent_folder='', debug_file_path="", embedding=None, rebuild_corpus=False):
+        if len(parent_folder)==0:
+            parent_folder = self.__class__.__name__
+        else:
+            parent_folder = os.path.join(self.__class__.__name__, parent_folder)
         self.parent_directory = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', parent_folder)
         self.train_file_path = os.path.join(self.parent_directory, train_file_path)
         self.eval_file_path = os.path.join(self.parent_directory, eval_file_path)
@@ -25,7 +29,7 @@ class Dataset(ABC):
         pass
 
     def get_all_text_in_dataset(self):
-        return self.get_dataset_dictionary(mode='train')['sentences']+self.get_dataset_dictionary(mode='eval')['sentences']
+        return set(self.get_dataset_dictionary(mode='train')['sentences']+self.get_dataset_dictionary(mode='eval')['sentences'])
 
     def get_mapped_features_and_labels(self, mode='debug'):
         self.load_embedding_from_corpus(self.vocabulary_corpus)
@@ -53,12 +57,15 @@ class Dataset(ABC):
 
                 start = time.time()
 
-                features['sentence'].append(dataset_dict['sentences'][index])
-                features['target'].append(dataset_dict['targets'][index])
-                labels.append(dataset_dict['labels'][index])
+                sentence = dataset_dict['sentences'][index].strip()
+                target = dataset_dict['targets'][index].strip()
+                label = int(dataset_dict['labels'][index].strip()) if type(dataset_dict['labels'][index].strip())==str else dataset_dict['labels'][index]
 
-                features['sentence_length'].append(len(dataset_dict['sentences'][index]))
-                left_context, target, right_context = dataset_dict['sentences'][index].partition(dataset_dict['targets'][index])
+                features['sentence'].append(sentence)
+                features['sentence_length'].append(len(sentence))
+                features['target'].append(target)
+                labels.append(label)
+                left_context, _, right_context = sentence.partition(target)
                 features['mappings']['left'].append(self.embedding.map_embedding_ids(left_context.strip(), token_to_ids_dict=token_to_ids_dict))
                 features['mappings']['right'].append(self.embedding.map_embedding_ids(right_context.strip(), token_to_ids_dict=token_to_ids_dict))
                 features['mappings']['target'].append(self.embedding.map_embedding_ids(target, token_to_ids_dict=token_to_ids_dict))
@@ -139,6 +146,7 @@ class Dataset(ABC):
         nlp = spacy.load('en')
         doc = nlp(' '.join(source_documents))
         counts = doc.count_by(ORTH)
+        os.makedirs(self.generated_data_directory, exist_ok=True)
         with open(self.corpus_file_path, 'w') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=['word', 'count'])
 
