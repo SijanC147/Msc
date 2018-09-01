@@ -46,9 +46,12 @@ class Model(ABC):
     def set_model_dir(self, model_dir):
         self.model_dir = model_dir
 
-    def train(self, steps, batch_size=None, hooks=None):
+    def train(self, steps, batch_size=None, hooks=None, debug=False):
         batch = batch_size if batch_size!=None else self.params['batch_size']
-        features, labels = self.get_features_and_labels(mode='train')
+        if not(debug):
+            features, labels = self.get_features_and_labels(mode='train')
+        else:
+            features, labels = self.get_features_and_labels(mode='debug')
         if self.estimator==None:
             self.create_estimator()
         self.estimator.train(
@@ -61,9 +64,12 @@ class Model(ABC):
             hooks=hooks
         )
 
-    def evaluate(self, batch_size=None, hooks=None):
+    def evaluate(self, batch_size=None, hooks=None, debug=False):
         batch = batch_size if batch_size!=None else self.params['batch_size']
-        features, labels = self.get_features_and_labels(mode='eval')
+        if not(debug):
+            features, labels = self.get_features_and_labels(mode='eval')
+        else:
+            features, labels = self.get_features_and_labels(mode='debug')
         if self.estimator==None:
             self.create_estimator()
         self.estimator.evaluate(

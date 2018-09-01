@@ -9,21 +9,67 @@ from abc import ABC, abstractmethod
 
 class Dataset(ABC):
 
-    def __init__(self, parent_folder, train_file_path, eval_file_path, debug_file_path=""):
+    def __init__(self, parent_folder, train_file_path, eval_file_path, debug_file_path="", embedding=None, rebuild_corpus=False):
         self.parent_directory = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', parent_folder)
         self.train_file_path = os.path.join(self.parent_directory, train_file_path)
         self.eval_file_path = os.path.join(self.parent_directory, eval_file_path)
         self.debug_file_path = os.path.join(self.parent_directory, debug_file_path)
         self.generated_data_directory = os.path.join(self.parent_directory, 'generated')
         self.corpus_file_path = os.path.join(self.parent_directory, self.generated_data_directory, 'corpus.csv')
+        self.vocabulary_corpus = self.get_vocabulary_corpus(rebuild=rebuild_corpus)
+        if embedding!=None:
+            self.set_embedding(embedding)
 
     @abstractmethod
-    def get_vocabulary_corpus(self, rebuild=False):
+    def get_dataset_dictionary(self, mode='debug'):
         pass
 
-    @abstractmethod
+    def get_all_text_in_dataset(self):
+        return self.get_dataset_dictionary(mode='train')['sentences']+self.get_dataset_dictionary(mode='eval')['sentences']
+
     def get_mapped_features_and_labels(self, mode='debug'):
-        pass
+        self.load_embedding_from_corpus(self.vocabulary_corpus)
+
+        if self.features_labels_save_file_exists(mode):
+            features, labels = self.load_features_and_labels_from_save(mode)
+        else:
+            features = {
+                'sentence' : [],
+                'sentence_length': [],
+                'target' : [],
+                'mappings': {
+                    'left': [],
+                    'target': [],
+                    'right': []
+                },
+                'maptest': []
+            }
+            labels = []
+
+            token_to_ids_dict = self.get_word_to_id_dict(self.vocabulary_corpus, debug=(mode=='debug'))
+            dataset_dict = self.get_dataset_dictionary(mode=mode)
+            total_time = 0
+            for index in range(len(dataset_dict['sentences'])):
+
+                start = time.time()
+
+                features['sentence'].append(dataset_dict['sentences'][index])
+                features['target'].append(dataset_dict['targets'][index])
+                labels.append(dataset_dict['labels'][index])
+
+                features['sentence_length'].append(len(dataset_dict['sentences'][index]))
+                left_context, target, right_context = dataset_dict['sentences'][index].partition(dataset_dict['targets'][index])
+                features['mappings']['left'].append(self.embedding.map_embedding_ids(left_context.strip(), token_to_ids_dict=token_to_ids_dict))
+                features['mappings']['right'].append(self.embedding.map_embedding_ids(right_context.strip(), token_to_ids_dict=token_to_ids_dict))
+                features['mappings']['target'].append(self.embedding.map_embedding_ids(target, token_to_ids_dict=token_to_ids_dict))
+
+                total_time += (time.time()-start)
+                if(index%60==0):
+                    print("Processed {0}/{1} lines ({2:.2f}%) tot:{3:.3f}s avg:{4:.3f}s/line".format(index+1, len(dataset_dict['sentences']), ((index+1)/len(dataset_dict['sentences']))*100, total_time, total_time/(index+1)))
+
+            self.save_features_and_labels(mode, features, labels)            
+
+        return features, labels
 
     def get_file(self, mode='debug'):
         if mode=='train':
@@ -116,9 +162,9 @@ class Dataset(ABC):
             for word in [*partial_embedding]:
                 f.write(word + '\n')
 
-    def get_word_to_id_dict(self, vocabulary_corpus):
+    def get_word_to_id_dict(self, vocabulary_corpus, debug=False):
         token_to_ids_dict = {}
-        if self.embedding_id_file_exists():
+        if self.embedding_id_file_exists() and not(debug):
             with open(self.embedding_id_file_path) as csvfile:
                 reader = csv.DictReader(csvfile)
                 for row in reader:
@@ -128,14 +174,21 @@ class Dataset(ABC):
             start = time.time()
             token_to_ids_dict = self.embedding.map_token_ids_dict(vocabulary_corpus)
             print('Built token to ids dict in: ' + str(time.time()-start))
-            os.makedirs(self.generated_embedding_directory, exist_ok=True)
-            with open(self.embedding_id_file_path, 'w+') as csvfile:
-                writer = csv.DictWriter(csvfile, fieldnames=['word', 'id'])
+            if not(debug):
+                os.makedirs(self.generated_embedding_directory, exist_ok=True)
+                with open(self.embedding_id_file_path, 'w+') as csvfile:
+                    writer = csv.DictWriter(csvfile, fieldnames=['word', 'id'])
 
-                writer.writeheader()
-                for word in [*token_to_ids_dict]:
-                    writer.writerow({'word': word, 'id': token_to_ids_dict[word]})
+                    writer.writeheader()
+                    for word in [*token_to_ids_dict]:
+                        writer.writerow({'word': word, 'id': token_to_ids_dict[word]})
         return token_to_ids_dict
+
+    def get_vocabulary_corpus(self, rebuild=False):
+        if self.corpus_file_exists() and not(rebuild):
+            return self.load_vocabulary_corpus_from_csv()
+        else:
+            return self.generate_vocabulary_corpus(self.get_all_text_in_dataset())
 
     def load_embedding_from_corpus(self, vocabulary_corpus, force_rebuild_partial = False, force_rebuild_projection = False):
         if self.partial_embedding_file_exists() and not(force_rebuild_partial):

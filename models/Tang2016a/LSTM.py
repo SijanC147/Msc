@@ -24,12 +24,13 @@ class LSTM(Model):
 
     def set_model_fn(self, model_fn):
         def default_model_fn(features, labels, mode, params=self.params):
+            print(features)
             input_layer, sequence_length = tf.contrib.feature_column.sequence_input_layer(
                 features=features,
                 feature_columns=params['feature_columns']
             )
 
-            lstm_cell = tf.nn.rnn_cell.BasicLSTMCell(params['hidden_units'])
+            lstm_cell = tf.nn.rnn_cell.LSTMCell(params['hidden_units'])
 
             _, final_states = tf.nn.dynamic_rnn(
                 cell=lstm_cell,
@@ -38,7 +39,7 @@ class LSTM(Model):
                 dtype=tf.float32
             )
 
-            logits = tf.layers.dense(inputs=final_states.h, units=params['n_out_classes'])
+            logits = tf.layers.dense(inputs=final_states.h, units=params['n_out_classes'], trainable=False)
             predicted_classes = tf.argmax(logits, 1)
 
             if mode == tf.estimator.ModeKeys.PREDICT:
@@ -52,15 +53,15 @@ class LSTM(Model):
             loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
 
             accuracy = tf.metrics.accuracy(labels=labels,predictions=predicted_classes,name='acc_op')
-            recall = tf.metrics.recall(labels=labels, predictions=predicted_classes, name='recall_op')
+            # recall = tf.metrics.recall(labels=labels, predictions=predicted_classes, name='recall_op')
 
             metrics = {
                 'accuracy': accuracy,
-                'recall': recall
+                # 'recall': recall
                 }
 
             tf.summary.scalar('accuracy', accuracy[1])
-            tf.summary.scalar('recall', recall[1])
+            # tf.summary.scalar('recall', recall[1])
 
             tf.summary.scalar('loss', loss)
 

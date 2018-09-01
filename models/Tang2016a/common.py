@@ -2,15 +2,17 @@ import tensorflow as tf
 from utils import embed_and_concat,embed_from_ids,embed_target_and_average
 
 shared_params = {
-    'batch_size': 5,
+    'batch_size': 100,
     'max_seq_length' : 80, 
     'n_out_classes' : 3, 
     'learning_rate' : 0.01,
     'dropout_rate' : 0.1,
-    'hidden_units' : 200}
+    'hidden_units' : 200
+    }
 
 shared_feature_columns = [
-    tf.contrib.feature_column.sequence_numeric_column(key='x')]
+    tf.contrib.feature_column.sequence_numeric_column(key='x')
+    ]
 
 def lstm_input_fn(features, labels, batch_size, embedding, max_seq_length, num_out_classes):
     embedding.set_embedding_matrix_variable()
@@ -32,7 +34,7 @@ def lstm_input_fn(features, labels, batch_size, embedding, max_seq_length, num_o
 
 def tdlstm_input_fn(features, labels, batch_size, embedding, max_seq_length, num_out_classes):
     embedding.set_embedding_matrix_variable()
-    print(batch_size)
+
     left_contexts =  tf.data.Dataset.from_generator(lambda: features['mappings']['left'], output_shapes=[None], output_types=tf.int32)
     targets = tf.data.Dataset.from_generator(lambda: features['mappings']['target'], output_shapes=[None], output_types=tf.int32)
     right_contexts = tf.data.Dataset.from_generator(lambda: features['mappings']['right'], output_shapes=[None], output_types=tf.int32)
