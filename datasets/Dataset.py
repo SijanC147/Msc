@@ -3,6 +3,7 @@ import csv
 import pickle
 import spacy
 import time
+from utils import keep_token
 from spacy.tokens import Doc
 from spacy.attrs import ORTH
 from abc import ABC, abstractmethod
@@ -65,7 +66,7 @@ class Dataset(ABC):
                 features['sentence_length'].append(len(sentence))
                 features['target'].append(target)
                 labels.append(label)
-                left_context, _, right_context = sentence.partition(target)
+                left_context, right_context = self.get_left_and_right_contexts(sentence=sentence, target=target, offset=dataset_dict.get('offset')) 
                 features['mappings']['left'].append(self.embedding.map_embedding_ids(left_context.strip(), token_to_ids_dict=token_to_ids_dict))
                 features['mappings']['right'].append(self.embedding.map_embedding_ids(right_context.strip(), token_to_ids_dict=token_to_ids_dict))
                 features['mappings']['target'].append(self.embedding.map_embedding_ids(target, token_to_ids_dict=token_to_ids_dict))
@@ -77,6 +78,14 @@ class Dataset(ABC):
             self.save_features_and_labels(mode, features, labels)            
 
         return features, labels
+
+    def get_left_and_right_contexts(self, sentence, target, offset=None):
+        if offset==None:
+            left, _, right = sentence.partition(target) 
+        else:
+            left = sentence[:offset].strip()
+            right = sentence[offset+len(target.strip()):].strip()
+        return left, right
 
     def get_file(self, mode='debug'):
         if mode=='train':
@@ -145,7 +154,8 @@ class Dataset(ABC):
 
         nlp = spacy.load('en')
         doc = nlp(' '.join(source_documents))
-        counts = doc.count_by(ORTH)
+        filtered_doc = nlp(''.join(map(keep_token, doc)))
+        counts = filtered_doc.count_by(ORTH)
         os.makedirs(self.generated_data_directory, exist_ok=True)
         with open(self.corpus_file_path, 'w') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=['word', 'count'])

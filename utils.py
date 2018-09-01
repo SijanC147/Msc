@@ -10,10 +10,7 @@ def tokenize_phrase(phrase, backend='spacy'):
         tokens_list = []
         nlp = spacy.load('en')
         tokens = nlp(str(phrase))
-        for token in tokens:
-            # ignore pescy unicode character that appears after certain emoji
-            if token.text!='\uFE0F': 
-                tokens_list.append(token.text)
+        tokens_list = list(filter(keep_token, tokens))
         return tokens_list
     elif backend=='vanilla':
         return(phrase.split())
@@ -40,3 +37,12 @@ def embed_from_ids(ids_tensor):
     embedding_matrix = get_embedding_matrix_variable()
     embedding = tf.nn.embedding_lookup(embedding_matrix, ids_tensor)
     return embedding
+
+def keep_token(token):
+    if token.like_url:
+        return False
+    if token.like_email:
+        return False
+    if token.text in ['\uFE0F']:
+        return False 
+    return True
