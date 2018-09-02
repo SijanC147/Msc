@@ -3,7 +3,7 @@ from datasets.Dataset import Dataset
 class Dong2014(Dataset):
 
     def __init__(self, train_file='train.txt', eval_file='test.txt', debug_file='micro.txt', embedding=None, rebuild_corpus=False):
-        super().__init__(train_file, eval_file, debug_file, embedding, rebuild_corpus)
+        super().__init__(train_file_path=train_file, eval_file_path=eval_file, debug_file_path=debug_file, embedding=embedding, rebuild_corpus=rebuild_corpus)
 
     def generate_dataset_dictionary(self, mode='debug'):
         dataset_dict = {

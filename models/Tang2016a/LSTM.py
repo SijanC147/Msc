@@ -1,6 +1,6 @@
 import tensorflow as tf
 from models.Model import Model
-from models.Tang2016a.common import lstm_input_fn,shared_params,shared_feature_columns
+from models.Tang2016a.common import lstm_input_fn,shared_params,shared_feature_columns,shared_lstm_cell
 
 class LSTM(Model):
 
@@ -18,22 +18,19 @@ class LSTM(Model):
         super().set_train_input_fn(default_train_input_fn if train_input_fn==None else train_input_fn)        
         
     def set_eval_input_fn(self, eval_input_fn):
-        default_eval_input_fn = lambda features,labels,batch_size=self.params.get('batch_size'): lstm_input_fn(
-            features, labels, batch_size, embedding=self.embedding, max_seq_length=self.params['max_seq_length'], num_out_classes=self.params['n_out_classes'])
+        default_eval_input_fn = lambda features,labels: lstm_input_fn(
+            features, labels, batch_size=None, embedding=self.embedding, max_seq_length=self.params['max_seq_length'], num_out_classes=self.params['n_out_classes'])
         super().set_eval_input_fn(default_eval_input_fn if eval_input_fn==None else eval_input_fn)
 
     def set_model_fn(self, model_fn):
         def default_model_fn(features, labels, mode, params=self.params):
-            print(features)
             input_layer, sequence_length = tf.contrib.feature_column.sequence_input_layer(
                 features=features,
                 feature_columns=params['feature_columns']
             )
 
-            lstm_cell = tf.nn.rnn_cell.LSTMCell(params['hidden_units'])
-
             _, final_states = tf.nn.dynamic_rnn(
-                cell=lstm_cell,
+                cell=shared_lstm_cell(params),
                 inputs=input_layer,
                 sequence_length=sequence_length,
                 dtype=tf.float32
