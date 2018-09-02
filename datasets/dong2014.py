@@ -5,7 +5,7 @@ class Dong2014(Dataset):
     def __init__(self, train_file='train.txt', eval_file='test.txt', debug_file='micro.txt', embedding=None, rebuild_corpus=False):
         super().__init__(train_file, eval_file, debug_file, embedding, rebuild_corpus)
 
-    def get_dataset_dictionary(self, mode='debug'):
+    def generate_dataset_dictionary(self, mode='debug'):
         dataset_dict = {
             'sentences':[],
             'targets':[],

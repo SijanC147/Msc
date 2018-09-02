@@ -5,7 +5,7 @@ import spacy
 import time
 from utils import keep_token
 from spacy.tokens import Doc
-from spacy.attrs import ORTH
+from spacy.attrs import ORTH # pylint: disable=E0611
 from abc import ABC, abstractmethod
 
 class Dataset(ABC):
@@ -26,7 +26,7 @@ class Dataset(ABC):
             self.set_embedding(embedding)
 
     @abstractmethod
-    def get_dataset_dictionary(self, mode='debug'):
+    def generate_dataset_dictionary(self, mode='debug'):
         pass
 
     def get_all_text_in_dataset(self):
@@ -108,6 +108,9 @@ class Dataset(ABC):
     def get_save_file_path(self, mode):
         return os.path.join(self.generated_embedding_directory, 'features_labels_'+mode+'.pkl')
 
+    def get_dataset_dictionary_file_path(self, mode='debug'):
+        return os.path.join(self.generated_data_directory, 'raw_dataset_dictionary_'+mode+'.pkl')
+
     def corpus_file_exists(self):
         return os.path.isfile(self.corpus_file_path)
 
@@ -123,6 +126,9 @@ class Dataset(ABC):
     def features_labels_save_file_exists(self, mode):
         return os.path.exists(self.get_save_file_path(mode))
     
+    def dataset_dictionary_file_exists(self, mode='debug'):
+        return os.path.exists(self.get_dataset_dictionary_file_path(mode))
+
     def load_features_and_labels_from_save(self, mode):
         if self.features_labels_save_file_exists(mode):
             with open(self.get_save_file_path(mode), 'rb') as f:
@@ -140,6 +146,11 @@ class Dataset(ABC):
             with open(self.get_save_file_path(mode), 'wb+') as f:
                 pickle.dump(saved_data, f, pickle.HIGHEST_PROTOCOL)
 
+    def save_dataset_dictionary(self, dataset_dictionary, mode):
+        os.makedirs(self.generated_data_directory, exist_ok=True)
+        with open(self.get_dataset_dictionary_file_path(mode), 'wb+') as f:
+            pickle.dump(dataset_dictionary, f, pickle.HIGHEST_PROTOCOL)
+        
     def load_vocabulary_corpus_from_csv(self):
         vocabulary_corpus = {}
         if self.corpus_file_exists():
@@ -149,13 +160,19 @@ class Dataset(ABC):
                     vocabulary_corpus[row['word']]=int(row['count'])
         return vocabulary_corpus
 
+    def load_dataset_dictionary_from_save(self, mode='debug'):
+        if self.dataset_dictionary_file_exists(mode):
+            with open(self.get_dataset_dictionary_file_path(mode), 'rb') as f:
+                return pickle.load(f)
+    
     def generate_vocabulary_corpus(self, source_documents):
         vocabulary_corpus = {}
 
         nlp = spacy.load('en')
-        doc = nlp(' '.join(source_documents))
-        filtered_doc = nlp(''.join(map(keep_token, doc)))
-        counts = filtered_doc.count_by(ORTH)
+        tokens = nlp(' '.join(map(lambda document: document.strip(), source_documents)))
+        filtered_tokens = list(filter(keep_token, tokens))
+        filtered_doc = nlp(' '.join(map(lambda token: token.text, filtered_tokens)))
+        counts = tokens.count_by(ORTH)
         os.makedirs(self.generated_data_directory, exist_ok=True)
         with open(self.corpus_file_path, 'w') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=['word', 'count'])
@@ -207,6 +224,14 @@ class Dataset(ABC):
             return self.load_vocabulary_corpus_from_csv()
         else:
             return self.generate_vocabulary_corpus(self.get_all_text_in_dataset())
+
+    def get_dataset_dictionary(self, mode='debug'):
+        if self.dataset_dictionary_file_exists(mode):
+            return self.load_dataset_dictionary_from_save(mode)
+        else:
+            dataset_dictionary = self.generate_dataset_dictionary(mode)
+            self.save_dataset_dictionary(dataset_dictionary=dataset_dictionary, mode=mode)
+            return dataset_dictionary
 
     def load_embedding_from_corpus(self, vocabulary_corpus, force_rebuild_partial = False, force_rebuild_projection = False):
         if self.partial_embedding_file_exists() and not(force_rebuild_partial):

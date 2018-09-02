@@ -3,7 +3,7 @@ from datasets.Dataset import Dataset
 
 class Xue2018(Dataset):
 
-    def __init__(self, version, train_file='train.json', eval_file='test.json', debug_file='', parent_folder='', embedding=None, rebuild_corpus=False):
+    def __init__(self, version='all_joined', train_file='train.json', eval_file='test.json', debug_file='', parent_folder='', embedding=None, rebuild_corpus=False):
         parent_folder = {
             'all': 'all_joined',
             'easy': 'easy_joined',
@@ -17,7 +17,7 @@ class Xue2018(Dataset):
         }.get(version, 'all_joined')
         super().__init__(train_file, eval_file, parent_folder, debug_file, embedding, rebuild_corpus)
 
-    def get_dataset_dictionary(self, mode='debug'):
+    def generate_dataset_dictionary(self, mode='debug'):
         dataset_dict = {
             'sentences':[],
             'targets':[],
