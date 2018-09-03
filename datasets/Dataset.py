@@ -60,7 +60,7 @@ class Dataset(ABC):
 
                 sentence = dataset_dict['sentences'][index].strip()
                 target = dataset_dict['targets'][index].strip()
-                label = int(dataset_dict['labels'][index].strip()) if type(dataset_dict['labels'][index].strip())==str else dataset_dict['labels'][index]
+                label = int(dataset_dict['labels'][index].strip()) if type(dataset_dict['labels'][index])==str else dataset_dict['labels'][index]
 
                 features['sentence'].append(sentence)
                 features['sentence_length'].append(len(sentence))
@@ -172,7 +172,7 @@ class Dataset(ABC):
         tokens = nlp(' '.join(map(lambda document: document.strip(), source_documents)))
         filtered_tokens = list(filter(keep_token, tokens))
         filtered_doc = nlp(' '.join(map(lambda token: token.text, filtered_tokens)))
-        counts = tokens.count_by(ORTH)
+        counts = filtered_doc.count_by(ORTH)
         os.makedirs(self.generated_data_directory, exist_ok=True)
         with open(self.corpus_file_path, 'w') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=['word', 'count'])

@@ -86,7 +86,7 @@ class Model(ABC):
         train_features, train_labels = self.get_features_and_labels(mode='train')
         eval_features, eval_labels = self.get_features_and_labels(mode='eval')
         self.init_estimator_if_none()
-        os.makedirs(self.estimator.eval_dir())
+        os.makedirs(self.estimator.eval_dir(), exist_ok=True)
         early_stopping = tf.contrib.estimator.stop_if_no_decrease_hook(
             self.estimator,
             metric_name='loss',
@@ -101,7 +101,7 @@ class Model(ABC):
                     batch_size=batch
                 ),
                 max_steps=steps,
-                hooks=[early_stopping]
+                hooks=[early_stopping] if train_hooks==None else [early_stopping]+train_hooks
             ),
             eval_spec=tf.estimator.EvalSpec(
                 input_fn = lambda: self.eval_input_fn(

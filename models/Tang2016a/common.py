@@ -2,11 +2,11 @@ import tensorflow as tf
 from utils import embed_and_concat,embed_from_ids,embed_target_and_average
 
 shared_params = {
-    'batch_size': 25,
+    'batch_size': 250,
     'max_seq_length' : 80, 
     'n_out_classes' : 3, 
     'learning_rate' : 0.01,
-    'dropout_rate' : 0.1,
+    'keep_prob' : 0.8,
     'hidden_units' : 200
     }
 
@@ -15,6 +15,8 @@ shared_feature_columns = [
     ]
 
 shared_lstm_cell = lambda params: tf.nn.rnn_cell.LSTMCell(num_units=params['hidden_units'], initializer=tf.initializers.random_uniform(minval=-0.03, maxval=0.03))
+
+shared_lstm_cell_with_dropout = lambda params: tf.contrib.rnn.DropoutWrapper(cell=shared_lstm_cell(params), output_keep_prob=params['keep_prob'])
 
 def lstm_input_fn(features, labels, batch_size, embedding, max_seq_length, num_out_classes):
     embedding.set_embedding_matrix_variable()
@@ -33,9 +35,10 @@ def lstm_input_fn(features, labels, batch_size, embedding, max_seq_length, num_o
     dataset = tf.data.Dataset.zip((sparse_features_dict, labels_dataset))
 
     if batch_size!=None:
-        return dataset.shuffle(len(features['sentence'])).repeat().batch(batch_size=batch_size)
+        # return dataset.shuffle(len(labels)).repeat().batch(batch_size=batch_size)
+        return dataset.apply(tf.contrib.data.shuffle_and_repeat(len(labels))).batch(batch_size=batch_size)
     else:
-        return dataset.shuffle(len(features['sentence'])).batch(batch_size=1)
+        return dataset.batch(batch_size=1)
 
 def tdlstm_input_fn(features, labels, batch_size, embedding, max_seq_length, num_out_classes):
     embedding.set_embedding_matrix_variable()

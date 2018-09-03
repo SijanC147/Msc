@@ -25,7 +25,7 @@ class Xue2018(Dataset):
         }
         data = json.loads(open(self.get_file(mode), 'r').read())
         data = [sample for sample in data if sample['aspect']!='conflict']
-        dataset_dict['sentences'] = [sample['sentence'] for sample in data]
-        dataset_dict['targets'] = [sample['aspect'] for sample in data]
-        dataset_dict['labels'] = [{'positive': 1, 'neutral': 0, 'negative': -1}.get(sample['sentiment']) for sample in data]
+        dataset_dict['sentences'] = [sample['sentence'] for sample in data if sample['sentiment'] in ['positive','neutral','negative']]
+        dataset_dict['targets'] = [sample['aspect'] for sample in data if sample['sentiment'] in ['positive','neutral','negative']]
+        dataset_dict['labels'] = [{'positive': 1, 'neutral': 0, 'negative': -1}.get(sample['sentiment']) for sample in data if sample['sentiment'] in ['positive','neutral','negative']]
         return dataset_dict
