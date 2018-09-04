@@ -1,6 +1,8 @@
 import re
+
 import numpy as np
 import tensorflow as tf
+
 from utils import tokenize_phrase
 
 
@@ -75,4 +77,3 @@ class Embedding:
         self.load_embeddings_from_path()
         self.embedding_dict = {token: self.embedding_dict[token] for token in tokens if token in [*self.embedding_dict]}
         return self.embedding_dict
-

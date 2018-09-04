@@ -3,6 +3,9 @@ import csv
 import pickle
 import spacy
 import time
+import math
+import random
+from statistics import mean
 from utils import keep_token
 from spacy.tokens import Doc
 from spacy.attrs import ORTH # pylint: disable=E0611
@@ -26,13 +29,13 @@ class Dataset(ABC):
             self.set_embedding(embedding)
 
     @abstractmethod
-    def generate_dataset_dictionary(self, mode='debug'):
+    def generate_dataset_dictionary(self, mode):
         pass
 
     def get_all_text_in_dataset(self):
         return set(self.get_dataset_dictionary(mode='train')['sentences']+self.get_dataset_dictionary(mode='eval')['sentences'])
 
-    def get_mapped_features_and_labels(self, mode='debug'):
+    def get_mapped_features_and_labels(self, mode):
         self.load_embedding_from_corpus(self.vocabulary_corpus)
 
         if self.features_labels_save_file_exists(mode):
@@ -47,7 +50,6 @@ class Dataset(ABC):
                     'target': [],
                     'right': []
                 },
-                'maptest': []
             }
             labels = []
 
@@ -87,7 +89,7 @@ class Dataset(ABC):
             right = sentence[offset+len(target.strip()):].strip()
         return left, right
 
-    def get_file(self, mode='debug'):
+    def get_file(self, mode):
         if mode=='train':
             return self.train_file_path
         elif mode=='eval':
@@ -108,7 +110,7 @@ class Dataset(ABC):
     def get_save_file_path(self, mode):
         return os.path.join(self.generated_embedding_directory, 'features_labels_'+mode+'.pkl')
 
-    def get_dataset_dictionary_file_path(self, mode='debug'):
+    def get_dataset_dictionary_file_path(self, mode):
         return os.path.join(self.generated_data_directory, 'raw_dataset_dictionary_'+mode+'.pkl')
 
     def corpus_file_exists(self):
@@ -126,7 +128,7 @@ class Dataset(ABC):
     def features_labels_save_file_exists(self, mode):
         return os.path.exists(self.get_save_file_path(mode))
     
-    def dataset_dictionary_file_exists(self, mode='debug'):
+    def dataset_dictionary_file_exists(self, mode):
         return os.path.exists(self.get_dataset_dictionary_file_path(mode))
 
     def load_features_and_labels_from_save(self, mode):
@@ -160,7 +162,7 @@ class Dataset(ABC):
                     vocabulary_corpus[row['word']]=int(row['count'])
         return vocabulary_corpus
 
-    def load_dataset_dictionary_from_save(self, mode='debug'):
+    def load_dataset_dictionary_from_save(self, mode):
         if self.dataset_dictionary_file_exists(mode):
             with open(self.get_dataset_dictionary_file_path(mode), 'rb') as f:
                 return pickle.load(f)
@@ -225,7 +227,7 @@ class Dataset(ABC):
         else:
             return self.generate_vocabulary_corpus(self.get_all_text_in_dataset())
 
-    def get_dataset_dictionary(self, mode='debug'):
+    def get_dataset_dictionary(self, mode):
         if self.dataset_dictionary_file_exists(mode):
             return self.load_dataset_dictionary_from_save(mode)
         else:

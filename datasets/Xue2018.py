@@ -17,7 +17,7 @@ class Xue2018(Dataset):
         }.get(version, 'all_joined')
         super().__init__(train_file, eval_file, parent_folder, debug_file, embedding, rebuild_corpus)
 
-    def generate_dataset_dictionary(self, mode='debug'):
+    def generate_dataset_dictionary(self, mode):
         dataset_dict = {
             'sentences':[],
             'targets':[],

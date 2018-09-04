@@ -6,7 +6,7 @@ class Saeidi2016(Dataset):
     def __init__(self, train_file='sentihood-train.json', eval_file='sentihood-test.json', debug_file='sentihood-dev.json', parent_folder='', embedding=None, rebuild_corpus=False):
         super().__init__(train_file, eval_file, parent_folder, debug_file, embedding, rebuild_corpus)
 
-    def generate_dataset_dictionary(self, mode='debug'):
+    def generate_dataset_dictionary(self, mode):
         dataset_dict = {
             'sentences':[],
             'targets':[],

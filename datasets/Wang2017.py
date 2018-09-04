@@ -9,7 +9,7 @@ class Wang2017(Dataset):
     def __init__(self, train_file='train_id.txt', eval_file='test_id.txt', debug_file='', parent_folder='', embedding=None, rebuild_corpus=False):
         super().__init__(train_file, eval_file, parent_folder, debug_file, embedding, rebuild_corpus)
 
-    def generate_dataset_dictionary(self, mode='debug'):
+    def generate_dataset_dictionary(self, mode):
         dataset_dict = {
             'sentences':[],
             'targets':[],

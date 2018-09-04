@@ -1,6 +1,9 @@
 import os
 import tensorflow as tf
 import inspect
+import time
+import datetime
+from utils import get_statistics_on_features_labels,change_features_labels_distribution
 from abc import ABC, abstractmethod
 
 class Model(ABC):
@@ -57,6 +60,9 @@ class Model(ABC):
         else:
             features, labels = self.get_features_and_labels(mode='debug')
         self.init_estimator_if_none()
+        run_stats = self.export_statistics(features=features,labels=labels, batch_size=batch_size, steps=steps, train_hooks=hooks)
+        print("Training {0}...".format(self.__class__.__name__))
+        start = time.time()
         self.estimator.train(
             input_fn = lambda: self.train_input_fn(
                 features=features,
@@ -66,6 +72,13 @@ class Model(ABC):
             steps=steps,
             hooks=hooks
         )
+        time_taken = str(datetime.timedelta(seconds=time.time()-start))
+        duration_dict = {
+            'job': 'train',
+            'time': time_taken 
+        }
+        print("Finished training {0} in {1}".format(self.__class__.__name__, time_taken))
+        return {'duration':duration_dict, **run_stats}
 
     def evaluate(self, hooks=None, debug=False):
         if not(debug):
@@ -73,6 +86,9 @@ class Model(ABC):
         else:
             features, labels = self.get_features_and_labels(mode='debug')
         self.init_estimator_if_none()
+        run_stats = self.export_statistics(features=features,labels=labels, eval_hooks=hooks)
+        print("Evaluating {0}...".format(self.__class__.__name__))
+        start = time.time()
         self.estimator.evaluate(
             input_fn = lambda: self.eval_input_fn(
                 features=features,
@@ -80,18 +96,31 @@ class Model(ABC):
             ),
             hooks=hooks
         )
+        time_taken = str(datetime.timedelta(seconds=time.time()-start))
+        print("Finished evaluating {0} in {1}".format(self.__class__.__name__, time_taken))
+        duration_dict = {
+            'job': 'eval',
+            'time': time_taken 
+        }
+        return {'duration':duration_dict, **run_stats}
 
     def train_and_evaluate(self, steps=None, batch_size=None, train_hooks=None, eval_hooks=None):
         batch = batch_size if batch_size!=None else self.params['batch_size']
         train_features, train_labels = self.get_features_and_labels(mode='train')
+        train_features, train_labels = change_features_labels_distribution(features=train_features, labels=train_labels, positive=0.20, neutral=0.70, negative=0.10)
         eval_features, eval_labels = self.get_features_and_labels(mode='eval')
+        eval_features, eval_labels = change_features_labels_distribution(features=eval_features, labels=eval_labels, positive=0.35, neutral=0.20, negative=0.45)
         self.init_estimator_if_none()
+        train_run_stats = self.export_statistics(features=train_features,labels=train_labels, batch_size=batch_size, steps=steps, train_hooks=train_hooks, eval_hooks=eval_hooks)
+        eval_run_stats = self.export_statistics(features=eval_features,labels=eval_labels, batch_size=batch_size, steps=steps, train_hooks=train_hooks, eval_hooks=eval_hooks)
         os.makedirs(self.estimator.eval_dir(), exist_ok=True)
         early_stopping = tf.contrib.estimator.stop_if_no_decrease_hook(
             self.estimator,
             metric_name='loss',
             max_steps_without_decrease=10,
             min_steps=300)
+        print("{0} starting to train and evaluate...".format(self.__class__.__name__))
+        start = time.time()
         tf.estimator.train_and_evaluate(
             estimator=self.estimator,
             train_spec=tf.estimator.TrainSpec(
@@ -112,7 +141,47 @@ class Model(ABC):
                 hooks=eval_hooks
             )
         )
+        time_taken = str(datetime.timedelta(seconds=time.time()-start))
+        print("{0} trained and evaluated in {1}".format(self.__class__.__name__, time_taken))
+        duration_dict = {
+            'job': 'train+eval',
+            'time': time_taken 
+        }
+        return {'duration':duration_dict, **train_run_stats}, {'duration':duration_dict, **eval_run_stats} 
 
+    def export_statistics(self, features, labels, steps=None, batch_size=None, train_hooks=None, eval_hooks=None):
+        dataset_statistics = get_statistics_on_features_labels(features, labels)
+        train_input_fn_source = inspect.getsource(self.train_input_fn)
+        eval_input_fn_source = inspect.getsource(self.eval_input_fn)
+        model_fn_source = inspect.getsource(self.model_fn)
+        model_common_file = os.path.join(os.path.dirname(inspect.getfile(self.__class__)),'common.py')
+        estimator_train_fn_source = inspect.getsource(self.train)
+        estimator_eval_fn_source = inspect.getsource(self.evaluate)
+        estimator_train_eval_fn_source = inspect.getsource(self.train_and_evaluate)
+        if os.path.exists(model_common_file):
+            common_content = open(model_common_file, 'r').read()
+        else:
+            common_content = ''
+        return {
+            'dataset' : dataset_statistics,
+            'steps' : steps,
+            'effective_batch_size': batch_size,
+            'model': {
+                'params': self.params,
+                'train_input_fn': train_input_fn_source,
+                'eval_input_fn': eval_input_fn_source,
+                'model_fn': model_fn_source,
+            },
+            'estimator': {
+                'train_hooks': train_hooks,
+                'eval_hooks': eval_hooks,
+                'train_fn': estimator_train_fn_source,
+                'eval_fn': estimator_eval_fn_source,
+                'train_eval_fn': estimator_train_eval_fn_source,
+            },
+            'common': common_content
+        }
+        
     def initialize_internal_defaults(self):
         self.set_feature_columns(None)
         self.set_params(None)
