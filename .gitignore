@@ -100,9 +100,6 @@ ENV/
 # mypy
 .mypy_cache/
 
-# experiments
-experiments/
-
 # data
 data/cifar-100-python/
 data/glove.twitter.27B.100d.txt

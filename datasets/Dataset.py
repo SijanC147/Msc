@@ -12,8 +12,20 @@ from spacy.attrs import ORTH # pylint: disable=E0611
 from abc import ABC, abstractmethod
 
 class Dataset(ABC):
-
     def __init__(self, train_file_path, eval_file_path, parent_folder='', debug_file_path="", embedding=None, rebuild_corpus=False):
+        """Creates a new dataset based on the specified training and evaluation data files
+        
+        Arguments:
+            ABC {Class} -- makes the class abstract
+            train_file_path {str} -- file path for the data to use when mode=='train'
+            eval_file_path {str} -- file path for the data to use when mode=='eval'
+        
+        Keyword Arguments:
+            parent_folder {str} --  specify further subfolders if the dataset is further stratified (default: {''})
+            debug_file_path {str} -- specify any particular data file used for debugging only (default: {""})
+            embedding {Embedding} -- optional embedding to attach at initialization, can be attached later (default: {None})
+            rebuild_corpus {bool} -- flag to rebuild corpus csv file even if one exists already (default: {False})
+        """
         if len(parent_folder)==0:
             parent_folder = self.__class__.__name__
         else:
@@ -30,12 +42,47 @@ class Dataset(ABC):
 
     @abstractmethod
     def generate_dataset_dictionary(self, mode):
+        """Loads data from raw data files into a dataset dictionary
+        
+            This must be implemented for every new dataset. 
+            All other methods and functionality build on top of this function
+
+            When adding a new dataset, you only need to defined how to load the data into the dataset dictionary 
+            in this function.
+
+            For each new dataset, this function must return a dataset_dictionary in the form of
+            {
+                'sentences':[list of str],
+                'targets':[list of str],
+                'labels':[list of {-1,0,1} for positive, neutral and negative respectively]
+                (optionally)'offsets':[list of int, marking the position where a target starts in the sentence]
+            }
+
+            For sentences with multiple targets, there must be a separate entry in the dictionary for 
+            each (sentence,target|offset,label) trio.
+
+        Arguments:
+            mode {'train','eval','debug'} -- Which raw data file to load from depends on this
+        """
         pass
 
     def get_all_text_in_dataset(self):
+        """Returns list of all unique sentences in dataset.
+        
+        Returns:
+            list -- Unique sentences in dataset
+        """
         return set(self.get_dataset_dictionary(mode='train')['sentences']+self.get_dataset_dictionary(mode='eval')['sentences'])
 
     def get_mapped_features_and_labels(self, mode):
+        """Gets features and labels in form of IDs from word embeddin
+        
+        Arguments:
+            mode {'train','eval','debug'} -- controls features and labels source
+        
+        Returns:
+            (dict, list) -- feature dictionary and labels list
+        """
         self.load_embedding_from_corpus(self.vocabulary_corpus)
 
         if self.features_labels_save_file_exists(mode):
@@ -82,6 +129,18 @@ class Dataset(ABC):
         return features, labels
 
     def get_left_and_right_contexts(self, sentence, target, offset=None):
+        """Gets contexts of target in sentence
+        
+        Arguments:
+            sentence {str} -- Sentence containing target
+            target {str} -- Target in the sentence
+        
+        Keyword Arguments:
+            offset {int} -- Target location instead of the target phrase (default: {None})
+        
+        Returns:
+            (str, str) -- left and right contexts
+        """
         if offset==None:
             left, _, right = sentence.partition(target) 
         else:
@@ -90,6 +149,14 @@ class Dataset(ABC):
         return left, right
 
     def get_file(self, mode):
+        """Retrieves the respective data file for the dataset
+        
+        Arguments:
+            mode {'train','eval','debug'} -- Defines which source file to retrieve 
+        
+        Returns:
+            str -- path to souce file
+        """
         if mode=='train':
             return self.train_file_path
         elif mode=='eval':
@@ -98,9 +165,19 @@ class Dataset(ABC):
             return self.debug_file_path
 
     def initialize_with_embedding(self, embedding):
+        """Initializes embedding settinns for the dataset
+        
+        Arguments:
+            embedding {Embedding} -- the embedding to attach  
+        """
         self.set_embedding(embedding)
 
     def set_embedding(self, embedding):
+        """Sets up the necessary settings based on a provided Embedding
+        
+        Arguments:
+            embedding {Embedding} -- the embedding being attached to the dataset
+        """
         self.embedding = embedding
         self.generated_embedding_directory = os.path.join(self.generated_data_directory, type(self.embedding).__name__, self.embedding.get_alias())
         self.embedding_id_file_path = os.path.join(self.generated_embedding_directory, 'words_to_ids.csv')
@@ -108,30 +185,90 @@ class Dataset(ABC):
         self.partial_embedding_file_path = os.path.join(self.generated_embedding_directory, 'partial_'+self.embedding.get_version()+'.txt')
     
     def get_save_file_path(self, mode):
+        """Generates file name to save obtained features and labels for future re-use
+        
+        Arguments:
+            mode {'train','eval','debug'} -- source of features and labels depends on this
+        
+        Returns:
+            str -- absolute path to save file
+        """
         return os.path.join(self.generated_embedding_directory, 'features_labels_'+mode+'.pkl')
 
     def get_dataset_dictionary_file_path(self, mode):
+        """Get the file path for a saved copy of the data dictionary
+        
+        Arguments:
+            mode {'train','eval','debug'} -- the source of the data dictionary would depend on this
+        
+        Returns:
+            str -- absolute path to the data dictionary file
+        """
         return os.path.join(self.generated_data_directory, 'raw_dataset_dictionary_'+mode+'.pkl')
 
     def corpus_file_exists(self):
+        """Check if a corpus file has been generated for this dataset
+        
+        Returns:
+            bool -- wether the corpus file exists
+        """
         return os.path.isfile(self.corpus_file_path)
 
     def embedding_id_file_exists(self):
+        """Check if a word to id (index in embedding) file exists
+        
+        Returns:
+            bool -- wether the word to id file exists
+        """
         return os.path.exists(self.embedding_id_file_path)
     
     def partial_embedding_file_exists(self):
+        """Check if a partial embedding file has been generated before for reuse
+        
+        Returns:
+            bool -- wether the partial embedding file exists
+        """
         return os.path.exists(self.partial_embedding_file_path)
     
     def projection_labels_file_exists(self):
+        """Checks if a projection file exists, to provide labels for tensorboard embedding projector
+        
+        Returns:
+            bool -- wether the projection label file exists
+        """
         return os.path.exists(self.projection_labels_file_path)
 
     def features_labels_save_file_exists(self, mode):
+        """Checks if a saved version of the features and labels for a mode exists
+        
+        Arguments:
+            mode {'train','eval','debug'} -- the source of the features and labels depend on this
+        
+        Returns:
+            bool -- wether the saved features and labels file exists
+        """
         return os.path.exists(self.get_save_file_path(mode))
     
     def dataset_dictionary_file_exists(self, mode):
+        """Checks if a saved version of the dataset dictionary exists for a specified mode
+        
+        Arguments:
+            mode {'train','eval','debug'} -- the source of the dataset dictionary depends on this 
+        
+        Returns:
+            bool -- wether the dataset dictionary file exists
+        """
         return os.path.exists(self.get_dataset_dictionary_file_path(mode))
 
     def load_features_and_labels_from_save(self, mode):
+        """Loads features and labels for a specific mode from a previous save file
+        
+        Arguments:
+            mode {'train','eval','debug'} -- the features and labels file to load depends on this
+        
+        Returns:
+            (dict, list) -- loaded features dictionary and list of labels
+        """
         if self.features_labels_save_file_exists(mode):
             with open(self.get_save_file_path(mode), 'rb') as f:
                 saved_data = pickle.load(f)
@@ -140,20 +277,38 @@ class Dataset(ABC):
                 return features, labels
 
     def save_features_and_labels(self, mode, features, labels):
-            saved_data = {
-                'features': features,
-                'labels': labels
-            }
+        """Saves features and labels for efficient re-use in future experiments
+        
+        Arguments:
+            mode {'train','eval','debug'} -- appended to the save file name
+            features {dict} -- features to save
+            labels {list of {-1,0,1}} -- corresponding labels to save
+        """
+        saved_data = {
+            'features': features,
+            'labels': labels
+        }
 
-            with open(self.get_save_file_path(mode), 'wb+') as f:
-                pickle.dump(saved_data, f, pickle.HIGHEST_PROTOCOL)
+        with open(self.get_save_file_path(mode), 'wb+') as f:
+            pickle.dump(saved_data, f, pickle.HIGHEST_PROTOCOL)
 
     def save_dataset_dictionary(self, dataset_dictionary, mode):
+        """Saves a dataset dictionary to external file
+        
+        Arguments:
+            dataset_dictionary {dict} -- contains sentences, targets, labels, and possibly offsets
+            mode {'train','eval','debug'} -- appended to the save file name
+        """
         os.makedirs(self.generated_data_directory, exist_ok=True)
         with open(self.get_dataset_dictionary_file_path(mode), 'wb+') as f:
             pickle.dump(dataset_dictionary, f, pickle.HIGHEST_PROTOCOL)
         
     def load_vocabulary_corpus_from_csv(self):
+        """Loads a previously saved corpus of unique token in the dataset
+        
+        Returns:
+            dict -- dictionary of all unique tokens in the dataset
+        """
         vocabulary_corpus = {}
         if self.corpus_file_exists():
             with open(self.corpus_file_path) as csvfile:
@@ -163,11 +318,27 @@ class Dataset(ABC):
         return vocabulary_corpus
 
     def load_dataset_dictionary_from_save(self, mode):
+        """Loads a previously saved dataset dictionary from file
+        
+        Arguments:
+            mode {'train','eval','debug'} -- specifies which file to load from
+        
+        Returns:
+            dict -- dictionary of sentences, targets, labels and possibly offsets
+        """
         if self.dataset_dictionary_file_exists(mode):
             with open(self.get_dataset_dictionary_file_path(mode), 'rb') as f:
                 return pickle.load(f)
     
     def generate_vocabulary_corpus(self, source_documents):
+        """Generates list of all unique tokens in the dataset
+        
+        Arguments:
+            source_documents {list of str} -- all unique sentences in the dataset
+        
+        Returns:
+            dict -- dictionary of all unique tokens in the dataset
+        """
         vocabulary_corpus = {}
 
         nlp = spacy.load('en')
@@ -187,12 +358,22 @@ class Dataset(ABC):
         return vocabulary_corpus
 
     def generate_partial_embedding_file(self, partial_embedding):
+        """Saves a partial embedding file created from the original embedding and tokens in this dataset
+        
+        Arguments:
+            partial_embedding {dict} -- a subset of the original embedding matrix
+        """
         os.makedirs(self.generated_embedding_directory, exist_ok=True)
         with open(self.partial_embedding_file_path, 'w+') as f:
             for word in [*partial_embedding]:
                 f.write(word + ' ' + ' '.join(partial_embedding[word].astype(str)) + '\n')
 
     def generate_projection_labels_file(self, partial_embedding):
+        """Generates the embedding projection labels for tensorboard based on the partial embedding
+        
+        Arguments:
+            partial_embedding {dict} -- a subset of the original embedding
+        """
         os.makedirs(self.generated_embedding_directory, exist_ok=True)
         with open(self.projection_labels_file_path, 'w+') as f:
             f.write('Words')
@@ -200,6 +381,17 @@ class Dataset(ABC):
                 f.write(word + '\n')
 
     def get_word_to_id_dict(self, vocabulary_corpus, debug=False):
+        """Gets a dictionary mapping words to indices in the partial embedding
+        
+        Arguments:
+            vocabulary_corpus {dict} -- the corpus of unique tokens appearing in this dataset
+        
+        Keyword Arguments:
+            debug {bool} -- Only used in special cases where a specific embedding with different indices (for dev) is used (default: {False})
+        
+        Returns:
+            dict -- dictionary of unique tokens and their respective id (index) in the partial embedding
+        """
         token_to_ids_dict = {}
         if self.embedding_id_file_exists() and not(debug):
             with open(self.embedding_id_file_path) as csvfile:
@@ -222,12 +414,28 @@ class Dataset(ABC):
         return token_to_ids_dict
 
     def get_vocabulary_corpus(self, rebuild=False):
+        """Returns the vocabulary corpus from the save file, or rebuilds it from scratch
+        
+        Keyword Arguments:
+            rebuild {bool} -- Wether to rebuild the vocabulary corpus even if a save file exists (default: {False})
+        
+        Returns:
+            dict -- dictionary of all unique tokens in the dataset
+        """
         if self.corpus_file_exists() and not(rebuild):
             return self.load_vocabulary_corpus_from_csv()
         else:
             return self.generate_vocabulary_corpus(self.get_all_text_in_dataset())
 
     def get_dataset_dictionary(self, mode):
+        """Returns the specific data dictionary for a particular mode, from a save file, or generates it otherwise
+        
+        Arguments:
+            mode {'train','eval','debug'} -- the specific mode for the dataset dicitonary, which would be in the file name
+        
+        Returns:
+            dict -- dictionary of sentences, targets, labels and possibly offsets
+        """
         if self.dataset_dictionary_file_exists(mode):
             return self.load_dataset_dictionary_from_save(mode)
         else:
@@ -236,6 +444,15 @@ class Dataset(ABC):
             return dataset_dictionary
 
     def load_embedding_from_corpus(self, vocabulary_corpus, force_rebuild_partial = False, force_rebuild_projection = False):
+        """Returns the partial embedding if it exists in a save file, or builds it from scratch and saves it
+        
+        Arguments:
+            vocabulary_corpus {dict} -- dictionary of unique tokens in the dataset
+        
+        Keyword Arguments:
+            force_rebuild_partial {bool} -- wether to rebuild the partial embedding even if a save file exists (default: {False})
+            force_rebuild_projection {bool} -- wether to rebuild the projection label tsv file even if it already exists (default: {False})
+        """
         if self.partial_embedding_file_exists() and not(force_rebuild_partial):
             partial_embedding_dict = self.embedding.load_embeddings_from_path(path=self.partial_embedding_file_path)
         else:
