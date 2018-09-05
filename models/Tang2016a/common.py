@@ -3,7 +3,7 @@ import tensorflow as tf
 from utils import embed_and_concat, embed_from_ids, embed_target_and_average
 
 shared_params = {
-    'batch_size': 200,
+    'batch_size': 25,
     'max_seq_length' : 140, 
     'n_out_classes' : 3, 
     'learning_rate' : 0.01,
@@ -65,7 +65,7 @@ def tdlstm_input_fn(features, labels, batch_size, embedding, max_seq_length, num
     if batch_size!=None:
         return dataset.apply(tf.contrib.data.shuffle_and_repeat(len(labels))).batch(batch_size=batch_size)
     else:
-        return dataset.shuffle(len(features['sentence'])).batch(batch_size=1)
+        return dataset.batch(batch_size=1)
 
 def tclstm_input_fn(features, labels, batch_size, embedding, max_seq_length, num_out_classes):
     embedding.set_embedding_matrix_variable()
@@ -92,7 +92,7 @@ def tclstm_input_fn(features, labels, batch_size, embedding, max_seq_length, num
     if batch_size!=None:
         return dataset.apply(tf.contrib.data.shuffle_and_repeat(len(labels))).batch(batch_size=batch_size)
     else:
-        return dataset.shuffle(len(features['sentence'])).batch(batch_size=1)
+        return dataset.batch(batch_size=1)
 
 def dual_lstm_model_fn(features, labels, mode, params):
     with tf.variable_scope('left_lstm'):
@@ -102,7 +102,7 @@ def dual_lstm_model_fn(features, labels, mode, params):
         )
 
         _, final_states_left = tf.nn.dynamic_rnn(
-            cell=shared_lstm_cell(params),
+            cell=shared_lstm_cell_with_dropout(params),
             inputs=input_layer,
             sequence_length=sequence_length,
             dtype=tf.float32
@@ -115,7 +115,7 @@ def dual_lstm_model_fn(features, labels, mode, params):
         )
 
         _, final_states_right = tf.nn.dynamic_rnn(
-            cell=shared_lstm_cell(params),
+            cell=shared_lstm_cell_with_dropout(params),
             inputs=input_layer,
             sequence_length=sequence_length,
             dtype=tf.float32
@@ -136,7 +136,7 @@ def dual_lstm_model_fn(features, labels, mode, params):
 
     loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
 
-    accuracy = tf.metrics.accuracy(labels=labels,predictions=predicted_classes,name='acc_op')
+    accuracy = tf.metrics.accuracy(labels=labels,predictions=predicted_classes, name='acc_op')
     recall = tf.metrics.recall(labels=labels, predictions=predicted_classes, name='recall_op')
 
     metrics = {
@@ -157,4 +157,6 @@ def dual_lstm_model_fn(features, labels, mode, params):
 
     train_op = optimizer.minimize(loss, global_step=tf.train.get_global_step())
 
-    return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op)
+    logging_hook = tf.train.LoggingTensorHook({'loss': loss, 'accuracy': accuracy[1]}, every_n_iter=30)
+
+    return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op, training_hooks=[logging_hook])

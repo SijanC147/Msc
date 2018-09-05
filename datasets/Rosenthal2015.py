@@ -19,7 +19,7 @@ class Rosenthal2015(Dataset):
             for row in reader:
                 if row['sentiment'] in ['positive', 'neutral', 'negative']:
                     dataset_dict['sentences'].append(row['sentence'])
-                    dataset_dict['target'].append(row['target'])
+                    dataset_dict['targets'].append(row['target'])
                     dataset_dict['labels'].append({'positive' : 1, 'neutral': 0, 'negative': -1}.get(row['sentiment']))
 
         return dataset_dict

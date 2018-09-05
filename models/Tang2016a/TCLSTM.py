@@ -18,8 +18,8 @@ class TCLSTM(Model):
         super().set_train_input_fn(default_train_input_fn if train_input_fn==None else train_input_fn)        
         
     def set_eval_input_fn(self, eval_input_fn):
-        default_eval_input_fn = lambda features,labels,batch_size=self.params.get('batch_size'): tclstm_input_fn(
-            features, labels, batch_size, embedding=self.embedding, max_seq_length=self.params['max_seq_length'], num_out_classes=self.params['n_out_classes'])
+        default_eval_input_fn = lambda features,labels: tclstm_input_fn(
+            features, labels, batch_size=None, embedding=self.embedding, max_seq_length=self.params['max_seq_length'], num_out_classes=self.params['n_out_classes'])
         super().set_eval_input_fn(default_eval_input_fn if eval_input_fn==None else eval_input_fn)
 
     def set_model_fn(self, model_fn):

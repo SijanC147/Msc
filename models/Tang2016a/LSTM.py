@@ -25,15 +25,13 @@ class LSTM(Model):
 
     def set_model_fn(self, model_fn):
         def default_model_fn(features, labels, mode, params=self.params):
-            head = tf.contrib.estimator.multi_class_head(n_classes=params['n_out_classes'])
-
             input_layer, sequence_length = tf.contrib.feature_column.sequence_input_layer(
                 features=features,
                 feature_columns=params['feature_columns'],
             )
 
             _, final_states = tf.nn.dynamic_rnn(
-                cell=shared_lstm_cell_with_dropout(params),
+                cell=shared_lstm_cell(params),
                 inputs=input_layer,
                 sequence_length=sequence_length,
                 dtype=tf.float32
@@ -43,27 +41,36 @@ class LSTM(Model):
                 inputs=final_states.h, 
                 units=params['n_out_classes'],
                 kernel_initializer=tf.random_uniform_initializer(minval=-0.03,maxval=0.03),
-                bias_initializer=tf.random_uniform_initializer(minval=-0.03,maxval=0.03),
-                activation=None)
+                bias_initializer=tf.random_uniform_initializer(minval=-0.03,maxval=0.03))
+            predicted_classes = tf.argmax(logits, 1)
 
-            if labels is not None:
-                labels = tf.reshape(labels, [-1,1])
+            if mode == tf.estimator.ModeKeys.PREDICT:
+                predictions = {
+                    'class_ids': predicted_classes[:, tf.newaxis],
+                    'probabilities': tf.nn.softmax(logits),
+                    'logits': logits
+                }
+                return tf.estimator.EstimatorSpec(mode, predictions=predictions)
+            
+            loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
+            accuracy = tf.metrics.accuracy(labels=labels, predictions=predicted_classes, name='acc_op')
+
+            metrics = {
+                'accuracy': accuracy
+            }
+
+            tf.summary.scalar('accuracy', accuracy[1])
+            tf.summary.scalar('loss', loss)
+
+            if mode == tf.estimator.ModeKeys.EVAL:
+                return tf.estimator.EstimatorSpec(mode, loss=loss, eval_metric_ops=metrics)
 
             optimizer = tf.train.AdagradOptimizer(learning_rate=params['learning_rate'])
+            train_op = optimizer.minimize(loss, global_step=tf.train.get_global_step())
 
-            tf.summary.scalar('training_accuracy', tf.metrics.accuracy(labels=labels, predictions=tf.argmax(logits,1))[1])
+            logging_hook = tf.train.LoggingTensorHook({'loss': loss, 'accuracy': accuracy[1]}, every_n_iter=30)
 
-            def _train_op_fn(loss):
-                return optimizer.minimize(
-                    loss=loss,
-                    global_step=tf.train.get_global_step())
-
-            return head.create_estimator_spec(
-                features=features,
-                labels=labels,
-                mode=mode,
-                logits=logits,
-                train_op_fn=_train_op_fn)
+            return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op, training_hooks=[logging_hook])
     
         super().set_model_fn(default_model_fn if model_fn==None else model_fn)
 

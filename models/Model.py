@@ -234,18 +234,18 @@ class Model(ABC):
         """
         batch = batch_size if batch_size!=None else self.params['batch_size']
         train_features, train_labels = self.get_features_and_labels(mode='train')
-        train_features, train_labels = change_features_labels_distribution(features=train_features, labels=train_labels, positive=0.20, neutral=0.70, negative=0.10)
+        train_features, train_labels = change_features_labels_distribution(features=train_features, labels=train_labels, positive=0.70, neutral=0.20, negative=0.10)
         eval_features, eval_labels = self.get_features_and_labels(mode='eval')
         eval_features, eval_labels = change_features_labels_distribution(features=eval_features, labels=eval_labels, positive=0.35, neutral=0.20, negative=0.45)
         self.init_estimator_if_none()
         train_run_stats = self.export_statistics(features=train_features,labels=train_labels, batch_size=batch_size, steps=steps, train_hooks=train_hooks, eval_hooks=eval_hooks)
         eval_run_stats = self.export_statistics(features=eval_features,labels=eval_labels, batch_size=batch_size, steps=steps, train_hooks=train_hooks, eval_hooks=eval_hooks)
-        os.makedirs(self.estimator.eval_dir(), exist_ok=True)
-        early_stopping = tf.contrib.estimator.stop_if_no_decrease_hook(
-            self.estimator,
-            metric_name='loss',
-            max_steps_without_decrease=10,
-            min_steps=300)
+        # os.makedirs(self.estimator.eval_dir(), exist_ok=True)
+        # early_stopping = tf.contrib.estimator.stop_if_no_decrease_hook(
+        #     self.estimator,
+        #     metric_name='loss',
+        #     max_steps_without_decrease=10,
+        #     min_steps=300)
         print("{0} starting to train and evaluate...".format(self.__class__.__name__))
         start = time.time()
         tf.estimator.train_and_evaluate(
@@ -257,7 +257,8 @@ class Model(ABC):
                     batch_size=batch
                 ),
                 max_steps=steps,
-                hooks=[early_stopping] if train_hooks==None else [early_stopping]+train_hooks
+                # hooks=[early_stopping] if train_hooks==None else [early_stopping]+train_hooks
+                hooks=train_hooks
             ),
             eval_spec=tf.estimator.EvalSpec(
                 input_fn = lambda: self.eval_input_fn(
