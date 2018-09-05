@@ -68,9 +68,15 @@ def random_input_fn(features, labels, batch_size, embedding, max_seq_length, num
     else:
         return dataset.shuffle(len(features['sentence'])).batch(batch_size=1)
 
-def change_features_labels_distribution(features, labels, positive, neutral, negative):
+def change_features_labels_distribution(features, labels, distribution):
+    if type(distribution)==list:
+        assert (len(distribution)==3), "distribution must have exactly 3 values for positive, neutral and negative \n len({0}) = {1}".format(distribution, len(distribution))
+        target_dists = distribution 
+    elif type(distribution)==dict:
+        assert ('positive' in distribution and 'neutral' in distribution and 'negative' in distribution), "Invalid distribution dictionary, needs to have positive, neutral and negative keys \n {0}".format(distribution)
+        target_dists = [distribution['positive'], distribution['neutral'], distribution['negative']]
+
     counts = [len([l for l in labels if l==1]), len([l for l in labels if l==0]), len([l for l in labels if l==-1])]
-    target_dists = [positive, neutral, negative]
     target_counts = [0,0,0]
 
     smallest_count_indices = [i for i,x in enumerate(counts) if x==min(counts)]

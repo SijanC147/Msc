@@ -147,7 +147,7 @@ class Model(ABC):
             model_dir=self.model_dir
         )
 
-    def train(self, steps, batch_size=None, hooks=None, debug=False):
+    def train(self, steps, batch_size=None, hooks=None, debug=False, label_distribution=None):
         """Run a training job on the model estimator
         
         Arguments:
@@ -163,9 +163,9 @@ class Model(ABC):
         """
         batch = batch_size if batch_size!=None else self.params['batch_size']
         if not(debug):
-            features, labels = self.get_features_and_labels(mode='train')
+            features, labels = self.get_features_and_labels(mode='train', label_distribution=label_distribution)
         else:
-            features, labels = self.get_features_and_labels(mode='debug')
+            features, labels = self.get_features_and_labels(mode='debug', label_distribution=label_distribution)
         self.init_estimator_if_none()
         run_stats = self.export_statistics(features=features,labels=labels, batch_size=batch_size, steps=steps, train_hooks=hooks)
         print("Training {0}...".format(self.__class__.__name__))
@@ -187,7 +187,7 @@ class Model(ABC):
         print("Finished training {0} in {1}".format(self.__class__.__name__, time_taken))
         return {'duration':duration_dict, **run_stats}
 
-    def evaluate(self, hooks=None, debug=False):
+    def evaluate(self, hooks=None, debug=False, label_distribution=None):
         """Run an evaluation job on the model estimator, useless if the model has not been trained
         
         Keyword Arguments:
@@ -198,9 +198,9 @@ class Model(ABC):
             dict -- dictionary of statistics obtained from the evaaluation process
         """
         if not(debug):
-            features, labels = self.get_features_and_labels(mode='eval')
+            features, labels = self.get_features_and_labels(mode='eval', label_distribution=label_distribution)
         else:
-            features, labels = self.get_features_and_labels(mode='debug')
+            features, labels = self.get_features_and_labels(mode='debug', label_distribution=label_distribution)
         self.init_estimator_if_none()
         run_stats = self.export_statistics(features=features,labels=labels, eval_hooks=hooks)
         print("Evaluating {0}...".format(self.__class__.__name__))
@@ -220,7 +220,7 @@ class Model(ABC):
         }
         return {'duration':duration_dict, **run_stats}
 
-    def train_and_evaluate(self, steps=None, batch_size=None, train_hooks=None, eval_hooks=None):
+    def train_and_evaluate(self, steps=None, batch_size=None, train_hooks=None, eval_hooks=None, train_distribution=None, eval_distribution=None):
         """Run a training job followed by an evaluation job on the model estimator
         
         Keyword Arguments:
@@ -233,10 +233,8 @@ class Model(ABC):
             (dict, dict) -- two separate dictionaries of statistics with training, and evaluation statistics
         """
         batch = batch_size if batch_size!=None else self.params['batch_size']
-        train_features, train_labels = self.get_features_and_labels(mode='train')
-        train_features, train_labels = change_features_labels_distribution(features=train_features, labels=train_labels, positive=0.70, neutral=0.20, negative=0.10)
-        eval_features, eval_labels = self.get_features_and_labels(mode='eval')
-        eval_features, eval_labels = change_features_labels_distribution(features=eval_features, labels=eval_labels, positive=0.35, neutral=0.20, negative=0.45)
+        train_features, train_labels = self.get_features_and_labels(mode='train', label_distribution=train_distribution)
+        eval_features, eval_labels = self.get_features_and_labels(mode='eval', label_distribution=eval_distribution)
         self.init_estimator_if_none()
         train_run_stats = self.export_statistics(features=train_features,labels=train_labels, batch_size=batch_size, steps=steps, train_hooks=train_hooks, eval_hooks=eval_hooks)
         eval_run_stats = self.export_statistics(features=eval_features,labels=eval_labels, batch_size=batch_size, steps=steps, train_hooks=train_hooks, eval_hooks=eval_hooks)
@@ -336,7 +334,7 @@ class Model(ABC):
         self.set_eval_input_fn(None)
         self.set_model_fn(None) 
 
-    def get_features_and_labels(self, mode):
+    def get_features_and_labels(self, mode, label_distribution=None):
         """Get features and labels from the dataset for a particular mode
         
         Arguments:
@@ -345,5 +343,8 @@ class Model(ABC):
         Returns:
             (dict, list) -- dictionary of features and list of corresponding labels
         """
-        return self.dataset.get_mapped_features_and_labels(mode)
+        features, labels = self.dataset.get_mapped_features_and_labels(mode)
+        if label_distribution!=None:
+            features, labels = change_features_labels_distribution(features, labels, label_distribution)
+        return features, labels
     
