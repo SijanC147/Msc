@@ -112,13 +112,19 @@ class Dataset(ABC):
                 label = int(dataset_dict['labels'][index].strip()) if type(dataset_dict['labels'][index])==str else dataset_dict['labels'][index]
 
                 features['sentence'].append(sentence)
-                features['sentence_length'].append(len(sentence))
                 features['target'].append(target)
                 labels.append(label)
                 left_context, right_context = self.get_left_and_right_contexts(sentence=sentence, target=target, offset=dataset_dict.get('offset')) 
-                features['mappings']['left'].append(self.embedding.map_embedding_ids(left_context.strip(), token_to_ids_dict=token_to_ids_dict))
-                features['mappings']['right'].append(self.embedding.map_embedding_ids(right_context.strip(), token_to_ids_dict=token_to_ids_dict))
-                features['mappings']['target'].append(self.embedding.map_embedding_ids(target, token_to_ids_dict=token_to_ids_dict))
+
+                left_mapping = self.embedding.map_embedding_ids(left_context.strip(), token_to_ids_dict=token_to_ids_dict)
+                target_mapping = self.embedding.map_embedding_ids(target, token_to_ids_dict=token_to_ids_dict)
+                right_mapping = self.embedding.map_embedding_ids(right_context.strip(), token_to_ids_dict=token_to_ids_dict)
+
+                features['sentence_length'].append(len(left_mapping+target_mapping+right_mapping))
+
+                features['mappings']['left'].append(left_mapping)
+                features['mappings']['target'].append(target_mapping)
+                features['mappings']['right'].append(right_mapping)
 
                 total_time += (time.time()-start)
                 if(index%60==0):
