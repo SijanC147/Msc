@@ -141,10 +141,12 @@ class Model(ABC):
         The internal settings for the model MUST have been initialized before this is called
         either to their default, or the setter respective functions
         """
+        myconfig = tf.estimator.RunConfig(tf_random_seed=1234)
         self.estimator = tf.estimator.Estimator(
             model_fn=self.model_fn,
             params={'feature_columns': self.feature_columns, **self.params},
-            model_dir=self.model_dir
+            model_dir=self.model_dir,
+            config=myconfig
         )
 
     def train(self, steps, batch_size=None, hooks=None, debug=False, label_distribution=None):

@@ -7,7 +7,7 @@ from embeddings.GloVe import GloVe
 from datasets.Dong2014 import Dong2014
 
 class Experiment():
-    def __init__(self, dataset, embedding, model, make_repeatable=True, continue_training=False, custom_tag='', debug=False):
+    def __init__(self, dataset, embedding, model, continue_training=False, custom_tag='', debug=False):
         """Create a new experiment
         
         Arguments:
@@ -16,13 +16,10 @@ class Experiment():
             model {Model} -- model to use for the experiment
         
         Keyword Arguments:
-            make_repeatable {bool} -- whether to set a seed for reproduceable results (default: {True})
             continue_training {bool} -- whether this is a continuation on a previous model training (default: {False})
             custom_tag {str} -- a custom string that can be appended to the experiment directory (default: {''})
             debug {bool} -- flag to override the provided embedding and datasets for the debug instance, since I only have one debug-compatible embedding and dataset (default: {False})
         """
-        if make_repeatable:
-            tf.set_random_seed(1)
         if debug:
             self.embedding = GloVe(alias='twitter', version='debug')
             self.dataset = Dong2014()

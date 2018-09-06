@@ -3,8 +3,8 @@ import tensorflow as tf
 from utils import embed_and_concat, embed_from_ids, embed_target_and_average
 
 shared_params = {
-    'batch_size': 25,
-    'max_seq_length' : 140, 
+    'batch_size': 100,
+    'max_seq_length' : 85, 
     'n_out_classes' : 3, 
     'learning_rate' : 0.01,
     'keep_prob' : 0.8,
@@ -28,17 +28,17 @@ def lstm_input_fn(features, labels, batch_size, embedding, max_seq_length, num_o
 
     zipped_features = tf.data.Dataset.zip((left_contexts, targets, right_contexts))
     embedded_features = zipped_features.map(embed_and_concat)
-    sparse_features = embedded_features.apply(tf.contrib.data.dense_to_sparse_batch(batch_size=1, row_shape=[max_seq_length,embedding.get_embedding_dim()]))
-    sparse_features_dict = tf.data.Dataset.zip(({'x' : sparse_features})) 
+
+    embedded_features_dict = tf.data.Dataset.zip(({'x' : embedded_features})) 
 
     labels_dataset = tf.data.Dataset.from_tensor_slices([label+1 for label in labels])
 
-    dataset = tf.data.Dataset.zip((sparse_features_dict, labels_dataset))
+    dataset = tf.data.Dataset.zip((embedded_features_dict, labels_dataset))
 
     if batch_size!=None:
-        return dataset.apply(tf.contrib.data.shuffle_and_repeat(len(labels))).batch(batch_size=batch_size)
+        return dataset.apply(tf.contrib.data.shuffle_and_repeat(len(labels))).padded_batch(batch_size=batch_size, padded_shapes=(({'x': [max_seq_length, embedding.get_embedding_dim()]}), []))
     else:
-        return dataset.batch(batch_size=1)
+        return dataset.padded_batch(batch_size=1, padded_shapes=(({'x': [max_seq_length, embedding.get_embedding_dim()]}), []))
 
 def tdlstm_input_fn(features, labels, batch_size, embedding, max_seq_length, num_out_classes):
     embedding.set_embedding_matrix_variable()
@@ -54,16 +54,14 @@ def tdlstm_input_fn(features, labels, batch_size, embedding, max_seq_length, num
     left_context_with_target = tf.data.Dataset.zip((embedded_left_contexts, embedded_targets)).map(lambda left, target: tf.concat([left, target], axis=0))
     right_context_with_target = tf.data.Dataset.zip((embedded_right_contexts, embedded_targets)).map(lambda right, target: tf.concat([right, target], axis=0))
 
-    sparse_features_left = left_context_with_target.apply(tf.contrib.data.dense_to_sparse_batch(batch_size=1, row_shape=[max_seq_length,embedding.get_embedding_dim()]))
-    sparse_features_right = right_context_with_target.apply(tf.contrib.data.dense_to_sparse_batch(batch_size=1, row_shape=[max_seq_length,embedding.get_embedding_dim()]))
-    sparse_features_dict = tf.data.Dataset.zip(({'left': {'x' : sparse_features_left}, 'right': {'x' : sparse_features_right}})) 
+    sparse_features_dict = tf.data.Dataset.zip(({'left': {'x' : left_context_with_target}, 'right': {'x' : right_context_with_target}})) 
 
     labels_dataset = tf.data.Dataset.from_tensor_slices([label+1 for label in labels])
 
     dataset = tf.data.Dataset.zip((sparse_features_dict, labels_dataset))
 
     if batch_size!=None:
-        return dataset.apply(tf.contrib.data.shuffle_and_repeat(len(labels))).batch(batch_size=batch_size)
+        return dataset.apply(tf.contrib.data.shuffle_and_repeat(len(labels))).padded_batch(batch_size=batch_size, padded_shapes=(({'left': {'x': [max_seq_length, embedding.get_embedding_dim()]}, 'right': {'x': [max_seq_length, embedding.get_embedding_dim()]}}), []))
     else:
         return dataset.batch(batch_size=1)
 
@@ -96,10 +94,13 @@ def tclstm_input_fn(features, labels, batch_size, embedding, max_seq_length, num
 
 def dual_lstm_model_fn(features, labels, mode, params):
     with tf.variable_scope('left_lstm'):
+        features['left']['x'] = tf.contrib.layers.dense_to_sparse(features['left']['x'])
         input_layer, sequence_length = tf.contrib.feature_column.sequence_input_layer(
             features=features['left'],
             feature_columns=params['feature_columns']
         )
+
+        sequence_length = tf.Print(input_=sequence_length, data=[sequence_length], message='Seq length: ')
 
         _, final_states_left = tf.nn.dynamic_rnn(
             cell=shared_lstm_cell_with_dropout(params),
@@ -109,10 +110,13 @@ def dual_lstm_model_fn(features, labels, mode, params):
         )
 
     with tf.variable_scope('right_lstm'):
+        features['right']['x'] = tf.contrib.layers.dense_to_sparse(features['right']['x'])
         input_layer, sequence_length = tf.contrib.feature_column.sequence_input_layer(
             features=features['right'],
             feature_columns=params['feature_columns']
         )
+
+        sequence_length = tf.Print(input_=sequence_length, data=[sequence_length], message='Seq length: ')
 
         _, final_states_right = tf.nn.dynamic_rnn(
             cell=shared_lstm_cell_with_dropout(params),
@@ -157,6 +161,6 @@ def dual_lstm_model_fn(features, labels, mode, params):
 
     train_op = optimizer.minimize(loss, global_step=tf.train.get_global_step())
 
-    logging_hook = tf.train.LoggingTensorHook({'loss': loss, 'accuracy': accuracy[1]}, every_n_iter=30)
+    logging_hook = tf.train.LoggingTensorHook({'loss': loss, 'accuracy': accuracy[1]}, every_n_iter=50)
 
     return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op, training_hooks=[logging_hook])
