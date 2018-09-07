@@ -239,7 +239,10 @@ class Model(ABC):
         Returns:
             (dict, dict) -- two separate dictionaries of statistics with training, and evaluation statistics
         """
-        batch = batch_size if batch_size!=None else self.params['batch_size']
+
+        if batch_size!=None and batch_size!=self.params['batch_size']:
+            self.params['batch_size']=batch_size
+
         train_features, train_labels = self.get_features_and_labels(mode='train', label_distribution=train_distribution)
         eval_features, eval_labels = self.get_features_and_labels(mode='eval', label_distribution=eval_distribution)
         self.init_estimator_if_none()
@@ -259,7 +262,7 @@ class Model(ABC):
                 input_fn = lambda: self.train_input_fn(
                     features=train_features,
                     labels=train_labels,
-                    batch_size=batch
+                    batch_size=self.params['batch_size']
                 ),
                 max_steps=steps,
                 # hooks=[early_stopping] if train_hooks==None else [early_stopping]+train_hooks
