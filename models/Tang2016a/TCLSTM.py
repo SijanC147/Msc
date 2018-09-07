@@ -57,19 +57,21 @@ class TCLSTM(Model):
                         axis=1,
                         keepdims=True)
                 left_inputs = tf.stack(
-                    values=[left_inputs,tf.ones([params['batch_size'],params['max_seq_length'],params['embedding_dim']])*mean_target_embedding],
+                    # values=[left_inputs,tf.ones([tf.shape(left_inputs)[0],params['max_seq_length'],params['embedding_dim']])*mean_target_embedding],
+                    values=[left_inputs,tf.ones(tf.shape(left_inputs))*mean_target_embedding],
                     axis=2
                 )
                 left_inputs = tf.reshape(
                     tensor=left_inputs, 
-                    shape=[params['batch_size'],params['max_seq_length'],-1])
+                    shape=[-1,params['max_seq_length'],2*params['embedding_dim']])
                 right_inputs = tf.stack(
-                    values=[right_inputs,tf.ones([params['batch_size'],params['max_seq_length'],params['embedding_dim']])*mean_target_embedding],
+                    # values=[right_inputs,tf.ones([tf.shape(right_inputs)[0],params['max_seq_length'],params['embedding_dim']])*mean_target_embedding],
+                    values=[right_inputs,tf.ones(tf.shape(right_inputs))*mean_target_embedding],
                     axis=2
                 )
                 right_inputs = tf.reshape(
                     tensor=right_inputs, 
-                    shape=[params['batch_size'],params['max_seq_length'],-1])
+                    shape=[-1,params['max_seq_length'],2*params['embedding_dim']])
 
             
             with tf.variable_scope('left_lstm'):

@@ -15,9 +15,9 @@ from models.Tang2016a.TCLSTM import TCLSTM
 
 experiment = Experiment(
     dataset=Dong2014(),
-    embedding=GloVe(alias='twitter', version='200'),
+    embedding=GloVe(alias='twitter', version='25'),
     model=TCLSTM())
-experiment.run(job='train+eval', steps=10)
+experiment.run(job='train+eval', steps=1000)
 
 # experiment.run(
 #     job='train', 
