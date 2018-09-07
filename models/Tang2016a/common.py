@@ -3,16 +3,13 @@ from tensorflow.python.keras.preprocessing import sequence # pylint: disable=E06
 
 from utils import embed_and_concat, embed_from_ids, embed_target_and_average
 
-shared_params = lambda embedding: {
+shared_params = {
     'batch_size': 200,
     'max_seq_length' : 85, 
     'n_out_classes' : 3, 
-    'learning_rate' : 0.1,
+    'learning_rate' : 0.01,
     'keep_prob' : 0.8,
     'hidden_units' : 200,
-    'embedding_initializer': embedding.get_tf_embedding_initializer(),
-    'vocab_size': embedding.get_vocab_size(),
-    'embedding_dim': embedding.get_embedding_dim()
     }
 
 shared_feature_columns = [
@@ -31,7 +28,7 @@ def lstm_input_fn(features, labels, batch_size, max_seq_length):
     sentences = sequence.pad_sequences(sequences=sentences, maxlen=max_seq_length, truncating='post', padding='post', value=0)
     
     dataset = tf.data.Dataset.from_tensor_slices((sentences, sens_lens, labels))
-    dataset = dataset.shuffle(buffer_size=len(sentences))
+    dataset = dataset.shuffle(buffer_size=len(labels))
 
     if batch_size==None:
         dataset = dataset.batch(batch_size=1)
@@ -46,30 +43,32 @@ def lstm_input_fn(features, labels, batch_size, max_seq_length):
     iterator = dataset.make_one_shot_iterator()
     return iterator.get_next()
 
-def tdlstm_input_fn(features, labels, batch_size, embedding, max_seq_length, num_out_classes):
-    embedding.set_embedding_matrix_variable()
+def tdlstm_input_fn(features, labels, batch_size, max_seq_length):
+    left_contexts = [l+t for l,t in zip(features['mappings']['left'],features['mappings']['target'])]
+    left_contexts_len = [len(left_context) for left_context in left_contexts]
+    left_contexts = sequence.pad_sequences(sequences=left_contexts, maxlen=max_seq_length, truncating='post', padding='post', value=0)
 
-    left_contexts =  tf.data.Dataset.from_generator(lambda: features['mappings']['left'], output_shapes=[None], output_types=tf.int32)
-    targets = tf.data.Dataset.from_generator(lambda: features['mappings']['target'], output_shapes=[None], output_types=tf.int32)
-    right_contexts = tf.data.Dataset.from_generator(lambda: features['mappings']['right'], output_shapes=[None], output_types=tf.int32)
+    right_contexts = [list(reversed(t+r)) for t,r in zip(features['mappings']['target'],features['mappings']['right'])]
+    right_contexts_len = [len(right_context) for right_context in right_contexts]
+    right_contexts = sequence.pad_sequences(sequences=right_contexts, maxlen=max_seq_length, truncating='post', padding='post', value=0)
 
-    embedded_left_contexts = left_contexts.map(embed_from_ids)
-    embedded_targets = targets.map(embed_from_ids)
-    embedded_right_contexts = right_contexts.map(lambda token: tf.reverse(token, axis=[0])).map(embed_from_ids)
+    labels = [label+1 for label in labels]
+    
+    dataset = tf.data.Dataset.from_tensor_slices((left_contexts, left_contexts_len, right_contexts, right_contexts_len, labels))
+    dataset = dataset.shuffle(buffer_size=len(labels))
 
-    left_context_with_target = tf.data.Dataset.zip((embedded_left_contexts, embedded_targets)).map(lambda left, target: tf.concat([left, target], axis=0))
-    right_context_with_target = tf.data.Dataset.zip((embedded_right_contexts, embedded_targets)).map(lambda right, target: tf.concat([right, target], axis=0))
+    if batch_size==None:
+        dataset = dataset.batch(batch_size=1)
+    else:
+        dataset = dataset.batch(batch_size=batch_size)
 
-    sparse_features_dict = tf.data.Dataset.zip(({'left': {'x' : left_context_with_target}, 'right': {'x' : right_context_with_target}})) 
-
-    labels_dataset = tf.data.Dataset.from_tensor_slices([label+1 for label in labels])
-
-    dataset = tf.data.Dataset.zip((sparse_features_dict, labels_dataset))
+    dataset = dataset.map(lambda left,left_len,right,right_len,label: ({'left': {'x': left, 'len': left_len}, 'right': {'x': right, 'len': right_len}}, label))
 
     if batch_size!=None:
-        return dataset.apply(tf.contrib.data.shuffle_and_repeat(len(labels))).padded_batch(batch_size=batch_size, padded_shapes=(({'left': {'x': [max_seq_length, embedding.get_embedding_dim()]}, 'right': {'x': [max_seq_length, embedding.get_embedding_dim()]}}), []))
-    else:
-        return dataset.batch(batch_size=1)
+        dataset = dataset.repeat()
+
+    iterator = dataset.make_one_shot_iterator()
+    return iterator.get_next()
 
 def tclstm_input_fn(features, labels, batch_size, embedding, max_seq_length, num_out_classes):
     embedding.set_embedding_matrix_variable()

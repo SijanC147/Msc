@@ -6,7 +6,7 @@ from utils import random_input_fn
 class LSTM(Model):
 
     def set_params(self, params):
-        default_params = shared_params(self.embedding)
+        default_params = shared_params
         super().set_params(default_params if params==None else params)
 
     def set_feature_columns(self, feature_columns):
