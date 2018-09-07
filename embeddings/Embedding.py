@@ -1,4 +1,5 @@
 import re
+import os
 
 import numpy as np
 import tensorflow as tf
@@ -8,7 +9,7 @@ from utils import tokenize_phrase
 
 class Embedding:
 
-    def __init__(self, path, alias, version):
+    def __init__(self, path, alias, version, oov_embedding=None):
         """Create a new embedding
         
         Arguments:
@@ -18,8 +19,16 @@ class Embedding:
         """
         self.alias = alias
         self.version = version
-        self.path = path
+        self.default_path = path
         self.embedding_dict = {}
+        if oov_embedding==None:
+            self.oov_embedding = lambda embedding_dim: np.random.uniform(low=-1,high=1,size=embedding_dim)
+        else:
+            self.oov_embedding = oov_embedding
+    
+    def init_partial_embedding_if_exists(self, partial_embedding_path):
+        if os.path.exists(partial_embedding_path):
+            self.load_embeddings_from_path(path=partial_embedding_path) 
 
     def load_embeddings_from_path(self, path='default'):
         """Populate the embedding dictionary from the external data file
@@ -33,16 +42,32 @@ class Embedding:
         if path!='default':
             load_path = path 
         else:
-            load_path = 'embeddings/data/'+self.path
-
+            load_path = os.path.join('embeddings','data', self.default_path)
+        
         with open(load_path, "r", encoding='utf-8') as f:
             for line in f:
                 values = line.strip().split()
                 word = values[0]
                 embedding = np.asarray(values[1:], dtype='float32')
                 self.embedding_dict[word] = embedding
-        
+
+        self.embedding_dim = int((self.get_embedding_vectors().size)/self.get_vocab_size())
+
+        self.add_embedding_flags_to_embedding_dict()
+
         return self.embedding_dict
+
+    def get_tf_embedding_initializer(self):
+        def embedding_initializer(shape=(self.get_vocab_size(), self.get_embedding_dim()), dtype=tf.float32, partition_info=None):
+            return np.asarray([self.embedding_dict[word] for word in [*self.embedding_dict]])
+        return embedding_initializer
+
+    def add_embedding_flags_to_embedding_dict(self):
+        self.embedding_dict = {
+            '<PAD>': np.zeros(shape=self.embedding_dim),
+            '<OOV>': self.oov_embedding(embedding_dim=self.embedding_dim),
+            **self.embedding_dict
+        }
 
     def get_alias(self):
         """Returns the alias value for the embedding.
@@ -98,7 +123,7 @@ class Embedding:
         Returns:
             int -- embedding dimension of the embedding matrix
         """
-        return int((self.get_embedding_vectors().size)/self.get_vocab_size())
+        return self.embedding_dim
 
     def set_embedding_matrix_variable(self):
         """Initializes the embedding matrix on the TensorFlow graph in a SHARED scope
@@ -111,7 +136,7 @@ class Embedding:
         
         return embedding_matrix
 
-    def map_embedding_ids(self, phrase, token_to_ids_dict={}):
+    def map_embedding_ids(self, phrase, word_to_ids_dict={}):
         """Maps a phrase of tokens to IDs (indices) in the embedding matrix
         
         Arguments:
@@ -125,13 +150,15 @@ class Embedding:
         """
         phrase = str(phrase, 'utf-8') if type(phrase)!=str else phrase
 
-        if len(token_to_ids_dict)==0:
-            return list([*self.embedding_dict].index(token) for token in tokenize_phrase(phrase.lower()) if token in [*self.embedding_dict])
+        if len(word_to_ids_dict)==0:
+            return list([*self.embedding_dict].index(word) if word in [*self.embedding_dict] else [*self.embedding_dict].index('<OOV>') for word in tokenize_phrase(phrase.lower()))
         else:
-            return list(token_to_ids_dict[token] for token in tokenize_phrase(phrase.lower()) if token in [*token_to_ids_dict])
+            return list(word_to_ids_dict[word] for word in tokenize_phrase(phrase.lower()) if word in [*word_to_ids_dict])
 
-    def map_token_ids_dict(self, tokens):
+    def get_word_to_ids_dict(self, words):
         """Get dictionary of token IDs indexed by the token text
+
+        Used to build word to id dictionary for a dataset
         
         Arguments:
             tokens {list} -- list of tokens to map to ID in the embedding matrix
@@ -139,29 +166,7 @@ class Embedding:
         Returns:
             dict -- dictionary of IDs indexed by the token
         """
-        return {token: [*self.embedding_dict].index(token) for token in tokens if token in [*self.embedding_dict]}
-
-    def map_token_ids_list(self, tokens):
-        """Get list of IDs (indices) of each token in the embedding matrix
-        
-        Arguments:
-            tokens {list} -- tokens to map to IDs 
-        
-        Returns:
-            list -- list of IDs of the provided tokens
-        """
-        return list([*self.embedding_dict].index(token) for token in tokens if token in [*self.embedding_dict])
-
-    def map_token_embeddings(self, tokens):
-        """Get list embedding vectors for tokens
-        
-        Arguments:
-            tokens {list} -- tokens to embed
-        
-        Returns:
-            list -- embeddings for tokens based on the mebedding matrix
-        """
-        return list(self.embedding_dict[token] for token in tokens if token in [*self.embedding_dict])
+        return {word: [*self.embedding_dict].index(word) if word in [*self.embedding_dict] else [*self.embedding_dict].index('<OOV>') for word in words }
 
     def filter_on_corpus(self, tokens):
         """Filter a large embedding on a subset of tokens to speed up lookup performance
@@ -172,6 +177,7 @@ class Embedding:
         Returns:
             dict -- dictionary of the partial embedding {word:embedding} based on the provided tokens
         """
-        self.load_embeddings_from_path()
+        self.load_embeddings_from_path(path='default')
         self.embedding_dict = {token: self.embedding_dict[token] for token in tokens if token in [*self.embedding_dict]}
+        self.add_embedding_flags_to_embedding_dict()
         return self.embedding_dict

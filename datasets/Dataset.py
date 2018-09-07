@@ -100,7 +100,7 @@ class Dataset(ABC):
             }
             labels = []
 
-            token_to_ids_dict = self.get_word_to_id_dict(self.vocabulary_corpus, debug=(mode=='debug'))
+            word_to_ids_dict = self.get_word_to_id_dict(self.vocabulary_corpus, debug=(mode=='debug'))
             dataset_dict = self.get_dataset_dictionary(mode=mode)
             total_time = 0
             for index in range(len(dataset_dict['sentences'])):
@@ -116,9 +116,9 @@ class Dataset(ABC):
                 labels.append(label)
                 left_context, right_context = self.get_left_and_right_contexts(sentence=sentence, target=target, offset=dataset_dict.get('offset')) 
 
-                left_mapping = self.embedding.map_embedding_ids(left_context.strip(), token_to_ids_dict=token_to_ids_dict)
-                target_mapping = self.embedding.map_embedding_ids(target, token_to_ids_dict=token_to_ids_dict)
-                right_mapping = self.embedding.map_embedding_ids(right_context.strip(), token_to_ids_dict=token_to_ids_dict)
+                left_mapping = self.embedding.map_embedding_ids(left_context.strip(), word_to_ids_dict=word_to_ids_dict)
+                target_mapping = self.embedding.map_embedding_ids(target, word_to_ids_dict=word_to_ids_dict)
+                right_mapping = self.embedding.map_embedding_ids(right_context.strip(), word_to_ids_dict=word_to_ids_dict)
 
                 features['sentence_length'].append(len(left_mapping+target_mapping+right_mapping))
 
@@ -189,6 +189,7 @@ class Dataset(ABC):
         self.embedding_id_file_path = os.path.join(self.generated_embedding_directory, 'words_to_ids.csv')
         self.projection_labels_file_path = os.path.join(self.generated_embedding_directory, 'tensorboard_projection_labels.tsv')
         self.partial_embedding_file_path = os.path.join(self.generated_embedding_directory, 'partial_'+self.embedding.get_version()+'.txt')
+        self.embedding.init_partial_embedding_if_exists(partial_embedding_path=self.partial_embedding_file_path)
     
     def get_save_file_path(self, mode):
         """Generates file name to save obtained features and labels for future re-use
@@ -372,7 +373,8 @@ class Dataset(ABC):
         os.makedirs(self.generated_embedding_directory, exist_ok=True)
         with open(self.partial_embedding_file_path, 'w+') as f:
             for word in [*partial_embedding]:
-                f.write(word + ' ' + ' '.join(partial_embedding[word].astype(str)) + '\n')
+                if word!='<OOV>' and word!='<PAD>':
+                    f.write(word + ' ' + ' '.join(partial_embedding[word].astype(str)) + '\n')
 
     def generate_projection_labels_file(self, partial_embedding):
         """Generates the embedding projection labels for tensorboard based on the partial embedding
@@ -407,7 +409,7 @@ class Dataset(ABC):
         else:
             print('Building token to ids dict...')
             start = time.time()
-            token_to_ids_dict = self.embedding.map_token_ids_dict(vocabulary_corpus)
+            token_to_ids_dict = self.embedding.get_word_to_ids_dict(vocabulary_corpus)
             print('Built token to ids dict in: ' + str(time.time()-start))
             if not(debug):
                 os.makedirs(self.generated_embedding_directory, exist_ok=True)

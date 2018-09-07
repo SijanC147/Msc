@@ -1,14 +1,18 @@
 import tensorflow as tf
+from tensorflow.python.keras.preprocessing import sequence # pylint: disable=E0611
 
 from utils import embed_and_concat, embed_from_ids, embed_target_and_average
 
-shared_params = {
-    'batch_size': 100,
+shared_params = lambda embedding: {
+    'batch_size': 200,
     'max_seq_length' : 85, 
     'n_out_classes' : 3, 
-    'learning_rate' : 0.01,
+    'learning_rate' : 0.1,
     'keep_prob' : 0.8,
-    'hidden_units' : 200
+    'hidden_units' : 200,
+    'embedding_initializer': embedding.get_tf_embedding_initializer(),
+    'vocab_size': embedding.get_vocab_size(),
+    'embedding_dim': embedding.get_embedding_dim()
     }
 
 shared_feature_columns = [
@@ -19,26 +23,28 @@ shared_lstm_cell = lambda params: tf.nn.rnn_cell.LSTMCell(num_units=params['hidd
 
 shared_lstm_cell_with_dropout = lambda params: tf.contrib.rnn.DropoutWrapper(cell=shared_lstm_cell(params), output_keep_prob=params['keep_prob'])
 
-def lstm_input_fn(features, labels, batch_size, embedding, max_seq_length, num_out_classes):
-    embedding.set_embedding_matrix_variable()
+def lstm_input_fn(features, labels, batch_size, max_seq_length):
+    sentences = [l+t+r for l,t,r in zip(features['mappings']['left'],features['mappings']['target'],features['mappings']['right'])]
+    sens_lens = [len(l+t+r) for l,t,r in zip(features['mappings']['left'],features['mappings']['target'],features['mappings']['right'])]
+    labels = [label+1 for label in labels]
 
-    left_contexts =  tf.data.Dataset.from_generator(lambda: features['mappings']['left'], output_shapes=[None], output_types=tf.int32)
-    targets = tf.data.Dataset.from_generator(lambda: features['mappings']['target'], output_shapes=[None], output_types=tf.int32)
-    right_contexts = tf.data.Dataset.from_generator(lambda: features['mappings']['right'], output_shapes=[None], output_types=tf.int32)
+    sentences = sequence.pad_sequences(sequences=sentences, maxlen=max_seq_length, truncating='post', padding='post', value=0)
+    
+    dataset = tf.data.Dataset.from_tensor_slices((sentences, sens_lens, labels))
+    dataset = dataset.shuffle(buffer_size=len(sentences))
 
-    zipped_features = tf.data.Dataset.zip((left_contexts, targets, right_contexts))
-    embedded_features = zipped_features.map(embed_and_concat)
+    if batch_size==None:
+        dataset = dataset.batch(batch_size=1)
+    else:
+        dataset = dataset.batch(batch_size=batch_size)
 
-    embedded_features_dict = tf.data.Dataset.zip(({'x' : embedded_features})) 
-
-    labels_dataset = tf.data.Dataset.from_tensor_slices([label+1 for label in labels])
-
-    dataset = tf.data.Dataset.zip((embedded_features_dict, labels_dataset))
+    dataset = dataset.map(lambda sentence,length,label: ({'x': sentence, 'len': length}, label))
 
     if batch_size!=None:
-        return dataset.apply(tf.contrib.data.shuffle_and_repeat(len(labels))).padded_batch(batch_size=batch_size, padded_shapes=(({'x': [max_seq_length, embedding.get_embedding_dim()]}), []))
-    else:
-        return dataset.padded_batch(batch_size=1, padded_shapes=(({'x': [max_seq_length, embedding.get_embedding_dim()]}), []))
+        dataset = dataset.repeat()
+
+    iterator = dataset.make_one_shot_iterator()
+    return iterator.get_next()
 
 def tdlstm_input_fn(features, labels, batch_size, embedding, max_seq_length, num_out_classes):
     embedding.set_embedding_matrix_variable()
