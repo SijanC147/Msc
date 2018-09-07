@@ -16,16 +16,12 @@ from models.Tang2016a.TCLSTM import TCLSTM
 experiment = Experiment(
     dataset=Dong2014(),
     embedding=GloVe(alias='twitter', version='200'),
-    model=LSTM(),
-    # debug=True,
-    # custom_tag='1',
-    # continue_training=True
-)
+    model=LSTM())
+experiment.run(job='train+eval', steps=100)
+
 # experiment.run(
 #     job='train', 
 #     steps=1000, 
 #     open_tensorboard=False)
-
-experiment.run(job='train+eval', steps=1000, open_tensorboard=True)
 # experiment.run(job='train', steps=10, debug=True, open_tensorboard=True)
 # experiment.run(job='train', steps=100, debug=True, train_hooks=[tf_debug.TensorBoardDebugHook("127.0.0.1:6064")])

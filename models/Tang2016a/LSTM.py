@@ -54,7 +54,7 @@ class LSTM(Model):
                 return tf.estimator.EstimatorSpec(mode, predictions=predictions)
             
             loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
-            accuracy = tf.metrics.accuracy(labels=labels, predictions=predicted_classes, name='accuracy')
+            accuracy = tf.metrics.accuracy(labels=labels, predictions=predicted_classes)
 
             metrics = {
                 'accuracy': accuracy

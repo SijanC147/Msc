@@ -30,7 +30,12 @@ class Model(ABC):
         Arguments:
             params {dict} -- dictionary of params to be passed to the model
         """
-        self.params = {'feature_columns': self.feature_columns, **params}
+        self.params = {
+            'feature_columns': self.feature_columns, 
+            'embedding_initializer': self.embedding.get_tf_embedding_initializer(),
+            'vocab_size': self.embedding.get_vocab_size(),
+            'embedding_dim': self.embedding.get_embedding_dim(),
+            **params}
 
     @abstractmethod
     def set_feature_columns(self, feature_columns):
