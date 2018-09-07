@@ -3,8 +3,8 @@ import tensorflow as tf
 import inspect
 import time
 import datetime
-from utils import get_statistics_on_features_labels,change_features_labels_distribution
 from abc import ABC, abstractmethod
+from utils import get_statistics_on_features_labels,change_features_labels_distribution
 
 class Model(ABC):
     def __init__(self, embedding=None, dataset=None, model_dir=None):

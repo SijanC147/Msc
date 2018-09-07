@@ -1,24 +1,18 @@
 import tensorflow as tf
 from tensorflow.python.keras.preprocessing import sequence # pylint: disable=E0611
 
-from utils import embed_and_concat, embed_from_ids, embed_target_and_average
-
-shared_params = {
+params = {
     'batch_size': 200,
     'max_seq_length' : 85, 
     'n_out_classes' : 3, 
     'learning_rate' : 0.01,
     'keep_prob' : 0.8,
     'hidden_units' : 100,
+    'lstm_initializer' : tf.initializers.random_uniform(minval=-0.03,maxval=0.03)
     }
 
-shared_feature_columns = [
-    tf.contrib.feature_column.sequence_numeric_column(key='x')
-    ]
-
-shared_lstm_cell = lambda params: tf.nn.rnn_cell.LSTMCell(num_units=params['hidden_units'], initializer=tf.initializers.random_uniform(minval=-0.03, maxval=0.03))
-
-shared_lstm_cell_with_dropout = lambda params: tf.contrib.rnn.DropoutWrapper(cell=shared_lstm_cell(params), output_keep_prob=params['keep_prob'])
+lstm_cell = lambda params: tf.nn.rnn_cell.LSTMCell(num_units=params['hidden_units'], initializer=params.get('lstm_initializer'))
+dropout_lstm_cell = lambda params: tf.contrib.rnn.DropoutWrapper(cell=lstm_cell(params), output_keep_prob=params['keep_prob'])
 
 def lstm_input_fn(features, labels, batch_size, max_seq_length, eval_input=False):
     sentences = [l+t+r for l,t,r in zip(features['mappings']['left'],features['mappings']['target'],features['mappings']['right'])]

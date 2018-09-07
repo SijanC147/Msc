@@ -1,25 +1,24 @@
 import tensorflow as tf
 from models.Model import Model
-from models.Tang2016a.common import lstm_input_fn,shared_params,shared_feature_columns,shared_lstm_cell,shared_lstm_cell_with_dropout
-from utils import random_input_fn
+from models.Tang2016a import common 
 
 class LSTM(Model):
 
     def set_params(self, params):
-        default_params = shared_params
+        default_params = common.params
         super().set_params(default_params if params==None else params)
 
     def set_feature_columns(self, feature_columns):
-        default_feature_columns = shared_feature_columns 
+        default_feature_columns =  []
         super().set_feature_columns(default_feature_columns if feature_columns==None else feature_columns)
 
     def set_train_input_fn(self, train_input_fn):
-        default_train_input_fn = lambda features,labels,batch_size=self.params.get('batch_size'): lstm_input_fn(
+        default_train_input_fn = lambda features,labels,batch_size=self.params.get('batch_size'): common.lstm_input_fn(
             features, labels, batch_size, max_seq_length=self.params['max_seq_length'])
         super().set_train_input_fn(default_train_input_fn if train_input_fn==None else train_input_fn)        
         
     def set_eval_input_fn(self, eval_input_fn):
-        default_eval_input_fn = lambda features,labels,batch_size=self.params.get('batch_size'): lstm_input_fn(
+        default_eval_input_fn = lambda features,labels,batch_size=self.params.get('batch_size'): common.lstm_input_fn(
             features, labels, batch_size, max_seq_length=self.params['max_seq_length'], eval_input=True)
         super().set_eval_input_fn(default_eval_input_fn if eval_input_fn==None else eval_input_fn)
 
@@ -33,7 +32,7 @@ class LSTM(Model):
             )
 
             _, final_states = tf.nn.dynamic_rnn(
-                cell=shared_lstm_cell_with_dropout(params),
+                cell=common.dropout_lstm_cell(params),
                 inputs=inputs,
                 sequence_length=features['len'],
                 dtype=tf.float32
