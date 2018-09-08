@@ -7,10 +7,10 @@ from abc import ABC, abstractmethod
 
 
 class Model(ABC):
-    def __init__(self, embedding=None, dataset=None, model_dir=None):
+    def __init__(self, embedding=None, dataset=None, run_config=None):
         self.embedding = embedding
         self.dataset = dataset
-        self.model_dir = model_dir
+        self.run_config = run_config
         self.estimator = None
 
     @abstractmethod
@@ -48,11 +48,11 @@ class Model(ABC):
 
     def train(self, steps, hooks=None, debug=False, label_distribution=None):
         if not (debug):
-            features, labels, stats = self.dataset.get_mapped_features_and_labels(
+            features, labels, stats = self.dataset.get_features_and_labels(
                 mode="train", distribution=label_distribution
             )
         else:
-            features, labels, stats = self.dataset.get_mapped_features_and_labels(
+            features, labels, stats = self.dataset.get_features_and_labels(
                 mode="debug", distribution=label_distribution
             )
         self.init_estimator_if_none()
@@ -75,11 +75,11 @@ class Model(ABC):
 
     def evaluate(self, hooks=None, debug=False, label_distribution=None):
         if not (debug):
-            features, labels, stats = self.dataset.get_mapped_features_and_labels(
+            features, labels, stats = self.dataset.get_features_and_labels(
                 mode="eval", distribution=label_distribution
             )
         else:
-            features, labels, stats = self.dataset.get_mapped_features_and_labels(
+            features, labels, stats = self.dataset.get_features_and_labels(
                 mode="debug", distribution=label_distribution
             )
         self.init_estimator_if_none()
@@ -106,7 +106,7 @@ class Model(ABC):
         eval_distribution=None,
     ):
         self.init_estimator_if_none()
-        features, labels, stats = self.dataset.get_mapped_features_and_labels(
+        features, labels, stats = self.dataset.get_features_and_labels(
             mode="train", distribution=train_distribution
         )
         train_stats = self.export_statistics(
@@ -124,7 +124,7 @@ class Model(ABC):
             max_steps=steps,
             hooks=train_hooks,
         )
-        features, labels, stats = self.dataset.get_mapped_features_and_labels(
+        features, labels, stats = self.dataset.get_features_and_labels(
             mode="eval", distribution=eval_distribution
         )
         eval_stats = self.export_statistics(
@@ -195,10 +195,8 @@ class Model(ABC):
             self.create_estimator()
 
     def create_estimator(self):
-        myconfig = tf.estimator.RunConfig(tf_random_seed=1234)
         self.estimator = tf.estimator.Estimator(
             model_fn=self.model_fn,
             params={"feature_columns": self.feature_columns, **self.params},
-            model_dir=self.model_dir,
-            config=myconfig,
+            config=self.run_config,
         )

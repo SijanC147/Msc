@@ -56,7 +56,7 @@ class Dataset(ABC):
     def generate_dataset_dictionary(self, mode):
         pass
 
-    def get_mapped_features_and_labels(self, mode, distribution=None):
+    def get_features_and_labels(self, mode, distribution=None):
         self.load_embedding_from_corpus(self.vocabulary_corpus)
 
         if self.features_labels_save_file_exists(mode):

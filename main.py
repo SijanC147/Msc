@@ -17,6 +17,7 @@ experiment = Experiment(
     dataset=Dong2014(),
     embedding=GloVe(alias="twitter", version="25"),
     model=LSTM(),
+    seed=1234,
 )
 experiment.run(job="train+eval", steps=100)
 

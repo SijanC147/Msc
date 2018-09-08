@@ -14,6 +14,8 @@ class Experiment:
         dataset,
         embedding,
         model,
+        run_config=None,
+        seed=None,
         continue_training=False,
         custom_tag="",
         debug=False,
@@ -34,7 +36,19 @@ class Experiment:
         self.dataset.set_embedding(self.embedding)
         self.model.embedding = self.embedding
         self.model.dataset = self.dataset
-        self.model.model_dir = self.tb_summary_directory
+
+        if run_config is None:
+            run_config = tf.estimator.RunConfig(
+                model_dir=self.tb_summary_directory
+            )
+        else:
+            run_config = run_config.replace(
+                model_dir=self.tb_summary_directory
+            )
+        if seed is not None:
+            run_config = run_config.replace(tf_random_seed=seed)
+
+        self.model.run_config = run_config
         self.model.initialize_internal_defaults()
 
     def init_experiment_directory(self, custom_tag, continue_training):
@@ -85,7 +99,6 @@ class Experiment:
         self,
         job,
         steps,
-        batch_size=None,
         train_hooks=None,
         eval_hooks=None,
         train_distribution=None,
