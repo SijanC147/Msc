@@ -96,7 +96,6 @@ class Experiment:
         if job == "train":
             train_stats = self.model.train(
                 steps=steps,
-                batch_size=batch_size,
                 hooks=train_hooks,
                 debug=debug,
                 label_distribution=train_distribution,
@@ -116,7 +115,6 @@ class Experiment:
         elif job == "train+eval":
             train_stats, eval_stats = self.model.train_and_evaluate(
                 steps=steps,
-                batch_size=batch_size,
                 train_hooks=train_hooks,
                 eval_hooks=eval_hooks,
                 train_distribution=train_distribution,
@@ -147,9 +145,6 @@ class Experiment:
                     {
                         "duration": job_stats["duration"],
                         "steps": job_stats["steps"],
-                        "effective_batch_size": job_stats[
-                            "effective_batch_size"
-                        ],
                     }
                 )
             )

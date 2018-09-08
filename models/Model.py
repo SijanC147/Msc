@@ -46,17 +46,7 @@ class Model(ABC):
         self.set_eval_input_fn(eval_input_fn=None)
         self.set_model_fn(model_fn=None)
 
-    def train(
-        self,
-        steps,
-        batch_size=None,
-        hooks=None,
-        debug=False,
-        label_distribution=None,
-    ):
-        batch = (
-            batch_size if batch_size is not None else self.params["batch_size"]
-        )
+    def train(self, steps, hooks=None, debug=False, label_distribution=None):
         if not (debug):
             features, labels, stats = self.dataset.get_mapped_features_and_labels(
                 mode="train", distribution=label_distribution
@@ -67,27 +57,20 @@ class Model(ABC):
             )
         self.init_estimator_if_none()
         run_stats = self.export_statistics(
-            dataset_stats=stats,
-            batch_size=batch_size,
-            steps=steps,
-            train_hooks=hooks,
+            dataset_stats=stats, steps=steps, train_hooks=hooks
         )
-        print("Training {0}...".format(self.__class__.__name__))
         start = time.time()
         self.estimator.train(
             input_fn=lambda: self.train_input_fn(
-                features=features, labels=labels, batch_size=batch
+                features=features,
+                labels=labels,
+                batch_size=self.params["batch_size"],
             ),
             steps=steps,
             hooks=hooks,
         )
         time_taken = str(datetime.timedelta(seconds=time.time() - start))
         duration_dict = {"job": "train", "time": time_taken}
-        print(
-            "Finished training {0} in {1}".format(
-                self.__class__.__name__, time_taken
-            )
-        )
         return {"duration": duration_dict, **run_stats}
 
     def evaluate(self, hooks=None, debug=False, label_distribution=None):
@@ -103,7 +86,6 @@ class Model(ABC):
         run_stats = self.export_statistics(
             dataset_stats=stats, eval_hooks=hooks
         )
-        print("Evaluating {0}...".format(self.__class__.__name__))
         start = time.time()
         self.estimator.evaluate(
             input_fn=lambda: self.eval_input_fn(
@@ -112,99 +94,67 @@ class Model(ABC):
             hooks=hooks,
         )
         time_taken = str(datetime.timedelta(seconds=time.time() - start))
-        print(
-            "Finished evaluating {0} in {1}".format(
-                self.__class__.__name__, time_taken
-            )
-        )
         duration_dict = {"job": "eval", "time": time_taken}
         return {"duration": duration_dict, **run_stats}
 
     def train_and_evaluate(
         self,
         steps=None,
-        batch_size=None,
         train_hooks=None,
         eval_hooks=None,
         train_distribution=None,
         eval_distribution=None,
     ):
-
-        if batch_size is not None and batch_size != self.params["batch_size"]:
-            self.params["batch_size"] = batch_size
-
-        train_features, train_labels, train_stats = self.dataset.get_mapped_features_and_labels(
+        self.init_estimator_if_none()
+        features, labels, stats = self.dataset.get_mapped_features_and_labels(
             mode="train", distribution=train_distribution
         )
-        eval_features, eval_labels, eval_stats = self.dataset.get_mapped_features_and_labels(
+        train_stats = self.export_statistics(
+            dataset_stats=stats,
+            steps=steps,
+            train_hooks=train_hooks,
+            eval_hooks=eval_hooks,
+        )
+        train_spec = tf.estimator.TrainSpec(
+            input_fn=lambda: self.train_input_fn(
+                features=features,
+                labels=labels,
+                batch_size=self.params["batch_size"],
+            ),
+            max_steps=steps,
+            hooks=train_hooks,
+        )
+        features, labels, stats = self.dataset.get_mapped_features_and_labels(
             mode="eval", distribution=eval_distribution
         )
-        self.init_estimator_if_none()
-        train_run_stats = self.export_statistics(
-            dataset_stats=train_stats,
-            batch_size=batch_size,
+        eval_stats = self.export_statistics(
+            dataset_stats=stats,
             steps=steps,
             train_hooks=train_hooks,
             eval_hooks=eval_hooks,
         )
-        eval_run_stats = self.export_statistics(
-            dataset_stats=eval_stats,
-            batch_size=batch_size,
-            steps=steps,
-            train_hooks=train_hooks,
-            eval_hooks=eval_hooks,
-        )
-        # os.makedirs(self.estimator.eval_dir(), exist_ok=True)
-        # early_stopping = tf.contrib.estimator.stop_if_no_decrease_hook(
-        #     self.estimator,
-        #     metric_name='loss',
-        #     max_steps_without_decrease=10,
-        #     min_steps=300)
-        print(
-            "{0} starting to train and evaluate...".format(
-                self.__class__.__name__
-            )
+        eval_spec = tf.estimator.EvalSpec(
+            input_fn=lambda: self.eval_input_fn(
+                features=features, labels=labels
+            ),
+            steps=None,
+            hooks=eval_hooks,
         )
         start = time.time()
         tf.estimator.train_and_evaluate(
             estimator=self.estimator,
-            train_spec=tf.estimator.TrainSpec(
-                input_fn=lambda: self.train_input_fn(
-                    features=train_features,
-                    labels=train_labels,
-                    batch_size=self.params["batch_size"],
-                ),
-                max_steps=steps,
-                # hooks=[early_stopping] if train_hooks==None else [early_stopping]+train_hooks
-                hooks=train_hooks,
-            ),
-            eval_spec=tf.estimator.EvalSpec(
-                input_fn=lambda: self.eval_input_fn(
-                    features=eval_features, labels=eval_labels
-                ),
-                steps=None,
-                hooks=eval_hooks,
-            ),
+            train_spec=train_spec,
+            eval_spec=eval_spec,
         )
         time_taken = str(datetime.timedelta(seconds=time.time() - start))
-        print(
-            "{0} trained and evaluated in {1}".format(
-                self.__class__.__name__, time_taken
-            )
-        )
         duration_dict = {"job": "train+eval", "time": time_taken}
         return (
-            {"duration": duration_dict, **train_run_stats},
-            {"duration": duration_dict, **eval_run_stats},
+            {"duration": duration_dict, **train_stats},
+            {"duration": duration_dict, **eval_stats},
         )
 
     def export_statistics(
-        self,
-        dataset_stats=None,
-        steps=None,
-        batch_size=None,
-        train_hooks=None,
-        eval_hooks=None,
+        self, dataset_stats=None, steps=None, train_hooks=None, eval_hooks=None
     ):
         train_input_fn_source = inspect.getsource(self.train_input_fn)
         eval_input_fn_source = inspect.getsource(self.eval_input_fn)
@@ -224,7 +174,6 @@ class Model(ABC):
         return {
             "dataset": dataset_stats,
             "steps": steps,
-            "effective_batch_size": batch_size,
             "model": {
                 "params": self.params,
                 "train_input_fn": train_input_fn_source,
