@@ -212,9 +212,9 @@ def inspect_distribution(features, labels):
     }
 
 
-def start_tensorboard(self, summary_dir, debug=False):
+def start_tensorboard(self, model_dir, debug=False):
     data = {
-        "logdir": summary_dir,
+        "logdir": model_dir,
         "debug": "--debugger_port 6064" if debug else "",
     }
     os.system("open http://localhost:6006")

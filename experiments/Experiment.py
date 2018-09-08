@@ -20,35 +20,33 @@ class Experiment:
         custom_tag="",
         debug=False,
     ):
-        if debug:
-            self.embedding = GloVe(alias="twitter", version="debug")
-            self.dataset = Dong2014()
-        else:
-            self.embedding = embedding
-            self.dataset = dataset
+        self.embedding = (
+            GloVe(alias="twitter", version="debug") if debug else embedding
+        )
+        self.dataset = Dong2014() if debug else dataset
         self.model = model
         self.experiment_directory = self.init_experiment_directory(
             custom_tag, continue_training
         )
-        self.tb_summary_directory = os.path.join(
-            self.experiment_directory, "tb_summary"
+
+        summary_dir = os.path.join(self.experiment_directory, "tb_summary")
+        self.run_config = (
+            tf.estimator.RunConfig(model_dir=summary_dir)
+            if run_config is None
+            else run_config
         )
+
+        if run_config.model_dir is None:
+            self.run_config = run_config.replace(model_dir=summary_dir)
+
+        if seed is not None:
+            self.run_config = self.run_config.replace(tf_random_seed=seed)
+
         self.dataset.set_embedding(self.embedding)
+
         self.model.embedding = self.embedding
         self.model.dataset = self.dataset
-
-        if run_config is None:
-            run_config = tf.estimator.RunConfig(
-                model_dir=self.tb_summary_directory
-            )
-        else:
-            run_config = run_config.replace(
-                model_dir=self.tb_summary_directory
-            )
-        if seed is not None:
-            run_config = run_config.replace(tf_random_seed=seed)
-
-        self.model.run_config = run_config
+        self.model.run_config = self.run_config
         self.model.initialize_internal_defaults()
 
     def init_experiment_directory(self, custom_tag, continue_training):
@@ -106,25 +104,20 @@ class Experiment:
         debug=False,
         start_tensorboard=False,
     ):
+        self.model.create_estimator()
         if job == "train":
-            train_stats = self.model.train(
+            stats = self.model.train(
                 steps=steps,
                 hooks=train_hooks,
                 debug=debug,
-                label_distribution=train_distribution,
+                distribution=train_distribution,
             )
-            self.write_stats_to_experiment_dir(
-                job="train", job_stats=train_stats
-            )
+            self.write_stats_to_experiment_dir(job="train", job_stats=stats)
         elif job == "eval":
-            eval_stats = self.model.evaluate(
-                hooks=eval_hooks,
-                debug=debug,
-                label_distribution=eval_distribution,
+            stats = self.model.evaluate(
+                hooks=eval_hooks, debug=debug, distribution=eval_distribution
             )
-            self.write_stats_to_experiment_dir(
-                job="eval", job_stats=eval_stats
-            )
+            self.write_stats_to_experiment_dir(job="eval", job_stats=stats)
         elif job == "train+eval":
             train_stats, eval_stats = self.model.train_and_evaluate(
                 steps=steps,
@@ -141,9 +134,7 @@ class Experiment:
             )
 
         if start_tensorboard:
-            start_tensorboard(
-                summary_dir=self.tb_summary_directory, debug=debug
-            )
+            start_tensorboard(model_dir=self.run_config.model_dir, debug=debug)
 
     def write_stats_to_experiment_dir(self, job, job_stats):
         job_stats_directory = os.path.join(self.experiment_directory, job)

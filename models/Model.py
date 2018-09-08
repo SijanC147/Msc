@@ -16,7 +16,6 @@ class Model(ABC):
     @abstractmethod
     def set_params(self, params):
         self.params = {
-            "feature_columns": self.feature_columns,
             "embedding_initializer": self.embedding.get_tf_embedding_initializer(),
             "vocab_size": self.embedding.vocab_size,
             "embedding_dim": self.embedding.dimension_size,
@@ -46,16 +45,18 @@ class Model(ABC):
         self.set_eval_input_fn(eval_input_fn=None)
         self.set_model_fn(model_fn=None)
 
-    def train(self, steps, hooks=None, debug=False, label_distribution=None):
-        if not (debug):
-            features, labels, stats = self.dataset.get_features_and_labels(
-                mode="train", distribution=label_distribution
-            )
-        else:
-            features, labels, stats = self.dataset.get_features_and_labels(
-                mode="debug", distribution=label_distribution
-            )
-        self.init_estimator_if_none()
+    def create_estimator(self):
+        self.estimator = tf.estimator.Estimator(
+            model_fn=self.model_fn,
+            params={"feature_columns": self.feature_columns, **self.params},
+            config=self.run_config,
+        )
+
+    def train(self, steps, hooks=None, debug=False, distribution=None):
+        mode = "train" if not debug else "debug"
+        features, labels, stats = self.dataset.get_features_and_labels(
+            mode=mode, distribution=distribution
+        )
         run_stats = self.export_statistics(
             dataset_stats=stats, steps=steps, train_hooks=hooks
         )
@@ -73,16 +74,11 @@ class Model(ABC):
         duration_dict = {"job": "train", "time": time_taken}
         return {"duration": duration_dict, **run_stats}
 
-    def evaluate(self, hooks=None, debug=False, label_distribution=None):
-        if not (debug):
-            features, labels, stats = self.dataset.get_features_and_labels(
-                mode="eval", distribution=label_distribution
-            )
-        else:
-            features, labels, stats = self.dataset.get_features_and_labels(
-                mode="debug", distribution=label_distribution
-            )
-        self.init_estimator_if_none()
+    def evaluate(self, hooks=None, debug=False, distribution=None):
+        mode = "eval" if not debug else "debug"
+        features, labels, stats = self.dataset.get_features_and_labels(
+            mode=mode, distribution=distribution
+        )
         run_stats = self.export_statistics(
             dataset_stats=stats, eval_hooks=hooks
         )
@@ -105,7 +101,6 @@ class Model(ABC):
         train_distribution=None,
         eval_distribution=None,
     ):
-        self.init_estimator_if_none()
         features, labels, stats = self.dataset.get_features_and_labels(
             mode="train", distribution=train_distribution
         )
@@ -190,13 +185,3 @@ class Model(ABC):
             "common": common_content,
         }
 
-    def init_estimator_if_none(self):
-        if self.estimator is None:
-            self.create_estimator()
-
-    def create_estimator(self):
-        self.estimator = tf.estimator.Estimator(
-            model_fn=self.model_fn,
-            params={"feature_columns": self.feature_columns, **self.params},
-            config=self.run_config,
-        )
