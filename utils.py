@@ -1,3 +1,4 @@
+import os
 import spacy
 import nltk
 import random
@@ -13,13 +14,13 @@ def tokenize_phrase(phrase, backend="spacy"):
         tokens_list = []
         nlp = spacy.load("en")
         tokens = nlp(str(phrase))
-        tokens_list = list(filter(keep_token, tokens))
+        tokens_list = list(filter(token_filter, tokens))
         return [token.text for token in tokens_list]
     elif backend == "vanilla":
         return phrase.split()
 
 
-def keep_token(token):
+def token_filter(token):
     if token.like_url:
         return False
     if token.like_email:
@@ -29,7 +30,7 @@ def keep_token(token):
     return True
 
 
-def change_distribution(features, labels, distribution):
+def re_distribute(features, labels, distribution):
     if type(distribution) == list:
         target_dists = distribution
     elif type(distribution) == dict:
@@ -189,7 +190,7 @@ def change_distribution(features, labels, distribution):
     return new_features, new_labels
 
 
-def get_statistics_on_features_labels(features, labels):
+def inspect_distribution(features, labels):
     positive = [label for label in labels if label == 1]
     neutral = [label for label in labels if label == 0]
     negative = [label for label in labels if label == -1]
@@ -209,3 +210,12 @@ def get_statistics_on_features_labels(features, labels):
         },
         "mean_sen_length": round(np.mean(features["sentence_length"]), 2),
     }
+
+
+def start_tensorboard(self, summary_dir, debug=False):
+    data = {
+        "logdir": summary_dir,
+        "debug": "--debugger_port 6064" if debug else "",
+    }
+    os.system("open http://localhost:6006")
+    os.system("tensorboard --logdir {dir} {debug}".format(data))

@@ -18,7 +18,7 @@ experiment = Experiment(
     embedding=GloVe(alias="twitter", version="25"),
     model=LSTM(),
 )
-experiment.run(job="train+eval", steps=1000)
+experiment.run(job="train+eval", steps=100)
 
 # experiment.run(job="train", steps=1000, open_tensorboard=False)
 # experiment.run(job="train", steps=10, debug=True, open_tensorboard=True)
