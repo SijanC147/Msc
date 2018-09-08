@@ -11,9 +11,11 @@ nltk = "*"
 spacymoji = "*"
 
 [dev-packages]
-"autopep8" = "*"
 pylint = "*"
 rope = "*"
+"pep8" = "*"
+pycodestyle = "*"
+black = "*"
 
 [requires]
 python_version = "3.6"

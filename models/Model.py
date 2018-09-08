@@ -4,7 +4,8 @@ import inspect
 import time
 import datetime
 from abc import ABC, abstractmethod
-from utils import get_statistics_on_features_labels,change_features_labels_distribution
+from utils import get_statistics_on_features_labels, change_distribution
+
 
 class Model(ABC):
     def __init__(self, embedding=None, dataset=None, model_dir=None):
@@ -14,11 +15,13 @@ class Model(ABC):
             ABC {Class} -- Make the class abstract
         
         Keyword Arguments:
-            embedding {Embedding} -- Specify an embedding to use with the model, can be defined later (default: {None})
-            dataset {Dataset} -- Specify a dataset to use with the model, can be defined later (default: {None})
-            model_dir {str} -- Directory for the tensorboard summary files, can be defined later (default: {None})
+            embedding {Embedding} -- Specify an embedding to use with the model
+            dataset {Dataset} -- Specify a dataset to use with the model
+            model_dir {str} -- Directory for the tensorboard summary files
         """
-        self.connect_external_sources(embedding=embedding, dataset=dataset, model_dir=model_dir)
+        self.connect_external_sources(
+            embedding=embedding, dataset=dataset, model_dir=model_dir
+        )
         self.estimator = None
 
     @abstractmethod
@@ -31,11 +34,12 @@ class Model(ABC):
             params {dict} -- dictionary of params to be passed to the model
         """
         self.params = {
-            'feature_columns': self.feature_columns, 
-            'embedding_initializer': self.embedding.get_tf_embedding_initializer(),
-            'vocab_size': self.embedding.get_vocab_size(),
-            'embedding_dim': self.embedding.get_embedding_dim(),
-            **params}
+            "feature_columns": self.feature_columns,
+            "embedding_initializer": self.embedding.get_tf_embedding_initializer(),
+            "vocab_size": self.embedding.get_vocab_size(),
+            "embedding_dim": self.embedding.get_embedding_dim(),
+            **params,
+        }
 
     @abstractmethod
     def set_feature_columns(self, feature_columns):
@@ -47,7 +51,7 @@ class Model(ABC):
             feature_columns {list} -- list of tensorflow feature columns for the model
         """
         self.feature_columns = feature_columns
-    
+
     @abstractmethod
     def set_train_input_fn(self, train_input_fn):
         """Set the training input function for the model.
@@ -58,7 +62,7 @@ class Model(ABC):
             train_input_fn {callable} -- function that provides data that is called when training the model
         """
         self.train_input_fn = train_input_fn
-    
+
     @abstractmethod
     def set_eval_input_fn(self, eval_input_fn):
         """Set the evaluation input function for the model.
@@ -91,7 +95,7 @@ class Model(ABC):
         """
         self.connect_external_sources(embedding, dataset, model_dir)
         self.initialize_internal_defaults()
-    
+
     def connect_external_sources(self, embedding, dataset, model_dir):
         """Attach an embedding, dataset(with matching embedding) and model_dir for the model
 
@@ -123,7 +127,7 @@ class Model(ABC):
         
         Arguments:
             dataset {Dataset} -- the dataset to attach to the model
-        """ 
+        """
         self.dataset = dataset
 
     def set_model_dir(self, model_dir):
@@ -137,7 +141,7 @@ class Model(ABC):
     def init_estimator_if_none(self):
         """Initialize the estimator object if it has not yet been initialized
         """
-        if self.estimator==None:
+        if self.estimator is None:
             self.create_estimator()
 
     def create_estimator(self):
@@ -149,12 +153,14 @@ class Model(ABC):
         myconfig = tf.estimator.RunConfig(tf_random_seed=1234)
         self.estimator = tf.estimator.Estimator(
             model_fn=self.model_fn,
-            params={'feature_columns': self.feature_columns, **self.params},
+            params={"feature_columns": self.feature_columns, **self.params},
             model_dir=self.model_dir,
-            config=myconfig
+            config=myconfig,
         )
 
-    def train(self, steps, batch_size=None, hooks=None, debug=False, label_distribution=None):
+    def train(
+        self, steps, batch_size=None, hooks=None, debug=False, label_distribution=None
+    ):
         """Run a training job on the model estimator
         
         Arguments:
@@ -168,31 +174,38 @@ class Model(ABC):
         Returns:
             dict -- dictionary of statistics obtained from the training process
         """
-        batch = batch_size if batch_size!=None else self.params['batch_size']
-        if not(debug):
-            features, labels = self.get_features_and_labels(mode='train', label_distribution=label_distribution)
+        batch = batch_size if batch_size != None else self.params["batch_size"]
+        if not (debug):
+            features, labels = self.get_features_and_labels(
+                mode="train", label_distribution=label_distribution
+            )
         else:
-            features, labels = self.get_features_and_labels(mode='debug', label_distribution=label_distribution)
+            features, labels = self.get_features_and_labels(
+                mode="debug", label_distribution=label_distribution
+            )
         self.init_estimator_if_none()
-        run_stats = self.export_statistics(features=features,labels=labels, batch_size=batch_size, steps=steps, train_hooks=hooks)
+        run_stats = self.export_statistics(
+            features=features,
+            labels=labels,
+            batch_size=batch_size,
+            steps=steps,
+            train_hooks=hooks,
+        )
         print("Training {0}...".format(self.__class__.__name__))
         start = time.time()
         self.estimator.train(
-            input_fn = lambda: self.train_input_fn(
-                features=features,
-                labels=labels,
-                batch_size=batch
+            input_fn=lambda: self.train_input_fn(
+                features=features, labels=labels, batch_size=batch
             ),
             steps=steps,
-            hooks=hooks
+            hooks=hooks,
         )
-        time_taken = str(datetime.timedelta(seconds=time.time()-start))
-        duration_dict = {
-            'job': 'train',
-            'time': time_taken 
-        }
-        print("Finished training {0} in {1}".format(self.__class__.__name__, time_taken))
-        return {'duration':duration_dict, **run_stats}
+        time_taken = str(datetime.timedelta(seconds=time.time() - start))
+        duration_dict = {"job": "train", "time": time_taken}
+        print(
+            "Finished training {0} in {1}".format(self.__class__.__name__, time_taken)
+        )
+        return {"duration": duration_dict, **run_stats}
 
     def evaluate(self, hooks=None, debug=False, label_distribution=None):
         """Run an evaluation job on the model estimator, useless if the model has not been trained
@@ -204,30 +217,40 @@ class Model(ABC):
         Returns:
             dict -- dictionary of statistics obtained from the evaaluation process
         """
-        if not(debug):
-            features, labels = self.get_features_and_labels(mode='eval', label_distribution=label_distribution)
+        if not (debug):
+            features, labels = self.get_features_and_labels(
+                mode="eval", label_distribution=label_distribution
+            )
         else:
-            features, labels = self.get_features_and_labels(mode='debug', label_distribution=label_distribution)
+            features, labels = self.get_features_and_labels(
+                mode="debug", label_distribution=label_distribution
+            )
         self.init_estimator_if_none()
-        run_stats = self.export_statistics(features=features,labels=labels, eval_hooks=hooks)
+        run_stats = self.export_statistics(
+            features=features, labels=labels, eval_hooks=hooks
+        )
         print("Evaluating {0}...".format(self.__class__.__name__))
         start = time.time()
         self.estimator.evaluate(
-            input_fn = lambda: self.eval_input_fn(
-                features=features,
-                labels=labels
-            ),
-            hooks=hooks
+            input_fn=lambda: self.eval_input_fn(features=features, labels=labels),
+            hooks=hooks,
         )
-        time_taken = str(datetime.timedelta(seconds=time.time()-start))
-        print("Finished evaluating {0} in {1}".format(self.__class__.__name__, time_taken))
-        duration_dict = {
-            'job': 'eval',
-            'time': time_taken 
-        }
-        return {'duration':duration_dict, **run_stats}
+        time_taken = str(datetime.timedelta(seconds=time.time() - start))
+        print(
+            "Finished evaluating {0} in {1}".format(self.__class__.__name__, time_taken)
+        )
+        duration_dict = {"job": "eval", "time": time_taken}
+        return {"duration": duration_dict, **run_stats}
 
-    def train_and_evaluate(self, steps=None, batch_size=None, train_hooks=None, eval_hooks=None, train_distribution=None, eval_distribution=None):
+    def train_and_evaluate(
+        self,
+        steps=None,
+        batch_size=None,
+        train_hooks=None,
+        eval_hooks=None,
+        train_distribution=None,
+        eval_distribution=None,
+    ):
         """Run a training job followed by an evaluation job on the model estimator
         
         Keyword Arguments:
@@ -240,14 +263,32 @@ class Model(ABC):
             (dict, dict) -- two separate dictionaries of statistics with training, and evaluation statistics
         """
 
-        if batch_size!=None and batch_size!=self.params['batch_size']:
-            self.params['batch_size']=batch_size
+        if batch_size != None and batch_size != self.params["batch_size"]:
+            self.params["batch_size"] = batch_size
 
-        train_features, train_labels = self.get_features_and_labels(mode='train', label_distribution=train_distribution)
-        eval_features, eval_labels = self.get_features_and_labels(mode='eval', label_distribution=eval_distribution)
+        train_features, train_labels = self.get_features_and_labels(
+            mode="train", label_distribution=train_distribution
+        )
+        eval_features, eval_labels = self.get_features_and_labels(
+            mode="eval", label_distribution=eval_distribution
+        )
         self.init_estimator_if_none()
-        train_run_stats = self.export_statistics(features=train_features,labels=train_labels, batch_size=batch_size, steps=steps, train_hooks=train_hooks, eval_hooks=eval_hooks)
-        eval_run_stats = self.export_statistics(features=eval_features,labels=eval_labels, batch_size=batch_size, steps=steps, train_hooks=train_hooks, eval_hooks=eval_hooks)
+        train_run_stats = self.export_statistics(
+            features=train_features,
+            labels=train_labels,
+            batch_size=batch_size,
+            steps=steps,
+            train_hooks=train_hooks,
+            eval_hooks=eval_hooks,
+        )
+        eval_run_stats = self.export_statistics(
+            features=eval_features,
+            labels=eval_labels,
+            batch_size=batch_size,
+            steps=steps,
+            train_hooks=train_hooks,
+            eval_hooks=eval_hooks,
+        )
         # os.makedirs(self.estimator.eval_dir(), exist_ok=True)
         # early_stopping = tf.contrib.estimator.stop_if_no_decrease_hook(
         #     self.estimator,
@@ -259,33 +300,44 @@ class Model(ABC):
         tf.estimator.train_and_evaluate(
             estimator=self.estimator,
             train_spec=tf.estimator.TrainSpec(
-                input_fn = lambda: self.train_input_fn(
+                input_fn=lambda: self.train_input_fn(
                     features=train_features,
                     labels=train_labels,
-                    batch_size=self.params['batch_size']
+                    batch_size=self.params["batch_size"],
                 ),
                 max_steps=steps,
                 # hooks=[early_stopping] if train_hooks==None else [early_stopping]+train_hooks
-                hooks=train_hooks
+                hooks=train_hooks,
             ),
             eval_spec=tf.estimator.EvalSpec(
-                input_fn = lambda: self.eval_input_fn(
-                    features=eval_features,
-                    labels=eval_labels
+                input_fn=lambda: self.eval_input_fn(
+                    features=eval_features, labels=eval_labels
                 ),
                 steps=None,
-                hooks=eval_hooks
+                hooks=eval_hooks,
+            ),
+        )
+        time_taken = str(datetime.timedelta(seconds=time.time() - start))
+        print(
+            "{0} trained and evaluated in {1}".format(
+                self.__class__.__name__, time_taken
             )
         )
-        time_taken = str(datetime.timedelta(seconds=time.time()-start))
-        print("{0} trained and evaluated in {1}".format(self.__class__.__name__, time_taken))
-        duration_dict = {
-            'job': 'train+eval',
-            'time': time_taken 
-        }
-        return {'duration':duration_dict, **train_run_stats}, {'duration':duration_dict, **eval_run_stats} 
+        duration_dict = {"job": "train+eval", "time": time_taken}
+        return (
+            {"duration": duration_dict, **train_run_stats},
+            {"duration": duration_dict, **eval_run_stats},
+        )
 
-    def export_statistics(self, features, labels, steps=None, batch_size=None, train_hooks=None, eval_hooks=None):
+    def export_statistics(
+        self,
+        features,
+        labels,
+        steps=None,
+        batch_size=None,
+        train_hooks=None,
+        eval_hooks=None,
+    ):
         """Generate a dictionary of different statistics to be returned after estimator job runs
         
         Arguments:
@@ -305,34 +357,36 @@ class Model(ABC):
         train_input_fn_source = inspect.getsource(self.train_input_fn)
         eval_input_fn_source = inspect.getsource(self.eval_input_fn)
         model_fn_source = inspect.getsource(self.model_fn)
-        model_common_file = os.path.join(os.path.dirname(inspect.getfile(self.__class__)),'common.py')
+        model_common_file = os.path.join(
+            os.path.dirname(inspect.getfile(self.__class__)), "common.py"
+        )
         estimator_train_fn_source = inspect.getsource(self.train)
         estimator_eval_fn_source = inspect.getsource(self.evaluate)
         estimator_train_eval_fn_source = inspect.getsource(self.train_and_evaluate)
         if os.path.exists(model_common_file):
-            common_content = open(model_common_file, 'r').read()
+            common_content = open(model_common_file, "r").read()
         else:
-            common_content = ''
+            common_content = ""
         return {
-            'dataset' : dataset_statistics,
-            'steps' : steps,
-            'effective_batch_size': batch_size,
-            'model': {
-                'params': self.params,
-                'train_input_fn': train_input_fn_source,
-                'eval_input_fn': eval_input_fn_source,
-                'model_fn': model_fn_source,
+            "dataset": dataset_statistics,
+            "steps": steps,
+            "effective_batch_size": batch_size,
+            "model": {
+                "params": self.params,
+                "train_input_fn": train_input_fn_source,
+                "eval_input_fn": eval_input_fn_source,
+                "model_fn": model_fn_source,
             },
-            'estimator': {
-                'train_hooks': train_hooks,
-                'eval_hooks': eval_hooks,
-                'train_fn': estimator_train_fn_source,
-                'eval_fn': estimator_eval_fn_source,
-                'train_eval_fn': estimator_train_eval_fn_source,
+            "estimator": {
+                "train_hooks": train_hooks,
+                "eval_hooks": eval_hooks,
+                "train_fn": estimator_train_fn_source,
+                "eval_fn": estimator_eval_fn_source,
+                "train_eval_fn": estimator_train_eval_fn_source,
             },
-            'common': common_content
+            "common": common_content,
         }
-        
+
     def initialize_internal_defaults(self):
         """Initialize the internal settings of the model to the default values
         
@@ -342,7 +396,7 @@ class Model(ABC):
         self.set_params(None)
         self.set_train_input_fn(None)
         self.set_eval_input_fn(None)
-        self.set_model_fn(None) 
+        self.set_model_fn(None)
 
     def get_features_and_labels(self, mode, label_distribution=None):
         """Get features and labels from the dataset for a particular mode
@@ -354,7 +408,9 @@ class Model(ABC):
             (dict, list) -- dictionary of features and list of corresponding labels
         """
         features, labels = self.dataset.get_mapped_features_and_labels(mode)
-        if label_distribution!=None:
-            features, labels = change_features_labels_distribution(features, labels, label_distribution)
+        if label_distribution != None:
+            features, labels = change_distribution(
+                features, labels, label_distribution
+            )
         return features, labels
-    
+

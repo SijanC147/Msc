@@ -1,8 +1,4 @@
-import tensorflow as tf
-tf.logging.set_verbosity(tf.logging.INFO)
-
 from tensorflow.python import debug as tf_debug  # pylint: disable=E0611
-
 from experiments.Experiment import Experiment
 from embeddings.GloVe import GloVe
 from datasets.Dong2014 import Dong2014
@@ -13,15 +9,22 @@ from models.Tang2016a.LSTM import LSTM
 from models.Tang2016a.TDLSTM import TDLSTM
 from models.Tang2016a.TCLSTM import TCLSTM
 
+import tensorflow as tf
+
+tf.logging.set_verbosity(tf.logging.INFO)
+
 experiment = Experiment(
     dataset=Dong2014(),
-    embedding=GloVe(alias='twitter', version='25'),
-    model=LSTM())
-experiment.run(job='train+eval', steps=1000)
+    embedding=GloVe(alias="twitter", version="25"),
+    model=LSTM(),
+)
+experiment.run(job="train+eval", steps=1000)
 
+# experiment.run(job="train", steps=1000, open_tensorboard=False)
+# experiment.run(job="train", steps=10, debug=True, open_tensorboard=True)
 # experiment.run(
-#     job='train', 
-#     steps=1000, 
-#     open_tensorboard=False)
-# experiment.run(job='train', steps=10, debug=True, open_tensorboard=True)
-# experiment.run(job='train', steps=100, debug=True, train_hooks=[tf_debug.TensorBoardDebugHook("127.0.0.1:6064")])
+#     job="train",
+#     steps=100,
+#     debug=True,
+#     train_hooks=[tf_debug.TensorBoardDebugHook("127.0.0.1:6064")],
+# )
