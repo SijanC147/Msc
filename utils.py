@@ -4,8 +4,12 @@ import nltk
 import random
 import math
 import json
+import pickle
 import numpy as np
 import tensorflow as tf
+from csv import DictReader, DictWriter
+from os.path import listdir, isfile, join
+from spacy.attrs import ORTH  # pylint: disable=E0611
 
 
 def tokenize_phrase(phrase, backend="spacy"):
@@ -31,7 +35,7 @@ def token_filter(token):
     return True
 
 
-def re_distribute(features, labels, distribution):
+def re_dist(features, labels, distribution):
     if type(distribution) == list:
         target_dists = distribution
     elif type(distribution) == dict:
@@ -191,7 +195,7 @@ def re_distribute(features, labels, distribution):
     return new_features, new_labels
 
 
-def inspect_distribution(features, labels):
+def inspect_dist(features, labels):
     positive = [label for label in labels if label == 1]
     neutral = [label for label in labels if label == 0]
     negative = [label for label in labels if label == -1]
@@ -227,17 +231,17 @@ def default_oov(dim_size):
 
 
 def write_stats_to_disk(job, stats, path):
-    target_dir = os.path.join(path, job)
+    target_dir = join(path, job)
     os.makedirs(target_dir, exist_ok=True)
-    with open(os.path.join(target_dir, "dataset.json"), "w") as file:
+    with open(join(target_dir, "dataset.json"), "w") as file:
         file.write(json.dumps(stats["dataset"]))
-    with open(os.path.join(target_dir, "job.json"), "w") as file:
+    with open(join(target_dir, "job.json"), "w") as file:
         file.write(
             json.dumps(
                 {"duration": stats["duration"], "steps": stats["steps"]}
             )
         )
-    with open(os.path.join(target_dir, "model.md"), "w") as file:
+    with open(join(target_dir, "model.md"), "w") as file:
         file.write("## Model Params\n")
         file.write("````Python\n")
         file.write(str(stats["model"]["params"]) + "\n")
@@ -254,7 +258,7 @@ def write_stats_to_disk(job, stats, path):
         file.write("````Python\n")
         file.write(str(stats["model"]["model_fn"]) + "\n")
         file.write("````\n")
-    with open(os.path.join(target_dir, "estimator.md"), "w") as file:
+    with open(join(target_dir, "estimator.md"), "w") as file:
         file.write("## Train Hooks\n")
         file.write("````Python\n")
         file.write(str(stats["estimator"]["train_hooks"]) + "\n")
@@ -276,8 +280,84 @@ def write_stats_to_disk(job, stats, path):
         file.write(str(stats["estimator"]["train_eval_fn"]) + "\n")
         file.write("````\n")
     if len(stats["common"]) > 0:
-        with open(os.path.join(target_dir, "common.md"), "w") as file:
+        with open(join(target_dir, "common.md"), "w") as file:
             file.write("## Model Common Functions\n")
             file.write("````Python\n")
             file.write(str(stats["common"]) + "\n")
             file.write("````\n")
+
+
+def search_dir(dir, query, first=False, files_only=False):
+    if files_only:
+        results = [f for f in listdir(dir) if isfile(f) and query in f]
+    else:
+        results = [f for f in listdir(dir) if query in f]
+    return results[0] if first else results
+
+
+def corpus_from_docs(docs):
+    corpus = {}
+
+    nlp = spacy.load("en")
+    tokens = nlp(" ".join(map(lambda document: document.strip(), docs)))
+    tokens = list(filter(token_filter, tokens))
+    doc = nlp(" ".join(map(lambda token: token.text, tokens)))
+    counts = doc.count_by(ORTH)
+    words = counts.items()
+    for word_id, cnt in sorted(words, reverse=True, key=lambda item: item[1]):
+        corpus[nlp.vocab.strings[word_id]] = cnt
+
+    return corpus
+
+
+def corpus_from_csv(path):
+    corpus = {}
+    with open(path) as csvfile:
+        reader = DictReader(csvfile)
+        for row in reader:
+            corpus[row["word"]] = int(row["count"])
+    return corpus
+
+
+def corpus_to_csv(path, corpus):
+    with open(path, "w") as csvfile:
+        writer = DictWriter(csvfile, fieldnames=["word", "count"])
+        writer.writeheader()
+        for word, count in corpus.items():
+            row = {"word": word, "count": count}
+            writer.writerow(row)
+
+
+def write_embedding_to_disk(path, emb_dict):
+    with open(path, "w+") as f:
+        for word in [*emb_dict]:
+            if word != "<OOV>" and word != "<PAD>":
+                vector = " ".join(emb_dict[word].astype(str))
+                f.write("{w} {v}\n".format({"w": word, "v": vector}))
+
+
+def write_emb_tsv_to_disk(path, emb_dict):
+    with open(path, "w+") as f:
+        f.write("Words\n")
+        for word in [*emb_dict]:
+            f.write(word + "\n")
+
+
+def get_sentence_contexts(sentence, target, offset=None):
+    if offset is None:
+        left, _, right = sentence.partition(target)
+    else:
+        left = sentence[:offset]
+        start = offset + len(target)
+        right = sentence[start:]
+    return left.strip(), right.strip()
+
+
+def unpickle_file(path):
+    with open(path, "rb") as f:
+        return pickle.load(f)
+
+
+def pickle_file(path, data):
+    with open(path, "rb") as f:
+        return pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
