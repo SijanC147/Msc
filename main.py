@@ -6,9 +6,8 @@ from datasets.Xue2018 import Xue2018
 from datasets.Wang2017 import Wang2017
 from datasets.Rosenthal2015 import Rosenthal2015
 from models.Tang2016a.LSTM import LSTM
-
-# from models.Tang2016a.TDLSTM import TDLSTM
-# from models.Tang2016a.TCLSTM import TCLSTM
+from models.Tang2016a.TDLSTM import TDLSTM
+from models.Tang2016a.TCLSTM import TCLSTM
 
 import tensorflow as tf
 
@@ -17,7 +16,7 @@ tf.logging.set_verbosity(tf.logging.INFO)
 experiment = Experiment(
     dataset=Dong2014(),
     embedding=GloVe(alias="twitter", version="25"),
-    model=LSTM(),
+    model=TCLSTM(),
     seed=1234,
 )
 experiment.run(job="train+eval", steps=100)

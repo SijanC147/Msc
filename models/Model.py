@@ -132,7 +132,7 @@ class Model(ABC):
             input_fn=lambda: self.__train_input_fn(
                 features=features,
                 labels=labels,
-                batch_size=self.__params["batch_size"],
+                batch_size=self.params["batch_size"],
             ),
             steps=steps,
             hooks=self.__train_hooks,
@@ -151,7 +151,7 @@ class Model(ABC):
             input_fn=lambda: self.__eval_input_fn(
                 features=features,
                 labels=labels,
-                batch_size=self.__params["batch_size"],
+                batch_size=self.params["batch_size"],
             ),
             hooks=self.__eval_hooks,
         )
@@ -159,7 +159,7 @@ class Model(ABC):
         duration_dict = {"job": "eval", "time": time_taken}
         return {"duration": duration_dict, **run_stats}
 
-    def train_and_evaluate(self, dataset, steps=None):
+    def train_and_evaluate(self, dataset, steps):
         self._add_embedding_params(embedding=dataset.embedding)
         features, labels, stats = dataset.get_features_and_labels(mode="train")
         train_stats = self._export_statistics(dataset_stats=stats, steps=steps)
@@ -167,7 +167,7 @@ class Model(ABC):
             input_fn=lambda: self.__train_input_fn(
                 features=features,
                 labels=labels,
-                batch_size=self.__params["batch_size"],
+                batch_size=self.params["batch_size"],
             ),
             max_steps=steps,
             hooks=self.__train_hooks,
@@ -178,7 +178,7 @@ class Model(ABC):
             input_fn=lambda: self.__eval_input_fn(
                 features=features,
                 labels=labels,
-                batch_size=self.__params["batch_size"],
+                batch_size=self.params["batch_size"],
             ),
             steps=None,
             hooks=self.__eval_hooks,
@@ -238,42 +238,3 @@ class Model(ABC):
             "embedding_dim": embedding.dim_size,
             **self.params,
         }
-
-    # @abstractmethod
-    # def set_params(self, params):
-    #     self.params = {
-    #         "embedding_initializer": self.embedding.initializer,
-    #         "vocab_size": self.embedding.vocab_size,
-    #         "embedding_dim": self.embedding.dim_size,
-    #         **params
-    #     }
-
-    # @abstractmethod
-    # def set_feature_columns(self, feature_columns):
-    #     self.feature_columns = feature_columns
-
-    # @abstractmethod
-    # def set_train_input_fn(self, train_input_fn):
-    #     self.train_input_fn = train_input_fn
-
-    # @abstractmethod
-    # def set_eval_input_fn(self, eval_input_fn):
-    #     self.eval_input_fn = eval_input_fn
-
-    # @abstractmethod
-    # def set_model_fn(self, model_fn):
-    #     self.model_fn = model_fn
-
-    # def initialize_internal_defaults(self):
-    #     self.set_feature_columns(feature_columns=None)
-    #     self.set_params(params=None)
-    #     self.set_train_input_fn(train_input_fn=None)
-    #     self.set_eval_input_fn(eval_input_fn=None)
-    #     self.set_model_fn(model_fn=None)
-
-    # def create_estimator(self):
-    #     self.estimator = tf.estimator.Estimator(
-    #         model_fn=self.model_fn,
-    #         params={"feature_columns": self.feature_columns, **self.params},
-    #         config=self.run_config,
-    #     )

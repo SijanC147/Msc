@@ -3,6 +3,7 @@ import spacy
 import nltk
 import random
 import math
+import json
 import numpy as np
 import tensorflow as tf
 
@@ -223,3 +224,60 @@ def start_tensorboard(model_dir, debug=False):
 
 def default_oov(dim_size):
     return np.random.uniform(low=-0.03, high=0.03, size=dim_size)
+
+
+def write_stats_to_disk(job, stats, path):
+    target_dir = os.path.join(path, job)
+    os.makedirs(target_dir, exist_ok=True)
+    with open(os.path.join(target_dir, "dataset.json"), "w") as file:
+        file.write(json.dumps(stats["dataset"]))
+    with open(os.path.join(target_dir, "job.json"), "w") as file:
+        file.write(
+            json.dumps(
+                {"duration": stats["duration"], "steps": stats["steps"]}
+            )
+        )
+    with open(os.path.join(target_dir, "model.md"), "w") as file:
+        file.write("## Model Params\n")
+        file.write("````Python\n")
+        file.write(str(stats["model"]["params"]) + "\n")
+        file.write("````\n")
+        file.write("## Train Input Fn\n")
+        file.write("````Python\n")
+        file.write(str(stats["model"]["train_input_fn"]) + "\n")
+        file.write("````\n")
+        file.write("## Eval Input Fn\n")
+        file.write("````Python\n")
+        file.write(str(stats["model"]["eval_input_fn"]) + "\n")
+        file.write("````\n")
+        file.write("## Model Fn\n")
+        file.write("````Python\n")
+        file.write(str(stats["model"]["model_fn"]) + "\n")
+        file.write("````\n")
+    with open(os.path.join(target_dir, "estimator.md"), "w") as file:
+        file.write("## Train Hooks\n")
+        file.write("````Python\n")
+        file.write(str(stats["estimator"]["train_hooks"]) + "\n")
+        file.write("````\n")
+        file.write("## Eval Hooks\n")
+        file.write("````Python\n")
+        file.write(str(stats["estimator"]["eval_hooks"]) + "\n")
+        file.write("````\n")
+        file.write("## Train Fn\n")
+        file.write("````Python\n")
+        file.write(str(stats["estimator"]["train_fn"]) + "\n")
+        file.write("````\n")
+        file.write("## Eval Fn\n")
+        file.write("````Python\n")
+        file.write(str(stats["estimator"]["eval_fn"]) + "\n")
+        file.write("````\n")
+        file.write("## Train And Eval Fn\n")
+        file.write("````Python\n")
+        file.write(str(stats["estimator"]["train_eval_fn"]) + "\n")
+        file.write("````\n")
+    if len(stats["common"]) > 0:
+        with open(os.path.join(target_dir, "common.md"), "w") as file:
+            file.write("## Model Common Functions\n")
+            file.write("````Python\n")
+            file.write(str(stats["common"]) + "\n")
+            file.write("````\n")
