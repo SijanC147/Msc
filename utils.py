@@ -212,10 +212,14 @@ def inspect_distribution(features, labels):
     }
 
 
-def start_tensorboard(self, model_dir, debug=False):
+def start_tensorboard(model_dir, debug=False):
     data = {
         "logdir": model_dir,
         "debug": "--debugger_port 6064" if debug else "",
     }
     os.system("open http://localhost:6006")
     os.system("tensorboard --logdir {dir} {debug}".format(data))
+
+
+def default_oov(dim_size):
+    return np.random.uniform(low=-0.03, high=0.03, size=dim_size)

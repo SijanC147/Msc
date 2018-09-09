@@ -16,9 +16,9 @@ class Model(ABC):
     @abstractmethod
     def set_params(self, params):
         self.params = {
-            "embedding_initializer": self.embedding.get_tf_embedding_initializer(),
+            "embedding_initializer": self.embedding.initializer,
             "vocab_size": self.embedding.vocab_size,
-            "embedding_dim": self.embedding.dimension_size,
+            "embedding_dim": self.embedding.dim_size,
             **params,
         }
 
@@ -184,4 +184,3 @@ class Model(ABC):
             },
             "common": common_content,
         }
-

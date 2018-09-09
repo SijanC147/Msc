@@ -1,100 +1,105 @@
 import re
 import os
-
 import numpy as np
 import tensorflow as tf
 
-from utils import tokenize_phrase
+from utils import tokenize_phrase, default_oov
 
 
 class Embedding:
-    def __init__(self, path, alias, version, oov_embedding=None):
-        self.alias = alias
-        self.version = version
-        self.default_path = path
-        self.dictionary = {}
-        if oov_embedding is None:
-            self.oov_embedding = lambda embedding_dim: np.random.uniform(
-                low=-1, high=1, size=embedding_dim
-            )
-        else:
-            self.oov_embedding = oov_embedding
+    def __init__(self, path, oov=None):
+        self.__path = None
+        self.path = path
+        self.oov = oov
 
-    def load_embeddings_from_path(self, path=None):
-        if path is not None:
-            load_path = path
-        else:
-            load_path = os.path.join("embeddings", "data", self.default_path)
+    @property
+    def path(self):
+        return self.__path
 
-        with open(load_path, "r", encoding="utf-8") as f:
+    @property
+    def oov(self):
+        return self.__oov
+
+    @property
+    def dictionary(self):
+        if self.__dictionary is None:
+            self.dictionary = self._load_embedding(path=self.path)
+        return self.__dictionary
+
+    @property
+    def dim_size(self):
+        self.__dim_size = len(next(iter(self.dictionary.values())))
+        return self.__dim_size
+
+    @property
+    def vocab_size(self):
+        self.__vocab_size = len(self.dictionary)
+        return self.__vocab_size
+
+    @property
+    def initializer(self):
+        shape = (self.vocab_size, self.dim_size)
+
+        def _init(shape=shape, dtype=tf.float32, partition_info=None):
+            return np.asarray([self.dictionary[w] for w in [*self.dictionary]])
+
+        self.__initializer = _init
+        return self.__initializer
+
+    @path.setter
+    def path(self, path):
+        if self.__path != path:
+            self.__path = path
+            self.dictionary = None
+
+    @oov.setter
+    def oov(self, oov):
+        if oov is None:
+            self.__oov = lambda dim_size: default_oov(dim_size)
+        else:
+            self.__oov = lambda dim_size: oov(dim_size)
+        self.dictionary["<OOV>"] = self.__oov(dim_size=self.dim_size)
+
+    @dictionary.setter
+    def dictionary(self, dictionary):
+        if dictionary is not None:
+            dim_size = len(next(iter(dictionary.values())))
+            dictionary = {**self._get_flags(dim_size), **dictionary}
+
+        self.__dictionary = dictionary
+
+    def filter_on_vocab(self, vocab):
+        filtered_dict = {
+            word: self.dictionary[word]
+            for word in vocab
+            if word in [*self.dictionary]
+        }
+        self.dictionary = filtered_dict
+
+    def get_index_ids(self, phrase):
+        phrase = phrase.decode() if isinstance(phrase, bytes) else phrase
+        phrase = str(phrase) if not isinstance(phrase, str) else phrase
+        words = tokenize_phrase(phrase.lower())
+        vocab = [*self.dictionary]
+        ids = [
+            vocab.index(word) if word in vocab else vocab.index("<OOV>")
+            for word in words
+        ]
+        return ids
+
+    def _load_embedding(self, path):
+        dictionary = {}
+        with open(path, "r", encoding="utf-8") as f:
             for line in f:
                 values = line.strip().split()
                 word = values[0]
                 embedding = np.asarray(values[1:], dtype="float32")
-                self.dictionary[word] = embedding
+                dictionary[word] = embedding
+        return dictionary
 
-        self.dimension_size = len(next(iter(self.dictionary.values())))
-        self.dictionary = {
-            "<PAD>": np.zeros(shape=self.dimension_size),
-            "<OOV>": self.oov_embedding(embedding_dim=self.dimension_size),
-            **self.dictionary,
+    def _get_flags(self, dim_size):
+        flags = {
+            "<PAD>": np.zeros(shape=dim_size),
+            "<OOV>": self.oov(dim_size=dim_size),
         }
-        self.vocab_size = len(self.dictionary)
-
-        return self.dictionary
-
-    def init_partial_embedding_if_exists(self, partial_embedding_path):
-        if os.path.exists(partial_embedding_path):
-            self.load_embeddings_from_path(path=partial_embedding_path)
-
-    def get_tf_embedding_initializer(self):
-        def embedding_initializer(
-            shape=(self.vocab_size, self.dimension_size),
-            dtype=tf.float32,
-            partition_info=None,
-        ):
-            return np.asarray(
-                [self.dictionary[word] for word in [*self.dictionary]]
-            )
-
-        return embedding_initializer
-
-    def map_embedding_ids(self, phrase, word_to_ids_dict={}):
-        phrase = str(phrase, "utf-8") if type(phrase) != str else phrase
-
-        if len(word_to_ids_dict) == 0:
-            return list(
-                [*self.dictionary].index(word)
-                if word in [*self.dictionary]
-                else [*self.dictionary].index("<OOV>")
-                for word in tokenize_phrase(phrase.lower())
-            )
-        else:
-            return list(
-                word_to_ids_dict[word]
-                for word in tokenize_phrase(phrase.lower())
-                if word in [*word_to_ids_dict]
-            )
-
-    def get_word_to_ids_dict(self, words):
-        return {
-            word: [*self.dictionary].index(word)
-            if word in [*self.dictionary]
-            else [*self.dictionary].index("<OOV>")
-            for word in words
-        }
-
-    def filter_on_corpus(self, tokens):
-        self.load_embeddings_from_path()
-        self.dictionary = {
-            token: self.dictionary[token]
-            for token in tokens
-            if token in [*self.dictionary]
-        }
-        self.dictionary = {
-            "<PAD>": np.zeros(shape=self.dimension_size),
-            "<OOV>": self.oov_embedding(embedding_dim=self.dimension_size),
-            **self.dictionary,
-        }
-        self.vocab_size = len(self.dictionary)
-        return self.dictionary
+        return flags

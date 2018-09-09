@@ -36,7 +36,7 @@ class Experiment:
             else run_config
         )
 
-        if run_config.model_dir is None:
+        if self.run_config.model_dir is None:
             self.run_config = run_config.replace(model_dir=summary_dir)
 
         if seed is not None:

@@ -70,9 +70,6 @@ class Dataset(ABC):
             }
             labels = []
 
-            word_to_ids_dict = self.get_word_to_id_dict(
-                self.vocabulary_corpus, debug=(mode == "debug")
-            )
             dataset_dict = self.get_dataset_dictionary(mode=mode)
             total_time = 0
             for index in range(len(dataset_dict["sentences"])):
@@ -96,15 +93,9 @@ class Dataset(ABC):
                     offset=dataset_dict.get("offset"),
                 )
 
-                left_mapping = self.embedding.map_embedding_ids(
-                    left_context.strip(), word_to_ids_dict=word_to_ids_dict
-                )
-                target_mapping = self.embedding.map_embedding_ids(
-                    target, word_to_ids_dict=word_to_ids_dict
-                )
-                right_mapping = self.embedding.map_embedding_ids(
-                    right_context.strip(), word_to_ids_dict=word_to_ids_dict
-                )
+                left_mapping = self.embedding.get_index_ids(left_context)
+                target_mapping = self.embedding.get_index_ids(target)
+                right_mapping = self.embedding.get_index_ids(right_context)
 
                 features["sentence_length"].append(
                     len(left_mapping + target_mapping + right_mapping)
@@ -146,9 +137,10 @@ class Dataset(ABC):
         if offset is None:
             left, _, right = sentence.partition(target)
         else:
-            left = sentence[:offset].strip()
-            right = sentence[offset + len(target.strip()) :].strip()
-        return left, right
+            left = sentence[:offset]
+            start = offset + len(target)
+            right = sentence[start:]
+        return left.strip(), right.strip()
 
     def get_file(self, mode):
         if mode == "train":
@@ -176,9 +168,8 @@ class Dataset(ABC):
             self.generated_embedding_directory,
             "partial_" + self.embedding.version + ".txt",
         )
-        self.embedding.init_partial_embedding_if_exists(
-            partial_embedding_path=self.partial_embedding_file_path
-        )
+        if self.partial_embedding_file_exists():
+            self.embedding.path = self.partial_embedding_file_path
 
     def get_save_file_path(self, mode):
         return os.path.join(
@@ -289,32 +280,6 @@ class Dataset(ABC):
             for word in [*partial_embedding]:
                 f.write(word + "\n")
 
-    def get_word_to_id_dict(self, vocabulary_corpus, debug=False):
-        token_to_ids_dict = {}
-        if self.embedding_id_file_exists() and not (debug):
-            with open(self.embedding_id_file_path) as csvfile:
-                reader = csv.DictReader(csvfile)
-                for row in reader:
-                    token_to_ids_dict[row["word"]] = row["id"]
-        else:
-            print("Building token to ids dict...")
-            start = time.time()
-            token_to_ids_dict = self.embedding.get_word_to_ids_dict(
-                vocabulary_corpus
-            )
-            print("Built token to ids dict in: " + str(time.time() - start))
-            if not (debug):
-                os.makedirs(self.generated_embedding_directory, exist_ok=True)
-                with open(self.embedding_id_file_path, "w+") as csvfile:
-                    writer = csv.DictWriter(csvfile, fieldnames=["word", "id"])
-
-                    writer.writeheader()
-                    for word in [*token_to_ids_dict]:
-                        writer.writerow(
-                            {"word": word, "id": token_to_ids_dict[word]}
-                        )
-        return token_to_ids_dict
-
     def get_vocabulary_corpus(self, rebuild=False):
         if self.corpus_file_exists() and not (rebuild):
             return self.load_vocabulary_corpus_from_csv()
@@ -336,23 +301,13 @@ class Dataset(ABC):
     def load_embedding_from_corpus(
         self,
         vocabulary_corpus,
-        force_rebuild_partial=False,
-        force_rebuild_projection=False,
+        rebuild_partial=False,
+        rebuild_projection=False,
     ):
-        if self.partial_embedding_file_exists() and not (
-            force_rebuild_partial
-        ):
-            partial_embedding_dict = self.embedding.load_embeddings_from_path(
-                path=self.partial_embedding_file_path
-            )
+        if self.partial_embedding_file_exists() and not rebuild_partial:
+            self.embedding.path = self.partial_embedding_file_path
         else:
-            partial_embedding_dict = self.embedding.filter_on_corpus(
-                tokens=[*vocabulary_corpus]
-            )
-            self.generate_partial_embedding_file(partial_embedding_dict)
-
-        if (
-            not (self.projection_labels_file_exists())
-            or force_rebuild_projection
-        ):
-            self.generate_projection_labels_file(partial_embedding_dict)
+            self.embedding.filter_on_vocab(vocab=[*vocabulary_corpus])
+            self.generate_partial_embedding_file(self.embedding.dictionary)
+        if not (self.projection_labels_file_exists()) or rebuild_projection:
+            self.generate_projection_labels_file(self.embedding.dictionary)
