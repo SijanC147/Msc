@@ -24,12 +24,16 @@ class Experiment:
             GloVe(alias="twitter", version="debug") if debug else embedding
         )
         self.dataset = Dong2014() if debug else dataset
+        self.dataset.set_embedding(self.embedding)
         self.model = model
         self.experiment_directory = self.init_experiment_directory(
-            custom_tag, continue_training
+            model=self.model,
+            dataset=self.dataset,
+            custom_tag=custom_tag,
+            continue_training=continue_training,
         )
-
         summary_dir = os.path.join(self.experiment_directory, "tb_summary")
+
         self.run_config = (
             tf.estimator.RunConfig(model_dir=summary_dir)
             if run_config is None
@@ -44,39 +48,41 @@ class Experiment:
 
         self.dataset.set_embedding(self.embedding)
 
-        self.model.embedding = self.embedding
-        self.model.dataset = self.dataset
+        # self.model.embedding = self.embedding
+        # self.model.dataset = self.dataset
         self.model.run_config = self.run_config
-        self.model.initialize_internal_defaults()
+        # self.model.initialize_internal_defaults()
 
-    def init_experiment_directory(self, custom_tag, continue_training):
+    def init_experiment_directory(
+        self, model, dataset, custom_tag, continue_training
+    ):
         all_experiments_path = os.path.join(
             os.path.dirname(os.path.abspath(__file__)), "data"
         )
         relative_model_path = os.path.join(
             os.path.relpath(
-                os.path.dirname(inspect.getfile(self.model.__class__)),
+                os.path.dirname(inspect.getfile(model.__class__)),
                 os.path.join(os.getcwd(), "models"),
             ),
-            self.model.__class__.__name__,
+            model.__class__.__name__,
         )
         if len(custom_tag) > 0:
             experiment_folder_name = "_".join(
                 [
-                    self.dataset.__class__.__name__,
-                    self.embedding.__class__.__name__,
-                    self.embedding.alias,
-                    self.embedding.version,
+                    dataset.__class__.__name__,
+                    dataset.embedding.__class__.__name__,
+                    dataset.embedding.alias,
+                    dataset.embedding.version,
                     custom_tag.replace(" ", "_"),
                 ]
             )
         else:
             experiment_folder_name = "_".join(
                 [
-                    self.dataset.__class__.__name__,
-                    self.embedding.__class__.__name__,
-                    self.embedding.alias,
-                    self.embedding.version,
+                    dataset.__class__.__name__,
+                    dataset.embedding.__class__.__name__,
+                    dataset.embedding.alias,
+                    dataset.embedding.version,
                 ]
             )
         experiment_directory = os.path.join(
@@ -104,99 +110,83 @@ class Experiment:
         debug=False,
         start_tensorboard=False,
     ):
-        self.model.create_estimator()
+        # self.model.create_estimator()
         if job == "train":
             stats = self.model.train(
-                steps=steps,
-                hooks=train_hooks,
-                debug=debug,
-                distribution=train_distribution,
+                dataset=self.dataset, steps=steps, debug=debug
             )
-            self.write_stats_to_experiment_dir(job="train", job_stats=stats)
+            self._write_stats_to_experiment_dir(job="train", stats=stats)
         elif job == "eval":
-            stats = self.model.evaluate(
-                hooks=eval_hooks, debug=debug, distribution=eval_distribution
-            )
-            self.write_stats_to_experiment_dir(job="eval", job_stats=stats)
+            stats = self.model.evaluate(dataset=self.dataset, debug=debug)
+            self._write_stats_to_experiment_dir(job="eval", stats=stats)
         elif job == "train+eval":
             train_stats, eval_stats = self.model.train_and_evaluate(
-                steps=steps,
-                train_hooks=train_hooks,
-                eval_hooks=eval_hooks,
-                train_distribution=train_distribution,
-                eval_distribution=eval_distribution,
+                steps=steps, dataset=self.dataset
             )
-            self.write_stats_to_experiment_dir(
-                job="train", job_stats=train_stats
-            )
-            self.write_stats_to_experiment_dir(
-                job="eval", job_stats=eval_stats
-            )
+            self._write_stats_to_experiment_dir(job="train", stats=train_stats)
+            self._write_stats_to_experiment_dir(job="eval", stats=eval_stats)
 
         if start_tensorboard:
             start_tensorboard(model_dir=self.run_config.model_dir, debug=debug)
 
-    def write_stats_to_experiment_dir(self, job, job_stats):
+    def _write_stats_to_experiment_dir(self, job, stats):
         job_stats_directory = os.path.join(self.experiment_directory, job)
         os.makedirs(job_stats_directory, exist_ok=True)
         with open(
             os.path.join(job_stats_directory, "dataset.json"), "w"
         ) as file:
-            file.write(json.dumps(job_stats["dataset"]))
+            file.write(json.dumps(stats["dataset"]))
         with open(os.path.join(job_stats_directory, "job.json"), "w") as file:
             file.write(
                 json.dumps(
-                    {
-                        "duration": job_stats["duration"],
-                        "steps": job_stats["steps"],
-                    }
+                    {"duration": stats["duration"], "steps": stats["steps"]}
                 )
             )
         with open(os.path.join(job_stats_directory, "model.md"), "w") as file:
             file.write("## Model Params\n")
             file.write("````Python\n")
-            file.write(str(job_stats["model"]["params"]) + "\n")
+            file.write(str(stats["model"]["params"]) + "\n")
             file.write("````\n")
             file.write("## Train Input Fn\n")
             file.write("````Python\n")
-            file.write(str(job_stats["model"]["train_input_fn"]) + "\n")
+            file.write(str(stats["model"]["train_input_fn"]) + "\n")
             file.write("````\n")
             file.write("## Eval Input Fn\n")
             file.write("````Python\n")
-            file.write(str(job_stats["model"]["eval_input_fn"]) + "\n")
+            file.write(str(stats["model"]["eval_input_fn"]) + "\n")
             file.write("````\n")
             file.write("## Model Fn\n")
             file.write("````Python\n")
-            file.write(str(job_stats["model"]["model_fn"]) + "\n")
+            file.write(str(stats["model"]["model_fn"]) + "\n")
             file.write("````\n")
         with open(
             os.path.join(job_stats_directory, "estimator.md"), "w"
         ) as file:
             file.write("## Train Hooks\n")
             file.write("````Python\n")
-            file.write(str(job_stats["estimator"]["train_hooks"]) + "\n")
+            file.write(str(stats["estimator"]["train_hooks"]) + "\n")
             file.write("````\n")
             file.write("## Eval Hooks\n")
             file.write("````Python\n")
-            file.write(str(job_stats["estimator"]["eval_hooks"]) + "\n")
+            file.write(str(stats["estimator"]["eval_hooks"]) + "\n")
             file.write("````\n")
             file.write("## Train Fn\n")
             file.write("````Python\n")
-            file.write(str(job_stats["estimator"]["train_fn"]) + "\n")
+            file.write(str(stats["estimator"]["train_fn"]) + "\n")
             file.write("````\n")
             file.write("## Eval Fn\n")
             file.write("````Python\n")
-            file.write(str(job_stats["estimator"]["eval_fn"]) + "\n")
+            file.write(str(stats["estimator"]["eval_fn"]) + "\n")
             file.write("````\n")
             file.write("## Train And Eval Fn\n")
             file.write("````Python\n")
-            file.write(str(job_stats["estimator"]["train_eval_fn"]) + "\n")
+            file.write(str(stats["estimator"]["train_eval_fn"]) + "\n")
             file.write("````\n")
-        if len(job_stats["common"]) > 0:
+        if len(stats["common"]) > 0:
             with open(
                 os.path.join(job_stats_directory, "common.md"), "w"
             ) as file:
                 file.write("## Model Common Functions\n")
                 file.write("````Python\n")
-                file.write(str(job_stats["common"]) + "\n")
+                file.write(str(stats["common"]) + "\n")
                 file.write("````\n")
