@@ -21,7 +21,8 @@ class Embedding:
 
     @property
     def version(self):
-        return splitext(basename(normpath(self.path)))[0]
+        file_name = splitext(basename(normpath(self.path)))[0]
+        return file_name.replace("partial_", "")
 
     @property
     def name(self):

@@ -15,8 +15,9 @@ pylint = "*"
 rope = "*"
 "pep8" = "*"
 pycodestyle = "*"
-black = "*"
 "autopep8" = "*"
+black = "*"
+pydocstyle = "*"
 
 [requires]
 python_version = "3.6"

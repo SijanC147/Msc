@@ -238,6 +238,7 @@ class Dataset:
         }
         labels = []
 
+        print("Processing dataset...")
         total_time = 0
         for index in range(len(dictionary["sentences"])):
 

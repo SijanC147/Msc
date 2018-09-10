@@ -122,10 +122,11 @@ class Model(ABC):
     def _model_fn(self):
         pass
 
-    def train(self, dataset, steps, debug=False):
+    def train(self, dataset, steps, distribution=None):
         self._add_embedding_params(embedding=dataset.embedding)
-        mode = "train" if not debug else "debug"
-        features, labels, stats = dataset.get_features_and_labels(mode=mode)
+        features, labels, stats = dataset.get_features_and_labels(
+            mode="train", distribution=distribution
+        )
         run_stats = self._export_statistics(dataset_stats=stats, steps=steps)
         start = _time()
         self.estimator.train(
@@ -141,10 +142,11 @@ class Model(ABC):
         duration_dict = {"job": "train", "time": time_taken}
         return {"duration": duration_dict, **run_stats}
 
-    def evaluate(self, dataset, debug=False):
+    def evaluate(self, dataset, distribution=None):
         self._add_embedding_params(embedding=dataset.embedding)
-        mode = "eval" if not debug else "debug"
-        features, labels, stats = dataset.get_features_and_labels(mode=mode)
+        features, labels, stats = dataset.get_features_and_labels(
+            mode="test", distribution=distribution
+        )
         run_stats = self._export_statistics(dataset_stats=stats)
         start = _time()
         self.estimator.evaluate(
@@ -159,7 +161,7 @@ class Model(ABC):
         duration_dict = {"job": "eval", "time": time_taken}
         return {"duration": duration_dict, **run_stats}
 
-    def train_and_evaluate(self, dataset, steps):
+    def train_and_eval(self, dataset, steps):
         self._add_embedding_params(embedding=dataset.embedding)
         features, labels, stats = dataset.get_features_and_labels(mode="train")
         train_stats = self._export_statistics(dataset_stats=stats, steps=steps)
@@ -203,7 +205,7 @@ class Model(ABC):
         model_common_file = join(dirname(getfile(self.__class__)), "common.py")
         estimator_train_fn_source = getsource(self.train)
         estimator_eval_fn_source = getsource(self.evaluate)
-        estimator_train_eval_fn_source = getsource(self.train_and_evaluate)
+        estimator_train_eval_fn_source = getsource(self.train_and_eval)
         if exists(model_common_file):
             common_content = open(model_common_file, "r").read()
         else:
