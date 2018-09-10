@@ -1,6 +1,6 @@
-import os
 import tensorflow as tf
-from inspect import getsource
+from os.path import join, dirname, exists
+from inspect import getsource, getfile
 from datetime import timedelta
 from time import time as _time
 from abc import ABC, abstractmethod
@@ -200,13 +200,11 @@ class Model(ABC):
         train_input_fn_source = getsource(self.train_input_fn)
         eval_input_fn_source = getsource(self.eval_input_fn)
         model_fn_source = getsource(self.model_fn)
-        model_common_file = os.path.join(
-            os.path.dirname(inspect.getfile(self.__class__)), "common.py"
-        )
+        model_common_file = join(dirname(getfile(self.__class__)), "common.py")
         estimator_train_fn_source = getsource(self.train)
         estimator_eval_fn_source = getsource(self.evaluate)
         estimator_train_eval_fn_source = getsource(self.train_and_evaluate)
-        if os.path.exists(model_common_file):
+        if exists(model_common_file):
             common_content = open(model_common_file, "r").read()
         else:
             common_content = ""

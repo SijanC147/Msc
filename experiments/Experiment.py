@@ -1,38 +1,22 @@
-import os
-import time
-import inspect
-import json
 import tensorflow as tf
+from os import getcwd
+from os.path import join as _join, relpath, dirname, exists, abspath
+from inspect import getfile
 from utils import start_tensorboard, write_stats_to_disk
-from embeddings.GloVe import GloVe
-from datasets.Dong2014 import Dong2014
 
 
 class Experiment:
     def __init__(
-        self,
-        dataset,
-        embedding,
-        model,
-        run_config=None,
-        seed=None,
-        continue_training=False,
-        custom_tag="",
-        debug=False,
+        self, dataset, embedding, model, run_config=None, custom_tag=""
     ):
-        self.embedding = (
-            GloVe(alias="twitter", version="debug") if debug else embedding
-        )
-        self.dataset = Dong2014() if debug else dataset
-        self.dataset.set_embedding(self.embedding)
+        self.embedding = embedding
+        self.dataset = dataset
+        self.dataset.embedding = self.embedding
         self.model = model
         self.exp_dir = self._init_exp_dir(
-            model=self.model,
-            dataset=self.dataset,
-            custom_tag=custom_tag,
-            continue_training=continue_training,
+            model=self.model, dataset=self.dataset, custom_tag=custom_tag
         )
-        summary_dir = os.path.join(self.exp_dir, "tb_summary")
+        summary_dir = _join(self.exp_dir, "tb_summary")
 
         self.run_config = (
             tf.estimator.RunConfig(model_dir=summary_dir)
@@ -42,11 +26,6 @@ class Experiment:
 
         if self.run_config.model_dir is None:
             self.run_config = run_config.replace(model_dir=summary_dir)
-
-        if seed is not None:
-            self.run_config = self.run_config.replace(tf_random_seed=seed)
-
-        self.dataset.set_embedding(self.embedding)
 
         self.model.run_config = self.run_config
 
@@ -83,34 +62,24 @@ class Experiment:
         if start_tensorboard:
             start_tensorboard(model_dir=self.run_config.model_dir, debug=debug)
 
-    def _init_exp_dir(self, model, dataset, custom_tag, continue_training):
-        all_exps_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "data"
-        )
-        rel_model_path = os.path.join(
-            os.path.relpath(
-                os.path.dirname(inspect.getfile(model.__class__)),
-                os.path.join(os.getcwd(), "models"),
+    def _init_exp_dir(self, model, dataset, custom_tag):
+        all_exps_path = _join(dirname(abspath(__file__)), "data")
+        rel_model_path = _join(
+            relpath(
+                dirname(getfile(model.__class__)), _join(getcwd(), "models")
             ),
             model.__class__.__name__,
         )
-        exp_dir_name = "_".join(
-            [
-                dataset.__class__.__name__,
-                dataset.embedding.__class__.__name__,
-                dataset.embedding.alias,
-                dataset.embedding.version,
-            ]
-        )
+        exp_dir_name = "_".join([dataset.name, dataset.embedding.version])
         if len(custom_tag) > 0:
             exp_dir_name += "_" + custom_tag.replace(" ", "_")
 
-        exp_dir = os.path.join(all_exps_path, rel_model_path, exp_dir_name)
-        if os.path.exists(exp_dir) and not (continue_training):
+        exp_dir = _join(all_exps_path, rel_model_path, exp_dir_name)
+        if exists(exp_dir) and not len(custom_tag) > 0:
             i = 0
-            while os.path.exists(exp_dir):
+            while exists(exp_dir):
                 i += 1
-                exp_dir = os.path.join(
+                exp_dir = _join(
                     all_exps_path, rel_model_path, exp_dir_name + "_" + str(i)
                 )
         return exp_dir

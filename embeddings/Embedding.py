@@ -1,14 +1,13 @@
-import re
-import os
 import numpy as np
 import tensorflow as tf
-
+from os.path import normpath, basename, splitext, dirname
 from utils import tokenize_phrase, default_oov
+
+import embeddings._keys as EMBEDDINGS
 
 
 class Embedding:
     def __init__(self, path, oov=None):
-        self.__path = None
         self.path = path
         self.oov = oov
 
@@ -19,6 +18,14 @@ class Embedding:
     @property
     def oov(self):
         return self.__oov
+
+    @property
+    def version(self):
+        return splitext(basename(normpath(self.path)))[0]
+
+    @property
+    def name(self):
+        return basename(normpath(dirname(self.path)))
 
     @property
     def dictionary(self):
@@ -48,9 +55,13 @@ class Embedding:
 
     @path.setter
     def path(self, path):
-        if self.__path != path:
-            self.__path = path
-            self.dictionary = None
+        try:
+            path_changed = self.__path != path
+        except:
+            path_changed = True
+
+        if path_changed:
+            self._reset(path)
 
     @oov.setter
     def oov(self, oov):
@@ -86,6 +97,10 @@ class Embedding:
             for word in words
         ]
         return ids
+
+    def _reset(self, path):
+        self.__path = path
+        self.dictionary = None
 
     def _load_embedding(self, path):
         dictionary = {}

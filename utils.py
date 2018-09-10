@@ -13,6 +13,12 @@ from functools import wraps
 from spacy.attrs import ORTH  # pylint: disable=E0611
 
 
+class ConstantDict(dict):
+    __getattr__ = dict.get
+    __setattr__ = dict.get
+    __delattr__ = dict.get
+
+
 def tokenize_phrase(phrase, backend="spacy"):
     if backend == "nltk":
         return nltk.word_tokenize(phrase)

@@ -1,6 +1,6 @@
 from time import time as _time
 from os import listdir, makedirs
-from os.path import isfile, join, exists
+from os.path import normpath, basename, isfile, join, exists
 from statistics import mean
 from functools import wraps
 from utils import (
@@ -17,6 +17,7 @@ from utils import (
     unpickle_file as _unpickle,
     pickle_file as _pickle,
 )
+import datasets._keys as DATASETS
 
 
 class Dataset:
@@ -36,6 +37,10 @@ class Dataset:
     @property
     def embedding(self):
         return self.__embedding
+
+    @property
+    def name(self):
+        return basename(normpath(self.path))
 
     @property
     def train_file(self):
@@ -138,8 +143,8 @@ class Dataset:
     @embedding.setter
     def embedding(self, embedding):
         if embedding is not None:
-            name = type(embedding).__name__
-            version = embedding.alias
+            name = embedding.name
+            version = embedding.version
             emb_gen_dir = join(self.gen_dir, name, version)
             makedirs(emb_gen_dir, exist_ok=True)
             partial_name = "partial_{v}.txt".format({"v": version})
