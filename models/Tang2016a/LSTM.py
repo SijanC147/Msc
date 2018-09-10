@@ -1,17 +1,21 @@
 import tensorflow as tf
 from models.Model import Model
-from models.Tang2016a import common
+from models.Tang2016a.common import (
+    params as default_params,
+    dropout_lstm_cell,
+    lstm_input_fn,
+)
 
 
-class LSTM(Model):
+class Lstm(Model):
     def _params(self):
-        return common.params
+        return default_params
 
     def _feature_columns(self):
         return []
 
     def _train_input_fn(self):
-        return lambda features, labels, batch_size: common.lstm_input_fn(
+        return lambda features, labels, batch_size: lstm_input_fn(
             features,
             labels,
             batch_size,
@@ -19,7 +23,7 @@ class LSTM(Model):
         )
 
     def _eval_input_fn(self):
-        return lambda features, labels, batch_size: common.lstm_input_fn(
+        return lambda features, labels, batch_size: lstm_input_fn(
             features,
             labels,
             batch_size,
@@ -37,7 +41,7 @@ class LSTM(Model):
             )
 
             _, final_states = tf.nn.dynamic_rnn(
-                cell=common.dropout_lstm_cell(params),
+                cell=dropout_lstm_cell(params),
                 inputs=inputs,
                 sequence_length=features["len"],
                 dtype=tf.float32,

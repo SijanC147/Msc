@@ -13,12 +13,6 @@ from functools import wraps
 from spacy.attrs import ORTH  # pylint: disable=E0611
 
 
-class ConstantDict(dict):
-    __getattr__ = dict.get
-    __setattr__ = dict.get
-    __delattr__ = dict.get
-
-
 def tokenize_phrase(phrase, backend="spacy"):
     if backend == "nltk":
         return nltk.word_tokenize(phrase)
@@ -225,12 +219,10 @@ def inspect_dist(features, labels):
 
 
 def start_tensorboard(model_dir, debug=False):
-    data = {
-        "logdir": model_dir,
-        "debug": "--debugger_port 6064" if debug else "",
-    }
+    logdir = model_dir
+    debug_str = "--debugger_port 6064" if debug else ""
     system("open http://localhost:6006")
-    system("tensorboard --logdir {dir} {debug}".format(data))
+    system("tensorboard --logdir {dir} {debug}".format(logdir, debug_str))
 
 
 def default_oov(dim_size):
@@ -296,7 +288,9 @@ def write_stats_to_disk(job, stats, path):
 
 def search_dir(dir, query, first=False, files_only=False):
     if files_only:
-        results = [f for f in listdir(dir) if isfile(dir + f) and query in f]
+        results = [
+            f for f in listdir(dir) if isfile(join(dir, f)) and query in f
+        ]
     else:
         results = [f for f in listdir(dir) if query in f]
     return results[0] if first else results
@@ -340,7 +334,7 @@ def write_embedding_to_disk(path, emb_dict):
         for word in [*emb_dict]:
             if word != "<OOV>" and word != "<PAD>":
                 vector = " ".join(emb_dict[word].astype(str))
-                f.write("{w} {v}\n".format({"w": word, "v": vector}))
+                f.write("{w} {v}\n".format(w=word, v=vector))
 
 
 def write_emb_tsv_to_disk(path, emb_dict):

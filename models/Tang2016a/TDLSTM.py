@@ -1,17 +1,21 @@
 import tensorflow as tf
 from models.Model import Model
-from models.Tang2016a import common
+from models.Tang2016a.common import (
+    params as default_params,
+    dropout_lstm_cell,
+    tdlstm_input_fn,
+)
 
 
-class TDLSTM(Model):
+class TdLstm(Model):
     def _params(self):
-        return common.params
+        return default_params
 
     def _feature_columns(self):
         return []
 
     def _train_input_fn(self):
-        return lambda features, labels, batch_size: common.tdlstm_input_fn(
+        return lambda features, labels, batch_size: tdlstm_input_fn(
             features,
             labels,
             batch_size,
@@ -19,7 +23,7 @@ class TDLSTM(Model):
         )
 
     def _eval_input_fn(self):
-        return lambda features, labels, batch_size: common.tdlstm_input_fn(
+        return lambda features, labels, batch_size: tdlstm_input_fn(
             features,
             labels,
             batch_size,
@@ -52,7 +56,7 @@ class TDLSTM(Model):
 
             with tf.variable_scope("left_lstm"):
                 _, final_states_left = tf.nn.dynamic_rnn(
-                    cell=common.dropout_lstm_cell(params),
+                    cell=dropout_lstm_cell(params),
                     inputs=left_inputs,
                     sequence_length=features["left"]["len"],
                     dtype=tf.float32,
@@ -60,7 +64,7 @@ class TDLSTM(Model):
 
             with tf.variable_scope("right_lstm"):
                 _, final_states_right = tf.nn.dynamic_rnn(
-                    cell=common.dropout_lstm_cell(params),
+                    cell=dropout_lstm_cell(params),
                     inputs=right_inputs,
                     sequence_length=features["right"]["len"],
                     dtype=tf.float32,

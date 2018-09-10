@@ -3,7 +3,7 @@ import tensorflow as tf
 from os.path import normpath, basename, splitext, dirname
 from utils import tokenize_phrase, default_oov
 
-import embeddings._keys as EMBEDDINGS
+import embeddings._constants as EMBEDDINGS
 
 
 class Embedding:

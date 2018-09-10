@@ -17,7 +17,7 @@ from utils import (
     unpickle_file as _unpickle,
     pickle_file as _pickle,
 )
-import datasets._keys as DATASETS
+import datasets._constants as DATASETS
 
 
 class Dataset:
@@ -145,9 +145,9 @@ class Dataset:
         if embedding is not None:
             name = embedding.name
             version = embedding.version
-            emb_gen_dir = join(self.gen_dir, name, version)
+            emb_gen_dir = join(self.gen_dir, name)
             makedirs(emb_gen_dir, exist_ok=True)
-            partial_name = "partial_{v}.txt".format({"v": version})
+            partial_name = "partial_{0}.txt".format(version)
             partial_path = join(emb_gen_dir, partial_name)
             tb_tsv_path = join(emb_gen_dir, "projection_meta.tsv")
             if exists(partial_path):
