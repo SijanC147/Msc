@@ -5,6 +5,9 @@ import datasets._parsers as PARSERS
 
 __data_path = join(getcwd(), "datasets", "data")
 
+DEBUG = ConstantDict(
+    {"PATH": join(__data_path, "Debug"), "PARSER": PARSERS.dong_parser}
+)
 DONG2014 = ConstantDict(
     {"PATH": join(__data_path, "Dong2014"), "PARSER": PARSERS.dong_parser}
 )

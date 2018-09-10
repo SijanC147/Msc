@@ -10,11 +10,11 @@ from models.Tang2016a.TCLSTM import TCLSTM
 tf.logging.set_verbosity(tf.logging.INFO)
 
 
-embedding = Embedding(path=EMBEDDINGS.GLOVE["TWITTER"]["25D"])
+embedding = Embedding(path=EMBEDDINGS.DEBUG)
 
 dataset = Dataset(
-    path=DATASETS.DONG2014["PATH"],
-    parser=DATASETS.DONG2014["PARSER"],
+    path=DATASETS.DEBUG["PATH"],
+    parser=DATASETS.DEBUG["PARSER"],
     embedding=embedding,
 )
 model = LSTM(run_config=tf.estimator.RunConfig(tf_random_seed=1234))
