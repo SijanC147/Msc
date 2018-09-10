@@ -32,9 +32,9 @@ Each `Experiment` object takes the following
 Experiments can then be run on an experiment instance using `experiment.run(job, steps)`
 
 The job options avaiable are
-*   'train', steps **must** be provided.
-*   'eval', model **must** have been previously trained. 
-*   'train+eval`, steps **must** be provided, **This is the most easy and straight forward approach**
+*   `'train'`, steps **must** be provided.
+*   `'eval'`, model **must** have been previously trained. 
+*   `'train+eval'`, steps **must** be provided, **This is the most easy and straight forward approach**
 
 
 ## Experiment Process
