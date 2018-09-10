@@ -1,8 +1,8 @@
 import os
 import tensorflow as tf
-import inspect
-import time
-import datetime
+from inspect import getsource
+from datetime import timedelta
+from time import time as _time
 from abc import ABC, abstractmethod
 
 
@@ -127,7 +127,7 @@ class Model(ABC):
         mode = "train" if not debug else "debug"
         features, labels, stats = dataset.get_features_and_labels(mode=mode)
         run_stats = self._export_statistics(dataset_stats=stats, steps=steps)
-        start = time.time()
+        start = _time()
         self.estimator.train(
             input_fn=lambda: self.__train_input_fn(
                 features=features,
@@ -137,7 +137,7 @@ class Model(ABC):
             steps=steps,
             hooks=self.__train_hooks,
         )
-        time_taken = str(datetime.timedelta(seconds=time.time() - start))
+        time_taken = str(timedelta(seconds=_time() - start))
         duration_dict = {"job": "train", "time": time_taken}
         return {"duration": duration_dict, **run_stats}
 
@@ -146,7 +146,7 @@ class Model(ABC):
         mode = "eval" if not debug else "debug"
         features, labels, stats = dataset.get_features_and_labels(mode=mode)
         run_stats = self._export_statistics(dataset_stats=stats)
-        start = time.time()
+        start = _time()
         self.estimator.evaluate(
             input_fn=lambda: self.__eval_input_fn(
                 features=features,
@@ -155,7 +155,7 @@ class Model(ABC):
             ),
             hooks=self.__eval_hooks,
         )
-        time_taken = str(datetime.timedelta(seconds=time.time() - start))
+        time_taken = str(timedelta(seconds=_time() - start))
         duration_dict = {"job": "eval", "time": time_taken}
         return {"duration": duration_dict, **run_stats}
 
@@ -183,13 +183,13 @@ class Model(ABC):
             steps=None,
             hooks=self.__eval_hooks,
         )
-        start = time.time()
+        start = _time()
         tf.estimator.train_and_evaluate(
             estimator=self.estimator,
             train_spec=train_spec,
             eval_spec=eval_spec,
         )
-        time_taken = str(datetime.timedelta(seconds=time.time() - start))
+        time_taken = str(timedelta(seconds=_time() - start))
         duration_dict = {"job": "train+eval", "time": time_taken}
         return (
             {"duration": duration_dict, **train_stats},
@@ -197,17 +197,15 @@ class Model(ABC):
         )
 
     def _export_statistics(self, dataset_stats=None, steps=None):
-        train_input_fn_source = inspect.getsource(self.train_input_fn)
-        eval_input_fn_source = inspect.getsource(self.eval_input_fn)
-        model_fn_source = inspect.getsource(self.model_fn)
+        train_input_fn_source = getsource(self.train_input_fn)
+        eval_input_fn_source = getsource(self.eval_input_fn)
+        model_fn_source = getsource(self.model_fn)
         model_common_file = os.path.join(
             os.path.dirname(inspect.getfile(self.__class__)), "common.py"
         )
-        estimator_train_fn_source = inspect.getsource(self.train)
-        estimator_eval_fn_source = inspect.getsource(self.evaluate)
-        estimator_train_eval_fn_source = inspect.getsource(
-            self.train_and_evaluate
-        )
+        estimator_train_fn_source = getsource(self.train)
+        estimator_eval_fn_source = getsource(self.evaluate)
+        estimator_train_eval_fn_source = getsource(self.train_and_evaluate)
         if os.path.exists(model_common_file):
             common_content = open(model_common_file, "r").read()
         else:

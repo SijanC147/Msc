@@ -1,4 +1,3 @@
-import os
 import spacy
 import nltk
 import random
@@ -8,7 +7,9 @@ import pickle
 import numpy as np
 import tensorflow as tf
 from csv import DictReader, DictWriter
-from os.path import listdir, isfile, join
+from os import listdir, system, makedirs
+from os.path import isfile, join
+from functools import wraps
 from spacy.attrs import ORTH  # pylint: disable=E0611
 
 
@@ -222,8 +223,8 @@ def start_tensorboard(model_dir, debug=False):
         "logdir": model_dir,
         "debug": "--debugger_port 6064" if debug else "",
     }
-    os.system("open http://localhost:6006")
-    os.system("tensorboard --logdir {dir} {debug}".format(data))
+    system("open http://localhost:6006")
+    system("tensorboard --logdir {dir} {debug}".format(data))
 
 
 def default_oov(dim_size):
@@ -232,7 +233,7 @@ def default_oov(dim_size):
 
 def write_stats_to_disk(job, stats, path):
     target_dir = join(path, job)
-    os.makedirs(target_dir, exist_ok=True)
+    makedirs(target_dir, exist_ok=True)
     with open(join(target_dir, "dataset.json"), "w") as file:
         file.write(json.dumps(stats["dataset"]))
     with open(join(target_dir, "job.json"), "w") as file:
@@ -289,7 +290,7 @@ def write_stats_to_disk(job, stats, path):
 
 def search_dir(dir, query, first=False, files_only=False):
     if files_only:
-        results = [f for f in listdir(dir) if isfile(f) and query in f]
+        results = [f for f in listdir(dir) if isfile(dir + f) and query in f]
     else:
         results = [f for f in listdir(dir) if query in f]
     return results[0] if first else results
@@ -359,5 +360,5 @@ def unpickle_file(path):
 
 
 def pickle_file(path, data):
-    with open(path, "rb") as f:
+    with open(path, "wb") as f:
         return pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
