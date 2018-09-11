@@ -299,8 +299,11 @@ def search_dir(dir, query, first=False, files_only=False):
 def corpus_from_docs(docs):
     corpus = {}
 
-    nlp = spacy.load("en")
-    tokens = nlp(" ".join(map(lambda document: document.strip(), docs)))
+    nlp = spacy.load("en", disable=["parser", "ner"])
+    docs_joined = " ".join(map(lambda document: document.strip(), docs))
+    if len(docs_joined) > 1000000:
+        nlp.max_length = len(docs_joined) + 1
+    tokens = nlp(docs_joined)
     tokens = list(filter(token_filter, tokens))
     doc = nlp(" ".join(map(lambda token: token.text, tokens)))
     counts = doc.count_by(ORTH)

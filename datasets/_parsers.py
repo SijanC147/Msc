@@ -29,14 +29,13 @@ def nakov_parser(path):
             fieldnames=["tweet_id", "target", "sentiment", "sentence"],
         )
         for row in reader:
-            if row["sentiment"] in ["positive", "neutral", "negative"]:
-                sentences.append(row["sentence"])
-                targets.append(row["target"])
-                labels.append(
-                    {"2": 1, "1": 1, "0": 0, "-1": -1, "-2": -1}.get(
-                        row["sentiment"]
-                    )
+            sentences.append(row["sentence"])
+            targets.append(row["target"])
+            labels.append(
+                {"2": 1, "1": 1, "0": 0, "-1": -1, "-2": -1}.get(
+                    row["sentiment"]
                 )
+            )
     return sentences, targets, labels
 
 
