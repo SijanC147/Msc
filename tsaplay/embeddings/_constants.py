@@ -1,7 +1,7 @@
 from os import getcwd
 from os.path import join
 
-__data = join(getcwd(), "embeddings", "data")
+__data = join(getcwd(), "tsaplay", "embeddings", "data")
 __glove = join(__data, "GloVe")
 __debug = join(__data, "debug_embedding")
 

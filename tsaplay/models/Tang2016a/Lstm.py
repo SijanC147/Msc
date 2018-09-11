@@ -1,6 +1,6 @@
 import tensorflow as tf
-from models.Model import Model
-from models.Tang2016a.common import (
+from tsaplay.models.Model import Model
+from tsaplay.models.Tang2016a.common import (
     params as default_params,
     dropout_lstm_cell,
     lstm_input_fn,

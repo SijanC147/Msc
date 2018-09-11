@@ -1,13 +1,13 @@
 import tensorflow as tf
-from models.Model import Model
-from models.Tang2016a.common import (
+from tsaplay.models.Model import Model
+from tsaplay.models.Tang2016a.common import (
     params as default_params,
     dropout_lstm_cell,
-    tclstm_input_fn,
+    tdlstm_input_fn,
 )
 
 
-class TcLstm(Model):
+class TdLstm(Model):
     def _params(self):
         return default_params
 
@@ -15,7 +15,7 @@ class TcLstm(Model):
         return []
 
     def _train_input_fn(self):
-        return lambda features, labels, batch_size: tclstm_input_fn(
+        return lambda features, labels, batch_size: tdlstm_input_fn(
             features,
             labels,
             batch_size,
@@ -23,7 +23,7 @@ class TcLstm(Model):
         )
 
     def _eval_input_fn(self):
-        return lambda features, labels, batch_size: tclstm_input_fn(
+        return lambda features, labels, batch_size: tdlstm_input_fn(
             features,
             labels,
             batch_size,
@@ -40,13 +40,6 @@ class TcLstm(Model):
                     initializer=params["embedding_initializer"],
                 )
 
-            target_embedding = tf.contrib.layers.embed_sequence(
-                ids=features["target"]["x"],
-                initializer=embeddings,
-                scope="embedding_layer",
-                reuse=True,
-            )
-
             left_inputs = tf.contrib.layers.embed_sequence(
                 ids=features["left"]["x"],
                 initializer=embeddings,
@@ -60,46 +53,6 @@ class TcLstm(Model):
                 scope="embedding_layer",
                 reuse=True,
             )
-
-            with tf.name_scope("target_connection"):
-                mean_target_embedding = tf.reduce_mean(
-                    input_tensor=target_embedding[
-                        :, : features["target"]["len"][0], :
-                    ],
-                    axis=1,
-                    keepdims=True,
-                )
-                left_inputs = tf.stack(
-                    values=[
-                        left_inputs,
-                        tf.ones(tf.shape(left_inputs)) * mean_target_embedding,
-                    ],
-                    axis=2,
-                )
-                left_inputs = tf.reshape(
-                    tensor=left_inputs,
-                    shape=[
-                        -1,
-                        params["max_seq_length"],
-                        2 * params["embedding_dim"],
-                    ],
-                )
-                right_inputs = tf.stack(
-                    values=[
-                        right_inputs,
-                        tf.ones(tf.shape(right_inputs))
-                        * mean_target_embedding,
-                    ],
-                    axis=2,
-                )
-                right_inputs = tf.reshape(
-                    tensor=right_inputs,
-                    shape=[
-                        -1,
-                        params["max_seq_length"],
-                        2 * params["embedding_dim"],
-                    ],
-                )
 
             with tf.variable_scope("left_lstm"):
                 _, final_states_left = tf.nn.dynamic_rnn(

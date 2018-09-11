@@ -1,8 +1,8 @@
 from os import getcwd
 from os.path import join
-import datasets._parsers as PARSERS
+import tsaplay.datasets._parsers as PARSERS
 
-__data = join(getcwd(), "datasets", "data")
+__data = join(getcwd(), "tsaplay", "datasets", "data")
 
 DEBUG_PATH = join(__data, "debug_dataset")
 DEBUG_PARSER = PARSERS.dong_parser

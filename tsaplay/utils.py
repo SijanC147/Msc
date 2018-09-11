@@ -1,5 +1,4 @@
 import spacy
-import nltk
 import numpy as np
 import tensorflow as tf
 from random import choice, randrange

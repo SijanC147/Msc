@@ -2,7 +2,7 @@ import tensorflow as tf
 from os import getcwd
 from os.path import join as _join, relpath, dirname, exists, abspath
 from inspect import getfile
-from utils import start_tensorboard, write_stats_to_disk
+from tsaplay.utils import start_tensorboard, write_stats_to_disk
 
 
 class Experiment:
@@ -57,7 +57,8 @@ class Experiment:
         all_exps_path = _join(dirname(abspath(__file__)), "data")
         rel_model_path = _join(
             relpath(
-                dirname(getfile(model.__class__)), _join(getcwd(), "models")
+                dirname(getfile(model.__class__)),
+                _join(getcwd(), "tsaplay", "models"),
             ),
             model.__class__.__name__,
         )

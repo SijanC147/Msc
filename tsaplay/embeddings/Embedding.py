@@ -1,9 +1,9 @@
 import numpy as np
 import tensorflow as tf
 from os.path import normpath, basename, splitext, dirname
-from utils import tokenize_phrase, default_oov
+from tsaplay.utils import tokenize_phrase, default_oov
 
-import embeddings._constants as EMBEDDINGS
+import tsaplay.embeddings._constants as EMBEDDINGS
 
 
 class Embedding:

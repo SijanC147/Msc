@@ -3,7 +3,7 @@ from os import listdir, makedirs
 from os.path import normpath, basename, isfile, join, exists
 from statistics import mean
 from functools import wraps
-from utils import (
+from tsaplay.utils import (
     token_filter,
     re_dist,
     inspect_dist,
@@ -17,7 +17,7 @@ from utils import (
     unpickle_file as _unpickle,
     pickle_file as _pickle,
 )
-import datasets._constants as DATASETS
+import tsaplay.datasets._constants as DATASETS
 
 
 class Dataset:
