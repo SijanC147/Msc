@@ -1,11 +1,11 @@
 import spacy
 import nltk
-import random
-import math
-import json
-import pickle
 import numpy as np
 import tensorflow as tf
+from random import choice, randrange
+from math import floor
+from json import dumps
+from pickle import load, dump, HIGHEST_PROTOCOL
 from csv import DictReader, DictWriter
 from os import listdir, system, makedirs
 from os.path import isfile, join
@@ -13,17 +13,12 @@ from functools import wraps
 from spacy.attrs import ORTH  # pylint: disable=E0611
 
 
-def tokenize_phrase(phrase, backend="spacy"):
-    if backend == "nltk":
-        return nltk.word_tokenize(phrase)
-    elif backend == "spacy":
-        tokens_list = []
-        nlp = spacy.load("en")
-        tokens = nlp(str(phrase))
-        tokens_list = list(filter(token_filter, tokens))
-        return [token.text for token in tokens_list]
-    elif backend == "vanilla":
-        return phrase.split()
+def tokenize_phrase(phrase):
+    tokens_list = []
+    nlp = spacy.load("en", disable=["parser", "ner"])
+    tokens = nlp(str(phrase))
+    tokens_list = list(filter(token_filter, tokens))
+    return [token.text for token in tokens_list]
 
 
 def token_filter(token):
@@ -64,7 +59,7 @@ def re_dist(features, labels, distribution):
         smallest_count_index = smallest_count_indices[0]
 
     target_counts[smallest_count_index] = counts[smallest_count_index]
-    new_total = math.floor(
+    new_total = floor(
         counts[smallest_count_index] / target_dists[smallest_count_index]
     )
     counts[smallest_count_index] = float("inf")
@@ -83,11 +78,11 @@ def re_dist(features, labels, distribution):
     target_count = int(new_total * target_dists[smallest_count_index])
     if target_count > counts[smallest_count_index]:
         old_total = new_total
-        new_total = math.floor(
+        new_total = floor(
             counts[smallest_count_index] / target_dists[smallest_count_index]
         )
         target_counts = [
-            math.floor(t * (new_total / old_total)) for t in target_counts
+            floor(t * (new_total / old_total)) for t in target_counts
         ]
         target_count = counts[smallest_count_index]
     target_counts[smallest_count_index] = target_count
@@ -96,9 +91,9 @@ def re_dist(features, labels, distribution):
 
     if new_total - sum(target_counts) > min(counts):
         old_total = new_total
-        new_total = math.floor(min(counts) / min(target_dists))
+        new_total = floor(min(counts) / min(target_dists))
         target_counts = [
-            math.floor(t * (new_total / old_total)) for t in target_counts
+            floor(t * (new_total / old_total)) for t in target_counts
         ]
     target_counts[target_counts.index(0)] = new_total - sum(target_counts)
 
@@ -118,10 +113,10 @@ def re_dist(features, labels, distribution):
     new_labels = [None] * new_total
 
     for _ in range(target_counts[0]):
-        random_index = random.choice(postive_sample_indices)
-        random_position = random.randrange(0, new_total)
+        random_index = choice(postive_sample_indices)
+        random_position = randrange(0, new_total)
         while new_labels[random_position] is not None:
-            random_position = random.randrange(0, new_total)
+            random_position = randrange(0, new_total)
         new_features["sentence"][random_position] = features["sentence"][
             random_index
         ]
@@ -143,10 +138,10 @@ def re_dist(features, labels, distribution):
         new_labels[random_position] = labels[random_index]
         postive_sample_indices.remove(random_index)
     for _ in range(target_counts[1]):
-        random_index = random.choice(neutral_sample_indices)
-        random_position = random.randrange(0, new_total)
+        random_index = choice(neutral_sample_indices)
+        random_position = randrange(0, new_total)
         while new_labels[random_position] is not None:
-            random_position = random.randrange(0, new_total)
+            random_position = randrange(0, new_total)
         new_features["sentence"][random_position] = features["sentence"][
             random_index
         ]
@@ -168,10 +163,10 @@ def re_dist(features, labels, distribution):
         new_labels[random_position] = labels[random_index]
         neutral_sample_indices.remove(random_index)
     for _ in range(target_counts[2]):
-        random_index = random.choice(negative_sample_indices)
-        random_position = random.randrange(0, new_total)
+        random_index = choice(negative_sample_indices)
+        random_position = randrange(0, new_total)
         while new_labels[random_position] is not None:
-            random_position = random.randrange(0, new_total)
+            random_position = randrange(0, new_total)
         new_features["sentence"][random_position] = features["sentence"][
             random_index
         ]
@@ -233,12 +228,10 @@ def write_stats_to_disk(job, stats, path):
     target_dir = join(path, job)
     makedirs(target_dir, exist_ok=True)
     with open(join(target_dir, "dataset.json"), "w") as file:
-        file.write(json.dumps(stats["dataset"]))
+        file.write(dumps(stats["dataset"]))
     with open(join(target_dir, "job.json"), "w") as file:
         file.write(
-            json.dumps(
-                {"duration": stats["duration"], "steps": stats["steps"]}
-            )
+            dumps({"duration": stats["duration"], "steps": stats["steps"]})
         )
     with open(join(target_dir, "model.md"), "w") as file:
         file.write("## Model Params\n")
@@ -359,9 +352,9 @@ def get_sentence_contexts(sentence, target, offset=None):
 
 def unpickle_file(path):
     with open(path, "rb") as f:
-        return pickle.load(f)
+        return load(f)
 
 
 def pickle_file(path, data):
     with open(path, "wb") as f:
-        return pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+        return dump(data, f, HIGHEST_PROTOCOL)
