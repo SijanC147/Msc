@@ -9,6 +9,9 @@ matplotlib = "*"
 spacy = "*"
 
 [dev-packages]
+tox-pipenv = "*"
+pytest = "*"
+hypothesis = "*"
 
 [requires]
 python_version = "3.6"
