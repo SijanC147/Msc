@@ -7,16 +7,26 @@ from utils import start_tensorboard, write_stats_to_disk
 
 class Experiment:
     def __init__(
-        self, dataset, embedding, model, run_config=None, contd_tag=""
+        self, dataset, model, embedding=None, run_config=None, contd_tag=""
     ):
-        self.embedding = embedding
         self.dataset = dataset
-        self.dataset.embedding = self.embedding
         self.model = model
+        if embedding is not None:
+            self.embedding = embedding
+            self.dataset.embedding = self.embedding
+        else:
+            if self.dataset.embedding is None:
+                raise ValueError(
+                    "No embedding found in experiment or dataset."
+                )
+            else:
+                self.embedding = self.dataset.embedding
         self.exp_dir = self._init_exp_dir(
             model=self.model, dataset=self.dataset, contd_tag=contd_tag
         )
-        self.model.run_config = self._init_run_config(
+        if run_config is None:
+            run_config = self.model.run_config
+        self.model.run_config = self._init_model_dir(
             exp_dir=self.exp_dir, run_config=run_config
         )
 
@@ -70,6 +80,13 @@ class Experiment:
         if run_config is None:
             return tf.estimator.RunConfig(model_dir=summary_dir)
         elif run_config.model_dir is None:
+            return run_config.replace(model_dir=summary_dir)
+        else:
+            return run_config
+
+    def _init_model_dir(self, exp_dir, run_config):
+        summary_dir = _join(exp_dir, "tb_summary")
+        if run_config.model_dir is None:
             return run_config.replace(model_dir=summary_dir)
         else:
             return run_config
