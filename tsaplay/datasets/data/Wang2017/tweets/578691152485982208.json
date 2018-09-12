@@ -1,0 +1,1 @@
+{"content": "#bbcqt Shirley Williams says you cannot have good public services & low taxation but you can by improved efficiency!", "entities": [{"offset": 7, "type": "ne", "id": 2, "entity": "shirley williams"}, {"entity": "taxation", "type": "topic keyword", "id": 3, "offset": 72}], "topics": [{"topic": "public spending", "id": 1}], "tweet_id": "578691152485982208"}

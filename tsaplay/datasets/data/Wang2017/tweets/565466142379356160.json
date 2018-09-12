@@ -1,0 +1,1 @@
+{"content": "there are many important #GE2015 issues for women. The colour of a bus is not one. STFU about #pinkbus and talk about domestic violence", "entities": [{"offset": 83, "type": "ne", "id": 2, "entity": "stfu"}, {"offset": 127, "type": "topic keyword", "id": 3, "entity": "violence"}], "topics": [{"topic": "crime", "id": 1}], "tweet_id": "565466142379356160"}

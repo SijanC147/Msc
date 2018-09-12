@@ -1,0 +1,1 @@
+{"content": "HMRC has power to take all tax owed due to their error in 1 go from PAYE citizens whatever consequences. Why not corporate evaders? #bbcqt", "entities": [{"offset": 68, "type": "ne", "id": 2, "entity": "paye"}, {"entity": "hmrc", "type": "topic keyword", "id": 3, "offset": 0}], "topics": [{"topic": "public spending", "id": 1}], "tweet_id": "566007398801096704"}

@@ -1,0 +1,1 @@
+{"content": "\"Economic growth works if it goes (filters) down to the bottom & it doesn't at the moment...) BOOM! #bbcqt Danny just developed a stutter.", "entities": [{"offset": 107, "type": "ne", "id": 2, "entity": "danny"}, {"entity": "economic", "type": "topic keyword", "id": 3, "offset": 1}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "573629183890493440"}

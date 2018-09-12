@@ -1,0 +1,1 @@
+{"content": "Ummmmm coming-deflation is not good economic news.  #GE2015", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "ummmmm"}, {"entity": "deflation", "type": "topic keyword", "id": 3, "offset": 14}, {"entity": "economic", "type": "topic keyword", "id": 4, "offset": 36}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "580449562701271041"}

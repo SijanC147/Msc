@@ -1,0 +1,1 @@
+{"content": "#BattleForNumber10 nothing about controls on rented housing", "entities": [{"offset": 1, "type": "ne", "id": 2, "entity": "battlefornumber10"}, {"entity": "rented housing", "type": "topic keyword", "id": 3, "offset": 45}], "topics": [{"topic": "housing", "id": 1}], "tweet_id": "581208737051967488"}

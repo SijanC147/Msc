@@ -1,0 +1,1 @@
+{"content": "Mum is now yelling 'that's complete balls you liar' at the TV. This is why I don't let her watch #bbcqt often.", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "mum"}, {"entity": "balls", "type": "topic keyword", "id": 3, "offset": 36}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "578694396087906304"}

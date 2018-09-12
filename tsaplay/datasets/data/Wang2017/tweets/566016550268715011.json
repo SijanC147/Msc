@@ -1,0 +1,1 @@
+{"content": "Spoke to my cllr once, he told me I had a 'young person's opinion' then walked away. It's not lack of education, it's lack of care #bbcqt", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "spoke"}, {"entity": "education", "type": "topic keyword", "id": 3, "offset": 102}], "topics": [{"topic": "education", "id": 1}], "tweet_id": "566016550268715011"}

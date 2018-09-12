@@ -1,0 +1,1 @@
+{"content": "Zayn Malik is a police officer, so that's why he quit. Jeez looks he had a rough first day of it, aged 40 years already! #BattleForNumber10", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "zayn malik"}, {"offset": 16, "type": "topic keyword", "id": 3, "entity": "police"}], "topics": [{"topic": "crime", "id": 1}], "tweet_id": "581207359495766017"}

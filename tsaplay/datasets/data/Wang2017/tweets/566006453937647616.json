@@ -1,0 +1,1 @@
+{"content": "VAT man does a deal with Vodafone to negotiate a fifth of what they owe yet i have 2 pay 2 the penny for my company tax.Vanilla hey #bbcqt", "entities": [{"offset": 25, "type": "ne", "id": 2, "entity": "vodafone"}, {"entity": "vat", "type": "topic keyword", "id": 3, "offset": 0}], "topics": [{"topic": "public spending", "id": 1}], "tweet_id": "566006453937647616"}

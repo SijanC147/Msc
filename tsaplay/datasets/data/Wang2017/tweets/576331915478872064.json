@@ -1,0 +1,1 @@
+{"content": "Phew, my first two hustings in the #Eastbourne #GE2015 campaign over now! Great to be able to stand up for an end to austerity! #VoteGreen", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "phew"}, {"entity": "austerity", "type": "topic keyword", "id": 3, "offset": 117}], "topics": [{"topic": "public spending", "id": 1}], "tweet_id": "576331915478872064"}

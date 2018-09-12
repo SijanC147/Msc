@@ -1,0 +1,1 @@
+{"content": "#BBCqt our universities allow muslim radicals freedom of speech and attempt to deny it to those who want to make the counter argument.", "entities": [{"offset": 30, "type": "ne", "id": 2, "entity": "muslim"}, {"entity": "universities", "type": "topic keyword", "id": 3, "offset": 11}], "topics": [{"topic": "education", "id": 1}], "tweet_id": "573626833276637185"}

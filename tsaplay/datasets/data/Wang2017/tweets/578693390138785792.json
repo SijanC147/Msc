@@ -1,0 +1,1 @@
+{"content": "#bbcqt Trouble is there's been a lack of hard working families in UK since they stopped sending kids up chimneys & down mines.", "entities": [{"offset": 66, "type": "ne", "id": 2, "entity": "uk"}, {"entity": "hard working families", "type": "topic keyword", "id": 3, "offset": 41}], "topics": [{"topic": "public spending", "id": 1}], "tweet_id": "578693390138785792"}

@@ -1,0 +1,1 @@
+{"content": "Saville was a celebrity who raised money for \"charity\" as well...police ignored him for years as a result, look how that turned out #bbcdp", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "saville"}, {"offset": 65, "type": "topic keyword", "id": 3, "entity": "police"}], "topics": [{"topic": "crime", "id": 1}], "tweet_id": "570917860350038016"}

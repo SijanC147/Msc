@@ -1,0 +1,1 @@
+{"content": "Ed Balls will later today warn of 'extreme' and 'irresponsible' cuts to public services, if the Conservatives are elected in May. #GE2015", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "ed balls"}, {"entity": "conservatives", "type": "party keyword", "id": 3, "offset": 96}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "574859701789323265"}

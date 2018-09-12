@@ -1,0 +1,1 @@
+{"content": "20% less police equals 20% less crime...wow Dave's a genius... #BattleForNumber10", "entities": [{"offset": 44, "type": "ne", "id": 2, "entity": "dave"}, {"offset": 32, "type": "topic keyword", "id": 3, "entity": "crime"}, {"offset": 9, "type": "topic keyword", "id": 4, "entity": "police"}], "topics": [{"topic": "crime", "id": 1}], "tweet_id": "581207412436258817"}

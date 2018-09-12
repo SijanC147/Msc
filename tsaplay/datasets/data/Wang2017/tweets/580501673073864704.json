@@ -1,0 +1,1 @@
+{"content": "The BBC will have a small funding crisis next year, please can one party have the balls to sell it before it's worth nothing #GE2015", "entities": [{"offset": 4, "type": "ne", "id": 2, "entity": "bbc"}, {"entity": "balls", "type": "topic keyword", "id": 3, "offset": 82}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "580501673073864704"}

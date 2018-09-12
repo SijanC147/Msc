@@ -1,0 +1,1 @@
+{"content": "Having cars driving you is great news for our SS government, you didn't pay a fine, car will lock you in then drive to police station #bbcdp", "entities": [{"offset": 46, "type": "ne", "id": 2, "entity": "ss"}, {"offset": 119, "type": "topic keyword", "id": 3, "entity": "police"}], "topics": [{"topic": "crime", "id": 1}], "tweet_id": "565856010485899265"}

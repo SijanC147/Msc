@@ -1,0 +1,1 @@
+{"content": "Cameroun gives foreign states .7% of our GDP to arm themselves against us, and cuts from 2% what we pay to defend ourselves. #bbcsp", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "cameroun"}, {"entity": "gdp", "type": "topic keyword", "id": 3, "offset": 41}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "574542883392520192"}

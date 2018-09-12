@@ -1,0 +1,1 @@
+{"content": "@ostercywriter Unlikely to happen, current rates are on the back of oil prices which won't last more than a few months #bbcsp", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "@ostercywriter"}, {"offset": 68, "type": "topic keyword", "id": 3, "entity": "oil"}], "topics": [{"topic": "environment and energy", "id": 1}], "tweet_id": "582138122437332992"}

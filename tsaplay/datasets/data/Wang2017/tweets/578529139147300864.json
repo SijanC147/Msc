@@ -1,0 +1,1 @@
+{"content": "The programme is called #bbcdp, but is obsessed by the gilt market, the City pundits etc. Real politics is as absent as real economics.", "entities": [{"offset": 68, "type": "ne", "id": 2, "entity": "the city"}, {"entity": "economics", "type": "topic keyword", "id": 3, "offset": 125}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "578529139147300864"}

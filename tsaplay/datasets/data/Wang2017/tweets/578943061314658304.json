@@ -1,0 +1,1 @@
+{"content": "\"No GP appntmnts AT ALL\" #Walsall #nhs #UKGE2015", "entities": [{"offset": 40, "type": "ne", "id": 2, "entity": "ukge2015"}, {"offset": 4, "type": "topic keyword", "id": 3, "entity": "gp"}, {"offset": 35, "type": "topic keyword", "id": 4, "entity": "nhs"}], "topics": [{"topic": "nhs", "id": 1}], "tweet_id": "578943061314658304"}

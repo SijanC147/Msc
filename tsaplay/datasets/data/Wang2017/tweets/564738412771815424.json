@@ -1,0 +1,1 @@
+{"content": "I think what Glasgow needs is more social housing and a promise of jobs for our younger generation as opposed to more railway links #GE2015", "entities": [{"offset": 13, "type": "ne", "id": 2, "entity": "glasgow"}, {"entity": "housing", "type": "topic keyword", "id": 3, "offset": 42}], "topics": [{"topic": "housing", "id": 1}], "tweet_id": "564738412771815424"}

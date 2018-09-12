@@ -1,0 +1,1 @@
+{"content": "@_Liam_Walker_ But he won't touch VAT... how ever you cut it, it always falls back to being a load of #Bullshit #GE2015 #UKelections", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "@_Liam_Walker_"}, {"entity": "vat", "type": "topic keyword", "id": 3, "offset": 34}], "topics": [{"topic": "public spending", "id": 1}], "tweet_id": "580743263948283906"}

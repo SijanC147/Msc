@@ -1,0 +1,1 @@
+{"content": "Burglary is a very serious crime.  The sense of violation that someone has been on your property is as bad as loss of your stuff #bbcdp", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "burglary"}, {"offset": 27, "type": "topic keyword", "id": 3, "entity": "crime"}], "topics": [{"topic": "crime", "id": 1}], "tweet_id": "572738063576788992"}

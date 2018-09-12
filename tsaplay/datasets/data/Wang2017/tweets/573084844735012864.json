@@ -1,0 +1,1 @@
+{"content": "If Osborne wants to sell off our share of Eurostar, you know it must be wrong thing to do. You'd think he'd know about family silver. #bbcdp", "entities": [{"offset": 42, "type": "ne", "id": 2, "entity": "eurostar"}, {"entity": "osborne", "type": "topic keyword", "id": 3, "offset": 3}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "573084844735012864"}

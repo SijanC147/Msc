@@ -1,0 +1,1 @@
+{"content": "@toadmeister Free Schools? Birmingham? Trojan Horse? Join dots  #bbcqt", "entities": [{"offset": 27, "type": "ne", "id": 2, "entity": "birmingham"}, {"offset": 0, "type": "ne", "id": 3, "entity": "@toadmeister"}, {"entity": "free schools", "type": "topic keyword", "id": 4, "offset": 13}], "topics": [{"topic": "education", "id": 1}], "tweet_id": "573625018753622017"}

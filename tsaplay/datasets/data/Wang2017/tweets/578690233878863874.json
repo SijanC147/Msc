@@ -1,0 +1,1 @@
+{"content": "Funny how the banks size property after a mortgage failure, yet they take their sweet time in paying back for the national debt. #bbcqt", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "funny"}, {"entity": "mortgage", "type": "topic keyword", "id": 3, "offset": 42}], "topics": [{"topic": "housing", "id": 1}], "tweet_id": "578690233878863874"}

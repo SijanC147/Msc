@@ -1,0 +1,1 @@
+{"content": "Do the people on Twitter saying more council housing is 'the answer' realise they'd still be right at the back of the queue for it? #bbcqt", "entities": [{"offset": 17, "type": "ne", "id": 2, "entity": "twitter"}, {"entity": "housing", "type": "topic keyword", "id": 3, "offset": 45}], "topics": [{"topic": "housing", "id": 1}], "tweet_id": "578703464081027072"}

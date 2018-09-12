@@ -1,0 +1,1 @@
+{"content": "My local hospital gives an excellent service as does my GP.#PMQs #bbcdp", "entities": [{"offset": 56, "type": "topic keyword", "id": 2, "entity": "gp"}, {"offset": 9, "type": "topic keyword", "id": 3, "entity": "hospital"}], "topics": [{"topic": "nhs", "id": 1}], "tweet_id": "580708201231978496"}

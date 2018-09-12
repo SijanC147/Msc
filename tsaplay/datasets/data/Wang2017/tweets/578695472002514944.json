@@ -1,0 +1,1 @@
+{"content": "The irony of former banker @sajidjavid claiming that global economic crash was all a political party's fault is probably lost on him. #bbcqt", "entities": [{"offset": 27, "type": "ne", "id": 2, "entity": "@sajidjavid"}, {"entity": "economic", "type": "topic keyword", "id": 3, "offset": 60}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "578695472002514944"}

@@ -1,0 +1,1 @@
+{"content": "Where did #JimMurphy get my e-mail address from? He says he has a plan. Is it a \"long term economic plan\" by any chance? #voteSNP #GE2015", "entities": [{"offset": 11, "type": "ne", "id": 2, "entity": "jimmurphy"}, {"entity": "economic", "type": "topic keyword", "id": 3, "offset": 91}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "570649912662208512"}

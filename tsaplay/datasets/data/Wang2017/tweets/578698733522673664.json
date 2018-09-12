@@ -1,0 +1,1 @@
+{"content": "In places like London is it that there is not enough housing available or is it at least partly who's buying g up The property #bbcqt", "entities": [{"offset": 15, "type": "ne", "id": 2, "entity": "london"}, {"entity": "housing", "type": "topic keyword", "id": 3, "offset": 53}], "topics": [{"topic": "housing", "id": 1}], "tweet_id": "578698733522673664"}

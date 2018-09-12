@@ -1,0 +1,1 @@
+{"content": "Govt. needs revenue but Corp tax is tough to collect and is direct tax on economic activity. Should be lowest rate possible. #bbcqt", "entities": [{"offset": 24, "type": "ne", "id": 2, "entity": "corp"}, {"entity": "economic", "type": "topic keyword", "id": 3, "offset": 74}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "566007567051415552"}

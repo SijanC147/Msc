@@ -1,0 +1,1 @@
+{"content": "The triage system means patients are seen on a needs basis. I would guess if your waiting 4 hours \u2795 you may not need urgent care #BBCQT", "entities": [{"offset": 130, "type": "ne", "id": 2, "entity": "bbcqt"}, {"offset": 24, "type": "topic keyword", "id": 3, "entity": "patients"}], "topics": [{"topic": "nhs", "id": 1}], "tweet_id": "573629896863412225"}

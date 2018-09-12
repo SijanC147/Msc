@@ -1,0 +1,1 @@
+{"content": "The simplest way to get the British #economy out of the mess it is in now is to cap interest rates on lending. Very simple really. #GE2015", "entities": [{"offset": 28, "type": "ne", "id": 2, "entity": "british"}, {"entity": "economy", "type": "topic keyword", "id": 3, "offset": 37}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "582507715173441536"}

@@ -1,0 +1,1 @@
+{"content": "Cameron promised 125 new free schools last week, now it's 500. At this rate, by the election, there will be one for every voter. #GE2015", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "cameron"}, {"entity": "free schools", "type": "topic keyword", "id": 3, "offset": 25}], "topics": [{"topic": "education", "id": 1}], "tweet_id": "574829513567301632"}

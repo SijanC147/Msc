@@ -1,0 +1,1 @@
+{"content": "Ed Balls body language with Ed M strange #Budget2015 #bbcdp", "entities": [{"offset": 28, "type": "ne", "id": 2, "entity": "ed m"}, {"offset": 0, "type": "ne", "id": 3, "entity": "ed balls"}, {"entity": "budget2015", "type": "topic keyword", "id": 4, "offset": 42}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "578187997906137090"}

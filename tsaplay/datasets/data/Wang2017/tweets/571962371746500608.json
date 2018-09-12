@@ -1,0 +1,1 @@
+{"content": "Everyone has the right to seek higher education, but the State should pay tuition and subsistence only for about 10% of students. #bbcsp", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "everyone"}, {"entity": "education", "type": "topic keyword", "id": 3, "offset": 38}], "topics": [{"topic": "education", "id": 1}], "tweet_id": "571962371746500608"}

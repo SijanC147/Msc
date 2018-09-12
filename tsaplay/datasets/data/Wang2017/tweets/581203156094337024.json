@@ -1,0 +1,1 @@
+{"content": "I bet right now Ed is feeling like a naughty school boy about to go and get a bollocking by the headmaster any min now #BattleForNumber10", "entities": [{"offset": 16, "type": "ne", "id": 2, "entity": "ed"}, {"entity": "headmaster", "type": "topic keyword", "id": 3, "offset": 96}], "topics": [{"topic": "education", "id": 1}], "tweet_id": "581203156094337024"}

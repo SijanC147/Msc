@@ -1,0 +1,1 @@
+{"content": "Cameron can confidently say there'll be no VAT rise after #GE2015 . He knows he'll be gone - his family are even there to see his last #PMQs", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "cameron"}, {"entity": "vat", "type": "topic keyword", "id": 3, "offset": 43}], "topics": [{"topic": "public spending", "id": 1}], "tweet_id": "580707889045757952"}

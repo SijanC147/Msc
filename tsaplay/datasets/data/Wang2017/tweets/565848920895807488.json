@@ -1,0 +1,1 @@
+{"content": "Lord Howard: \"Don't change course, we are on track, let's carry on with the long-term economic plan which is proving so successful\" #bbcdp", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "lord howard"}, {"entity": "economic", "type": "topic keyword", "id": 3, "offset": 86}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "565848920895807488"}

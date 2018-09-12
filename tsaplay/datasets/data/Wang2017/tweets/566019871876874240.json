@@ -1,0 +1,1 @@
+{"content": "Every time I've been drunk and disorderly I've ended up in a police station. I must be missing a trick here. #bbcqt", "entities": [{"offset": 21, "type": "topic keyword", "id": 2, "entity": "drunk and disorderly"}, {"offset": 61, "type": "topic keyword", "id": 3, "entity": "police"}], "topics": [{"topic": "crime", "id": 1}], "tweet_id": "566019871876874240"}

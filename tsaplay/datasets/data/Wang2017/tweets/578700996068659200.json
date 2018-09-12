@@ -1,0 +1,1 @@
+{"content": "The boat has been missed. You work hard now to cover high rent. No chance with deposit. Guy lucky of his age when prices not silly #bbcqt", "entities": [{"offset": 88, "type": "ne", "id": 2, "entity": "guy lucky"}, {"entity": "high rent", "type": "topic keyword", "id": 3, "offset": 53}], "topics": [{"topic": "housing", "id": 1}], "tweet_id": "578700996068659200"}

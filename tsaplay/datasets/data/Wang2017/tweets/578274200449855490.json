@@ -1,0 +1,1 @@
+{"content": ".@George_Osborne you haven't halved the deficit you dolt. 90/157 is not 0.5. And % GDP wise you were to have got rid of 100%!! #GE2015", "entities": [{"offset": 1, "type": "ne", "id": 2, "entity": "@George_Osborne"}, {"entity": "gdp", "type": "topic keyword", "id": 3, "offset": 83}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "578274200449855490"}

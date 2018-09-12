@@ -1,0 +1,1 @@
+{"content": "The reason why there is a housing crisis is because there are an extra 2mill people looking for somewhere to live in the past 10yrs #BBCQT", "entities": [{"offset": 133, "type": "ne", "id": 2, "entity": "bbcqt"}, {"entity": "housing", "type": "topic keyword", "id": 3, "offset": 26}], "topics": [{"topic": "housing", "id": 1}], "tweet_id": "578699374009671680"}

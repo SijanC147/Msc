@@ -1,0 +1,1 @@
+{"content": "#bbcsp the UK must increase its defence spending in real terms well over 2%. An island nation with 17 fighting ships will starve come a war", "entities": [{"offset": 11, "type": "ne", "id": 2, "entity": "uk"}, {"offset": 32, "type": "topic keyword", "id": 3, "entity": "defence"}], "topics": [{"topic": "defence", "id": 1}], "tweet_id": "571999642264739840"}

@@ -1,0 +1,1 @@
+{"content": "Long ago as it was at my school age everyone went to 2ndary modern then if You wanted to went onto grammar school to do exams #bbcdp", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "long"}, {"entity": "exams", "type": "topic keyword", "id": 3, "offset": 120}], "topics": [{"topic": "education", "id": 1}], "tweet_id": "575271469820809216"}

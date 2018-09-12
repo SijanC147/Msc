@@ -1,0 +1,1 @@
+{"content": "#bbcqt I watched as far as some spotty twerp in the audience saying \"the long term economic plan is working\" and then RAGEQUIT", "entities": [{"offset": 118, "type": "ne", "id": 2, "entity": "ragequit"}, {"entity": "economic", "type": "topic keyword", "id": 3, "offset": 83}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "573630912946126848"}

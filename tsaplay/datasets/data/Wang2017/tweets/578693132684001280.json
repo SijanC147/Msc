@@ -1,0 +1,1 @@
+{"content": "I'd have a great economic record if I walked in, spent billions I didn't have and then walked out as it was going to hit the fan. #BBCQT", "entities": [{"offset": 131, "type": "ne", "id": 2, "entity": "bbcqt"}, {"entity": "economic", "type": "topic keyword", "id": 3, "offset": 17}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "578693132684001280"}

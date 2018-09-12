@@ -1,0 +1,1 @@
+{"content": "I do hope that a NHS question is asked to Cameron, seeing as he's been sneakily selling it off for the last 5 years #BattleForNumber10", "entities": [{"offset": 42, "type": "ne", "id": 2, "entity": "cameron"}, {"offset": 17, "type": "topic keyword", "id": 3, "entity": "nhs"}], "topics": [{"topic": "nhs", "id": 1}], "tweet_id": "581206044283670528"}

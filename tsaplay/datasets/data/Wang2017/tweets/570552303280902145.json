@@ -1,0 +1,1 @@
+{"content": "#bbcdp Visualise a space or teach computer coding. The former can get you locked up, The latter will get you a job & benefit the economy!", "entities": [{"offset": 7, "type": "ne", "id": 2, "entity": "visualise"}, {"entity": "economy", "type": "topic keyword", "id": 3, "offset": 129}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "570552303280902145"}

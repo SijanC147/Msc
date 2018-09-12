@@ -1,0 +1,1 @@
+{"content": "It's easy enough for David Willets to say that student debt is no big deal. He wouldn't have had any when he left uni.. #bbcdp", "entities": [{"offset": 21, "type": "ne", "id": 2, "entity": "david willets"}, {"entity": "uni", "type": "topic keyword", "id": 3, "offset": 114}], "topics": [{"topic": "education", "id": 1}], "tweet_id": "571298345743982592"}

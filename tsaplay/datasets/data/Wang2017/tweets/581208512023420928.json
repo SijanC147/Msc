@@ -1,0 +1,1 @@
+{"content": "Debt of 130% over GDP calls for urgent deficit cut. Good thing to cut spending but is 2 billion cut the necessary figure? #BattleForNumber10", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "debt"}, {"entity": "gdp", "type": "topic keyword", "id": 3, "offset": 18}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "581208512023420928"}

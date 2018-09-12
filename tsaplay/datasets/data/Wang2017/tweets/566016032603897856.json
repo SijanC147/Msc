@@ -1,0 +1,1 @@
+{"content": "I don't give a toss about the pink bus please talk about tax dodgers or the NHS or cruel DWP decisions or why #dodgydave does nothing #bbcqt", "entities": [{"offset": 57, "type": "ne", "id": 2, "entity": "tax dodgers"}, {"offset": 76, "type": "topic keyword", "id": 3, "entity": "nhs"}], "topics": [{"topic": "nhs", "id": 1}], "tweet_id": "566016032603897856"}

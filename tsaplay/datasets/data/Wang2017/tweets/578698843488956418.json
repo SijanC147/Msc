@@ -1,0 +1,1 @@
+{"content": "I live in York, most houses that come on to the market are bought, converted into bedsits for students!  There is no housing stock! #bbcqt", "entities": [{"offset": 10, "type": "ne", "id": 2, "entity": "york"}, {"entity": "housing", "type": "topic keyword", "id": 3, "offset": 117}], "topics": [{"topic": "housing", "id": 1}], "tweet_id": "578698843488956418"}

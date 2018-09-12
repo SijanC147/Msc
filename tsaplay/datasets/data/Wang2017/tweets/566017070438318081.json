@@ -1,0 +1,1 @@
+{"content": "Ok, little bid of advice, if you want young people to vote, perhaps don't charge them \u00a39000 to get an education. Just an idea. #bbcqt", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "ok"}, {"entity": "education", "type": "topic keyword", "id": 3, "offset": 102}], "topics": [{"topic": "education", "id": 1}], "tweet_id": "566017070438318081"}

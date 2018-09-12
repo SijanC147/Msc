@@ -1,0 +1,1 @@
+{"content": "FTSE has hit 7000 today - wouldn't be doing that if market thought Ed Miliband was going to be PM in May! #GE2015", "entities": [{"offset": 67, "type": "ne", "id": 2, "entity": "ed miliband"}, {"entity": "ftse", "type": "topic keyword", "id": 3, "offset": 0}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "578934641140330496"}

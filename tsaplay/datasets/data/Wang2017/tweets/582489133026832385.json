@@ -1,0 +1,1 @@
+{"content": "\"We will cut and freeze business rates for smaller firms because we feel that is the priority for taxation\" @Ed_Miliband #GE2015", "entities": [{"offset": 108, "type": "ne", "id": 2, "entity": "@Ed_Miliband"}, {"entity": "taxation", "type": "topic keyword", "id": 3, "offset": 98}], "topics": [{"topic": "public spending", "id": 1}], "tweet_id": "582489133026832385"}

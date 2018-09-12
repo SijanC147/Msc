@@ -1,0 +1,1 @@
+{"content": "Imagine if you punched someone at work or school. You'd be fired straight away and probably be investigated by the police #bbcqt", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "imagine"}, {"offset": 115, "type": "topic keyword", "id": 3, "entity": "police"}], "topics": [{"topic": "crime", "id": 1}], "tweet_id": "581239267248234496"}

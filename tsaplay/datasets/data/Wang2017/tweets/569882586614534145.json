@@ -1,0 +1,1 @@
+{"content": "\"More low cost accommodation is needed so that one day no one has to be homeless\" says our client Claire at our #manifesto #GE2015 launch", "entities": [{"offset": 98, "type": "ne", "id": 2, "entity": "claire"}, {"entity": "homeless", "type": "topic keyword", "id": 3, "offset": 72}], "topics": [{"topic": "housing", "id": 1}], "tweet_id": "569882586614534145"}

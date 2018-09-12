@@ -1,0 +1,1 @@
+{"content": "\"The national debt has increased under your government ! True or False?\" A \"As a share of GDP it has reduced\" Just answer please!! #GE2015", "entities": [{"offset": 1, "type": "ne", "id": 2, "entity": "the national"}, {"entity": "gdp", "type": "topic keyword", "id": 3, "offset": 90}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "581204007730962432"}

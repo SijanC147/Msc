@@ -1,0 +1,1 @@
+{"content": "Good question, slightly off topic but all 4 years at uni my loan did not cover the rent -  costs are far too high #bbcqt", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "good"}, {"entity": "uni", "type": "topic keyword", "id": 3, "offset": 53}], "topics": [{"topic": "education", "id": 1}], "tweet_id": "578698387467472896"}

@@ -1,0 +1,1 @@
+{"content": "Who will @uklabour purpose to tax this week? Why not tell us how they will ensure a successful economy? So much easier #Ge2015", "entities": [{"offset": 9, "type": "ne", "id": 2, "entity": "@uklabour"}, {"entity": "economy", "type": "topic keyword", "id": 3, "offset": 95}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "572045729516130304"}

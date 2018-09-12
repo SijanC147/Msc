@@ -1,0 +1,1 @@
+{"content": "@wself absolutely right - if a politician could admit that the economy is mad and we have no control of it - I'd vote for them #bbcqt", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "@wself"}, {"entity": "economy", "type": "topic keyword", "id": 3, "offset": 63}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "578703749708922880"}

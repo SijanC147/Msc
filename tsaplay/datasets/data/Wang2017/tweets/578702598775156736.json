@@ -1,0 +1,1 @@
+{"content": "You've got to hand it to Thatcher, even when shes gone her housing policy has managed to shaft a new generation of the working class. #bbcqt", "entities": [{"offset": 25, "type": "ne", "id": 2, "entity": "thatcher"}, {"entity": "housing", "type": "topic keyword", "id": 3, "offset": 59}], "topics": [{"topic": "housing", "id": 1}], "tweet_id": "578702598775156736"}

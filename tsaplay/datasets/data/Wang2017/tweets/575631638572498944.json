@@ -1,0 +1,1 @@
+{"content": "Hey hey! Charity sector! It's Big Society time again, this time for the National Health Service. #bbcdp #PMQs", "entities": [{"offset": 30, "type": "ne", "id": 2, "entity": "big society"}, {"offset": 68, "type": "ne", "id": 3, "entity": "the national health service"}], "topics": [{"topic": "nhs", "id": 1}], "tweet_id": "575631638572498944"}

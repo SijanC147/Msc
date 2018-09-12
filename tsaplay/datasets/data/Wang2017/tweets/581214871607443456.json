@@ -1,0 +1,1 @@
+{"content": "Ed Balls said there was nothing in Osborne's budge that he would reverse.  How is that a real choice? #BattleForNumber10 #votetusc", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "ed balls"}, {"entity": "osborne", "type": "topic keyword", "id": 3, "offset": 35}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "581214871607443456"}

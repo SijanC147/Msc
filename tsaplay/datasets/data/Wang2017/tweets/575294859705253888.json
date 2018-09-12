@@ -1,0 +1,1 @@
+{"content": "George Osborne presides over a bubble wrapped in a pyramid built out of printing press lies churned out an infinite quantity of IOUs. #bbcdp", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "george osborne"}, {"offset": 128, "type": "ne", "id": 3, "entity": "ious"}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "575294859705253888"}

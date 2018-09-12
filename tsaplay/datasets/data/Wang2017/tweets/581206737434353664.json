@@ -1,0 +1,1 @@
+{"content": "David Cameron drinking game - take a drink if you hear any of these; economy, difficult decisions, deficit down, tax, jobs, benefits #GE2015", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "david cameron"}, {"entity": "economy", "type": "topic keyword", "id": 3, "offset": 69}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "581206737434353664"}

@@ -1,0 +1,1 @@
+{"content": "Will any MPs  be signing on next Monday as they become unemployed so they can see IDS benefits system close up and personal. #GE2015", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "will"}, {"entity": "unemployed", "type": "topic keyword", "id": 3, "offset": 55}], "topics": [{"topic": "public spending", "id": 1}], "tweet_id": "581408887930241025"}

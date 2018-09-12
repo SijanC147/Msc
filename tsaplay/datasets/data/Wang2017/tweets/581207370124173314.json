@@ -1,0 +1,1 @@
+{"content": "Crime has come down, let's disband the police. #BattleForNumber10", "entities": [{"offset": 0, "type": "topic keyword", "id": 2, "entity": "crime"}, {"offset": 39, "type": "topic keyword", "id": 3, "entity": "police"}], "topics": [{"topic": "crime", "id": 1}], "tweet_id": "581207370124173314"}

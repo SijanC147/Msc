@@ -1,0 +1,1 @@
+{"content": "What economic recovery? I have 70p in my purse and I have to wait two weeks for a payment of JSA because I lost my temporary job #bbcqt", "entities": [{"offset": 93, "type": "ne", "id": 2, "entity": "jsa"}, {"entity": "economic", "type": "topic keyword", "id": 3, "offset": 5}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "573624787450380288"}

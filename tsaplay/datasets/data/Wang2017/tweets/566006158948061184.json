@@ -1,0 +1,1 @@
+{"content": "basically a majority of us are PAYE, we pay whether we like it or not, the avoiders must be pursued rigorously by a well staffed HMRC #bbcqt", "entities": [{"offset": 31, "type": "ne", "id": 2, "entity": "paye"}, {"entity": "hmrc", "type": "topic keyword", "id": 3, "offset": 129}], "topics": [{"topic": "public spending", "id": 1}], "tweet_id": "566006158948061184"}

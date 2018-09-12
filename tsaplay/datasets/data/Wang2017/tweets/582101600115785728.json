@@ -1,0 +1,1 @@
+{"content": "#MarrShow offered a job & refuse ? should work for dole or welfare paid in vouchers - see how many find work then ?!", "entities": [{"offset": 1, "type": "ne", "id": 2, "entity": "marrshow"}, {"entity": "dole", "type": "topic keyword", "id": 3, "offset": 51}], "topics": [{"topic": "public spending", "id": 1}], "tweet_id": "582101600115785728"}

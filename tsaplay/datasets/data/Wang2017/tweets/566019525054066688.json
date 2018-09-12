@@ -1,0 +1,1 @@
+{"content": "NHS is the best thing about this country. Having had a knee op last week I know, thankfully I'm not in America, I'd just stay in pain #bbcqt", "entities": [{"offset": 103, "type": "ne", "id": 2, "entity": "america"}, {"offset": 0, "type": "topic keyword", "id": 3, "entity": "nhs"}], "topics": [{"topic": "nhs", "id": 1}], "tweet_id": "566019525054066688"}

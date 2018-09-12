@@ -1,0 +1,1 @@
+{"content": "Cameron: \"Every parent wants [free schools]\". No, some parents want their children to be taught better than everyone else's. #GE2015", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "cameron"}, {"entity": "free schools", "type": "topic keyword", "id": 3, "offset": 30}], "topics": [{"topic": "education", "id": 1}], "tweet_id": "574993708778676225"}

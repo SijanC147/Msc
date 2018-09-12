@@ -1,0 +1,1 @@
+{"content": "Build social housing. End mortgage slavery. #bbcqt", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "build"}, {"entity": "mortgage", "type": "topic keyword", "id": 3, "offset": 26}, {"entity": "housing", "type": "topic keyword", "id": 4, "offset": 13}], "topics": [{"topic": "housing", "id": 1}], "tweet_id": "578699587411697664"}

@@ -1,0 +1,1 @@
+{"content": "Can we have another question? Clearly Gideon's budget - like his grasp of the economy - is a bucket of rotting fish. Move on! #bbcqt", "entities": [{"offset": 38, "type": "ne", "id": 2, "entity": "gideon"}, {"entity": "economy", "type": "topic keyword", "id": 3, "offset": 78}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "578694219918868480"}

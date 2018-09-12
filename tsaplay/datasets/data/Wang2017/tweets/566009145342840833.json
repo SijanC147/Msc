@@ -1,0 +1,1 @@
+{"content": "One thing's for sure: those of us on #PAYE get stuffed when it comes to tax! Can't afford accountants to avoid effectively! #bbcqt #HMRC", "entities": [{"offset": 38, "type": "ne", "id": 2, "entity": "paye"}, {"entity": "hmrc", "type": "topic keyword", "id": 3, "offset": 132}], "topics": [{"topic": "public spending", "id": 1}], "tweet_id": "566009145342840833"}

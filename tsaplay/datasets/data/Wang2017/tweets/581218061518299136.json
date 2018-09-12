@@ -1,0 +1,1 @@
+{"content": "5 years ago Cameron promised he wouldn't put up VAT and did. He's just promised the same again. How can anyone trust him? #BattleForNumber10", "entities": [{"offset": 12, "type": "ne", "id": 2, "entity": "cameron"}, {"entity": "vat", "type": "topic keyword", "id": 3, "offset": 48}], "topics": [{"topic": "public spending", "id": 1}], "tweet_id": "581218061518299136"}

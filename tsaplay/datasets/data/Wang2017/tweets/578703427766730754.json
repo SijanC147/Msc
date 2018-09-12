@@ -1,0 +1,1 @@
+{"content": "BF and I just debated whether we are ethical landlords or not. We're in it to control our neighbours so we decided we are. #bbcqt", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "bf"}, {"entity": "landlords", "type": "topic keyword", "id": 3, "offset": 45}], "topics": [{"topic": "housing", "id": 1}], "tweet_id": "578703427766730754"}

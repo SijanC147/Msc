@@ -1,0 +1,1 @@
+{"content": "@BBCNews telling us that there may be more cuts to our armed forces after #GE2015 if it happens we may as well switch on the Doomsday clock", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "@BBCNews"}, {"offset": 55, "type": "topic keyword", "id": 3, "entity": "armed forces"}], "topics": [{"topic": "defence", "id": 1}], "tweet_id": "574628720394244096"}

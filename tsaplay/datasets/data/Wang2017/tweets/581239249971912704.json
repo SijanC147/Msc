@@ -1,0 +1,1 @@
+{"content": "Can't believe I agree with JSP but she's right, the education system is not adequately preparing the young for life after school #bbcqt", "entities": [{"offset": 27, "type": "ne", "id": 2, "entity": "jsp"}, {"entity": "education", "type": "topic keyword", "id": 3, "offset": 52}], "topics": [{"topic": "education", "id": 1}], "tweet_id": "581239249971912704"}

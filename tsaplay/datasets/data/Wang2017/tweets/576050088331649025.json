@@ -1,0 +1,1 @@
+{"content": "Afternoon! Over the next hour we will be asking your views on what politicians need to know & change about the NHS ahead of #GE2015 #ImOne", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "afternoon"}, {"offset": 111, "type": "topic keyword", "id": 3, "entity": "nhs"}], "topics": [{"topic": "nhs", "id": 1}], "tweet_id": "576050088331649025"}

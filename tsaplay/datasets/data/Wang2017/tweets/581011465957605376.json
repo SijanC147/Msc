@@ -1,0 +1,1 @@
+{"content": ".@LibDems Tbh I expected you to be fond of the last budget, you're in government after all. And it's a good budget. #Budget2015 #GE2015", "entities": [{"offset": 1, "type": "ne", "id": 2, "entity": "@LibDems"}, {"entity": "budget2015", "type": "topic keyword", "id": 3, "offset": 117}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "581011465957605376"}

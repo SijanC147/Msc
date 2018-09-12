@@ -1,0 +1,1 @@
+{"content": "George Osborne is the Wonga Chancellor  #marrshow", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "george osborne"}, {"offset": 22, "type": "ne", "id": 3, "entity": "wonga chancellor"}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "564360298719875072"}

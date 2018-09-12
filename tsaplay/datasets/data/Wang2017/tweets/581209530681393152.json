@@ -1,0 +1,1 @@
+{"content": "I love how when it gets to the nhs 'suddenly' cameron needs to be reminded of the time and the mics dont pick up voices #BattleForNumber10", "entities": [{"offset": 46, "type": "ne", "id": 2, "entity": "cameron"}, {"offset": 31, "type": "topic keyword", "id": 3, "entity": "nhs"}], "topics": [{"topic": "nhs", "id": 1}], "tweet_id": "581209530681393152"}

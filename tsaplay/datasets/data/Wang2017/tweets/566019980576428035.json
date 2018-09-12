@@ -1,0 +1,1 @@
+{"content": "Aye, stop treating the drunk and disorderly. Or just drunks. And smokers. People who were driving too fast. Clumsy people... #idiot #bbcqt", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "aye"}, {"offset": 23, "type": "topic keyword", "id": 3, "entity": "drunk and disorderly"}], "topics": [{"topic": "crime", "id": 1}], "tweet_id": "566019980576428035"}

@@ -1,0 +1,1 @@
+{"content": "If Hancock can't get 15 'Long-term economic plans' into his #bbcdp interview he'll be looking for his pin shaped head in a large haystack.", "entities": [{"offset": 3, "type": "ne", "id": 2, "entity": "hancock"}, {"entity": "economic", "type": "topic keyword", "id": 3, "offset": 35}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "564385115892359168"}

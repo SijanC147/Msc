@@ -1,0 +1,1 @@
+{"content": "So many new jobs are zero-hour and insecure. Wages are down. Inflation is down due to prices being slammed down as people can't buy. #BBCqt", "entities": [{"offset": 134, "type": "ne", "id": 2, "entity": "bbcqt"}, {"entity": "inflation", "type": "topic keyword", "id": 3, "offset": 61}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "568544632231092225"}

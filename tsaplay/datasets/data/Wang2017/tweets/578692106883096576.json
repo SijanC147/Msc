@@ -1,0 +1,1 @@
+{"content": "#bbcqt  IFS further says the worst of the cuts are yet to come & Chancellor should come clean on them.But there is an election coming up !", "entities": [{"offset": 8, "type": "ne", "id": 2, "entity": "ifs"}, {"entity": "chancellor", "type": "topic keyword", "id": 3, "offset": 65}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "578692106883096576"}

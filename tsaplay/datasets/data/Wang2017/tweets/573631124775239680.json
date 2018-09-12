@@ -1,0 +1,1 @@
+{"content": "#BBCqt NHS costs \u00a32Bn per week right? The annual cost of servicing is \u00a343Bn on the 1.3Tn debt. No fuck it, to depressing to make this point,", "entities": [{"offset": 1, "type": "ne", "id": 2, "entity": "bbcqt"}, {"offset": 7, "type": "topic keyword", "id": 3, "entity": "nhs"}], "topics": [{"topic": "nhs", "id": 1}], "tweet_id": "573631124775239680"}

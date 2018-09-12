@@ -1,0 +1,1 @@
+{"content": "#bbcqt Tax avoidance is arranging your affairs, within the law, to minimise your tax. Tax EVASION is illegal.", "entities": [{"entity": "tax avoidance", "type": "topic keyword", "id": 2, "offset": 7}, {"entity": "tax evasion", "type": "topic keyword", "id": 3, "offset": 86}], "topics": [{"topic": "public spending", "id": 1}], "tweet_id": "566004477124444160"}

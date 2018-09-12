@@ -1,0 +1,1 @@
+{"content": "DC tells it like it is as he takes audience questions. One response to his answer on the police force was \"no comment\". #BattleForNumber10", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "dc"}, {"offset": 89, "type": "topic keyword", "id": 3, "entity": "police"}], "topics": [{"topic": "crime", "id": 1}], "tweet_id": "581207803198586881"}

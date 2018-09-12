@@ -1,0 +1,1 @@
+{"content": "Are you raising my living standards by taking more money from me? Next time I get Mugged, I'll thank the criminal then. #BattleForNumber10", "entities": [{"offset": 82, "type": "ne", "id": 2, "entity": "mugged"}, {"offset": 105, "type": "topic keyword", "id": 3, "entity": "criminal"}], "topics": [{"topic": "crime", "id": 1}], "tweet_id": "581212423295729664"}

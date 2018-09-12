@@ -1,0 +1,1 @@
+{"content": "What a nice cozy chat. Marr is a joke of an interviewer. Not a serious question in sight. Nothing about debt, wages , austerity #marrshow", "entities": [{"offset": 23, "type": "ne", "id": 2, "entity": "marr"}, {"entity": "austerity", "type": "topic keyword", "id": 3, "offset": 118}], "topics": [{"topic": "public spending", "id": 1}], "tweet_id": "564362688453943296"}

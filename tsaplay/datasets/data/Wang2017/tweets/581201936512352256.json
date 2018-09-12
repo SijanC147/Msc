@@ -1,0 +1,1 @@
+{"content": "There's no point to this interview if Paxman is going to ask questions as if he's totally oblivious to how economics work #battlefornumber10", "entities": [{"offset": 38, "type": "ne", "id": 2, "entity": "paxman"}, {"entity": "economics", "type": "topic keyword", "id": 3, "offset": 107}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "581201936512352256"}

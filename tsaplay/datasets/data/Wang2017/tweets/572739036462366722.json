@@ -1,0 +1,1 @@
+{"content": "If recorded crime's down, it could be because police stations have closed. #bbcdp", "entities": [{"offset": 46, "type": "topic keyword", "id": 2, "entity": "police"}, {"offset": 12, "type": "topic keyword", "id": 3, "entity": "crime"}], "topics": [{"topic": "crime", "id": 1}], "tweet_id": "572739036462366722"}

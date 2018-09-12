@@ -1,0 +1,1 @@
+{"content": "We can only hope that no one in the UK is shallow enough to let Osborne buy their vote for #ge2015 today.", "entities": [{"offset": 36, "type": "ne", "id": 2, "entity": "uk"}, {"entity": "osborne", "type": "topic keyword", "id": 3, "offset": 64}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "578072224701100032"}

@@ -1,0 +1,1 @@
+{"content": "Last week may have been a blip, but trend is still towards higher LAB+CON shares - 64 in last 4 @LordAshcroft polls vs 61 in Jan/Dec #GE2015", "entities": [{"offset": 96, "type": "ne", "id": 2, "entity": "@LordAshcroft"}, {"entity": "shares", "type": "topic keyword", "id": 3, "offset": 74}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "572426329888587777"}

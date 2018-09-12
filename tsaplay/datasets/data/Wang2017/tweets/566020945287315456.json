@@ -1,0 +1,1 @@
+{"content": "#bbcqt a nurse told me yesterday she frequently has patients who don't know why they came in. No obvious symptoms, 10 mins to find out #NHS", "entities": [{"offset": 136, "type": "topic keyword", "id": 2, "entity": "nhs"}, {"offset": 52, "type": "topic keyword", "id": 3, "entity": "patients"}], "topics": [{"topic": "nhs", "id": 1}], "tweet_id": "566020945287315456"}

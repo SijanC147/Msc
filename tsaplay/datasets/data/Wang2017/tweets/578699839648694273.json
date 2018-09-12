@@ -1,0 +1,1 @@
+{"content": "Aberdeen rents are ridiculously high for the average wage in the city. Many I've known pretend to be homeless to get on council list #bbcqt", "entities": [{"offset": 0, "type": "ne", "id": 2, "entity": "aberdeen"}, {"entity": "homeless", "type": "topic keyword", "id": 3, "offset": 101}], "topics": [{"topic": "housing", "id": 1}], "tweet_id": "578699839648694273"}

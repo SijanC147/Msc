@@ -1,0 +1,1 @@
+{"content": "#bbctw. The #PMQs ruling-out of various taxation measures had the air of a pantomime act. Was it a backstairs stitch-up somehow? #bbcdp", "entities": [{"offset": 13, "type": "ne", "id": 2, "entity": "pmqs"}, {"entity": "taxation", "type": "topic keyword", "id": 3, "offset": 40}], "topics": [{"topic": "public spending", "id": 1}], "tweet_id": "581249228632137730"}

@@ -1,0 +1,1 @@
+{"content": "Already made my mind up who I am voting for in the UK #generalelection - all about the #economy + clear message + policies for me..", "entities": [{"offset": 51, "type": "ne", "id": 2, "entity": "uk"}, {"entity": "economy", "type": "topic keyword", "id": 3, "offset": 88}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "581205881272041472"}

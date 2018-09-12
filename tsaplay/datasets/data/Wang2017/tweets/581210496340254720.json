@@ -1,0 +1,1 @@
+{"content": "How did he spend so long on TV and not say \"Long Term Economic Plan\" I the @Conservatives won't be happy about that #BattleForNumber10", "entities": [{"offset": 75, "type": "ne", "id": 2, "entity": "@Conservatives"}, {"entity": "economic", "type": "topic keyword", "id": 3, "offset": 54}], "topics": [{"topic": "economy", "id": 1}], "tweet_id": "581210496340254720"}

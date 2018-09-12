@@ -1,0 +1,1 @@
+{"content": "How can I get a HMRC letter about under paid tax when my employer is responsible, under PAYE, to pay my tax? #bbcqt Why do I have to pay?", "entities": [{"offset": 88, "type": "ne", "id": 2, "entity": "paye"}, {"entity": "hmrc", "type": "topic keyword", "id": 3, "offset": 16}], "topics": [{"topic": "public spending", "id": 1}], "tweet_id": "568545111497416704"}

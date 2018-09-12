@@ -1,0 +1,1 @@
+{"content": "That man Farage is a danger to us all, he is the \"petrol can\" in a firework factory #bbcqt", "entities": [{"offset": 9, "type": "ne", "id": 2, "entity": "farage"}, {"offset": 50, "type": "topic keyword", "id": 3, "entity": "petrol"}], "topics": [{"topic": "environment and energy", "id": 1}], "tweet_id": "566012570856083457"}

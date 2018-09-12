@@ -1,0 +1,1 @@
+{"content": "It must be right, then, Will Self, if you just your university class and a random man on your way here vote unanimously. #bbcqt", "entities": [{"offset": 24, "type": "ne", "id": 2, "entity": "will self"}, {"entity": "university", "type": "topic keyword", "id": 3, "offset": 52}], "topics": [{"topic": "education", "id": 1}], "tweet_id": "578697038784782337"}
