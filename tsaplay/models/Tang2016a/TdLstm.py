@@ -94,7 +94,7 @@ class TdLstm(Model):
                 labels=labels, logits=logits
             )
             accuracy = tf.metrics.accuracy(
-                labels=labels, predictions=predicted_classes
+                labels=labels, predictions=predicted_classes, name="acc_op"
             )
 
             metrics = {"accuracy": accuracy}

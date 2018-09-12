@@ -4,7 +4,7 @@ import tsaplay.datasets._parsers as PARSERS
 
 __data = join(getcwd(), "tsaplay", "datasets", "data")
 
-DEBUG_PATH = join(__data, "debug_dataset")
+DEBUG_PATH = join(__data, "DebugDataset")
 DEBUG_PARSER = PARSERS.dong_parser
 DONG2014_PATH = join(__data, "Dong2014")
 DONG2014_PARSER = PARSERS.dong_parser

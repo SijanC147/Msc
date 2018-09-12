@@ -66,13 +66,13 @@ class Lstm(Model):
             loss = tf.losses.sparse_softmax_cross_entropy(
                 labels=labels, logits=logits
             )
+
             accuracy = tf.metrics.accuracy(
-                labels=labels, predictions=predicted_classes
+                labels=labels, predictions=predicted_classes, name="acc_op"
             )
-
             metrics = {"accuracy": accuracy}
-
             tf.summary.scalar("accuracy", accuracy[1])
+
             tf.summary.scalar("loss", loss)
 
             if mode == tf.estimator.ModeKeys.EVAL:
@@ -88,7 +88,7 @@ class Lstm(Model):
             )
 
             logging_hook = tf.train.LoggingTensorHook(
-                {"loss": loss, "accuracy": accuracy[1]}, every_n_iter=50
+                {"loss": loss, "accuracy": accuracy[1]}, every_n_iter=100
             )
 
             return tf.estimator.EstimatorSpec(

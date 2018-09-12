@@ -1,6 +1,7 @@
 import spacy
 import numpy as np
 import tensorflow as tf
+import sys
 from random import choice, randrange
 from math import floor
 from json import dumps
@@ -212,11 +213,30 @@ def inspect_dist(features, labels):
     }
 
 
-def start_tensorboard(model_dir, debug=False):
-    logdir = model_dir
-    debug_str = "--debugger_port 6064" if debug else ""
-    system("open http://localhost:6006")
-    system("tensorboard --logdir {dir} {debug}".format(logdir, debug_str))
+def get_platform():
+    return {
+        "linux1": "Linux",
+        "linux2": "Linux",
+        "darwin": "MacOS",
+        "win32": "Windows",
+    }.get(sys.platform, sys.platform)
+
+
+def start_tensorboard(model_dir, port=6006, debug=False, debug_port=6064):
+    logdir_str = "--logdir {0} --port {1}".format(model_dir, port)
+    debug_str = "--debugger_port {0}".format(debug_port) if debug else ""
+    start_tb_cmd = "tensorboard {0} {1}".format(logdir_str, debug_str)
+
+    tb_site = "http://localhost:{0}".format(port)
+    open_site_cmd = {
+        "Linux": "xdg-open {0}".format(tb_site),
+        "Windows": "cmd /c start {0}".format(tb_site),
+        "MacOS": "open {0}".format(tb_site),
+    }.get(get_platform())
+
+    if open_site_cmd is not None:
+        system(open_site_cmd)
+    system(start_tb_cmd)
 
 
 def default_oov(dim_size):

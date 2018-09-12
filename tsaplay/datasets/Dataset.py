@@ -58,7 +58,7 @@ class Dataset:
 
     @property
     def gen_dir(self):
-        gen_dir = join(self.path, "generated")
+        gen_dir = join(self.path, "_generated")
         makedirs(gen_dir, exist_ok=True)
         return gen_dir
 

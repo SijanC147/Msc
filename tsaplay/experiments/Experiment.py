@@ -30,7 +30,16 @@ class Experiment:
             exp_dir=self.exp_dir, run_config=run_config
         )
 
-    def run(self, job, steps, dist=None, debug=False, start_tb=False):
+    def run(
+        self,
+        job,
+        steps,
+        dist=None,
+        debug=False,
+        start_tb=False,
+        tb_port=6006,
+        debug_port=6064,
+    ):
         if job == "train":
             stats = self.model.train(
                 dataset=self.dataset, steps=steps, distribution=dist
@@ -50,7 +59,10 @@ class Experiment:
 
         if start_tb:
             start_tensorboard(
-                model_dir=self.model.run_config.model_dir, debug=debug
+                model_dir=self.model.run_config.model_dir,
+                port=tb_port,
+                debug=debug,
+                debug_port=debug_port,
             )
 
     def _init_exp_dir(self, model, dataset, contd_tag):

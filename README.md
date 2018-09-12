@@ -59,7 +59,9 @@ The system then parses these files with the **specified parser** to generate all
 
 ### Model
 
-All models should be defined under `models\<can_be_whatever>\<model>.py`
+All models should be defined under `models\<group>\<model>.py`
+
+The `group` can be whatever, for implemented models thus far a reference key to the original paper of the model is being used. eg. `Tang2016a`
 
 All models must inherit from the base `Model` class
 
@@ -77,7 +79,7 @@ Everything else is taken care of internally by the system.
 
 ### Experiment Results
 
-After running an experiment, results are written to `experiments\data\<can_be_whatever>\<model>\`
+After running an experiment, results are written to `experiments\data\<group>\<model>\`
 
 The directory contains some extra statistics files, and markdown of functions used for future reference. 
 
@@ -86,10 +88,10 @@ The **Tensorboard logdir** is named `tb_summary\`
 To launch tensorboard after an experiment run the following, 
 
 ````Bash
-tensorboard --logdir experiments\data\<can_be_whatever>\<model>\tb_summary
+tensorboard --logdir experiments\data\<group>\<model>\tb_summary
 ````
 
-Alternatively, the `experiment.run()` method takes an optional `start_tb` boolean parameter. **MAC ONLY**
+Alternatively, the `experiment.run()` method takes an optional `start_tb` boolean parameter.
 
 If set to true, the process will launch the tensorboard page and start the tensorboard process automatically. 
 
@@ -101,7 +103,7 @@ Extracting features and parsing the dataset files takes a while.
 
 To help with this, the `Dataset` class internally generates a myriad of files during its initial execution to use them in future runs. 
 
-All of the generated files are stored under `datasets\data\<name>\generated`
+All of the generated files are stored under `datasets\data\<name>\_generated`
 
 The files saved include: 
 
