@@ -7,8 +7,9 @@ from tsaplay.models.Zheng2018.common import (
     params as default_params,
     lcr_rot_input_fn,
     dropout_lstm_cell,
+    rotary_attn_unit,
 )
-from tsaplay.utils import variable_len_batch_mean
+from tsaplay.utils import variable_len_batch_mean, masked_softmax
 
 
 class LcrRot(Model):
@@ -74,13 +75,13 @@ class LcrRot(Model):
                     sequence_length=features["target"]["len"],
                     dtype=tf.float32,
                 )
-                target_pooled = variable_len_batch_mean(
+                r_t = variable_len_batch_mean(
                     input_tensor=target_hidden_states,
                     seq_lengths=features["target"]["len"],
                     op_name="target_avg_pooling",
                 )
 
-            with tf.variable_scope("left_bi_lstm", reuse=tf.AUTO_REUSE):
+            with tf.variable_scope("left_bi_lstm"):
                 left_hidden_states, _, _ = stack_bidirectional_dynamic_rnn(
                     cells_fw=[dropout_lstm_cell(params)],
                     cells_bw=[dropout_lstm_cell(params)],
@@ -88,9 +89,8 @@ class LcrRot(Model):
                     sequence_length=features["left"]["len"],
                     dtype=tf.float32,
                 )
-            print(left_hidden_states)
 
-            with tf.variable_scope("right_bi_lstm", reuse=tf.AUTO_REUSE):
+            with tf.variable_scope("right_bi_lstm"):
                 right_hidden_states, _, _ = stack_bidirectional_dynamic_rnn(
                     cells_fw=[dropout_lstm_cell(params)],
                     cells_bw=[dropout_lstm_cell(params)],
@@ -98,56 +98,46 @@ class LcrRot(Model):
                     sequence_length=features["right"]["len"],
                     dtype=tf.float32,
                 )
-            print(right_hidden_states)
 
-            with tf.name_scope("target_to_context_Attn"):
-                with tf.variable_scope("left"):
-                    Wlc = tf.get_variable(
-                        name="W_l_c",
-                        shape=[params["hidden_units"] * 2, 1],
-                        dtype=tf.float32,
-                        initializer=tf.random_uniform_initializer(
-                            minval=-0.1, maxval=0.1
-                        ),
-                    )
-                    blc = tf.get_variable(
-                        name="b_l_c",
-                        shape=[1],
-                        dtype=tf.float32,
-                        initializer=tf.random_uniform_initializer(
-                            minval=-0.1, maxval=0.1
-                        ),
-                    )
-                    score_fn = tf.tanh(
-                        tf.matmul(
-                            tf.matmul(left_hidden_states, Wlc),
-                            target_pooled,
-                            transpose_b=True,
-                        )
-                        + blc
-                    )
+            with tf.variable_scope("left_t2c_attn"):
+                r_l = rotary_attn_unit(
+                    h_states=left_hidden_states,
+                    hidden_units=params["hidden_units"] * 2,
+                    seq_lengths=features["left"]["len"],
+                    attn_focus=r_t,
+                )
 
-            # concatenated_final_states = tf.concat(
-            #     [
-            #         target_pooled
-            #         # left_hidden_states,
-            #         # target_hidden_states,
-            #         # right_hidden_states,
-            #     ],
-            #     axis=1,
-            # )
+            with tf.variable_scope("right_t2c_attn"):
+                r_r = rotary_attn_unit(
+                    h_states=right_hidden_states,
+                    hidden_units=params["hidden_units"] * 2,
+                    seq_lengths=features["right"]["len"],
+                    attn_focus=r_t,
+                )
 
-            # logits = tf.layers.dense(
-            #     inputs=concatenated_final_states, units=params["n_out_classes"]
-            # )
+            with tf.variable_scope("left_c2t_attn"):
+                r_t_l = rotary_attn_unit(
+                    h_states=target_hidden_states,
+                    hidden_units=params["hidden_units"] * 2,
+                    seq_lengths=features["target"]["len"],
+                    attn_focus=tf.expand_dims(r_l, axis=1),
+                )
 
-            concat_final_states = tf.concat([target_pooled], axis=1)
+            with tf.variable_scope("right_c2t_attn"):
+                r_t_r = rotary_attn_unit(
+                    h_states=target_hidden_states,
+                    hidden_units=params["hidden_units"] * 2,
+                    seq_lengths=features["target"]["len"],
+                    attn_focus=tf.expand_dims(r_r, axis=1),
+                )
 
-            logits = tf.layers.dense(inputs=concat_final_states, units=1)
+            final_sentence_rep = tf.concat([r_l, r_t_l, r_t_r, r_r], axis=1)
 
-            print(logits)
+            logits = tf.layers.dense(
+                inputs=final_sentence_rep, units=params["n_out_classes"]
+            )
+
             predicted_classes = tf.argmax(logits, 1)
-            print(predicted_classes)
 
             if mode == tf.estimator.ModeKeys.PREDICT:
                 predictions = {

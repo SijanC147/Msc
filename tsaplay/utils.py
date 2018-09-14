@@ -398,3 +398,21 @@ def variable_len_batch_mean(input_tensor, seq_lengths, op_name):
         batched_means = tf.divide(input_sum, seq_lengths_float)
 
     return batched_means
+
+
+def masked_softmax(logits, mask):
+    """
+    Masked softmax over dim 1, mask broadcasts over dim 2
+    :param logits: (N, L, T)
+    :param mask: (N, L)
+    :return: probabilities (N, L, T)
+    """
+    v = tf.shape(logits)[2]
+    indices = tf.cast(tf.where(tf.logical_not(mask)), tf.int32)
+    inf = tf.constant(np.array([[np.inf]], dtype=np.float32), dtype=tf.float32)
+    infs = tf.tile(inf, [tf.shape(indices)[0], v])
+    infmask = tf.scatter_nd(
+        indices=indices, updates=infs, shape=tf.shape(logits)
+    )
+    _p = tf.nn.softmax(logits - infmask, axis=1)
+    return _p
