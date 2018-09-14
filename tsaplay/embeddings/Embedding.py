@@ -81,9 +81,10 @@ class Embedding:
         self.__dictionary = dictionary
 
     def filter_on_vocab(self, vocab):
+        vocab_lower = [word.lower() for word in vocab]
         filtered_dict = {
             word: self.dictionary[word]
-            for word in vocab
+            for word in vocab_lower
             if word in [*self.dictionary]
         }
         self.dictionary = filtered_dict

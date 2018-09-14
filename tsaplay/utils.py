@@ -32,7 +32,6 @@ def token_filter(token):
 
 
 def re_dist(features, labels, distribution):
-    print(distribution)
     if type(distribution) == list:
         target_dists = distribution
     elif type(distribution) == dict:
@@ -118,8 +117,6 @@ def re_dist(features, labels, distribution):
             },
         }
         new_labels = [None] * new_total
-        print(target_counts)
-        print(len(negative_sample_indices))
         for _ in range(target_counts[0]):
             random_index = choice(negative_sample_indices)
             random_position = randrange(0, new_total)
@@ -364,7 +361,8 @@ def write_emb_tsv_to_disk(path, emb_dict):
     with open(path, "w+") as f:
         f.write("Words\n")
         for word in [*emb_dict]:
-            f.write(word + "\n")
+            if word != "<OOV>" and word != "<PAD>":
+                f.write(word + "\n")
 
 
 def get_sentence_contexts(sentence, target, offset=None):
@@ -385,3 +383,18 @@ def unpickle_file(path):
 def pickle_file(path, data):
     with open(path, "wb") as f:
         return dump(data, f, HIGHEST_PROTOCOL)
+
+
+def variable_len_batch_mean(input_tensor, seq_lengths, op_name):
+    with tf.name_scope(name=op_name):
+        input_sum = tf.reduce_sum(
+            input_tensor=input_tensor, axis=1, keepdims=True
+        )
+        seq_lengths_t = tf.transpose([[seq_lengths]])
+        seq_lengths_tiled = tf.tile(
+            seq_lengths_t, multiples=[1, 1, tf.shape(input_sum)[2]]
+        )
+        seq_lengths_float = tf.to_float(seq_lengths_tiled)
+        batched_means = tf.divide(input_sum, seq_lengths_float)
+
+    return batched_means

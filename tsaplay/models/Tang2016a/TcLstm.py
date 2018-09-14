@@ -5,6 +5,7 @@ from tsaplay.models.Tang2016a.common import (
     dropout_lstm_cell,
     tclstm_input_fn,
 )
+from tsaplay.utils import variable_len_batch_mean
 
 
 class TcLstm(Model):
@@ -62,12 +63,10 @@ class TcLstm(Model):
             )
 
             with tf.name_scope("target_connection"):
-                mean_target_embedding = tf.reduce_mean(
-                    input_tensor=target_embedding[
-                        :, : features["target"]["len"][0], :
-                    ],
-                    axis=1,
-                    keepdims=True,
+                mean_target_embedding = variable_len_batch_mean(
+                    input_tensor=target_embedding,
+                    seq_lengths=features["target"]["len"],
+                    op_name="target_embedding_avg",
                 )
                 left_inputs = tf.stack(
                     values=[

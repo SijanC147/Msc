@@ -59,10 +59,14 @@ class Model(ABC):
 
     @property
     def train_hooks(self):
+        if self.__train_hooks is None:
+            self.train_hooks = self._train_hooks()
         return self.__train_hooks
 
     @property
     def eval_hooks(self):
+        if self.__eval_hooks is None:
+            self.eval_hooks = self._eval_hooks()
         return self.__eval_hooks
 
     @property
@@ -122,7 +126,13 @@ class Model(ABC):
     def _model_fn(self):
         pass
 
-    def train(self, dataset, steps, distribution=None):
+    def _train_hooks(self):
+        return []
+
+    def _eval_hooks(self):
+        return []
+
+    def train(self, dataset, steps, distribution=None, hooks=[]):
         self._add_embedding_params(embedding=dataset.embedding)
         features, labels, stats = dataset.get_features_and_labels(
             mode="train", distribution=distribution
@@ -136,13 +146,13 @@ class Model(ABC):
                 batch_size=self.params["batch_size"],
             ),
             steps=steps,
-            hooks=self.__train_hooks,
+            hooks=self.train_hooks + hooks,
         )
         time_taken = str(timedelta(seconds=_time() - start))
         duration_dict = {"job": "train", "time": time_taken}
         return {"duration": duration_dict, **run_stats}
 
-    def evaluate(self, dataset, distribution=None):
+    def evaluate(self, dataset, distribution=None, hooks=[]):
         self._add_embedding_params(embedding=dataset.embedding)
         features, labels, stats = dataset.get_features_and_labels(
             mode="test", distribution=distribution
@@ -155,7 +165,7 @@ class Model(ABC):
                 labels=labels,
                 batch_size=self.params["batch_size"],
             ),
-            hooks=self.__eval_hooks,
+            hooks=self.eval_hooks + hooks,
         )
         time_taken = str(timedelta(seconds=_time() - start))
         duration_dict = {"job": "eval", "time": time_taken}
@@ -172,7 +182,7 @@ class Model(ABC):
                 batch_size=self.params["batch_size"],
             ),
             max_steps=steps,
-            hooks=self.__train_hooks,
+            hooks=self.train_hooks,
         )
         features, labels, stats = dataset.get_features_and_labels(mode="eval")
         eval_stats = self._export_statistics(dataset_stats=stats, steps=steps)
@@ -183,7 +193,7 @@ class Model(ABC):
                 batch_size=self.params["batch_size"],
             ),
             steps=None,
-            hooks=self.__eval_hooks,
+            hooks=self.eval_hooks,
         )
         start = _time()
         tf.estimator.train_and_evaluate(

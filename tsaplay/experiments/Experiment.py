@@ -35,6 +35,7 @@ class Experiment:
         job,
         steps,
         dist=None,
+        hooks=[],
         debug=False,
         start_tb=False,
         tb_port=6006,
@@ -42,12 +43,15 @@ class Experiment:
     ):
         if job == "train":
             stats = self.model.train(
-                dataset=self.dataset, steps=steps, distribution=dist
+                dataset=self.dataset,
+                steps=steps,
+                distribution=dist,
+                hooks=hooks,
             )
             write_stats_to_disk(job="train", stats=stats, path=self.exp_dir)
         elif job == "eval":
             stats = self.model.evaluate(
-                dataset=self.dataset, distribution=dist
+                dataset=self.dataset, distribution=dist, hooks=hooks
             )
             write_stats_to_disk(job="eval", stats=stats, path=self.exp_dir)
         elif job == "train+eval":
