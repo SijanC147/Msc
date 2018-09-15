@@ -44,6 +44,7 @@ class LcrRot(Model):
                     "embeddings",
                     shape=[params["vocab_size"], params["embedding_dim"]],
                     initializer=params["embedding_initializer"],
+                    trainable=False,
                 )
 
             left_embeddings = tf.contrib.layers.embed_sequence(
@@ -67,7 +68,7 @@ class LcrRot(Model):
                 reuse=True,
             )
 
-            with tf.variable_scope("target_bi_lstm", reuse=tf.AUTO_REUSE):
+            with tf.variable_scope("target_bi_lstm"):
                 target_hidden_states, _, _ = stack_bidirectional_dynamic_rnn(
                     cells_fw=[dropout_lstm_cell(params)],
                     cells_bw=[dropout_lstm_cell(params)],
@@ -105,6 +106,7 @@ class LcrRot(Model):
                     hidden_units=params["hidden_units"] * 2,
                     seq_lengths=features["left"]["len"],
                     attn_focus=r_t,
+                    init=params["initializer"],
                 )
 
             with tf.variable_scope("right_t2c_attn"):
@@ -113,6 +115,7 @@ class LcrRot(Model):
                     hidden_units=params["hidden_units"] * 2,
                     seq_lengths=features["right"]["len"],
                     attn_focus=r_t,
+                    init=params["initializer"],
                 )
 
             with tf.variable_scope("left_c2t_attn"):
@@ -121,6 +124,7 @@ class LcrRot(Model):
                     hidden_units=params["hidden_units"] * 2,
                     seq_lengths=features["target"]["len"],
                     attn_focus=tf.expand_dims(r_l, axis=1),
+                    init=params["initializer"],
                 )
 
             with tf.variable_scope("right_c2t_attn"):
@@ -129,6 +133,7 @@ class LcrRot(Model):
                     hidden_units=params["hidden_units"] * 2,
                     seq_lengths=features["target"]["len"],
                     attn_focus=tf.expand_dims(r_r, axis=1),
+                    init=params["initializer"],
                 )
 
             final_sentence_rep = tf.concat([r_l, r_t_l, r_t_r, r_r], axis=1)
@@ -152,6 +157,11 @@ class LcrRot(Model):
             loss = tf.losses.sparse_softmax_cross_entropy(
                 labels=labels, logits=logits
             )
+            l2_reg = tf.reduce_sum(
+                [tf.nn.l2_loss(v) for v in tf.trainable_variables()]
+            )
+            loss = loss + params["l2_weight"] * l2_reg
+
             accuracy = tf.metrics.accuracy(
                 labels=labels, predictions=predicted_classes, name="acc_op"
             )
@@ -165,8 +175,9 @@ class LcrRot(Model):
                     mode, loss=loss, eval_metric_ops=metrics
                 )
 
-            optimizer = tf.train.AdagradOptimizer(
-                learning_rate=params["learning_rate"]
+            optimizer = tf.train.MomentumOptimizer(
+                learning_rate=params["learning_rate"],
+                momentum=params["momentum"],
             )
             train_op = optimizer.minimize(
                 loss, global_step=tf.train.get_global_step()

@@ -5,22 +5,21 @@ from tensorflow.python.keras.preprocessing import (  # pylint: disable=E0611
 from tsaplay.utils import masked_softmax
 
 params = {
-    "batch_size": 3,
+    "batch_size": 25,
     "max_seq_length": 85,
     "n_out_classes": 3,
     "learning_rate": 0.1,
+    "l2_weight": 1e-5,
+    "momentum": 0.9,
     "keep_prob": 0.5,
-    "hidden_units": 2,
-    "lstm_initializer": tf.initializers.random_uniform(
-        minval=-0.1, maxval=0.1
-    ),
+    "hidden_units": 100,
+    "initializer": tf.initializers.random_uniform(minval=-0.1, maxval=0.1),
 }
 
 
 def lstm_cell(params):
     return tf.nn.rnn_cell.LSTMCell(
-        num_units=params["hidden_units"],
-        initializer=params.get("lstm_initializer"),
+        num_units=params["hidden_units"], initializer=params.get("initializer")
     )
 
 
@@ -100,20 +99,17 @@ def lcr_rot_input_fn(
     return iterator.get_next()
 
 
-def rotary_attn_unit(h_states, hidden_units, seq_lengths, attn_focus):
+def rotary_attn_unit(h_states, hidden_units, seq_lengths, attn_focus, init):
     batch_size = tf.shape(h_states)[0]
     max_seq_len = tf.shape(h_states)[1]
     weights = tf.get_variable(
         name="weights",
         shape=[hidden_units, hidden_units],
         dtype=tf.float32,
-        initializer=tf.random_uniform_initializer(minval=-0.1, maxval=0.1),
+        initializer=init,
     )
     bias = tf.get_variable(
-        name="bias",
-        shape=[1],
-        dtype=tf.float32,
-        initializer=tf.random_uniform_initializer(minval=-0.1, maxval=0.1),
+        name="bias", shape=[1], dtype=tf.float32, initializer=init
     )
 
     weights = tf.expand_dims(input=weights, axis=0)

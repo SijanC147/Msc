@@ -409,10 +409,19 @@ def masked_softmax(logits, mask):
     """
     v = tf.shape(logits)[2]
     indices = tf.cast(tf.where(tf.logical_not(mask)), tf.int32)
-    inf = tf.constant(np.array([[np.inf]], dtype=np.float32), dtype=tf.float32)
+    inf = tf.constant(
+        np.array([[tf.float32.max]], dtype=np.float32), dtype=tf.float32
+    )
     infs = tf.tile(inf, [tf.shape(indices)[0], v])
     infmask = tf.scatter_nd(
         indices=indices, updates=infs, shape=tf.shape(logits)
     )
-    _p = tf.nn.softmax(logits - infmask, axis=1)
-    return _p
+    masked_sm = tf.nn.softmax(logits - infmask, axis=1)
+
+    # masked_sm = tf.where(
+    #     tf.is_nan(masked_sm),
+    #     tf.ones_like(masked_sm) * 1. / tf.to_float(v),
+    #     masked_sm,
+    # )
+
+    return masked_sm

@@ -14,17 +14,18 @@ tf.logging.set_verbosity(tf.logging.INFO)
 # lstm = Lstm(run_config=tf.estimator.RunConfig(tf_random_seed=1234))
 # tdlstm = TdLstm(run_config=tf.estimator.RunConfig(tf_random_seed=1234))
 tclstm = TcLstm(run_config=tf.estimator.RunConfig(tf_random_seed=1234))
-lcrrot = LcrRot(run_config=tf.estimator.RunConfig(tf_random_seed=1234))
+# lcrrot = LcrRot(run_config=tf.estimator.RunConfig(tf_random_seed=1234))
+lcrrot = LcrRot(run_config=tf.estimator.RunConfig())
 
 experiment = Experiment(
     dataset=Dataset(
-        path=DATASETS.DEBUG_PATH,
-        parser=DATASETS.DEBUG_PARSER,
-        embedding=Embedding(path=EMBEDDINGS.DEBUG),
+        path=DATASETS.DONG2014_PATH,
+        parser=DATASETS.DONG2014_PARSER,
+        embedding=Embedding(path=EMBEDDINGS.GLOVE_TWITTER_25D),
     ),
     model=lcrrot,
 )
-experiment.run(job="train+eval", steps=200)
+experiment.run(job="train+eval", steps=1000)
 
 # experiment = Experiment(
 #     dataset=Dataset(
@@ -34,9 +35,4 @@ experiment.run(job="train+eval", steps=200)
 #     ),
 #     model=lcrrot,
 # )
-# experiment.run(
-#     job="train",
-#     steps=200,
-#     dist=[1, 0, 0],
-#     hooks=[tf_debug.LocalCLIDebugHook()],
-# )
+# experiment.run(job="train", steps=200, hooks=[tf_debug.LocalCLIDebugHook()])
