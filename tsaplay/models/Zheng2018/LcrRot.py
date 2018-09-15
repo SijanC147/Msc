@@ -7,7 +7,7 @@ from tsaplay.models.Zheng2018.common import (
     params as default_params,
     lcr_rot_input_fn,
     dropout_lstm_cell,
-    rotary_attn_unit,
+    attention_unit,
 )
 from tsaplay.utils import variable_len_batch_mean, masked_softmax
 
@@ -101,7 +101,7 @@ class LcrRot(Model):
                 )
 
             with tf.variable_scope("left_t2c_attn"):
-                r_l = rotary_attn_unit(
+                r_l = attention_unit(
                     h_states=left_hidden_states,
                     hidden_units=params["hidden_units"] * 2,
                     seq_lengths=features["left"]["len"],
@@ -110,7 +110,7 @@ class LcrRot(Model):
                 )
 
             with tf.variable_scope("right_t2c_attn"):
-                r_r = rotary_attn_unit(
+                r_r = attention_unit(
                     h_states=right_hidden_states,
                     hidden_units=params["hidden_units"] * 2,
                     seq_lengths=features["right"]["len"],
@@ -119,7 +119,7 @@ class LcrRot(Model):
                 )
 
             with tf.variable_scope("left_c2t_attn"):
-                r_t_l = rotary_attn_unit(
+                r_t_l = attention_unit(
                     h_states=target_hidden_states,
                     hidden_units=params["hidden_units"] * 2,
                     seq_lengths=features["target"]["len"],
@@ -128,7 +128,7 @@ class LcrRot(Model):
                 )
 
             with tf.variable_scope("right_c2t_attn"):
-                r_t_r = rotary_attn_unit(
+                r_t_r = attention_unit(
                     h_states=target_hidden_states,
                     hidden_units=params["hidden_units"] * 2,
                     seq_lengths=features["target"]["len"],

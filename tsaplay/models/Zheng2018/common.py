@@ -99,7 +99,7 @@ def lcr_rot_input_fn(
     return iterator.get_next()
 
 
-def rotary_attn_unit(h_states, hidden_units, seq_lengths, attn_focus, init):
+def attention_unit(h_states, hidden_units, seq_lengths, attn_focus, init):
     batch_size = tf.shape(h_states)[0]
     max_seq_len = tf.shape(h_states)[1]
     weights = tf.get_variable(
