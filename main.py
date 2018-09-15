@@ -6,6 +6,7 @@ from tsaplay.embeddings.Embedding import Embedding, EMBEDDINGS
 from tsaplay.models.Ma2017.InteractiveAttentionNetwork import (
     InteractiveAttentionNetwork
 )
+from tsaplay.models.Tang2016a.Lstm import Lstm
 from tsaplay.experiments.Experiment import Experiment
 
 tf.logging.set_verbosity(tf.logging.INFO)
@@ -13,6 +14,7 @@ tf.logging.set_verbosity(tf.logging.INFO)
 ian = InteractiveAttentionNetwork(
     run_config=tf.estimator.RunConfig(tf_random_seed=1234)
 )
+lstm = Lstm(run_config=tf.estimator.RunConfig(tf_random_seed=1234))
 experiment = Experiment(
     dataset=Dataset(
         path=DATASETS.DONG2014_PATH,
@@ -22,7 +24,7 @@ experiment = Experiment(
             oov=lambda size: np.random.uniform(low=0.1, high=0.1, size=size),
         ),
     ),
-    model=ian,
+    model=lstm,
 )
 experiment.run(job="train+eval", steps=600, start_tb=True)
 # experiment.run(job="train", steps=200, hooks=[tf_debug.LocalCLIDebugHook()])

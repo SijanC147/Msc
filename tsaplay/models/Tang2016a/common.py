@@ -10,23 +10,8 @@ params = {
     "learning_rate": 0.01,
     "keep_prob": 0.8,
     "hidden_units": 100,
-    "lstm_initializer": tf.initializers.random_uniform(
-        minval=-0.03, maxval=0.03
-    ),
+    "initializer": tf.initializers.random_uniform(minval=-0.03, maxval=0.03),
 }
-
-
-def lstm_cell(params):
-    return tf.nn.rnn_cell.LSTMCell(
-        num_units=params["hidden_units"],
-        initializer=params.get("lstm_initializer"),
-    )
-
-
-def dropout_lstm_cell(params):
-    return tf.contrib.rnn.DropoutWrapper(
-        cell=lstm_cell(params), output_keep_prob=params["keep_prob"]
-    )
 
 
 def lstm_input_fn(

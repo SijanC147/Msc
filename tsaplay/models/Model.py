@@ -269,8 +269,13 @@ class Model(ABC):
             estimator,
             lambda labels, predictions: {
                 "mean_iou": tf.metrics.mean_iou(
-                    labels, predictions["class_ids"], 3
-                )
+                    labels=labels,
+                    predictions=predictions["class_ids"],
+                    num_classes=self.params["n_out_classes"],
+                ),
+                "accuracy": tf.metrics.accuracy(
+                    labels=labels, predictions=predictions["class_ids"]
+                ),
             },
         )
         return estimator

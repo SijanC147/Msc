@@ -1,12 +1,16 @@
 import tensorflow as tf
+from tensorflow.estimator import (  # pylint: disable=E0401
+    EstimatorSpec,
+    ModeKeys,
+)
 from tsaplay.models.Model import Model
-from tsaplay.models.Ma2017.common import (
-    params as default_params,
-    ian_input_fn,
+from tsaplay.models.Ma2017.common import params as default_params, ian_input_fn
+from tsaplay.utils._tf import (
+    variable_len_batch_mean,
     dropout_lstm_cell,
+    l2_regularized_loss,
     attention_unit,
 )
-from tsaplay.utils.common import variable_len_batch_mean
 
 
 class InteractiveAttentionNetwork(Model):
@@ -60,7 +64,11 @@ class InteractiveAttentionNetwork(Model):
 
             with tf.variable_scope("context_lstm"):
                 context_hidden_states, _ = tf.nn.dynamic_rnn(
-                    cell=dropout_lstm_cell(params),
+                    cell=dropout_lstm_cell(
+                        hidden_units=params["hidden_units"],
+                        initializer=params["initializer"],
+                        keep_prob=params["keep_prob"],
+                    ),
                     inputs=context_embeddings,
                     sequence_length=features["context"]["len"],
                     dtype=tf.float32,
@@ -73,7 +81,11 @@ class InteractiveAttentionNetwork(Model):
 
             with tf.variable_scope("target_lstm"):
                 target_hidden_states, _ = tf.nn.dynamic_rnn(
-                    cell=dropout_lstm_cell(params),
+                    cell=dropout_lstm_cell(
+                        hidden_units=params["hidden_units"],
+                        initializer=params["initializer"],
+                        keep_prob=params["keep_prob"],
+                    ),
                     inputs=target_embeddings,
                     sequence_length=features["target"]["len"],
                     dtype=tf.float32,
@@ -102,48 +114,31 @@ class InteractiveAttentionNetwork(Model):
 
                 final_sentence_rep = tf.concat([t_r, c_r], axis=1)
 
-                logits = tf.layers.dense(
-                    inputs=final_sentence_rep,
-                    units=params["n_out_classes"],
-                    activation=tf.nn.tanh,
-                    kernel_initializer=params["initializer"],
-                    bias_initializer=params["initializer"],
-                )
-
-            predicted_classes = tf.argmax(logits, 1)
+            logits = tf.layers.dense(
+                inputs=final_sentence_rep,
+                units=params["n_out_classes"],
+                activation=tf.nn.tanh,
+                kernel_initializer=params["initializer"],
+                bias_initializer=params["initializer"],
+            )
 
             predictions = {
-                "class_ids": predicted_classes,
+                "class_ids": tf.argmax(logits, 1),
                 "probabilities": tf.nn.softmax(logits),
                 "logits": logits,
             }
 
-            if mode == tf.estimator.ModeKeys.PREDICT:
-                return tf.estimator.EstimatorSpec(
-                    mode, predictions=predictions
-                )
+            if mode == ModeKeys.PREDICT:
+                return EstimatorSpec(mode, predictions=predictions)
 
-            loss = tf.losses.sparse_softmax_cross_entropy(
-                labels=labels, logits=logits
+            loss = l2_regularized_loss(
+                labels=labels, logits=logits, l2_weight=params["l2_weight"]
             )
-            l2_reg = tf.reduce_sum(
-                [tf.nn.l2_loss(v) for v in tf.trainable_variables()]
-            )
-            loss = loss + params["l2_weight"] * l2_reg
 
-            accuracy = tf.metrics.accuracy(
-                labels=labels, predictions=predicted_classes, name="acc_op"
-            )
-            tf.summary.scalar("accuracy", accuracy[1])
             tf.summary.scalar("loss", loss)
 
-            if mode == tf.estimator.ModeKeys.EVAL:
-                return tf.estimator.EstimatorSpec(
-                    mode,
-                    loss=loss,
-                    predictions=predictions,
-                    eval_metric_ops={"accuracy": accuracy},
-                )
+            if mode == ModeKeys.EVAL:
+                return EstimatorSpec(mode, loss=loss, predictions=predictions)
 
             optimizer = tf.train.MomentumOptimizer(
                 learning_rate=params["learning_rate"],
@@ -153,16 +148,8 @@ class InteractiveAttentionNetwork(Model):
                 loss, global_step=tf.train.get_global_step()
             )
 
-            logging_hook = tf.train.LoggingTensorHook(
-                {"loss": loss, "accuracy": accuracy[1]}, every_n_iter=100
-            )
-
-            return tf.estimator.EstimatorSpec(
-                mode,
-                loss=loss,
-                train_op=train_op,
-                predictions=predictions,
-                training_hooks=[logging_hook],
+            return EstimatorSpec(
+                mode, loss=loss, train_op=train_op, predictions=predictions
             )
 
         return default

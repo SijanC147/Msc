@@ -20,9 +20,9 @@ class SaveConfusionMatrixHook(tf.train.SessionRunHook):
     def __init__(self, labels, confusion_matrix_tensor_name, summary_writer):
         """Initializes a `SaveConfusionMatrixHook`.
 
-        :param labels: Iterable of String containing the labels to print for 
+        :param labels: Iterable of String containing the labels to print for
                         each row/column in the confusion matrix.
-        :param confusion_matrix_tensor_name: The name of the tensor containing 
+        :param confusion_matrix_tensor_name: The name of the tensor containing
                                             the confusionmatrix
         :param summary_writer: The summary writer that will save the summary
         """
@@ -47,7 +47,7 @@ class SaveConfusionMatrixHook(tf.train.SessionRunHook):
         Converts a matplotlib figure ``fig`` into a TensorFlow Summary object
         that can be directly fed into ``Summary.FileWriter``.
         :param fig: A ``matplotlib.figure.Figure`` object.
-        :return: A TensorFlow ``Summary`` protobuf object containing the plot 
+        :return: A TensorFlow ``Summary`` protobuf object containing the plot
             image as a image summary.
         """
 
@@ -81,10 +81,10 @@ class SaveConfusionMatrixHook(tf.train.SessionRunHook):
 
     def _plot_confusion_matrix(self, cm):
         """
-        :param cm: A confusion matrix: A square ```numpy array``` of the same 
+        :param cm: A confusion matrix: A square ```numpy array``` of the same
                                         size as self.labels
-        :return:  A ``matplotlib.figure.Figure`` object with a numerical and 
-                                        graphical representation of the cm 
+        :return:  A ``matplotlib.figure.Figure`` object with a numerical and
+                                        graphical representation of the cm
                                         array
         """
         numClasses = len(self.labels)

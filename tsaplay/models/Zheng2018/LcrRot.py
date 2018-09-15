@@ -1,4 +1,8 @@
 import tensorflow as tf
+from tensorflow.estimator import (  # pylint: disable=E0401
+    EstimatorSpec,
+    ModeKeys,
+)
 from tensorflow.contrib.rnn import (  # pylint: disable=E0611
     stack_bidirectional_dynamic_rnn
 )
@@ -6,10 +10,13 @@ from tsaplay.models.Model import Model
 from tsaplay.models.Zheng2018.common import (
     params as default_params,
     lcr_rot_input_fn,
-    dropout_lstm_cell,
-    attention_unit,
 )
-from tsaplay.utils.common import variable_len_batch_mean, masked_softmax
+from tsaplay.utils._tf import (
+    variable_len_batch_mean,
+    attention_unit,
+    dropout_lstm_cell,
+    l2_regularized_loss,
+)
 
 
 class LcrRot(Model):
@@ -70,8 +77,20 @@ class LcrRot(Model):
 
             with tf.variable_scope("target_bi_lstm"):
                 target_hidden_states, _, _ = stack_bidirectional_dynamic_rnn(
-                    cells_fw=[dropout_lstm_cell(params)],
-                    cells_bw=[dropout_lstm_cell(params)],
+                    cells_fw=[
+                        dropout_lstm_cell(
+                            hidden_units=params["hidden_units"],
+                            initializer=params["initializer"],
+                            keep_prob=params["keep_prob"],
+                        )
+                    ],
+                    cells_bw=[
+                        dropout_lstm_cell(
+                            hidden_units=params["hidden_units"],
+                            initializer=params["initializer"],
+                            keep_prob=params["keep_prob"],
+                        )
+                    ],
                     inputs=target_embeddings,
                     sequence_length=features["target"]["len"],
                     dtype=tf.float32,
@@ -84,8 +103,20 @@ class LcrRot(Model):
 
             with tf.variable_scope("left_bi_lstm"):
                 left_hidden_states, _, _ = stack_bidirectional_dynamic_rnn(
-                    cells_fw=[dropout_lstm_cell(params)],
-                    cells_bw=[dropout_lstm_cell(params)],
+                    cells_fw=[
+                        dropout_lstm_cell(
+                            hidden_units=params["hidden_units"],
+                            initializer=params["initializer"],
+                            keep_prob=params["keep_prob"],
+                        )
+                    ],
+                    cells_bw=[
+                        dropout_lstm_cell(
+                            hidden_units=params["hidden_units"],
+                            initializer=params["initializer"],
+                            keep_prob=params["keep_prob"],
+                        )
+                    ],
                     inputs=left_embeddings,
                     sequence_length=features["left"]["len"],
                     dtype=tf.float32,
@@ -93,8 +124,20 @@ class LcrRot(Model):
 
             with tf.variable_scope("right_bi_lstm"):
                 right_hidden_states, _, _ = stack_bidirectional_dynamic_rnn(
-                    cells_fw=[dropout_lstm_cell(params)],
-                    cells_bw=[dropout_lstm_cell(params)],
+                    cells_fw=[
+                        dropout_lstm_cell(
+                            hidden_units=params["hidden_units"],
+                            initializer=params["initializer"],
+                            keep_prob=params["keep_prob"],
+                        )
+                    ],
+                    cells_bw=[
+                        dropout_lstm_cell(
+                            hidden_units=params["hidden_units"],
+                            initializer=params["initializer"],
+                            keep_prob=params["keep_prob"],
+                        )
+                    ],
                     inputs=right_embeddings,
                     sequence_length=features["right"]["len"],
                     dtype=tf.float32,
@@ -142,38 +185,23 @@ class LcrRot(Model):
                 inputs=final_sentence_rep, units=params["n_out_classes"]
             )
 
-            predicted_classes = tf.argmax(logits, 1)
+            predictions = {
+                "class_ids": tf.argmax(logits, 1),
+                "probabilities": tf.nn.softmax(logits),
+                "logits": logits,
+            }
 
-            if mode == tf.estimator.ModeKeys.PREDICT:
-                predictions = {
-                    "class_ids": predicted_classes[:, tf.newaxis],
-                    "probabilities": tf.nn.softmax(logits),
-                    "logits": logits,
-                }
-                return tf.estimator.EstimatorSpec(
-                    mode, predictions=predictions
-                )
+            if mode == ModeKeys.PREDICT:
+                return EstimatorSpec(mode, predictions=predictions)
 
-            loss = tf.losses.sparse_softmax_cross_entropy(
-                labels=labels, logits=logits
+            loss = l2_regularized_loss(
+                labels=labels, logits=logits, l2_weight=params["l2_weight"]
             )
-            l2_reg = tf.reduce_sum(
-                [tf.nn.l2_loss(v) for v in tf.trainable_variables()]
-            )
-            loss = loss + params["l2_weight"] * l2_reg
-
-            accuracy = tf.metrics.accuracy(
-                labels=labels, predictions=predicted_classes, name="acc_op"
-            )
-            metrics = {"accuracy": accuracy}
-            tf.summary.scalar("accuracy", accuracy[1])
 
             tf.summary.scalar("loss", loss)
 
-            if mode == tf.estimator.ModeKeys.EVAL:
-                return tf.estimator.EstimatorSpec(
-                    mode, loss=loss, eval_metric_ops=metrics
-                )
+            if mode == ModeKeys.EVAL:
+                return EstimatorSpec(mode, predictions=predictions, loss=loss)
 
             optimizer = tf.train.MomentumOptimizer(
                 learning_rate=params["learning_rate"],
@@ -183,15 +211,8 @@ class LcrRot(Model):
                 loss, global_step=tf.train.get_global_step()
             )
 
-            logging_hook = tf.train.LoggingTensorHook(
-                {"loss": loss, "accuracy": accuracy[1]}, every_n_iter=100
-            )
-
-            return tf.estimator.EstimatorSpec(
-                mode,
-                loss=loss,
-                train_op=train_op,
-                training_hooks=[logging_hook],
+            return EstimatorSpec(
+                mode, loss=loss, train_op=train_op, predictions=predictions
             )
 
         return default

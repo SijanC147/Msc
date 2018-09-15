@@ -3,17 +3,19 @@ from os import listdir, makedirs
 from os.path import normpath, basename, isfile, join, exists
 from statistics import mean
 from functools import wraps
-from tsaplay.utils.common import (
+from tsaplay.utils._nlp import (
     token_filter,
     re_dist,
     inspect_dist,
-    search_dir,
+    get_sentence_contexts,
     corpus_from_docs,
+)
+from tsaplay.utils._io import (
+    search_dir,
     corpus_from_csv,
     corpus_to_csv,
     write_embedding_to_disk,
     write_emb_tsv_to_disk,
-    get_sentence_contexts,
     unpickle_file as _unpickle,
     pickle_file as _pickle,
 )

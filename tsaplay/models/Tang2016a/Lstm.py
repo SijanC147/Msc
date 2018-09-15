@@ -1,10 +1,14 @@
 import tensorflow as tf
+from tensorflow.estimator import (  # pylint: disable=E0401
+    EstimatorSpec,
+    ModeKeys,
+)
 from tsaplay.models.Model import Model
 from tsaplay.models.Tang2016a.common import (
     params as default_params,
-    dropout_lstm_cell,
     lstm_input_fn,
 )
+from tsaplay.utils._tf import dropout_lstm_cell
 
 
 class Lstm(Model):
@@ -41,7 +45,11 @@ class Lstm(Model):
             )
 
             _, final_states = tf.nn.dynamic_rnn(
-                cell=dropout_lstm_cell(params),
+                cell=dropout_lstm_cell(
+                    hidden_units=params["hidden_units"],
+                    initializer=params["initializer"],
+                    keep_prob=params["keep_prob"],
+                ),
                 inputs=inputs,
                 sequence_length=features["len"],
                 dtype=tf.float32,
@@ -51,34 +59,23 @@ class Lstm(Model):
                 inputs=final_states.h, units=params["n_out_classes"]
             )
 
-            predicted_classes = tf.argmax(logits, 1)
+            predictions = {
+                "class_ids": tf.argmax(logits, 1),
+                "probabilities": tf.nn.softmax(logits),
+                "logits": logits,
+            }
 
-            if mode == tf.estimator.ModeKeys.PREDICT:
-                predictions = {
-                    "class_ids": predicted_classes[:, tf.newaxis],
-                    "probabilities": tf.nn.softmax(logits),
-                    "logits": logits,
-                }
-                return tf.estimator.EstimatorSpec(
-                    mode, predictions=predictions
-                )
+            if mode == ModeKeys.PREDICT:
+                return EstimatorSpec(mode, predictions=predictions)
 
             loss = tf.losses.sparse_softmax_cross_entropy(
                 labels=labels, logits=logits
             )
 
-            accuracy = tf.metrics.accuracy(
-                labels=labels, predictions=predicted_classes, name="acc_op"
-            )
-            metrics = {"accuracy": accuracy}
-            tf.summary.scalar("accuracy", accuracy[1])
-
             tf.summary.scalar("loss", loss)
 
-            if mode == tf.estimator.ModeKeys.EVAL:
-                return tf.estimator.EstimatorSpec(
-                    mode, loss=loss, eval_metric_ops=metrics
-                )
+            if mode == ModeKeys.EVAL:
+                return EstimatorSpec(mode, predictions=predictions, loss=loss)
 
             optimizer = tf.train.AdagradOptimizer(
                 learning_rate=params["learning_rate"]
@@ -87,15 +84,8 @@ class Lstm(Model):
                 loss, global_step=tf.train.get_global_step()
             )
 
-            logging_hook = tf.train.LoggingTensorHook(
-                {"loss": loss, "accuracy": accuracy[1]}, every_n_iter=100
-            )
-
-            return tf.estimator.EstimatorSpec(
-                mode,
-                loss=loss,
-                train_op=train_op,
-                training_hooks=[logging_hook],
+            return EstimatorSpec(
+                mode, loss=loss, train_op=train_op, predictions=predictions
             )
 
         return _default

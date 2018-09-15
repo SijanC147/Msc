@@ -2,7 +2,7 @@ import tensorflow as tf
 from os import getcwd
 from os.path import join as _join, relpath, dirname, exists, abspath
 from inspect import getfile
-from tsaplay.utils.common import start_tensorboard, write_stats_to_disk
+from tsaplay.utils._io import start_tensorboard, write_stats_to_disk
 
 
 class Experiment:
