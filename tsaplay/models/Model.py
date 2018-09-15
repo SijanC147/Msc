@@ -4,6 +4,7 @@ from inspect import getsource, getfile
 from datetime import timedelta
 from time import time as _time
 from abc import ABC, abstractmethod
+from tsaplay.utils.SaveConfusionMatrixHook import SaveConfusionMatrixHook
 
 
 class Model(ABC):
@@ -71,11 +72,7 @@ class Model(ABC):
 
     @property
     def estimator(self):
-        self.__estimator = tf.estimator.Estimator(
-            model_fn=self.model_fn,
-            params={"feature_columns": self.feature_columns, **self.params},
-            config=self.run_config,
-        )
+        self.__estimator = self._setup_estimator()
         return self.__estimator
 
     @property
@@ -103,11 +100,15 @@ class Model(ABC):
         self.__model_fn = model_fn
 
     @train_hooks.setter
-    def train_hooks(self, train_hooks=None):
+    def train_hooks(self, train_hooks):
+        if train_hooks is None:
+            train_hooks = []
         self.__train_hooks = train_hooks
 
     @eval_hooks.setter
-    def eval_hooks(self, eval_hooks=None):
+    def eval_hooks(self, eval_hooks):
+        if eval_hooks is None:
+            eval_hooks = []
         self.__eval_hooks = eval_hooks
 
     @run_config.setter
@@ -157,7 +158,7 @@ class Model(ABC):
                 batch_size=self.params["batch_size"],
             ),
             steps=steps,
-            hooks=self.train_hooks + hooks,
+            hooks=self._attach_std_train_hooks(self.train_hooks) + hooks,
         )
         time_taken = str(timedelta(seconds=_time() - start))
         duration_dict = {"job": "train", "time": time_taken}
@@ -176,7 +177,7 @@ class Model(ABC):
                 labels=labels,
                 batch_size=self.params["batch_size"],
             ),
-            hooks=self.eval_hooks + hooks,
+            hooks=self._attach_std_eval_hooks(self.eval_hooks) + hooks,
         )
         time_taken = str(timedelta(seconds=_time() - start))
         duration_dict = {"job": "eval", "time": time_taken}
@@ -193,7 +194,7 @@ class Model(ABC):
                 batch_size=self.params["batch_size"],
             ),
             max_steps=steps,
-            hooks=self.train_hooks,
+            hooks=self._attach_std_train_hooks(self.train_hooks),
         )
         features, labels, stats = dataset.get_features_and_labels(mode="eval")
         eval_stats = self._export_statistics(dataset_stats=stats, steps=steps)
@@ -204,7 +205,7 @@ class Model(ABC):
                 batch_size=self.params["batch_size"],
             ),
             steps=None,
-            hooks=self.eval_hooks,
+            hooks=self._attach_std_eval_hooks(self.eval_hooks),
         )
         start = _time()
         tf.estimator.train_and_evaluate(
@@ -257,3 +258,34 @@ class Model(ABC):
             "embedding_dim": embedding.dim_size,
             **self.params,
         }
+
+    def _setup_estimator(self):
+        estimator = tf.estimator.Estimator(
+            model_fn=self.model_fn,
+            params={"feature_columns": self.feature_columns, **self.params},
+            config=self.run_config,
+        )
+        estimator = tf.contrib.estimator.add_metrics(
+            estimator,
+            lambda labels, predictions: {
+                "mean_iou": tf.metrics.mean_iou(
+                    labels, predictions["class_ids"], 3
+                )
+            },
+        )
+        return estimator
+
+    def _attach_std_eval_hooks(self, eval_hooks):
+        confusion_matrix_save_hook = SaveConfusionMatrixHook(
+            labels=["Negative", "Neutral", "Positive"],
+            confusion_matrix_tensor_name="mean_iou/total_confusion_matrix",
+            summary_writer=tf.summary.FileWriterCache.get(
+                join(self.run_config.model_dir, "eval")
+            ),
+        )
+        std_eval_hooks = [confusion_matrix_save_hook]
+        return eval_hooks + std_eval_hooks
+
+    def _attach_std_train_hooks(self, train_hooks):
+        std_train_hooks = []
+        return train_hooks + std_train_hooks

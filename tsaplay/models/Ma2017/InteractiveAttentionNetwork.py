@@ -6,7 +6,7 @@ from tsaplay.models.Ma2017.common import (
     dropout_lstm_cell,
     attention_unit,
 )
-from tsaplay.utils import variable_len_batch_mean
+from tsaplay.utils.common import variable_len_batch_mean
 
 
 class InteractiveAttentionNetwork(Model):
@@ -110,58 +110,59 @@ class InteractiveAttentionNetwork(Model):
                     bias_initializer=params["initializer"],
                 )
 
-                predicted_classes = tf.argmax(logits, 1)
+            predicted_classes = tf.argmax(logits, 1)
 
-                if mode == tf.estimator.ModeKeys.PREDICT:
-                    predictions = {
-                        "class_ids": predicted_classes[:, tf.newaxis],
-                        "probabilities": tf.nn.softmax(logits),
-                        "logits": logits,
-                    }
-                    return tf.estimator.EstimatorSpec(
-                        mode, predictions=predictions
-                    )
+            predictions = {
+                "class_ids": predicted_classes,
+                "probabilities": tf.nn.softmax(logits),
+                "logits": logits,
+            }
 
-                loss = tf.losses.sparse_softmax_cross_entropy(
-                    labels=labels, logits=logits
+            if mode == tf.estimator.ModeKeys.PREDICT:
+                return tf.estimator.EstimatorSpec(
+                    mode, predictions=predictions
                 )
 
-                l2_reg = tf.reduce_sum(
-                    [tf.nn.l2_loss(v) for v in tf.trainable_variables()]
-                )
+            loss = tf.losses.sparse_softmax_cross_entropy(
+                labels=labels, logits=logits
+            )
+            l2_reg = tf.reduce_sum(
+                [tf.nn.l2_loss(v) for v in tf.trainable_variables()]
+            )
+            loss = loss + params["l2_weight"] * l2_reg
 
-                loss = loss + params["l2_weight"] * l2_reg
+            accuracy = tf.metrics.accuracy(
+                labels=labels, predictions=predicted_classes, name="acc_op"
+            )
+            tf.summary.scalar("accuracy", accuracy[1])
+            tf.summary.scalar("loss", loss)
 
-                accuracy = tf.metrics.accuracy(
-                    labels=labels, predictions=predicted_classes, name="acc_op"
-                )
-                metrics = {"accuracy": accuracy}
-                tf.summary.scalar("accuracy", accuracy[1])
-
-                tf.summary.scalar("loss", loss)
-
-                if mode == tf.estimator.ModeKeys.EVAL:
-                    return tf.estimator.EstimatorSpec(
-                        mode, loss=loss, eval_metric_ops=metrics
-                    )
-
-                optimizer = tf.train.MomentumOptimizer(
-                    learning_rate=params["learning_rate"],
-                    momentum=params["momentum"],
-                )
-                train_op = optimizer.minimize(
-                    loss, global_step=tf.train.get_global_step()
-                )
-
-                logging_hook = tf.train.LoggingTensorHook(
-                    {"loss": loss, "accuracy": accuracy[1]}, every_n_iter=100
-                )
-
+            if mode == tf.estimator.ModeKeys.EVAL:
                 return tf.estimator.EstimatorSpec(
                     mode,
                     loss=loss,
-                    train_op=train_op,
-                    training_hooks=[logging_hook],
+                    predictions=predictions,
+                    eval_metric_ops={"accuracy": accuracy},
                 )
+
+            optimizer = tf.train.MomentumOptimizer(
+                learning_rate=params["learning_rate"],
+                momentum=params["momentum"],
+            )
+            train_op = optimizer.minimize(
+                loss, global_step=tf.train.get_global_step()
+            )
+
+            logging_hook = tf.train.LoggingTensorHook(
+                {"loss": loss, "accuracy": accuracy[1]}, every_n_iter=100
+            )
+
+            return tf.estimator.EstimatorSpec(
+                mode,
+                loss=loss,
+                train_op=train_op,
+                predictions=predictions,
+                training_hooks=[logging_hook],
+            )
 
         return default

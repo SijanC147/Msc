@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 from os.path import normpath, basename, splitext, dirname
-from tsaplay.utils import tokenize_phrase, default_oov
+from tsaplay.utils.common import tokenize_phrase, default_oov
 
 import tsaplay.embeddings._constants as EMBEDDINGS
 

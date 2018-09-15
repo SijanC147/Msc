@@ -9,7 +9,7 @@ from tsaplay.models.Zheng2018.common import (
     dropout_lstm_cell,
     attention_unit,
 )
-from tsaplay.utils import variable_len_batch_mean, masked_softmax
+from tsaplay.utils.common import variable_len_batch_mean, masked_softmax
 
 
 class LcrRot(Model):

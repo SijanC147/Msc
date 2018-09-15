@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow.python.keras.preprocessing import (  # pylint: disable=E0611
     sequence
 )
-from tsaplay.utils import masked_softmax
+from tsaplay.utils.common import masked_softmax
 
 params = {
     "batch_size": 25,
@@ -12,7 +12,7 @@ params = {
     "l2_weight": 1e-5,
     "momentum": 0.9,
     "keep_prob": 0.5,
-    "hidden_units": 300,
+    "hidden_units": 200,
     "initializer": tf.initializers.random_uniform(minval=-0.1, maxval=0.1),
 }
 
@@ -138,4 +138,3 @@ def attention_unit(h_states, hidden_units, seq_lengths, attn_focus, init):
     final_rep = tf.squeeze(input=weighted_h_states_sum, axis=1)
 
     return final_rep  # dim: [batch_size, hidden_units*2] (for BiLSTM)
-

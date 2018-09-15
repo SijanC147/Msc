@@ -3,7 +3,7 @@ from os import listdir, makedirs
 from os.path import normpath, basename, isfile, join, exists
 from statistics import mean
 from functools import wraps
-from tsaplay.utils import (
+from tsaplay.utils.common import (
     token_filter,
     re_dist,
     inspect_dist,

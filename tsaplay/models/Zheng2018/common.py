@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow.python.keras.preprocessing import (  # pylint: disable=E0611
     sequence
 )
-from tsaplay.utils import masked_softmax
+from tsaplay.utils.common import masked_softmax
 
 params = {
     "batch_size": 25,

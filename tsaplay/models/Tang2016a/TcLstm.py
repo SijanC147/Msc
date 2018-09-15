@@ -5,7 +5,7 @@ from tsaplay.models.Tang2016a.common import (
     dropout_lstm_cell,
     tclstm_input_fn,
 )
-from tsaplay.utils import variable_len_batch_mean
+from tsaplay.utils.common import variable_len_batch_mean
 
 
 class TcLstm(Model):
