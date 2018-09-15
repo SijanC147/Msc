@@ -4,6 +4,7 @@ from inspect import getsource, getfile
 from datetime import timedelta
 from time import time as _time
 from abc import ABC, abstractmethod
+from functools import wraps
 from tsaplay.utils.SaveConfusionMatrixHook import SaveConfusionMatrixHook
 
 
@@ -97,7 +98,10 @@ class Model(ABC):
 
     @model_fn.setter
     def model_fn(self, model_fn):
-        self.__model_fn = model_fn
+        if model_fn is not None:
+            self.__model_fn = self._wrap_model_fn(model_fn)
+        else:
+            self.__model_fn = None
 
     @train_hooks.setter
     def train_hooks(self, train_hooks):
@@ -220,6 +224,33 @@ class Model(ABC):
             {"duration": duration_dict, **eval_stats},
         )
 
+    def _wrap_model_fn(self, _model_fn):
+        @wraps(_model_fn)
+        def wrapper(features, labels, mode, params):
+            spec = _model_fn(features, labels, mode, params)
+            std_metrics = {
+                "mean_iou": tf.metrics.mean_iou(
+                    labels=labels,
+                    predictions=spec.predictions["class_ids"],
+                    num_classes=params["n_out_classes"],
+                ),
+                "accuracy": tf.metrics.accuracy(
+                    labels=labels, predictions=spec.predictions["class_ids"]
+                ),
+            }
+            if mode == tf.estimator.ModeKeys.EVAL:
+                all_metrics = spec.eval_metric_ops or {}
+                all_metrics.update(std_metrics)
+                return spec._replace(eval_metric_ops=all_metrics)
+            elif mode == tf.estimator.ModeKeys.TRAIN:
+                tf.summary.scalar("loss", spec.loss)
+                tf.summary.scalar("accuracy", std_metrics["accuracy"][1])
+                return spec
+            elif mode == tf.estimator.ModeKeys.PREDICT:
+                return spec
+
+        return wrapper
+
     def _export_statistics(self, dataset_stats=None, steps=None):
         train_input_fn_source = getsource(self.train_input_fn)
         eval_input_fn_source = getsource(self.eval_input_fn)
@@ -264,19 +295,6 @@ class Model(ABC):
             model_fn=self.model_fn,
             params={"feature_columns": self.feature_columns, **self.params},
             config=self.run_config,
-        )
-        estimator = tf.contrib.estimator.add_metrics(
-            estimator,
-            lambda labels, predictions: {
-                "mean_iou": tf.metrics.mean_iou(
-                    labels=labels,
-                    predictions=predictions["class_ids"],
-                    num_classes=self.params["n_out_classes"],
-                ),
-                "accuracy": tf.metrics.accuracy(
-                    labels=labels, predictions=predictions["class_ids"]
-                ),
-            },
         )
         return estimator
 

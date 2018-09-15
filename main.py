@@ -17,14 +17,14 @@ ian = InteractiveAttentionNetwork(
 lstm = Lstm(run_config=tf.estimator.RunConfig(tf_random_seed=1234))
 experiment = Experiment(
     dataset=Dataset(
-        path=DATASETS.DONG2014_PATH,
-        parser=DATASETS.DONG2014_PARSER,
+        path=DATASETS.DEBUG_PATH,
+        parser=DATASETS.DEBUG_PARSER,
         embedding=Embedding(
-            path=EMBEDDINGS.GLOVE_TWITTER_25D,
+            path=EMBEDDINGS.DEBUG,
             oov=lambda size: np.random.uniform(low=0.1, high=0.1, size=size),
         ),
     ),
     model=lstm,
 )
-experiment.run(job="train+eval", steps=600, start_tb=True)
+experiment.run(job="train+eval", steps=1, start_tb=True)
 # experiment.run(job="train", steps=200, hooks=[tf_debug.LocalCLIDebugHook()])

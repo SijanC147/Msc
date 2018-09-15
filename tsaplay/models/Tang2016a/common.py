@@ -4,12 +4,12 @@ from tensorflow.python.keras.preprocessing import (  # pylint: disable=E0611
 )
 
 params = {
-    "batch_size": 200,
-    "max_seq_length": 85,
+    "batch_size": 1,
+    "max_seq_length": 25,
     "n_out_classes": 3,
     "learning_rate": 0.01,
     "keep_prob": 0.8,
-    "hidden_units": 100,
+    "hidden_units": 5,
     "initializer": tf.initializers.random_uniform(minval=-0.03, maxval=0.03),
 }
 
