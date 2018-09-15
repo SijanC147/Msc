@@ -418,10 +418,4 @@ def masked_softmax(logits, mask):
     )
     masked_sm = tf.nn.softmax(logits - infmask, axis=1)
 
-    # masked_sm = tf.where(
-    #     tf.is_nan(masked_sm),
-    #     tf.ones_like(masked_sm) * 1. / tf.to_float(v),
-    #     masked_sm,
-    # )
-
     return masked_sm

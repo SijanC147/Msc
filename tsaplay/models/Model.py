@@ -78,6 +78,10 @@ class Model(ABC):
         )
         return self.__estimator
 
+    @property
+    def run_config(self):
+        return self.__run_config
+
     @params.setter
     def params(self, params):
         self.__params = params
@@ -105,6 +109,13 @@ class Model(ABC):
     @eval_hooks.setter
     def eval_hooks(self, eval_hooks=None):
         self.__eval_hooks = eval_hooks
+
+    @run_config.setter
+    def run_config(self, run_config):
+        if run_config is None:
+            self.__run_config = tf.estimator.RunConfig()
+        else:
+            self.__run_config = run_config
 
     @abstractmethod
     def _params(self):
