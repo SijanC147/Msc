@@ -73,7 +73,11 @@ class Model(ABC):
 
     @property
     def estimator(self):
-        self.__estimator = self._setup_estimator()
+        self.__estimator = tf.estimator.Estimator(
+            model_fn=self.model_fn,
+            params={"feature_columns": self.feature_columns, **self.params},
+            config=self.run_config,
+        )
         return self.__estimator
 
     @property
@@ -235,19 +239,30 @@ class Model(ABC):
                     num_classes=params["n_out_classes"],
                 ),
                 "accuracy": tf.metrics.accuracy(
-                    labels=labels, predictions=spec.predictions["class_ids"]
+                    labels=labels,
+                    predictions=spec.predictions["class_ids"],
+                    name="acc_op",
                 ),
             }
+            tf.summary.scalar("accuracy", std_metrics["accuracy"][1])
             if mode == tf.estimator.ModeKeys.EVAL:
                 all_metrics = spec.eval_metric_ops or {}
                 all_metrics.update(std_metrics)
                 return spec._replace(eval_metric_ops=all_metrics)
-            elif mode == tf.estimator.ModeKeys.TRAIN:
+            if mode == tf.estimator.ModeKeys.TRAIN:
                 tf.summary.scalar("loss", spec.loss)
-                tf.summary.scalar("accuracy", std_metrics["accuracy"][1])
-                return spec
-            elif mode == tf.estimator.ModeKeys.PREDICT:
-                return spec
+                logging_hook = tf.train.LoggingTensorHook(
+                    tensors={
+                        "loss": spec.loss,
+                        "accuracy": std_metrics["accuracy"][1],
+                    },
+                    every_n_iter=100,
+                )
+                all_training_hooks = spec.training_hooks or []
+                all_training_hooks += [logging_hook]
+                return spec._replace(training_hooks=all_training_hooks)
+
+            return spec
 
         return wrapper
 
@@ -289,14 +304,6 @@ class Model(ABC):
             "embedding_dim": embedding.dim_size,
             **self.params,
         }
-
-    def _setup_estimator(self):
-        estimator = tf.estimator.Estimator(
-            model_fn=self.model_fn,
-            params={"feature_columns": self.feature_columns, **self.params},
-            config=self.run_config,
-        )
-        return estimator
 
     def _attach_std_eval_hooks(self, eval_hooks):
         confusion_matrix_save_hook = SaveConfusionMatrixHook(

@@ -12,7 +12,7 @@ params = {
     "l2_weight": 1e-5,
     "momentum": 0.9,
     "keep_prob": 0.5,
-    "hidden_units": 200,
+    "hidden_units": 50,
     "initializer": tf.initializers.random_uniform(minval=-0.1, maxval=0.1),
 }
 

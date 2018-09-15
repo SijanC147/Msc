@@ -198,8 +198,6 @@ class LcrRot(Model):
                 labels=labels, logits=logits, l2_weight=params["l2_weight"]
             )
 
-            tf.summary.scalar("loss", loss)
-
             if mode == ModeKeys.EVAL:
                 return EstimatorSpec(mode, predictions=predictions, loss=loss)
 

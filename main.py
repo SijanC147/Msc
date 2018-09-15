@@ -24,7 +24,7 @@ experiment = Experiment(
             oov=lambda size: np.random.uniform(low=0.1, high=0.1, size=size),
         ),
     ),
-    model=lstm,
+    model=ian,
 )
-experiment.run(job="train+eval", steps=1, start_tb=True)
+experiment.run(job="train+eval", steps=400, start_tb=True)
 # experiment.run(job="train", steps=200, hooks=[tf_debug.LocalCLIDebugHook()])
