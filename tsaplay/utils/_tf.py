@@ -105,6 +105,8 @@ def attention_unit(h_states, hidden_units, seq_lengths, attn_focus, init):
 
     attn_vec = masked_softmax(logits=f_score, mask=mask)
 
+    tf.add_to_collection("ATTENTION_VECTORS", attn_vec)
+
     attn_vec = tf.expand_dims(attn_vec, axis=3)
 
     weighted_h_states = tf.einsum("Baij,Bajk->Baik", attn_vec, h_states)

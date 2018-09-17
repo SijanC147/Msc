@@ -1,4 +1,5 @@
 import tensorflow as tf
+from tensorflow.estimator import ModeKeys  # pylint: disable=E0401
 from os.path import join, dirname, exists
 from inspect import getsource, getfile
 from datetime import timedelta
@@ -233,28 +234,43 @@ class Model(ABC):
         def wrapper(features, labels, mode, params):
             spec = _model_fn(features, labels, mode, params)
             std_metrics = {
-                "mean_iou": tf.metrics.mean_iou(
-                    labels=labels,
-                    predictions=spec.predictions["class_ids"],
-                    num_classes=params["n_out_classes"],
-                ),
                 "accuracy": tf.metrics.accuracy(
                     labels=labels,
                     predictions=spec.predictions["class_ids"],
                     name="acc_op",
                 ),
+                "mpc_accuracy": tf.metrics.mean_per_class_accuracy(
+                    labels=labels,
+                    predictions=spec.predictions["class_ids"],
+                    num_classes=params["n_out_classes"],
+                    name="mpc_acc_op",
+                ),
+                "auc": tf.metrics.auc(
+                    labels=tf.one_hot(
+                        indices=labels, depth=params["n_out_classes"]
+                    ),
+                    predictions=spec.predictions["probabilities"],
+                    name="auc_op",
+                ),
+                "mean_iou": tf.metrics.mean_iou(
+                    labels=labels,
+                    predictions=spec.predictions["class_ids"],
+                    num_classes=params["n_out_classes"],
+                ),
             }
             tf.summary.scalar("accuracy", std_metrics["accuracy"][1])
-            if mode == tf.estimator.ModeKeys.EVAL:
+            tf.summary.scalar("auc", std_metrics["auc"][1])
+            if mode == ModeKeys.EVAL:
                 all_metrics = spec.eval_metric_ops or {}
                 all_metrics.update(std_metrics)
                 return spec._replace(eval_metric_ops=all_metrics)
-            if mode == tf.estimator.ModeKeys.TRAIN:
+            if mode == ModeKeys.TRAIN:
                 tf.summary.scalar("loss", spec.loss)
                 logging_hook = tf.train.LoggingTensorHook(
                     tensors={
                         "loss": spec.loss,
                         "accuracy": std_metrics["accuracy"][1],
+                        "auc": std_metrics["auc"][1],
                     },
                     every_n_iter=100,
                 )

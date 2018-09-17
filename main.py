@@ -9,14 +9,14 @@ from tsaplay.experiments.Experiment import Experiment
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
-# experiment.run(job="train+eval", steps=400)
-# experiment = Experiment(
-#     dataset=Dataset(
-#         path=DATASETS.WANG2017_PATH,
-#         parser=DATASETS.WANG2017_PARSER,
-#         embedding=Embedding(path=EMBEDDINGS.GLOVE_TWITTER_25D),
-#     ),
-#     model=Lstm(),
-#     run_config=tf.estimator.RunConfig(tf_random_seed=1234),
-# )
+experiment = Experiment(
+    dataset=Dataset(
+        path=DATASETS.DONG2014_PATH,
+        parser=DATASETS.DONG2014_PARSER,
+        embedding=Embedding(path=EMBEDDINGS.GLOVE_TWITTER_25D),
+    ),
+    model=Lstm(),
+    run_config=tf.estimator.RunConfig(tf_random_seed=1234),
+)
+experiment.run(job="train+eval", steps=500, start_tb=True)
 # experiment.run(job="train", steps=200, hooks=[tf_debug.LocalCLIDebugHook()])
