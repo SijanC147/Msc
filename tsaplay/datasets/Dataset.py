@@ -293,12 +293,12 @@ class Dataset:
         @wraps(_parser)
         def wrapper(path):
             try:
-                sentences, targets, labels, offsets = _parser(path)
+                sentences, targets, offsets, labels = _parser(path)
                 return {
                     "sentences": sentences,
                     "targets": targets,
-                    "labels": labels,
                     "offsets": offsets,
+                    "labels": labels,
                 }
             except:
                 sentences, targets, labels, = _parser(path)

@@ -5,7 +5,7 @@ from tensorflow.python.keras.preprocessing import (  # pylint: disable=E0611
 
 params = {
     "batch_size": 25,
-    "max_seq_length": 85,
+    "max_seq_length": 140,
     "n_out_classes": 3,
     "learning_rate": 0.01,
     "keep_prob": 0.8,
