@@ -56,11 +56,13 @@ class Lstm(Model):
             )
 
             logits = tf.layers.dense(
-                inputs=final_states.h, units=params["n_out_classes"]
+                inputs=final_states.h,
+                units=params["n_out_classes"],
+                name="logits",
             )
 
             predictions = {
-                "class_ids": tf.argmax(logits, 1),
+                "class_ids": tf.argmax(logits, 1, name="class_ids"),
                 "probabilities": tf.nn.softmax(logits),
                 "logits": logits,
             }

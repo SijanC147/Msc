@@ -6,6 +6,7 @@ from time import time as _time
 from abc import ABC, abstractmethod
 from functools import wraps
 from tsaplay.utils.SaveConfusionMatrixHook import SaveConfusionMatrixHook
+from tsaplay.utils.LoggingHook import LoggingHook
 
 
 class Model(ABC):
@@ -310,5 +311,6 @@ class Model(ABC):
         return eval_hooks + std_eval_hooks
 
     def _attach_std_train_hooks(self, train_hooks):
-        std_train_hooks = []
+        logging_hook = LoggingHook()
+        std_train_hooks = [logging_hook]
         return train_hooks + std_train_hooks
