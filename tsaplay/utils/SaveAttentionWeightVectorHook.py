@@ -7,39 +7,31 @@ import io
 import itertools
 import matplotlib
 
+from PIL import Image, ImageDraw
 from tensorflow.train import SessionRunHook, SessionRunArgs
-from tsaplay.utils._nlp import draw_attention_heatmap
-from tsaplay.utils._tf import figure_to_summary
+from tsaplay.utils._nlp import (
+    draw_attention_heatmap,
+    draw_prediction_label,
+    stack_images,
+)
+from tsaplay.utils._tf import image_to_summary
 
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt  # nopep8
 
 
 class SaveAttentionWeightVectorHook(SessionRunHook):
-    def __init__(
-        self,
-        left_ctxts,
-        targets,
-        right_ctxts,
-        labels,
-        predictions,
-        summary_writer,
-    ):
-        self.left_ctxts = left_ctxts
-        self.targets = targets
-        self.right_ctxts = right_ctxts
+    def __init__(self, labels, predictions, summary_writer, picks=1):
         self.labels = labels
         self.predictions = predictions
+        self.picks = picks
         self._summary_writer = summary_writer
 
     def before_run(self, run_context):
         return SessionRunArgs(
             fetches={
                 "global_step": tf.get_collection(tf.GraphKeys.GLOBAL_STEP),
-                "attn_vecs": tf.get_collection("ATTENTION_VECTORS"),
-                "left_ctxts": self.left_ctxts,
-                "targets": self.targets,
-                "right_ctxts": self.right_ctxts,
+                "attention": tf.get_collection("ATTENTION"),
                 "labels": self.labels,
                 "predictions": self.predictions,
             }
@@ -47,24 +39,40 @@ class SaveAttentionWeightVectorHook(SessionRunHook):
 
     def after_run(self, run_context, run_values):
         results = run_values.results
+        attn_mechs = results["attention"]
+        labels = results["labels"]
+        predictions = results["predictions"]
+        num_attn_units = len(attn_mechs)
+        if num_attn_units < 1:
+            return
         global_step = results["global_step"][0]
-        random_chosen_targets = np.random.choice(results["targets"], 1)
-        for trg in random_chosen_targets:
-            index = results["targets"].tolist().index(trg)
-            phrases = []
-            attn_vec = []
-            phrases.append(results["left_ctxts"][index])
-            attn_vec.append(results["attn_vecs"][0][index])
-            phrases.append(trg)
-            attn_vec.append(results["attn_vecs"][2][index])
-            phrases.append(trg)
-            attn_vec.append(results["attn_vecs"][3][index])
-            phrases.append(results["right_ctxts"][index])
-            attn_vec.append(results["attn_vecs"][1][index])
-            # label = results.labels[index]
-            # prediction = results.predictions[index]
+        attn_samples = attn_mechs[0][0]
+        if self.picks > len(attn_samples):
+            self.picks = len(attn_samples)
+        rnd_picked = np.random.choice(
+            attn_samples, size=self.picks, replace=False
+        )
+        indices = [attn_samples.tolist().index(pick) for pick in rnd_picked]
 
-            figure = draw_attention_heatmap(phrases=phrases, attns=attn_vec)
+        images = []
+        for i in indices:
+            phrases = [attn_mech[0][i] for attn_mech in attn_mechs]
+            attn_vecs = [attn_mech[1][i] for attn_mech in attn_mechs]
+            label = labels[i]
+            prediction = predictions[i]
 
-        summary = figure_to_summary(name="Attention Heatmap", figure=figure)
+            attn_heatmap = draw_attention_heatmap(
+                phrases=phrases, attn_vecs=attn_vecs
+            )
+            pred_label = draw_prediction_label(
+                label=label, prediction=prediction
+            )
+            images.append(stack_images([attn_heatmap, pred_label], hspace=10))
+
+        final_image = stack_images(images, hspace=40)
+
+        summary = image_to_summary(
+            name="Attention Heatmaps", image=final_image
+        )
+
         self._summary_writer.add_summary(summary, global_step)

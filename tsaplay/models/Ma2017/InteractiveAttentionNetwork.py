@@ -10,6 +10,7 @@ from tsaplay.utils._tf import (
     dropout_lstm_cell,
     l2_regularized_loss,
     attention_unit,
+    generate_attn_heatmap_summary,
 )
 
 
@@ -97,22 +98,26 @@ class InteractiveAttentionNetwork(Model):
                 )
 
             with tf.variable_scope("attention_layer", reuse=tf.AUTO_REUSE):
-                c_r = attention_unit(
+                c_r, ctxt_attn_info = attention_unit(
                     h_states=context_hidden_states,
                     hidden_units=params["hidden_units"],
                     seq_lengths=features["context"]["len"],
                     attn_focus=t_avg,
                     init=params["initializer"],
+                    literal=features["context"]["lit"],
                 )
-                t_r = attention_unit(
+                t_r, trg_attn_info = attention_unit(
                     h_states=target_hidden_states,
                     hidden_units=params["hidden_units"],
                     seq_lengths=features["target"]["len"],
                     attn_focus=c_avg,
                     init=params["initializer"],
+                    literal=features["target"]["lit"],
                 )
 
-                final_sentence_rep = tf.concat([t_r, c_r], axis=1)
+            generate_attn_heatmap_summary(trg_attn_info, ctxt_attn_info)
+
+            final_sentence_rep = tf.concat([t_r, c_r], axis=1)
 
             logits = tf.layers.dense(
                 inputs=final_sentence_rep,

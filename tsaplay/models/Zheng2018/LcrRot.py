@@ -16,6 +16,7 @@ from tsaplay.utils._tf import (
     attention_unit,
     dropout_lstm_cell,
     l2_regularized_loss,
+    generate_attn_heatmap_summary,
 )
 
 
@@ -144,40 +145,51 @@ class LcrRot(Model):
                 )
 
             with tf.variable_scope("left_t2c_attn"):
-                r_l = attention_unit(
+                r_l, left_attn_info = attention_unit(
                     h_states=left_hidden_states,
                     hidden_units=params["hidden_units"] * 2,
                     seq_lengths=features["left"]["len"],
                     attn_focus=r_t,
                     init=params["initializer"],
+                    literal=features["left"]["lit"],
                 )
 
             with tf.variable_scope("right_t2c_attn"):
-                r_r = attention_unit(
+                r_r, right_attn_info = attention_unit(
                     h_states=right_hidden_states,
                     hidden_units=params["hidden_units"] * 2,
                     seq_lengths=features["right"]["len"],
                     attn_focus=r_t,
                     init=params["initializer"],
+                    literal=features["right"]["lit"],
                 )
 
             with tf.variable_scope("left_c2t_attn"):
-                r_t_l = attention_unit(
+                r_t_l, left_target_attn_info = attention_unit(
                     h_states=target_hidden_states,
                     hidden_units=params["hidden_units"] * 2,
                     seq_lengths=features["target"]["len"],
                     attn_focus=tf.expand_dims(r_l, axis=1),
                     init=params["initializer"],
+                    literal=features["target"]["lit"],
                 )
 
             with tf.variable_scope("right_c2t_attn"):
-                r_t_r = attention_unit(
+                r_t_r, right_target_attn_info = attention_unit(
                     h_states=target_hidden_states,
                     hidden_units=params["hidden_units"] * 2,
                     seq_lengths=features["target"]["len"],
                     attn_focus=tf.expand_dims(r_r, axis=1),
                     init=params["initializer"],
+                    literal=features["target"]["lit"],
                 )
+
+            generate_attn_heatmap_summary(
+                left_attn_info,
+                left_target_attn_info,
+                right_target_attn_info,
+                right_attn_info,
+            )
 
             final_sentence_rep = tf.concat([r_l, r_t_l, r_t_r, r_r], axis=1)
 

@@ -2,6 +2,14 @@ import tensorflow as tf
 from tensorflow.python.keras.preprocessing import (  # pylint: disable=E0611
     sequence
 )
+from tsaplay.utils._data import (
+    prep_dataset_and_get_iterator,
+    zip_list_join,
+    prep_features_for_dataset,
+    wrap_mapping_length_literal,
+    make_labels_dataset_from_list,
+    wrap_left_target_right_label,
+)
 
 params = {
     "batch_size": 25,
@@ -25,190 +33,99 @@ def lstm_input_fn(
             features["mappings"]["right"],
         )
     ]
-    sens_lens = [
-        len(l + t + r)
-        for l, t, r in zip(
-            features["mappings"]["left"],
-            features["mappings"]["target"],
-            features["mappings"]["right"],
-        )
-    ]
-    labels = [label + 1 for label in labels]
+    sen_map, sen_len = prep_features_for_dataset(mappings=sentences)
+    labels = make_labels_dataset_from_list(labels)
 
-    sentences = sequence.pad_sequences(
-        sequences=sentences,
-        maxlen=max_seq_length,
-        truncating="post",
-        padding="post",
-        value=0,
-    )
-
-    dataset = tf.data.Dataset.from_tensor_slices(
-        (sentences, sens_lens, labels)
-    )
+    dataset = tf.data.Dataset.from_tensor_slices((sen_map, sen_len, labels))
     dataset = dataset.map(
         lambda sentence, length, label: ({"x": sentence, "len": length}, label)
     )
 
-    if eval_input:
-        dataset = dataset.shuffle(buffer_size=len(labels))
-    else:
-        dataset = dataset.apply(
-            tf.contrib.data.shuffle_and_repeat(buffer_size=len(labels))
-        )
+    iterator = prep_dataset_and_get_iterator(
+        dataset=dataset,
+        shuffle_buffer=len(features),
+        batch_size=batch_size,
+        eval_input=eval_input,
+    )
 
-    dataset = dataset.batch(batch_size=batch_size)
-
-    iterator = dataset.make_one_shot_iterator()
     return iterator.get_next()
 
 
 def tdlstm_input_fn(
     features, labels, batch_size, max_seq_length, eval_input=False
 ):
-    left_contexts = [
-        l + t
-        for l, t in zip(
-            features["mappings"]["left"], features["mappings"]["target"]
-        )
-    ]
-    left_contexts_len = [len(left_context) for left_context in left_contexts]
-    left_contexts = sequence.pad_sequences(
-        sequences=left_contexts,
-        maxlen=max_seq_length,
-        truncating="post",
-        padding="post",
-        value=0,
+    left_contexts = zip_list_join(
+        features["mappings"]["left"], features["mappings"]["target"]
     )
 
-    right_contexts = [
-        list(reversed(t + r))
-        for t, r in zip(
-            features["mappings"]["target"], features["mappings"]["right"]
-        )
-    ]
-    right_contexts_len = [
-        len(right_context) for right_context in right_contexts
-    ]
-    right_contexts = sequence.pad_sequences(
-        sequences=right_contexts,
-        maxlen=max_seq_length,
-        truncating="post",
-        padding="post",
-        value=0,
+    left_map, left_len = prep_features_for_dataset(
+        mappings=left_contexts, max_seq_length=max_seq_length
     )
+    left = wrap_mapping_length_literal(left_map, left_len)
 
-    labels = [label + 1 for label in labels]
-
-    dataset = tf.data.Dataset.from_tensor_slices(
-        (
-            left_contexts,
-            left_contexts_len,
-            right_contexts,
-            right_contexts_len,
-            labels,
-        )
+    right_contexts = zip_list_join(
+        features["mappings"]["target"],
+        features["mappings"]["left"],
+        reverse=True,
     )
+    right_map, right_len = prep_features_for_dataset(
+        mappings=right_contexts, max_seq_length=max_seq_length
+    )
+    right = wrap_mapping_length_literal(right_map, right_len)
+
+    labels = make_labels_dataset_from_list(labels)
+
+    dataset = tf.data.Dataset.zip((left, right, labels))
     dataset = dataset.map(
-        lambda left, left_len, right, right_len, label: (
-            {
-                "left": {"x": left, "len": left_len},
-                "right": {"x": right, "len": right_len},
-            },
-            label,
-        )
+        lambda left, right, label: ({"left": left, "right": right}, label)
     )
 
-    if eval_input:
-        dataset = dataset.shuffle(buffer_size=len(labels))
-    else:
-        dataset = dataset.apply(
-            tf.contrib.data.shuffle_and_repeat(buffer_size=len(labels))
-        )
+    iterator = prep_dataset_and_get_iterator(
+        dataset=dataset,
+        shuffle_buffer=len(features),
+        batch_size=batch_size,
+        eval_input=eval_input,
+    )
 
-    dataset = dataset.batch(batch_size=batch_size)
-
-    iterator = dataset.make_one_shot_iterator()
     return iterator.get_next()
 
 
 def tclstm_input_fn(
     features, labels, batch_size, max_seq_length, eval_input=False
 ):
-    left_contexts = [
-        l + t
-        for l, t in zip(
-            features["mappings"]["left"], features["mappings"]["target"]
-        )
-    ]
-    left_contexts_len = [len(left_context) for left_context in left_contexts]
-    left_contexts = sequence.pad_sequences(
-        sequences=left_contexts,
-        maxlen=max_seq_length,
-        truncating="post",
-        padding="post",
-        value=0,
+    left_contexts = zip_list_join(
+        features["mappings"]["left"], features["mappings"]["target"]
     )
 
-    right_contexts = [
-        list(reversed(t + r))
-        for t, r in zip(
-            features["mappings"]["target"], features["mappings"]["right"]
-        )
-    ]
-    right_contexts_len = [
-        len(right_context) for right_context in right_contexts
-    ]
-    right_contexts = sequence.pad_sequences(
-        sequences=right_contexts,
-        maxlen=max_seq_length,
-        truncating="post",
-        padding="post",
-        value=0,
+    left_map, left_len = prep_features_for_dataset(
+        mappings=left_contexts, max_seq_length=max_seq_length
+    )
+    left = wrap_mapping_length_literal(left_map, left_len)
+
+    right_contexts = zip_list_join(
+        features["mappings"]["target"],
+        features["mappings"]["left"],
+        reverse=True,
+    )
+    right_map, right_len = prep_features_for_dataset(
+        mappings=right_contexts, max_seq_length=max_seq_length
+    )
+    right = wrap_mapping_length_literal(right_map, right_len)
+
+    target_map, target_len = prep_features_for_dataset(
+        mappings=features["mappings"]["target"]
+    )
+    target = wrap_mapping_length_literal(target_map, target_len)
+
+    labels = make_labels_dataset_from_list(labels)
+
+    dataset = wrap_left_target_right_label(left, target, right, labels)
+
+    iterator = prep_dataset_and_get_iterator(
+        dataset=dataset,
+        shuffle_buffer=len(features),
+        batch_size=batch_size,
+        eval_input=eval_input,
     )
 
-    targets = [t for t in features["mappings"]["target"]]
-    targets_len = [len(t) for t in targets]
-    targets = sequence.pad_sequences(
-        sequences=targets,
-        maxlen=max(targets_len),
-        truncating="post",
-        padding="post",
-        value=0,
-    )
-
-    labels = [label + 1 for label in labels]
-
-    dataset = tf.data.Dataset.from_tensor_slices(
-        (
-            left_contexts,
-            left_contexts_len,
-            right_contexts,
-            right_contexts_len,
-            targets,
-            targets_len,
-            labels,
-        )
-    )
-    dataset = dataset.map(
-        lambda left, left_len, right, right_len, target, target_len, label: (
-            {
-                "left": {"x": left, "len": left_len},
-                "right": {"x": right, "len": right_len},
-                "target": {"x": target, "len": target_len},
-            },
-            label,
-        )
-    )
-
-    if eval_input:
-        dataset = dataset.shuffle(buffer_size=len(labels))
-    else:
-        dataset = dataset.apply(
-            tf.contrib.data.shuffle_and_repeat(buffer_size=len(labels))
-        )
-
-    dataset = dataset.batch(batch_size=batch_size)
-
-    iterator = dataset.make_one_shot_iterator()
     return iterator.get_next()
