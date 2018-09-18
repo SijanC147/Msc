@@ -2,7 +2,13 @@ import spacy
 import numpy as np
 from random import choice, randrange
 from math import floor
+import matplotlib
+from matplotlib.font_manager import FontProperties
 from spacy.attrs import ORTH  # pylint: disable=E0611
+
+
+matplotlib.use("TkAgg")
+import matplotlib.pyplot as plt  # nopep8
 
 
 def tokenize_phrase(phrase):
@@ -240,3 +246,40 @@ def get_sentence_contexts(sentence, target, offset=None):
         start = offset + len(target)
         right = sentence[start:]
     return left.strip(), right.strip()
+
+
+def draw_attention_heatmap(phrases, attns):
+    phrases = [[t for t in tokenize_phrase(str(p, "utf-8"))] for p in phrases]
+    attns = [
+        np.reshape(a[0 : len(p)], newshape=[1, -1])
+        for a, p in zip(attns, phrases)
+    ]
+
+    fig, axis = plt.subplots(len(phrases))
+
+    for i in range(len(phrases)):
+        axis[i].imshow(attns[i], cmap="Oranges", vmin=0, vmax=1)
+        for j in range(len(phrases[i])):
+            axis[i].text(
+                j,
+                0,
+                phrases[i][j],
+                fontproperties=FontProperties(fname="./Symbola.ttf"),
+                ha="center",
+                va="center",
+                color="k",
+            )
+        axis[i].tick_params(
+            bottom=False,
+            top=False,
+            left=False,
+            right=False,
+            labelbottom=False,
+            labeltop=False,
+            labelleft=False,
+            labelright=False,
+        )
+
+    fig.tight_layout()
+
+    return fig

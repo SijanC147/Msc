@@ -235,7 +235,9 @@ class Dataset:
         features = {
             "sentence": [],
             "sentence_length": [],
+            "left": [],
             "target": [],
+            "right": [],
             "mappings": {"left": [], "target": [], "right": []},
         }
         labels = []
@@ -262,6 +264,8 @@ class Dataset:
                 target=target,
                 offset=dictionary.get("offset"),
             )
+            features["left"].append(left_context)
+            features["right"].append(right_context)
 
             left_mapping = self.embedding.get_index_ids(left_context)
             target_mapping = self.embedding.get_index_ids(target)

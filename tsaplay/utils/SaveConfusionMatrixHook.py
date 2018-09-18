@@ -8,6 +8,7 @@ import itertools
 import matplotlib
 
 from tensorflow.train import SessionRunHook
+from tsaplay.utils._tf import figure_to_summary
 
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt  # nopep8
@@ -41,45 +42,10 @@ class SaveConfusionMatrixHook(SessionRunHook):
         )
         globalStep = tf.train.get_global_step().eval(session=session)
         figure = self._plot_confusion_matrix(cm)
-        summary = self._figure_to_summary(figure)
+        summary = figure_to_summary(
+            name=self.confusion_matrix_tensor_name, figure=figure
+        )
         self._summary_writer.add_summary(summary, globalStep)
-
-    def _figure_to_summary(self, fig):
-        """
-        Converts a matplotlib figure ``fig`` into a TensorFlow Summary object
-        that can be directly fed into ``Summary.FileWriter``.
-        :param fig: A ``matplotlib.figure.Figure`` object.
-        :return: A TensorFlow ``Summary`` protobuf object containing the plot
-            image as a image summary.
-        """
-
-        # attach a new canvas if not exists
-        if fig.canvas is None:
-            matplotlib.backends.backend_agg.FigureCanvasAgg(fig)
-
-        fig.canvas.draw()
-        w, h = fig.canvas.get_width_height()
-
-        # get PNG data from the figure
-        png_buffer = io.BytesIO()
-        fig.canvas.print_png(png_buffer)
-        png_encoded = png_buffer.getvalue()
-        png_buffer.close()
-
-        summary_image = tf.Summary.Image(
-            height=h,
-            width=w,
-            colorspace=4,  # RGB-A
-            encoded_image_string=png_encoded,
-        )
-        summary = tf.Summary(
-            value=[
-                tf.Summary.Value(
-                    tag=self.confusion_matrix_tensor_name, image=summary_image
-                )
-            ]
-        )
-        return summary
 
     def _plot_confusion_matrix(self, cm):
         """

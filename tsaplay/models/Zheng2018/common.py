@@ -19,30 +19,34 @@ params = {
 def lcr_rot_input_fn(
     features, labels, batch_size, max_seq_length, eval_input=False
 ):
-    left_ctxts = features["mappings"]["left"]
-    left_ctxts_len = [len(l_ctxt) for l_ctxt in left_ctxts]
-    left_ctxts = sequence.pad_sequences(
-        sequences=left_ctxts,
+
+    left_ctxts_lit = features["left"]
+    left_ctxts_map = features["mappings"]["left"]
+    left_ctxts_len = [len(l_ctxt) for l_ctxt in left_ctxts_map]
+    left_ctxts_map = sequence.pad_sequences(
+        sequences=left_ctxts_map,
         maxlen=max_seq_length,
         truncating="post",
         padding="post",
         value=0,
     )
 
-    right_ctxts = features["mappings"]["right"]
-    right_ctxts_len = [len(r_ctxt) for r_ctxt in right_ctxts]
-    right_ctxts = sequence.pad_sequences(
-        sequences=right_ctxts,
+    right_ctxts_lit = features["right"]
+    right_ctxts_map = features["mappings"]["right"]
+    right_ctxts_len = [len(r_ctxt) for r_ctxt in right_ctxts_map]
+    right_ctxts_map = sequence.pad_sequences(
+        sequences=right_ctxts_map,
         maxlen=max_seq_length,
         truncating="post",
         padding="post",
         value=0,
     )
 
-    targets = features["mappings"]["target"]
-    targets_len = [len(t) for t in targets]
-    targets = sequence.pad_sequences(
-        sequences=targets,
+    targets_lit = features["target"]
+    targets_map = features["mappings"]["target"]
+    targets_len = [len(t) for t in targets_map]
+    targets_map = sequence.pad_sequences(
+        sequences=targets_map,
         maxlen=max(targets_len),
         truncating="post",
         padding="post",
@@ -53,21 +57,24 @@ def lcr_rot_input_fn(
 
     dataset = tf.data.Dataset.from_tensor_slices(
         (
-            left_ctxts,
+            left_ctxts_lit,
+            left_ctxts_map,
             left_ctxts_len,
-            right_ctxts,
+            right_ctxts_lit,
+            right_ctxts_map,
             right_ctxts_len,
-            targets,
+            targets_lit,
+            targets_map,
             targets_len,
             labels,
         )
     )
     dataset = dataset.map(
-        lambda left, left_len, right, right_len, target, target_len, label: (
+        lambda l_lit, l_map, l_len, r_lit, r_map, r_len, t_lit, t_map, t_len, label: (  # nopep8
             {
-                "left": {"x": left, "len": left_len},
-                "right": {"x": right, "len": right_len},
-                "target": {"x": target, "len": target_len},
+                "left": {"x": l_map, "len": l_len, "lit": l_lit},
+                "right": {"x": r_map, "len": r_len, "lit": r_lit},
+                "target": {"x": t_map, "len": t_len, "lit": t_lit},
             },
             label,
         )

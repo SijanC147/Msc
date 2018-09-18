@@ -1,5 +1,7 @@
 import tensorflow as tf
 import numpy as np
+import matplotlib
+import io
 
 
 def variable_len_batch_mean(input_tensor, seq_lengths, op_name):
@@ -118,3 +120,29 @@ def attention_unit(h_states, hidden_units, seq_lengths, attn_focus, init):
     final_rep = tf.squeeze(input=weighted_h_states_sum, axis=1)
 
     return final_rep  # dim: [batch_size, hidden_units*2] (for BiLSTM)
+
+
+def figure_to_summary(name, figure):
+    # attach a new canvas if not exists
+    if figure.canvas is None:
+        matplotlib.backends.backend_agg.FigureCanvasAgg(figure)
+
+    figure.canvas.draw()
+    w, h = figure.canvas.get_width_height()
+
+    # get PNG data from the figure
+    png_buffer = io.BytesIO()
+    figure.canvas.print_png(png_buffer)
+    png_encoded = png_buffer.getvalue()
+    png_buffer.close()
+
+    summary_image = tf.Summary.Image(
+        height=h,
+        width=w,
+        colorspace=4,  # RGB-A
+        encoded_image_string=png_encoded,
+    )
+    summary = tf.Summary(
+        value=[tf.Summary.Value(tag=name, image=summary_image)]
+    )
+    return summary
