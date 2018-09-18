@@ -5,6 +5,9 @@ from tsaplay.datasets.Dataset import Dataset, DATASETS
 from tsaplay.embeddings.Embedding import Embedding, EMBEDDINGS
 from tsaplay.models.Tang2016a.Lstm import Lstm
 from tsaplay.models.Zheng2018.LcrRot import LcrRot
+from tsaplay.models.Ma2017.InteractiveAttentionNetwork import (
+    InteractiveAttentionNetwork
+)
 from tsaplay.experiments.Experiment import Experiment
 
 tf.logging.set_verbosity(tf.logging.INFO)
@@ -22,27 +25,27 @@ params = {
     "initializer": tf.initializers.random_uniform(minval=-0.1, maxval=0.1),
 }
 
-experiment = Experiment(
-    dataset=Dataset(
-        path=DATASETS.DEBUG_PATH,
-        parser=DATASETS.DEBUG_PARSER,
-        embedding=Embedding(path=EMBEDDINGS.DEBUG),
-    ),
-    model=LcrRot(params=params),
-    run_config=tf.estimator.RunConfig(tf_random_seed=1234),
-)
-experiment.run(job="train+eval", steps=1, start_tb=True)
-# experiment.run(job="train", steps=200, hooks=[tf_debug.LocalCLIDebugHook()])
 # experiment = Experiment(
 #     dataset=Dataset(
-#         path=DATASETS.DONG2014_PATH,
-#         parser=DATASETS.DONG2014_PARSER,
-#         embedding=Embedding(path=EMBEDDINGS.GLOVE_TWITTER_25D),
+#         path=DATASETS.DEBUG_PATH,
+#         parser=DATASETS.DEBUG_PARSER,
+#         embedding=Embedding(path=EMBEDDINGS.DEBUG),
 #     ),
-#     model=LcrRot(),
+#     model=LcrRot(params=params),
 #     run_config=tf.estimator.RunConfig(tf_random_seed=1234),
 # )
-# experiment.run(job="train+eval", steps=500)
+# experiment.run(job="train+eval", steps=1, start_tb=True)
+# experiment.run(job="train", steps=200, hooks=[tf_debug.LocalCLIDebugHook()])
+experiment = Experiment(
+    dataset=Dataset(
+        path=DATASETS.DONG2014_PATH,
+        parser=DATASETS.DONG2014_PARSER,
+        embedding=Embedding(path=EMBEDDINGS.GLOVE_TWITTER_25D),
+    ),
+    model=InteractiveAttentionNetwork(),
+    # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
+)
+experiment.run(job="train+eval", steps=500, start_tb=True)
 # experiment = Experiment(
 #     dataset=Dataset(
 #         path=DATASETS.NAKOV2016_PATH,

@@ -298,7 +298,7 @@ def get_class_text(class_id):
 def draw_prediction_label(label, prediction):
     h_space = 10
     v_space = 5
-    font = ImageFont.truetype(font="./Symbola.ttf", size=14)
+    font = ImageFont.truetype(font="./Symbola.ttf", size=16)
     text = "Predicted: {0} \t Correct: {1}".format(
         get_class_text(prediction), get_class_text(label)
     )

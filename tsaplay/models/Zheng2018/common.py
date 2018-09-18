@@ -11,14 +11,14 @@ from tsaplay.utils._data import (
 )
 
 params = {
-    "batch_size": 25,
+    "batch_size": 35,
     "max_seq_length": 85,
     "n_out_classes": 3,
     "learning_rate": 0.1,
     "l2_weight": 1e-5,
     "momentum": 0.9,
     "keep_prob": 0.5,
-    "hidden_units": 200,
+    "hidden_units": 100,
     "initializer": tf.initializers.random_uniform(minval=-0.1, maxval=0.1),
 }
 

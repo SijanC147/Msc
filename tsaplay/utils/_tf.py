@@ -110,9 +110,7 @@ def attention_unit(
 
     attn_vec = masked_softmax(logits=f_score, mask=mask)
 
-    if literal is not None:
-        attn_summary_info = tf.tuple([literal, attn_vec])
-        tf.add_to_collection("ATTENTION", attn_summary_info)
+    attn_summary_info = tf.tuple([literal, attn_vec])
 
     attn_vec = tf.expand_dims(attn_vec, axis=3)
 
@@ -124,7 +122,20 @@ def attention_unit(
 
     final_rep = tf.squeeze(input=weighted_h_states_sum, axis=1)
 
-    return final_rep  # dim: [batch_size, hidden_units*2] (for BiLSTM)
+    return (
+        final_rep,  # dim: [batch_size, hidden_units*2] (for BiLSTM)
+        attn_summary_info,  # to optionally use for summary heatmaps
+    )
+
+
+def bulk_add_to_collection(collection, *variables):
+    for variable in variables:
+        tf.add_to_collection(collection, variable)
+
+
+def generate_attn_heatmap_summary(*attn_infos):
+    for attn_info in attn_infos:
+        tf.add_to_collection("ATTENTION", attn_info)
 
 
 def figure_to_summary(name, figure):
@@ -154,7 +165,6 @@ def figure_to_summary(name, figure):
 
 
 def image_to_summary(name, image):
-    # attach a new canvas if not exists
     with io.BytesIO() as output:
         image.save(output, "PNG")
         png_encoded = output.getvalue()
