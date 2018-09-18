@@ -64,7 +64,27 @@ class SaveAttentionWeightVectorHook(SessionRunHook):
             # label = results.labels[index]
             # prediction = results.predictions[index]
 
-            figure = draw_attention_heatmap(phrases=phrases, attns=attn_vec)
+        image = draw_attention_heatmap(phrases=phrases, attn_vecs=attn_vec)
 
-        summary = figure_to_summary(name="Attention Heatmap", figure=figure)
+        byte_io = io.BytesIO()
+
+        image.save(byte_io, "PNG")
+
+        png_encoded = byte_io.getvalue()
+
+        byte_io.close()
+
+        summary_image = tf.Summary.Image(
+            width=image.size[0],
+            height=image.size[1],
+            colorspace=4,
+            encoded_image_string=png_encoded,
+        )
+
+        summary = tf.Summary(
+            value=[
+                tf.Summary.Value(tag="Attention Heatmap", image=summary_image)
+            ]
+        )
+
         self._summary_writer.add_summary(summary, global_step)

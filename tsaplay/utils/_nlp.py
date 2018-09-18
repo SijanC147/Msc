@@ -1,13 +1,14 @@
 import spacy
 import numpy as np
+import matplotlib as mpl
+from PIL import Image, ImageDraw, ImageFont
 from random import choice, randrange
 from math import floor
-import matplotlib
 from matplotlib.font_manager import FontProperties
 from spacy.attrs import ORTH  # pylint: disable=E0611
 
 
-matplotlib.use("TkAgg")
+mpl.use("TkAgg")
 import matplotlib.pyplot as plt  # nopep8
 
 
@@ -248,38 +249,54 @@ def get_sentence_contexts(sentence, target, offset=None):
     return left.strip(), right.strip()
 
 
-def draw_attention_heatmap(phrases, attns):
+def cmap_int(value, cmap_name="Oranges", alpha=0.5):
+    cmap = plt.get_cmap(cmap_name)
+    rgba_flt = cmap(value, alpha=alpha)
+    rgba_arr = mpl.colors.to_rgba_array(rgba_flt)[0]
+    rgba_int = np.int32(rgba_arr * 255)
+    return tuple(rgba_int)
+
+
+def draw_attention_heatmap(phrases, attn_vecs):
+    font = ImageFont.truetype(font="./Symbola.ttf", size=24)
+
     phrases = [[t for t in tokenize_phrase(str(p, "utf-8"))] for p in phrases]
-    attns = [
-        np.reshape(a[: len(p)], newshape=[1, -1])
-        for a, p in zip(attns, phrases)
-    ]
+    attn_vecs = [a[: len(p)] for a, p in zip(attn_vecs, phrases)]
 
-    fig, axis = plt.subplots(len(phrases))
-
-    for i in range(len(phrases)):
-        axis[i].imshow(attns[i], cmap="Oranges", vmin=0, vmax=1)
-        for j in range(len(phrases[i])):
-            axis[i].text(
-                j,
-                0,
-                phrases[i][j],
-                fontproperties=FontProperties(fname="./Symbola.ttf"),
-                ha="center",
-                va="center",
-                color="k",
+    v_space = 5
+    h_space = 10
+    images = []
+    full_phrase = " ".join(map(lambda phrase: " ".join(phrase), phrases))
+    max_height = font.getsize(text=full_phrase)[1] + h_space
+    for phrase, attn_vec in zip(phrases, attn_vecs):
+        for token, attn_val in zip(phrase, attn_vec):
+            color = cmap_int(attn_val[0])
+            size = font.getsize(text=token)
+            img = Image.new(
+                mode="RGBA", size=(size[0] + v_space, max_height), color=color
             )
-        axis[i].tick_params(
-            bottom=False,
-            top=False,
-            left=False,
-            right=False,
-            labelbottom=False,
-            labeltop=False,
-            labelleft=False,
-            labelright=False,
-        )
+            draw = ImageDraw.Draw(img)
+            draw.text(
+                xy=(int(v_space / 2), int(h_space / 2)),
+                text=token,
+                fill=(0, 0, 0),
+                font=font,
+            )
+            images.append(img)
+        divider = Image.new(mode="RGBA", size=(10, max_height))
+        images.append(divider)
 
-    fig.tight_layout()
+    widths, heights = zip(*(im.size for im in images))
 
-    return fig
+    total_width = sum(widths) + v_space * len(images)
+    max_height = max(heights)
+
+    new_image = Image.new(mode="RGBA", size=(total_width, max_height))
+
+    x_offset = 0
+
+    for im in images:
+        new_image.paste(im, (x_offset, 0))
+        x_offset += im.size[0] + v_space
+
+    return new_image

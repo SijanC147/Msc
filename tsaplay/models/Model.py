@@ -264,23 +264,23 @@ class Model(ABC):
             tf.summary.scalar("accuracy", std_metrics["accuracy"][1])
             tf.summary.scalar("auc", std_metrics["auc"][1])
             if mode == ModeKeys.EVAL:
-                # attn_hook = SaveAttentionWeightVectorHook(
-                #     left_ctxts=features["left"]["lit"],
-                #     targets=features["target"]["lit"],
-                #     right_ctxts=features["right"]["lit"],
-                #     labels=labels,
-                #     predictions=spec.predictions["class_ids"],
-                #     summary_writer=tf.summary.FileWriterCache.get(
-                #         join(self.run_config.model_dir, "eval")
-                #     ),
-                # )
-                # all_eval_hooks = spec.evaluation_hooks or []
-                # all_eval_hooks += [attn_hook]
+                attn_hook = SaveAttentionWeightVectorHook(
+                    left_ctxts=features["left"]["lit"],
+                    targets=features["target"]["lit"],
+                    right_ctxts=features["right"]["lit"],
+                    labels=labels,
+                    predictions=spec.predictions["class_ids"],
+                    summary_writer=tf.summary.FileWriterCache.get(
+                        join(self.run_config.model_dir, "eval")
+                    ),
+                )
+                all_eval_hooks = spec.evaluation_hooks or []
+                all_eval_hooks += [attn_hook]
                 all_metrics = spec.eval_metric_ops or {}
                 all_metrics.update(std_metrics)
                 return spec._replace(
                     eval_metric_ops=all_metrics,
-                    # evaluation_hooks=all_eval_hooks,
+                    evaluation_hooks=all_eval_hooks,
                 )
             if mode == ModeKeys.TRAIN:
                 tf.summary.scalar("loss", spec.loss)
