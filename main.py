@@ -12,7 +12,7 @@ tf.logging.set_verbosity(tf.logging.INFO)
 
 params = {
     "batch_size": 5,
-    "max_seq_length": 25,
+    "max_seq_length": 20,
     "n_out_classes": 3,
     "learning_rate": 0.1,
     "l2_weight": 1e-5,
@@ -22,27 +22,27 @@ params = {
     "initializer": tf.initializers.random_uniform(minval=-0.1, maxval=0.1),
 }
 
-# experiment = Experiment(
-#     dataset=Dataset(
-#         path=DATASETS.DEBUG_PATH,
-#         parser=DATASETS.DEBUG_PARSER,
-#         embedding=Embedding(path=EMBEDDINGS.DEBUG),
-#     ),
-#     model=LcrRot(params=params),
-#     run_config=tf.estimator.RunConfig(tf_random_seed=1234),
-# )
-# experiment.run(job="train+eval", steps=1, start_tb=True)
-# experiment.run(job="train", steps=200, hooks=[tf_debug.LocalCLIDebugHook()])
 experiment = Experiment(
     dataset=Dataset(
-        path=DATASETS.DONG2014_PATH,
-        parser=DATASETS.DONG2014_PARSER,
-        embedding=Embedding(path=EMBEDDINGS.GLOVE_TWITTER_25D),
+        path=DATASETS.DEBUG_PATH,
+        parser=DATASETS.DEBUG_PARSER,
+        embedding=Embedding(path=EMBEDDINGS.DEBUG),
     ),
-    model=LcrRot(),
+    model=LcrRot(params=params),
     run_config=tf.estimator.RunConfig(tf_random_seed=1234),
 )
-experiment.run(job="train+eval", steps=500)
+experiment.run(job="train+eval", steps=1, start_tb=True)
+# experiment.run(job="train", steps=200, hooks=[tf_debug.LocalCLIDebugHook()])
+# experiment = Experiment(
+#     dataset=Dataset(
+#         path=DATASETS.DONG2014_PATH,
+#         parser=DATASETS.DONG2014_PARSER,
+#         embedding=Embedding(path=EMBEDDINGS.GLOVE_TWITTER_25D),
+#     ),
+#     model=LcrRot(),
+#     run_config=tf.estimator.RunConfig(tf_random_seed=1234),
+# )
+# experiment.run(job="train+eval", steps=500)
 # experiment = Experiment(
 #     dataset=Dataset(
 #         path=DATASETS.NAKOV2016_PATH,

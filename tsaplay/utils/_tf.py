@@ -1,4 +1,5 @@
 import tensorflow as tf
+from tensorflow.estimator import ModeKeys  # pylint: disable=E0401
 import numpy as np
 import matplotlib
 import io
@@ -65,7 +66,9 @@ def l2_regularized_loss(
     return loss
 
 
-def attention_unit(h_states, hidden_units, seq_lengths, attn_focus, init):
+def attention_unit(
+    h_states, hidden_units, seq_lengths, attn_focus, init, literal=None
+):
     batch_size = tf.shape(h_states)[0]
     max_seq_len = tf.shape(h_states)[1]
     weights = tf.get_variable(
@@ -107,7 +110,9 @@ def attention_unit(h_states, hidden_units, seq_lengths, attn_focus, init):
 
     attn_vec = masked_softmax(logits=f_score, mask=mask)
 
-    tf.add_to_collection("ATTENTION_VECTORS", attn_vec)
+    if literal is not None:
+        attn_summary_info = tf.tuple([literal, attn_vec])
+        tf.add_to_collection("ATTENTION", attn_summary_info)
 
     attn_vec = tf.expand_dims(attn_vec, axis=3)
 
@@ -139,6 +144,24 @@ def figure_to_summary(name, figure):
     summary_image = tf.Summary.Image(
         height=h,
         width=w,
+        colorspace=4,  # RGB-A
+        encoded_image_string=png_encoded,
+    )
+    summary = tf.Summary(
+        value=[tf.Summary.Value(tag=name, image=summary_image)]
+    )
+    return summary
+
+
+def image_to_summary(name, image):
+    # attach a new canvas if not exists
+    with io.BytesIO() as output:
+        image.save(output, "PNG")
+        png_encoded = output.getvalue()
+
+    summary_image = tf.Summary.Image(
+        height=image.size[1],
+        width=image.size[0],
         colorspace=4,  # RGB-A
         encoded_image_string=png_encoded,
     )

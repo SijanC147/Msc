@@ -150,6 +150,7 @@ class LcrRot(Model):
                     seq_lengths=features["left"]["len"],
                     attn_focus=r_t,
                     init=params["initializer"],
+                    literal=features["left"]["lit"],
                 )
 
             with tf.variable_scope("right_t2c_attn"):
@@ -159,6 +160,7 @@ class LcrRot(Model):
                     seq_lengths=features["right"]["len"],
                     attn_focus=r_t,
                     init=params["initializer"],
+                    literal=features["right"]["lit"],
                 )
 
             with tf.variable_scope("left_c2t_attn"):
@@ -168,6 +170,7 @@ class LcrRot(Model):
                     seq_lengths=features["target"]["len"],
                     attn_focus=tf.expand_dims(r_l, axis=1),
                     init=params["initializer"],
+                    literal=features["target"]["lit"],
                 )
 
             with tf.variable_scope("right_c2t_attn"):
@@ -177,6 +180,7 @@ class LcrRot(Model):
                     seq_lengths=features["target"]["len"],
                     attn_focus=tf.expand_dims(r_r, axis=1),
                     init=params["initializer"],
+                    literal=features["target"]["lit"],
                 )
 
             final_sentence_rep = tf.concat([r_l, r_t_l, r_t_r, r_r], axis=1)

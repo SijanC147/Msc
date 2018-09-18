@@ -286,17 +286,82 @@ def draw_attention_heatmap(phrases, attn_vecs):
         divider = Image.new(mode="RGBA", size=(10, max_height))
         images.append(divider)
 
+    new_image = join_images(images)
+
+    return new_image
+
+
+def get_class_text(class_id):
+    return {0: "Negative", 1: "Neutral", 2: "Positive"}.get(class_id)
+
+
+def draw_prediction_label(label, prediction):
+    h_space = 10
+    v_space = 5
+    font = ImageFont.truetype(font="./Symbola.ttf", size=14)
+    text = "Predicted: {0} \t Correct: {1}".format(
+        get_class_text(prediction), get_class_text(label)
+    )
+
+    _, max_height = font.getsize(text)
+
+    images = []
+    words = text.split()
+    for i in range(len(words)):
+        width, _ = font.getsize(words[i])
+        img = Image.new(
+            mode="RGBA", size=(width + v_space, max_height + h_space)
+        )
+        draw = ImageDraw.Draw(img)
+        if i == 1 and label != prediction:
+            fill = (255, 0, 0)
+        elif i == 1 and label == prediction:
+            fill = (0, 255, 0)
+        else:
+            fill = (0, 0, 0)
+
+        draw.text(
+            xy=(int(v_space / 2), int(h_space / 2)),
+            text=words[i],
+            fill=fill,
+            font=font,
+        )
+        images.append(img)
+
+    final_image = join_images(images)
+
+    return final_image
+
+
+def stack_images(images, hspace=10):
     widths, heights = zip(*(im.size for im in images))
 
-    total_width = sum(widths) + v_space * len(images)
+    total_height = sum(heights) + hspace * len(images)
+    max_width = sum(widths)
+
+    stacked_image = Image.new(mode="RGBA", size=(max_width, total_height))
+
+    y_offset = 0
+
+    for im in images:
+        stacked_image.paste(im, (0, y_offset))
+        y_offset += im.size[1] + hspace
+
+    return stacked_image
+
+
+def join_images(images, vspace=5):
+    widths, heights = zip(*(im.size for im in images))
+
+    total_width = sum(widths) + vspace * len(images)
     max_height = max(heights)
 
-    new_image = Image.new(mode="RGBA", size=(total_width, max_height))
+    joined_image = Image.new(mode="RGBA", size=(total_width, max_height))
 
     x_offset = 0
 
     for im in images:
-        new_image.paste(im, (x_offset, 0))
-        x_offset += im.size[0] + v_space
+        joined_image.paste(im, (x_offset, 0))
+        x_offset += im.size[0] + vspace
 
-    return new_image
+    return joined_image
