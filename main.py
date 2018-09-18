@@ -13,7 +13,7 @@ from tsaplay.experiments.Experiment import Experiment
 tf.logging.set_verbosity(tf.logging.INFO)
 
 
-params = {
+debug_params = {
     "batch_size": 5,
     "max_seq_length": 20,
     "n_out_classes": 3,
@@ -36,16 +36,16 @@ params = {
 # )
 # experiment.run(job="train+eval", steps=1, start_tb=True)
 # experiment.run(job="train", steps=200, hooks=[tf_debug.LocalCLIDebugHook()])
-experiment = Experiment(
-    dataset=Dataset(
-        path=DATASETS.DONG2014_PATH,
-        parser=DATASETS.DONG2014_PARSER,
-        embedding=Embedding(path=EMBEDDINGS.GLOVE_TWITTER_25D),
-    ),
-    model=InteractiveAttentionNetwork(),
-    # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
-)
-experiment.run(job="train+eval", steps=500, start_tb=True)
+# experiment = Experiment(
+#     dataset=Dataset(
+#         path=DATASETS.DONG2014_PATH,
+#         parser=DATASETS.DONG2014_PARSER,
+#         embedding=Embedding(path=EMBEDDINGS.GLOVE_TWITTER_25D),
+#     ),
+#     model=InteractiveAttentionNetwork(),
+#     # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
+# )
+# experiment.run(job="train+eval", steps=500, start_tb=True)
 # experiment = Experiment(
 #     dataset=Dataset(
 #         path=DATASETS.NAKOV2016_PATH,
@@ -76,16 +76,16 @@ experiment.run(job="train+eval", steps=500, start_tb=True)
 #     run_config=tf.estimator.RunConfig(tf_random_seed=1234),
 # )
 # experiment.run(job="train+eval", steps=1000)
-# experiment = Experiment(
-#     dataset=Dataset(
-#         path=DATASETS.XUE2018_RESTAURANTS_PATH,
-#         parser=DATASETS.XUE2018_PARSER,
-#         embedding=Embedding(path=EMBEDDINGS.GLOVE_TWITTER_25D),
-#     ),
-#     model=LcrRot(),
-#     run_config=tf.estimator.RunConfig(tf_random_seed=1234),
-# )
-# experiment.run(job="train+eval", steps=1000)
+experiment = Experiment(
+    dataset=Dataset(
+        path=DATASETS.XUE2018_RESTAURANTS_PATH,
+        parser=DATASETS.XUE2018_PARSER,
+        embedding=Embedding(path=EMBEDDINGS.GLOVE_TWITTER_25D),
+    ),
+    model=LcrRot(),
+    # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
+)
+experiment.run(job="train+eval", steps=500)
 # experiment = Experiment(
 #     dataset=Dataset(
 #         path=DATASETS.XUE2018_LAPTOPS_PATH,
@@ -93,9 +93,9 @@ experiment.run(job="train+eval", steps=500, start_tb=True)
 #         embedding=Embedding(path=EMBEDDINGS.GLOVE_TWITTER_25D),
 #     ),
 #     model=LcrRot(),
-#     run_config=tf.estimator.RunConfig(tf_random_seed=1234),
+#     # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
 # )
-# experiment.run(job="train+eval", steps=1000)
+# experiment.run(job="train+eval", steps=500)
 # experiment = Experiment(
 #     dataset=Dataset(
 #         path=DATASETS.ROSENTHAL2015_PATH,

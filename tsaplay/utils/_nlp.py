@@ -249,7 +249,7 @@ def get_sentence_contexts(sentence, target, offset=None):
     return left.strip(), right.strip()
 
 
-def cmap_int(value, cmap_name="Oranges", alpha=0.5):
+def cmap_int(value, cmap_name="Oranges", alpha=0.8):
     cmap = plt.get_cmap(cmap_name)
     rgba_flt = cmap(value, alpha=alpha)
     rgba_arr = mpl.colors.to_rgba_array(rgba_flt)[0]
