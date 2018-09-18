@@ -251,7 +251,7 @@ def get_sentence_contexts(sentence, target, offset=None):
 def draw_attention_heatmap(phrases, attns):
     phrases = [[t for t in tokenize_phrase(str(p, "utf-8"))] for p in phrases]
     attns = [
-        np.reshape(a[0 : len(p)], newshape=[1, -1])
+        np.reshape(a[: len(p)], newshape=[1, -1])
         for a, p in zip(attns, phrases)
     ]
 

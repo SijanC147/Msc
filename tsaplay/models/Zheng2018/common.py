@@ -2,6 +2,13 @@ import tensorflow as tf
 from tensorflow.python.keras.preprocessing import (  # pylint: disable=E0611
     sequence
 )
+from tsaplay.utils._data import (
+    make_labels_dataset_from_list,
+    prep_features_for_dataset,
+    wrap_mapping_length_literal,
+    wrap_left_target_right_label,
+    prep_dataset_and_get_iterator,
+)
 
 params = {
     "batch_size": 25,
@@ -20,75 +27,34 @@ def lcr_rot_input_fn(
     features, labels, batch_size, max_seq_length, eval_input=False
 ):
 
-    left_ctxts_lit = features["left"]
-    left_ctxts_map = features["mappings"]["left"]
-    left_ctxts_len = [len(l_ctxt) for l_ctxt in left_ctxts_map]
-    left_ctxts_map = sequence.pad_sequences(
-        sequences=left_ctxts_map,
-        maxlen=max_seq_length,
-        truncating="post",
-        padding="post",
-        value=0,
+    left_map, left_len = prep_features_for_dataset(
+        mappings=features["mappings"]["left"], max_seq_length=max_seq_length
+    )
+    left = wrap_mapping_length_literal(left_map, left_len, features["left"])
+
+    right_map, right_len = prep_features_for_dataset(
+        mappings=features["mappings"]["right"], max_seq_length=max_seq_length
+    )
+    right = wrap_mapping_length_literal(
+        right_map, right_len, features["right"]
     )
 
-    right_ctxts_lit = features["right"]
-    right_ctxts_map = features["mappings"]["right"]
-    right_ctxts_len = [len(r_ctxt) for r_ctxt in right_ctxts_map]
-    right_ctxts_map = sequence.pad_sequences(
-        sequences=right_ctxts_map,
-        maxlen=max_seq_length,
-        truncating="post",
-        padding="post",
-        value=0,
+    target_map, target_len = prep_features_for_dataset(
+        mappings=features["mappings"]["target"]
+    )
+    target = wrap_mapping_length_literal(
+        target_map, target_len, features["target"]
     )
 
-    targets_lit = features["target"]
-    targets_map = features["mappings"]["target"]
-    targets_len = [len(t) for t in targets_map]
-    targets_map = sequence.pad_sequences(
-        sequences=targets_map,
-        maxlen=max(targets_len),
-        truncating="post",
-        padding="post",
-        value=0,
+    labels = make_labels_dataset_from_list(labels)
+
+    dataset = wrap_left_target_right_label(left, target, right, labels)
+
+    iterator = prep_dataset_and_get_iterator(
+        dataset=dataset,
+        shuffle_buffer=len(features),
+        batch_size=batch_size,
+        eval_input=eval_input,
     )
 
-    labels = [label + 1 for label in labels]
-
-    dataset = tf.data.Dataset.from_tensor_slices(
-        (
-            left_ctxts_lit,
-            left_ctxts_map,
-            left_ctxts_len,
-            right_ctxts_lit,
-            right_ctxts_map,
-            right_ctxts_len,
-            targets_lit,
-            targets_map,
-            targets_len,
-            labels,
-        )
-    )
-    dataset = dataset.map(
-        lambda l_lit, l_map, l_len, r_lit, r_map, r_len, t_lit, t_map, t_len, label: (  # nopep8
-            {
-                "left": {"x": l_map, "len": l_len, "lit": l_lit},
-                "right": {"x": r_map, "len": r_len, "lit": r_lit},
-                "target": {"x": t_map, "len": t_len, "lit": t_lit},
-            },
-            label,
-        )
-    )
-
-    if eval_input:
-        dataset = dataset.shuffle(buffer_size=len(labels))
-    else:
-        dataset = dataset.apply(
-            tf.contrib.data.shuffle_and_repeat(buffer_size=len(labels))
-        )
-
-    dataset = dataset.batch(batch_size=batch_size)
-
-    iterator = dataset.make_one_shot_iterator()
     return iterator.get_next()
-
