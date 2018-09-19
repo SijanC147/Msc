@@ -2,7 +2,6 @@ import tensorflow as tf
 from tensorflow.python.keras.preprocessing import (  # pylint: disable=E0611
     sequence
 )
-from tsaplay.utils._tf import masked_softmax
 from tsaplay.utils._data import (
     zip_list_join,
     zip_str_join,
@@ -35,7 +34,7 @@ def ian_input_fn(
     )
 
     contexts_map, contexts_len = prep_features_for_dataset(
-        mappings=context_mappings
+        mappings=context_mappings, max_seq_length=max_seq_length
     )
     contexts = wrap_mapping_length_literal(
         contexts_map, contexts_len, context_literals

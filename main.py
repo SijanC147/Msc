@@ -8,6 +8,7 @@ from tsaplay.models.Zheng2018.LcrRot import LcrRot
 from tsaplay.models.Ma2017.InteractiveAttentionNetwork import (
     InteractiveAttentionNetwork
 )
+from tsaplay.models.Tang2016b.MemNet import MemNet
 from tsaplay.experiments.Experiment import Experiment
 
 tf.logging.set_verbosity(tf.logging.INFO)
@@ -25,27 +26,27 @@ debug_params = {
     "initializer": tf.initializers.random_uniform(minval=-0.1, maxval=0.1),
 }
 
-# experiment = Experiment(
-#     dataset=Dataset(
-#         path=DATASETS.DEBUG_PATH,
-#         parser=DATASETS.DEBUG_PARSER,
-#         embedding=Embedding(path=EMBEDDINGS.DEBUG),
-#     ),
-#     model=LcrRot(params=debug_params),
-#     run_config=tf.estimator.RunConfig(tf_random_seed=1234),
-# )
-# experiment.run(job="train+eval", steps=1, start_tb=True)
-# experiment.run(job="train", steps=200, hooks=[tf_debug.LocalCLIDebugHook()])
 experiment = Experiment(
     dataset=Dataset(
-        path=DATASETS.DONG2014_PATH,
-        parser=DATASETS.DONG2014_PARSER,
-        embedding=Embedding(path=EMBEDDINGS.GLOVE_TWITTER_100D),
+        path=DATASETS.DEBUG_PATH,
+        parser=DATASETS.DEBUG_PARSER,
+        embedding=Embedding(path=EMBEDDINGS.DEBUG),
     ),
-    model=LcrRot(),
-    # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
+    model=MemNet(),
+    run_config=tf.estimator.RunConfig(tf_random_seed=1234),
 )
-experiment.run(job="train+eval", steps=300, start_tb=True)
+experiment.run(job="train+eval", steps=1)
+# experiment.run(job="train", steps=200, hooks=[tf_debug.LocalCLIDebugHook()])
+# experiment = Experiment(
+#     dataset=Dataset(
+#         path=DATASETS.DONG2014_PATH,
+#         parser=DATASETS.DONG2014_PARSER,
+#         embedding=Embedding(path=EMBEDDINGS.GLOVE_TWITTER_100D),
+#     ),
+#     model=LcrRot(),
+#     # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
+# )
+# experiment.run(job="train+eval", steps=300, start_tb=True)
 # experiment = Experiment(
 #     dataset=Dataset(
 #         path=DATASETS.NAKOV2016_PATH,
