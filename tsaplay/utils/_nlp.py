@@ -1,7 +1,7 @@
 import spacy
 import numpy as np
 import matplotlib as mpl
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 from random import choice, randrange
 from math import floor
 from matplotlib.font_manager import FontProperties
@@ -258,7 +258,7 @@ def cmap_int(value, cmap_name="Oranges", alpha=0.8):
 
 
 def draw_attention_heatmap(phrases, attn_vecs):
-    font = ImageFont.truetype(font="./Symbola.ttf", size=24)
+    font = ImageFont.truetype(font="./tsaplay/Symbola.ttf", size=24)
 
     phrases = [[t for t in tokenize_phrase(str(p, "utf-8"))] for p in phrases]
     attn_vecs = [a[: len(p)] for a, p in zip(attn_vecs, phrases)]
@@ -266,6 +266,7 @@ def draw_attention_heatmap(phrases, attn_vecs):
     v_space = 5
     h_space = 10
     images = []
+    phrase_images = []
     full_phrase = " ".join(map(lambda phrase: " ".join(phrase), phrases))
     max_height = font.getsize(text=full_phrase)[1] + h_space
     for phrase, attn_vec in zip(phrases, attn_vecs):
@@ -283,10 +284,12 @@ def draw_attention_heatmap(phrases, attn_vecs):
                 font=font,
             )
             images.append(img)
-        divider = Image.new(mode="RGBA", size=(10, max_height))
-        images.append(divider)
+        if len(images) > 0:
+            phrase_image_with_border = join_images(images=images, border=1)
+            phrase_images.append(phrase_image_with_border)
+        images = []
 
-    new_image = join_images(images)
+    new_image = join_images(phrase_images, v_space=15)
 
     return new_image
 
@@ -295,12 +298,12 @@ def get_class_text(class_id):
     return {0: "Negative", 1: "Neutral", 2: "Positive"}.get(class_id)
 
 
-def draw_prediction_label(label, prediction):
+def draw_prediction_label(target, label, prediction):
     h_space = 10
     v_space = 5
-    font = ImageFont.truetype(font="./Symbola.ttf", size=16)
-    text = "Predicted: {0} \t Correct: {1}".format(
-        get_class_text(prediction), get_class_text(label)
+    font = ImageFont.truetype(font="./tsaplay/Symbola.ttf", size=16)
+    text = "Target: {0} \t\t Predicted: {1} \t Correct: {2}".format(
+        target, get_class_text(prediction), get_class_text(label)
     )
 
     _, max_height = font.getsize(text)
@@ -313,10 +316,11 @@ def draw_prediction_label(label, prediction):
             mode="RGBA", size=(width + v_space, max_height + h_space)
         )
         draw = ImageDraw.Draw(img)
-        if i == 1 and label != prediction:
-            fill = (255, 0, 0)
-        elif i == 1 and label == prediction:
-            fill = (0, 255, 0)
+        if i > 0 and words[i - 1] == "Predicted:":
+            if label != prediction:
+                fill = (255, 0, 0)
+            else:
+                fill = (0, 255, 0)
         else:
             fill = (0, 0, 0)
 
@@ -333,10 +337,10 @@ def draw_prediction_label(label, prediction):
     return final_image
 
 
-def stack_images(images, hspace=10):
+def stack_images(images, h_space=10):
     widths, heights = zip(*(im.size for im in images))
 
-    total_height = sum(heights) + hspace * len(images)
+    total_height = sum(heights) + h_space * len(images)
     max_width = sum(widths)
 
     stacked_image = Image.new(mode="RGBA", size=(max_width, total_height))
@@ -345,23 +349,29 @@ def stack_images(images, hspace=10):
 
     for im in images:
         stacked_image.paste(im, (0, y_offset))
-        y_offset += im.size[1] + hspace
+        y_offset += im.size[1] + h_space
 
     return stacked_image
 
 
-def join_images(images, vspace=5):
+def join_images(images, v_space=5, border=None, padding=2):
     widths, heights = zip(*(im.size for im in images))
 
-    total_width = sum(widths) + vspace * len(images)
-    max_height = max(heights)
+    total_width = sum(widths) + v_space * (len(images) - 1) + 2 * padding
+    max_height = max(heights) + 2 * padding
 
     joined_image = Image.new(mode="RGBA", size=(total_width, max_height))
 
-    x_offset = 0
+    x_offset = padding
 
     for im in images:
-        joined_image.paste(im, (x_offset, 0))
-        x_offset += im.size[0] + vspace
+        joined_image.paste(im, (x_offset, padding))
+        x_offset += im.size[0] + v_space
 
-    return joined_image
+    if border is None:
+        return joined_image
+    else:
+        joined_image_with_border = ImageOps.expand(
+            joined_image, border=border, fill="black"
+        )
+        return joined_image_with_border

@@ -31,21 +31,21 @@ debug_params = {
 #         parser=DATASETS.DEBUG_PARSER,
 #         embedding=Embedding(path=EMBEDDINGS.DEBUG),
 #     ),
-#     model=LcrRot(params=params),
+#     model=LcrRot(params=debug_params),
 #     run_config=tf.estimator.RunConfig(tf_random_seed=1234),
 # )
 # experiment.run(job="train+eval", steps=1, start_tb=True)
 # experiment.run(job="train", steps=200, hooks=[tf_debug.LocalCLIDebugHook()])
-# experiment = Experiment(
-#     dataset=Dataset(
-#         path=DATASETS.DONG2014_PATH,
-#         parser=DATASETS.DONG2014_PARSER,
-#         embedding=Embedding(path=EMBEDDINGS.GLOVE_TWITTER_25D),
-#     ),
-#     model=InteractiveAttentionNetwork(),
-#     # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
-# )
-# experiment.run(job="train+eval", steps=500, start_tb=True)
+experiment = Experiment(
+    dataset=Dataset(
+        path=DATASETS.DONG2014_PATH,
+        parser=DATASETS.DONG2014_PARSER,
+        embedding=Embedding(path=EMBEDDINGS.GLOVE_TWITTER_100D),
+    ),
+    model=LcrRot(),
+    # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
+)
+experiment.run(job="train+eval", steps=700, start_tb=True)
 # experiment = Experiment(
 #     dataset=Dataset(
 #         path=DATASETS.NAKOV2016_PATH,
@@ -53,9 +53,10 @@ debug_params = {
 #         embedding=Embedding(path=EMBEDDINGS.GLOVE_TWITTER_25D),
 #     ),
 #     model=LcrRot(),
-#     run_config=tf.estimator.RunConfig(tf_random_seed=1234),
+#     contd_tag="gold_100D"
+#     # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
 # )
-# experiment.run(job="train+eval", steps=1000)
+# experiment.run(job="train+eval", steps=500, start_tb=True)
 # experiment = Experiment(
 #     dataset=Dataset(
 #         path=DATASETS.SAEIDI2016_PATH,
@@ -76,26 +77,26 @@ debug_params = {
 #     run_config=tf.estimator.RunConfig(tf_random_seed=1234),
 # )
 # experiment.run(job="train+eval", steps=1000)
-experiment = Experiment(
-    dataset=Dataset(
-        path=DATASETS.XUE2018_RESTAURANTS_PATH,
-        parser=DATASETS.XUE2018_PARSER,
-        embedding=Embedding(path=EMBEDDINGS.GLOVE_TWITTER_25D),
-    ),
-    model=LcrRot(),
-    # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
-)
-experiment.run(job="train+eval", steps=500)
 # experiment = Experiment(
 #     dataset=Dataset(
-#         path=DATASETS.XUE2018_LAPTOPS_PATH,
+#         path=DATASETS.XUE2018_RESTAURANTS_PATH,
 #         parser=DATASETS.XUE2018_PARSER,
-#         embedding=Embedding(path=EMBEDDINGS.GLOVE_TWITTER_25D),
+#         embedding=Embedding(path=EMBEDDINGS.GLOVE_TWITTER_100D),
 #     ),
 #     model=LcrRot(),
 #     # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
 # )
 # experiment.run(job="train+eval", steps=500)
+# experiment = Experiment(
+#     dataset=Dataset(
+#         path=DATASETS.XUE2018_LAPTOPS_PATH,
+#         parser=DATASETS.XUE2018_PARSER,
+#         embedding=Embedding(path=EMBEDDINGS.GLOVE_TWITTER_100D),
+#     ),
+#     model=LcrRot(),
+#     # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
+# )
+# experiment.run(job="train+eval", steps=500, start_tb=True)
 # experiment = Experiment(
 #     dataset=Dataset(
 #         path=DATASETS.ROSENTHAL2015_PATH,

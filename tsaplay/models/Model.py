@@ -267,6 +267,7 @@ class Model(ABC):
                 attn_hook = SaveAttentionWeightVectorHook(
                     labels=labels,
                     predictions=spec.predictions["class_ids"],
+                    targets=features["target"]["lit"],
                     summary_writer=tf.summary.FileWriterCache.get(
                         join(self.run_config.model_dir, "eval")
                     ),
@@ -282,6 +283,9 @@ class Model(ABC):
                 )
             if mode == ModeKeys.TRAIN:
                 tf.summary.scalar("loss", spec.loss)
+                trainable = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
+                for variable in trainable:
+                    tf.summary.histogram(variable.name, variable)
                 logging_hook = tf.train.LoggingTensorHook(
                     tensors={
                         "loss": spec.loss,

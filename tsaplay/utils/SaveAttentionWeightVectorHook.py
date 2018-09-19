@@ -21,9 +21,10 @@ import matplotlib.pyplot as plt  # nopep8
 
 
 class SaveAttentionWeightVectorHook(SessionRunHook):
-    def __init__(self, labels, predictions, summary_writer, picks=1):
+    def __init__(self, labels, predictions, targets, summary_writer, picks=1):
         self.labels = labels
         self.predictions = predictions
+        self.targets = targets
         self.picks = picks
         self._summary_writer = summary_writer
 
@@ -32,6 +33,7 @@ class SaveAttentionWeightVectorHook(SessionRunHook):
             fetches={
                 "global_step": tf.get_collection(tf.GraphKeys.GLOBAL_STEP),
                 "attention": tf.get_collection("ATTENTION"),
+                "targets": self.targets,
                 "labels": self.labels,
                 "predictions": self.predictions,
             }
@@ -40,6 +42,7 @@ class SaveAttentionWeightVectorHook(SessionRunHook):
     def after_run(self, run_context, run_values):
         results = run_values.results
         attn_mechs = results["attention"]
+        targets = results["targets"]
         labels = results["labels"]
         predictions = results["predictions"]
         num_attn_units = len(attn_mechs)
@@ -58,6 +61,7 @@ class SaveAttentionWeightVectorHook(SessionRunHook):
         for i in indices:
             phrases = [attn_mech[0][i] for attn_mech in attn_mechs]
             attn_vecs = [attn_mech[1][i] for attn_mech in attn_mechs]
+            target = str(targets[i], "utf-8")
             label = labels[i]
             prediction = predictions[i]
 
@@ -65,11 +69,11 @@ class SaveAttentionWeightVectorHook(SessionRunHook):
                 phrases=phrases, attn_vecs=attn_vecs
             )
             pred_label = draw_prediction_label(
-                label=label, prediction=prediction
+                target=target, label=label, prediction=prediction
             )
-            images.append(stack_images([attn_heatmap, pred_label], hspace=10))
+            images.append(stack_images([attn_heatmap, pred_label], h_space=10))
 
-        final_image = stack_images(images, hspace=40)
+        final_image = stack_images(images, h_space=40)
 
         summary = image_to_summary(
             name="Attention Heatmaps", image=final_image

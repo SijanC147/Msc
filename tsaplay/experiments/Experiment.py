@@ -7,7 +7,7 @@ from tsaplay.utils._io import start_tensorboard, write_stats_to_disk
 
 class Experiment:
     def __init__(
-        self, dataset, model, embedding=None, run_config=None, contd_tag=""
+        self, dataset, model, embedding=None, run_config=None, contd_tag=None
     ):
         self.dataset = dataset
         self.model = model
@@ -78,12 +78,13 @@ class Experiment:
             ),
             model.__class__.__name__,
         )
-        exp_dir_name = "_".join([dataset.name, dataset.embedding.version])
-        if len(contd_tag) > 0:
-            exp_dir_name = contd_tag.replace(" ", "_") + "_" + exp_dir_name
+        if contd_tag is not None:
+            exp_dir_name = contd_tag.replace(" ", "_")
+        else:
+            exp_dir_name = "_".join([dataset.name, dataset.embedding.version])
 
         exp_dir = _join(all_exps_path, rel_model_path, exp_dir_name)
-        if exists(exp_dir) and not len(contd_tag) > 0:
+        if exists(exp_dir) and contd_tag is None:
             i = 0
             while exists(exp_dir):
                 i += 1
