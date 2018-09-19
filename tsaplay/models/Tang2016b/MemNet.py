@@ -83,7 +83,7 @@ class MemNet(Model):
             initial_hop_inputs = (hop_number, v_aspect, m)
 
             def condition(hop_num, input_vec, ext_memory):
-                return tf.equal(hop_num, params["num_hops"])
+                return tf.less_equal(hop_num, params["num_hops"])
 
             def hop(hop_num, input_vec, ext_memory):
                 location_vector_model_fn = get_location_vector_model(

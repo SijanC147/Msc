@@ -19,9 +19,8 @@ params = {
     "max_seq_length": 85,
     "n_out_classes": 3,
     "learning_rate": 0.01,
-    "l2_weight": 1e-5,
     "location_model": 2,
-    "num_hops": 4,
+    "num_hops": 8,
     "initializer": tf.initializers.random_uniform(minval=-0.01, maxval=0.01),
 }
 
