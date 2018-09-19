@@ -45,7 +45,7 @@ experiment = Experiment(
     model=LcrRot(),
     # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
 )
-experiment.run(job="train+eval", steps=700, start_tb=True)
+experiment.run(job="train+eval", steps=300, start_tb=True)
 # experiment = Experiment(
 #     dataset=Dataset(
 #         path=DATASETS.NAKOV2016_PATH,
