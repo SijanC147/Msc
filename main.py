@@ -13,6 +13,7 @@ from tsaplay.experiments.Experiment import Experiment
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
+debug_hook = tf_debug.LocalCLIDebugHook()
 
 debug_params = {
     "batch_size": 5,
@@ -35,8 +36,8 @@ debug_params = {
 #     model=MemNet(),
 #     run_config=tf.estimator.RunConfig(tf_random_seed=1234),
 # )
-# experiment.run(job="train+eval", steps=1)
-# # experiment.run(job="train", steps=200, hooks=[tf_debug.LocalCLIDebugHook()])
+# experiment.run(job="train+eval", steps=1, start_tb=True)
+# # experiment.run(job="train", steps=200, hooks=[debug_hook])
 experiment = Experiment(
     dataset=Dataset(
         path=DATASETS.DONG2014_PATH,
@@ -44,9 +45,10 @@ experiment = Experiment(
         embedding=Embedding(path=EMBEDDINGS.GLOVE_TWITTER_100D),
     ),
     model=MemNet(),
+    contd_tag="gold",
     # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
 )
-experiment.run(job="train+eval", steps=20000, start_tb=True)
+experiment.run(job="train+eval", steps=16000, start_tb=True)
 # experiment = Experiment(
 #     dataset=Dataset(
 #         path=DATASETS.NAKOV2016_PATH,

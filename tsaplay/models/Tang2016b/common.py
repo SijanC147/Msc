@@ -20,8 +20,9 @@ params = {
     "n_out_classes": 3,
     "learning_rate": 0.01,
     "location_model": 2,
-    "num_hops": 8,
     "initializer": tf.initializers.random_uniform(minval=-0.01, maxval=0.01),
+    "n_hops": 8,
+    "n_attn_heatmaps": 2,
 }
 
 
@@ -107,6 +108,19 @@ def get_absolute_distance_vector(target_locs, seq_lens, max_seq_len):
     abs_dist_masked = tf.where(mask, x=abs_dist, y=tf.cast(mask, tf.int32))
 
     return abs_dist_masked
+
+
+def zip_hop_attn_snapshots_with_literals(
+    literals, snapshots, max_len, num_hops
+):
+    snapshots = tf.transpose(snapshots, perm=[1, 0, 2, 3])
+    snapshots = tf.reshape(snapshots, shape=[-1, max_len, 1])
+
+    literals = tf.expand_dims(literals, axis=1)
+    literals = tf.tile(literals, multiples=[1, num_hops])
+    literals = tf.reshape(literals, shape=[-1])
+
+    return literals, snapshots
 
 
 def location_vector_model_one(locs, seq_lens, emb_dim, hop, init=None):
@@ -236,11 +250,9 @@ def content_attention_model(
 
     attn_vec = masked_softmax(logits=g_score, mask=softmax_mask)
 
-    attn_summary_info = tf.tuple([literal, attn_vec])
-
     output_vec = tf.reduce_sum(memory * attn_vec, axis=1)
 
     return (
         output_vec,  # dim: [batch_size, embedding_dim]
-        attn_summary_info,  # to optionally use for summary heatmaps
+        attn_vec,  # to optionally use for summary heatmaps
     )

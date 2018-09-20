@@ -271,7 +271,8 @@ class Model(ABC):
                     summary_writer=tf.summary.FileWriterCache.get(
                         join(self.run_config.model_dir, "eval")
                     ),
-                    picks=10,
+                    n_picks=self.params.get("n_attn_heatmaps", 5),
+                    n_hops=self.params.get("n_hops"),
                 )
                 all_eval_hooks = spec.evaluation_hooks or []
                 all_eval_hooks += [attn_hook]

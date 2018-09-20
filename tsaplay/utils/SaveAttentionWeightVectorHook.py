@@ -13,6 +13,7 @@ from tsaplay.utils._nlp import (
     draw_attention_heatmap,
     draw_prediction_label,
     stack_images,
+    tokenize_phrase,
 )
 from tsaplay.utils._tf import image_to_summary
 
@@ -21,11 +22,20 @@ import matplotlib.pyplot as plt  # nopep8
 
 
 class SaveAttentionWeightVectorHook(SessionRunHook):
-    def __init__(self, labels, predictions, targets, summary_writer, picks=1):
+    def __init__(
+        self,
+        labels,
+        predictions,
+        targets,
+        summary_writer,
+        n_picks=3,
+        n_hops=None,
+    ):
         self.labels = labels
         self.predictions = predictions
         self.targets = targets
-        self.picks = picks
+        self.n_picks = n_picks
+        self.n_hops = n_hops
         self._summary_writer = summary_writer
 
     def before_run(self, run_context):
@@ -40,37 +50,52 @@ class SaveAttentionWeightVectorHook(SessionRunHook):
         )
 
     def after_run(self, run_context, run_values):
+        if self.n_picks is None:
+            return
         results = run_values.results
+        global_step = results["global_step"][0]
         attn_mechs = results["attention"]
-        targets = results["targets"]
-        labels = results["labels"]
-        predictions = results["predictions"]
         num_attn_units = len(attn_mechs)
         if num_attn_units < 1:
             return
-        global_step = results["global_step"][0]
+        targets = results["targets"]
+        labels = results["labels"]
+        preds = results["predictions"]
         attn_samples = attn_mechs[0][0]
-        if self.picks > len(attn_samples):
-            self.picks = len(attn_samples)
+        if self.n_picks > len(attn_samples):
+            self.n_picks = len(attn_samples)
         rnd_picked = np.random.choice(
-            attn_samples, size=self.picks, replace=False
+            targets, size=self.n_picks, replace=False
         )
-        indices = [attn_samples.tolist().index(pick) for pick in rnd_picked]
+        indices = [targets.tolist().index(pick) for pick in rnd_picked]
 
         images = []
         for i in indices:
-            phrases = [attn_mech[0][i] for attn_mech in attn_mechs]
-            attn_vecs = [attn_mech[1][i] for attn_mech in attn_mechs]
+            if self.n_hops is None:
+                phrases = [attn_mech[0][i] for attn_mech in attn_mechs]
+                attn_vecs = [attn_mech[1][i] for attn_mech in attn_mechs]
+                attn_heatmap = draw_attention_heatmap(
+                    phrases=phrases, attn_vecs=attn_vecs
+                )
+            else:
+                i_hop = i * self.n_hops
+                hop_images = []
+                for h in range(i_hop, i_hop + self.n_hops):
+                    phrases = [attn_mech[0][h] for attn_mech in attn_mechs]
+                    attn_vecs = [attn_mech[1][h] for attn_mech in attn_mechs]
+                    attn_heatmap_hop = draw_attention_heatmap(
+                        phrases=phrases, attn_vecs=attn_vecs
+                    )
+                    hop_images.append(attn_heatmap_hop)
+                attn_heatmap = stack_images(hop_images, h_space=10)
+
             target = str(targets[i], "utf-8")
             label = labels[i]
-            prediction = predictions[i]
-
-            attn_heatmap = draw_attention_heatmap(
-                phrases=phrases, attn_vecs=attn_vecs
-            )
+            prediction = preds[i]
             pred_label = draw_prediction_label(
                 target=target, label=label, prediction=prediction
             )
+
             images.append(stack_images([attn_heatmap, pred_label], h_space=10))
 
         final_image = stack_images(images, h_space=40)
@@ -80,3 +105,10 @@ class SaveAttentionWeightVectorHook(SessionRunHook):
         )
 
         self._summary_writer.add_summary(summary, global_step)
+
+    def _tile_over_hops(self, value, n_hops):
+        value = np.expand_dims(value, axis=1)
+        value = np.tile(value, reps=[1, n_hops])
+        value = np.reshape(value, newshape=[-1])
+
+        return value
