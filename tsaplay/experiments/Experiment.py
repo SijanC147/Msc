@@ -79,7 +79,9 @@ class Experiment:
                 [self.model_name.lower(), self.contd_tag]
             )
             export_dir = _join(getcwd(), "export", export_model_name)
-            self.model.export(directory=export_dir)
+            self.model.export(
+                directory=export_dir, embedding=self.embedding.path
+            )
         return
 
     def _init_exp_dir(self, model, dataset, contd_tag):

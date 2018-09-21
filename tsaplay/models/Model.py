@@ -264,9 +264,12 @@ class Model(ABC):
             {"duration": duration_dict, **eval_stats},
         )
 
-    def export(self, directory):
+    def export(self, directory, embedding=None):
         self.estimator.export_savedmodel(
-            directory, self.serving_input_receiver_fn, strip_default_attrs=True
+            export_dir_base=directory,
+            serving_input_receiver_fn=self.serving_input_receiver_fn,
+            assets_extra={"embedding": embedding},
+            strip_default_attrs=True,
         )
 
     def _wrap_model_fn(self, _model_fn):
