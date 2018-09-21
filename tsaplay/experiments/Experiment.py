@@ -1,8 +1,13 @@
-import tensorflow as tf
-from os import getcwd
-from os.path import join as _join, relpath, dirname, exists, abspath
+import tensorflow as tfj
+from shutil import rmtree
+from os import getcwd, listdir
+from os.path import join as _join, isfile, relpath, dirname, exists, abspath
 from inspect import getfile
-from tsaplay.utils._io import start_tensorboard, write_stats_to_disk
+from tsaplay.utils._io import (
+    start_tensorboard,
+    write_stats_to_disk,
+    restart_tf_serve_container,
+)
 
 
 class Experiment:
@@ -71,17 +76,21 @@ class Experiment:
                 debug_port=debug_port,
             )
 
-    def export_model(self):
+    def export_model(self, overwrite=False, restart_server=False):
         if self.contd_tag is None:
             print("No continue tag defined, nothing to export!")
         else:
             export_model_name = "_".join(
                 [self.model_name.lower(), self.contd_tag]
             )
-            export_dir = _join(getcwd(), "export", export_model_name)
+            model_export_dir = _join(getcwd(), "export", export_model_name)
+            if exists(model_export_dir) and overwrite:
+                rmtree(model_export_dir)
             self.model.export(
-                directory=export_dir, embedding=self.embedding.path
+                directory=model_export_dir, embedding=self.embedding.path
             )
+            self._update_export_models_config()
+            restart_tf_serve_container()
         return
 
     def _init_exp_dir(self, model, dataset, contd_tag):
@@ -114,3 +123,24 @@ class Experiment:
             return run_config.replace(model_dir=summary_dir)
         else:
             return run_config
+
+    def _update_export_models_config(self):
+        export_dir = _join(getcwd(), "export")
+        config_file = _join(export_dir, "tfserve.conf")
+        exported_models = [
+            m for m in listdir(export_dir) if not isfile(_join(export_dir, m))
+        ]
+        config_file_str = "model_config_list: {\n"
+        container_base = "/models/"
+        for model in exported_models:
+            config_file_str += (
+                "    config: { \n"
+                '        name: "' + model + '",\n'
+                '        base_path: "' + container_base + model + '",\n'
+                '        model_platform: "tensorflow"\n'
+                "    }\n"
+            )
+        config_file_str += "}"
+
+        with open(config_file, "w") as f:
+            f.write(config_file_str)

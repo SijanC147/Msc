@@ -1,5 +1,14 @@
 import tensorflow as tf
 from tensorflow.estimator import ModeKeys  # pylint: disable=E0401
+from tensorflow.saved_model.signature_constants import (
+    DEFAULT_SERVING_SIGNATURE_DEF_KEY,
+    REGRESS_OUTPUTS,
+    PREDICT_OUTPUTS,
+)
+from tensorflow.estimator.export import (  # pylint: disable=E0401
+    PredictOutput,
+    RegressionOutput,
+)
 from os.path import join, dirname, exists
 from inspect import getsource, getfile
 from datetime import timedelta
@@ -178,9 +187,10 @@ class Model(ABC):
 
         def default_serving_input_receiver_fn():
             serialized_tf_example = tf.placeholder(
-                dtype=tf.string, shape=[None], name="input_example_tensor"
+                dtype=tf.string, shape=[None]
             )
-            receiver_tensors = {"examples": serialized_tf_example}
+
+            receiver_tensors = {"x": serialized_tf_example}
             features = tf.parse_example(serialized_tf_example, feature_spec)
             return tf.estimator.export.ServingInputReceiver(
                 features, receiver_tensors
@@ -277,7 +287,18 @@ class Model(ABC):
         def wrapper(features, labels, mode, params):
             spec = _model_fn(features, labels, mode, params)
             if mode == ModeKeys.PREDICT:
-                return spec
+                logits = spec.predictions["logits"]
+                preds = spec.predictions["class_ids"]
+                export_outputs = {
+                    DEFAULT_SERVING_SIGNATURE_DEF_KEY: RegressionOutput(
+                        logits
+                    ),
+                    REGRESS_OUTPUTS: RegressionOutput(logits),
+                    PREDICT_OUTPUTS: PredictOutput(preds),
+                }
+                all_export_outputs = spec.export_outputs or {}
+                all_export_outputs.update(export_outputs)
+                return spec._replace(export_outputs=all_export_outputs)
             std_metrics = {
                 "accuracy": tf.metrics.accuracy(
                     labels=labels,

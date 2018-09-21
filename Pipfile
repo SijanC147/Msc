@@ -8,6 +8,7 @@ tensorflow = "*"
 matplotlib = "*"
 spacy = "*"
 pillow = "*"
+docker = "*"
 
 [dev-packages]
 tox-pipenv = "*"

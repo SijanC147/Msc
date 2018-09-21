@@ -1,4 +1,7 @@
 import sys
+import docker
+import time
+from datetime import datetime, timedelta
 from pickle import load, dump, HIGHEST_PROTOCOL
 from os.path import isfile, join
 from json import dumps
@@ -30,6 +33,16 @@ def start_tensorboard(model_dir, port=6006, debug=False, debug_port=6064):
     if open_site_cmd is not None:
         system(open_site_cmd)
     system(start_tb_cmd)
+
+
+def restart_tf_serve_container():
+    client = docker.from_env()
+    for container in client.containers.list():
+        if container.name == "tsaplay":
+            start = datetime.utcnow() - timedelta(seconds=30)
+            container.restart()
+            logs = str(container.logs(since=start), "utf-8")
+            print(logs)
 
 
 def unpickle_file(path):
