@@ -27,28 +27,30 @@ debug_params = {
     "initializer": tf.initializers.random_uniform(minval=-0.1, maxval=0.1),
 }
 
-# experiment = Experiment(
-#     dataset=Dataset(
-#         path=DATASETS.DEBUG_PATH,
-#         parser=DATASETS.DEBUG_PARSER,
-#         embedding=Embedding(path=EMBEDDINGS.DEBUG),
-#     ),
-#     model=MemNet(),
-#     run_config=tf.estimator.RunConfig(tf_random_seed=1234),
-# )
-# experiment.run(job="train+eval", steps=1, start_tb=True)
-# # experiment.run(job="train", steps=200, hooks=[debug_hook])
 experiment = Experiment(
     dataset=Dataset(
-        path=DATASETS.DONG2014_PATH,
-        parser=DATASETS.DONG2014_PARSER,
-        embedding=Embedding(path=EMBEDDINGS.GLOVE_TWITTER_100D),
+        path=DATASETS.DEBUG_PATH,
+        parser=DATASETS.DEBUG_PARSER,
+        embedding=Embedding(path=EMBEDDINGS.DEBUG),
     ),
-    model=MemNet(),
-    contd_tag="gold",
+    model=Lstm(),
+    contd_tag="gold_debug",
     # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
 )
-experiment.run(job="train+eval", steps=16000, start_tb=True)
+# experiment.run(job="train+eval", steps=1, start_tb=True)
+# # experiment.run(job="train", steps=200, hooks=[debug_hook])
+# experiment = Experiment(
+#     dataset=Dataset(
+#         path=DATASETS.DONG2014_PATH,
+#         parser=DATASETS.DONG2014_PARSER,
+#         embedding=Embedding(path=EMBEDDINGS.GLOVE_TWITTER_25D),
+#     ),
+#     model=Lstm(),
+#     contd_tag="gold",
+#     # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
+# )
+experiment.run(job="train+eval", steps=1)
+experiment.export_model()
 # experiment = Experiment(
 #     dataset=Dataset(
 #         path=DATASETS.NAKOV2016_PATH,

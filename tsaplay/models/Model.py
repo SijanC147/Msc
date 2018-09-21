@@ -23,6 +23,7 @@ class Model(ABC):
         eval_input_fn=None,
         eval_hooks=None,
         model_fn=None,
+        serving_input_receiver_fn=None,
     ):
         self.params = params
         self.feature_columns = feature_columns
@@ -32,6 +33,7 @@ class Model(ABC):
         self.eval_hooks = eval_hooks
         self.model_fn = model_fn
         self.run_config = run_config
+        self.serving_input_receiver_fn = serving_input_receiver_fn
 
     @property
     def params(self):
@@ -74,6 +76,12 @@ class Model(ABC):
         if self.__eval_hooks is None:
             self.eval_hooks = self._eval_hooks()
         return self.__eval_hooks
+
+    @property
+    def serving_input_receiver_fn(self):
+        if self.__serving_input_receiver_fn is None:
+            self.serving_input_receiver_fn = self._serving_input_receiver_fn()
+        return self.__serving_input_receiver_fn
 
     @property
     def estimator(self):
@@ -123,6 +131,10 @@ class Model(ABC):
             eval_hooks = []
         self.__eval_hooks = eval_hooks
 
+    @serving_input_receiver_fn.setter
+    def serving_input_receiver_fn(self, serving_input_receiver_fn):
+        self.__serving_input_receiver_fn = serving_input_receiver_fn
+
     @run_config.setter
     def run_config(self, run_config):
         if run_config is None:
@@ -155,6 +167,26 @@ class Model(ABC):
 
     def _eval_hooks(self):
         return []
+
+    def _serving_input_receiver_fn(self):
+        feature_spec = {
+            "x": tf.FixedLenFeature(
+                dtype=tf.int64, shape=[self.params["max_seq_length"]]
+            ),
+            "len": tf.FixedLenFeature(dtype=tf.int64, shape=[]),
+        }
+
+        def default_serving_input_receiver_fn():
+            serialized_tf_example = tf.placeholder(
+                dtype=tf.string, shape=[None], name="input_example_tensor"
+            )
+            receiver_tensors = {"examples": serialized_tf_example}
+            features = tf.parse_example(serialized_tf_example, feature_spec)
+            return tf.estimator.export.ServingInputReceiver(
+                features, receiver_tensors
+            )
+
+        return default_serving_input_receiver_fn
 
     def train(self, dataset, steps, distribution=None, hooks=[]):
         self._add_embedding_params(embedding=dataset.embedding)
@@ -232,10 +264,17 @@ class Model(ABC):
             {"duration": duration_dict, **eval_stats},
         )
 
+    def export(self, directory):
+        self.estimator.export_savedmodel(
+            directory, self.serving_input_receiver_fn, strip_default_attrs=True
+        )
+
     def _wrap_model_fn(self, _model_fn):
         @wraps(_model_fn)
         def wrapper(features, labels, mode, params):
             spec = _model_fn(features, labels, mode, params)
+            if mode == ModeKeys.PREDICT:
+                return spec
             std_metrics = {
                 "accuracy": tf.metrics.accuracy(
                     labels=labels,
@@ -264,18 +303,19 @@ class Model(ABC):
             tf.summary.scalar("accuracy", std_metrics["accuracy"][1])
             tf.summary.scalar("auc", std_metrics["auc"][1])
             if mode == ModeKeys.EVAL:
-                attn_hook = SaveAttentionWeightVectorHook(
-                    labels=labels,
-                    predictions=spec.predictions["class_ids"],
-                    targets=features["target"]["lit"],
-                    summary_writer=tf.summary.FileWriterCache.get(
-                        join(self.run_config.model_dir, "eval")
-                    ),
-                    n_picks=self.params.get("n_attn_heatmaps", 5),
-                    n_hops=self.params.get("n_hops"),
-                )
                 all_eval_hooks = spec.evaluation_hooks or []
-                all_eval_hooks += [attn_hook]
+                if features.get("target") is not None:
+                    attn_hook = SaveAttentionWeightVectorHook(
+                        labels=labels,
+                        predictions=spec.predictions["class_ids"],
+                        targets=features["target"]["lit"],
+                        summary_writer=tf.summary.FileWriterCache.get(
+                            join(self.run_config.model_dir, "eval")
+                        ),
+                        n_picks=self.params.get("n_attn_heatmaps", 5),
+                        n_hops=self.params.get("n_hops"),
+                    )
+                    all_eval_hooks += [attn_hook]
                 all_metrics = spec.eval_metric_ops or {}
                 all_metrics.update(std_metrics)
                 return spec._replace(
@@ -298,8 +338,6 @@ class Model(ABC):
                 all_training_hooks = spec.training_hooks or []
                 all_training_hooks += [logging_hook]
                 return spec._replace(training_hooks=all_training_hooks)
-
-            return spec
 
         return wrapper
 

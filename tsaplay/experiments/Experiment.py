@@ -11,6 +11,7 @@ class Experiment:
     ):
         self.dataset = dataset
         self.model = model
+        self.model_name = model.__class__.__name__
         if embedding is not None:
             self.embedding = embedding
             self.dataset.embedding = self.embedding
@@ -21,8 +22,9 @@ class Experiment:
                 )
             else:
                 self.embedding = self.dataset.embedding
+        self.contd_tag = contd_tag
         self.exp_dir = self._init_exp_dir(
-            model=self.model, dataset=self.dataset, contd_tag=contd_tag
+            model=self.model, dataset=self.dataset, contd_tag=self.contd_tag
         )
         if run_config is None:
             run_config = self.model.run_config
@@ -69,6 +71,17 @@ class Experiment:
                 debug_port=debug_port,
             )
 
+    def export_model(self):
+        if self.contd_tag is None:
+            print("No continue tag defined, nothing to export!")
+        else:
+            export_model_name = "_".join(
+                [self.model_name.lower(), self.contd_tag]
+            )
+            export_dir = _join(getcwd(), "export", export_model_name)
+            self.model.export(directory=export_dir)
+        return
+
     def _init_exp_dir(self, model, dataset, contd_tag):
         all_exps_path = _join(dirname(abspath(__file__)), "data")
         rel_model_path = _join(
@@ -92,15 +105,6 @@ class Experiment:
                     all_exps_path, rel_model_path, exp_dir_name + "_" + str(i)
                 )
         return exp_dir
-
-    def _init_run_config(self, exp_dir, run_config):
-        summary_dir = _join(exp_dir, "tb_summary")
-        if run_config is None:
-            return tf.estimator.RunConfig(model_dir=summary_dir)
-        elif run_config.model_dir is None:
-            return run_config.replace(model_dir=summary_dir)
-        else:
-            return run_config
 
     def _init_model_dir(self, exp_dir, run_config):
         summary_dir = _join(exp_dir, "tb_summary")

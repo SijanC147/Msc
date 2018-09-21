@@ -33,13 +33,13 @@ def lstm_input_fn(
             features["mappings"]["right"],
         )
     ]
-    sen_map, sen_len = prep_features_for_dataset(mappings=sentences)
+    sen_map, sen_len = prep_features_for_dataset(
+        mappings=sentences, max_seq_length=max_seq_length
+    )
+    sentence = wrap_mapping_length_literal(sen_map, sen_len)
     labels = make_labels_dataset_from_list(labels)
 
-    dataset = tf.data.Dataset.from_tensor_slices((sen_map, sen_len, labels))
-    dataset = dataset.map(
-        lambda sentence, length, label: ({"x": sentence, "len": length}, label)
-    )
+    dataset = tf.data.Dataset.zip((sentence, labels))
 
     iterator = prep_dataset_and_get_iterator(
         dataset=dataset,
