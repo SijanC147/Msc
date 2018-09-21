@@ -17,6 +17,7 @@ class Experiment:
         self.dataset = dataset
         self.model = model
         self.model_name = model.__class__.__name__
+        self.export_dir = _join(getcwd(), "export")
         if embedding is not None:
             self.embedding = embedding
             self.dataset.embedding = self.embedding
@@ -76,22 +77,27 @@ class Experiment:
                 debug_port=debug_port,
             )
 
-    def export_model(self, overwrite=False, restart_server=False):
+    def export_model(self, overwrite=False, restart_tfserve=False):
         if self.contd_tag is None:
             print("No continue tag defined, nothing to export!")
         else:
             export_model_name = "_".join(
                 [self.model_name.lower(), self.contd_tag]
             )
-            model_export_dir = _join(getcwd(), "export", export_model_name)
+            model_export_dir = _join(self.export_dir, export_model_name)
             if exists(model_export_dir) and overwrite:
                 rmtree(model_export_dir)
+
+            prev_exported_models = self._list_exported_models()
             self.model.export(
                 directory=model_export_dir, embedding=self.embedding.path
             )
-            self._update_export_models_config()
-            restart_tf_serve_container()
-        return
+
+            if prev_exported_models != self._list_exported_models():
+                print("Updating tfserve.conf with new exported model info")
+                self._update_export_models_config()
+                print("Restarting tsaplay docker container to load new config")
+                restart_tf_serve_container()
 
     def _init_exp_dir(self, model, dataset, contd_tag):
         all_exps_path = _join(dirname(abspath(__file__)), "data")
@@ -125,11 +131,8 @@ class Experiment:
             return run_config
 
     def _update_export_models_config(self):
-        export_dir = _join(getcwd(), "export")
-        config_file = _join(export_dir, "tfserve.conf")
-        exported_models = [
-            m for m in listdir(export_dir) if not isfile(_join(export_dir, m))
-        ]
+        config_file = _join(self.export_dir, "tfserve.conf")
+        exported_models = self._list_exported_models()
         config_file_str = "model_config_list: {\n"
         container_base = "/models/"
         for model in exported_models:
@@ -144,3 +147,11 @@ class Experiment:
 
         with open(config_file, "w") as f:
             f.write(config_file_str)
+
+    def _list_exported_models(self):
+        exported_models = [
+            m
+            for m in listdir(self.export_dir)
+            if not isfile(_join(self.export_dir, m))
+        ]
+        return exported_models

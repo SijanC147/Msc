@@ -38,4 +38,4 @@ experiment = Experiment(
     # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
 )
 experiment.run(job="train+eval", steps=1)
-experiment.export_model(overwrite=True)
+experiment.export_model(overwrite=True, restart_server=True)
