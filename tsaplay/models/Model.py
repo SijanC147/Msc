@@ -33,7 +33,7 @@ class Model(ABC):
         eval_input_fn=None,
         eval_hooks=None,
         model_fn=None,
-        serving_input_receiver_fn=None,
+        serving_input_fn=None,
     ):
         self.params = params
         self.feature_columns = feature_columns
@@ -41,9 +41,9 @@ class Model(ABC):
         self.train_hooks = train_hooks
         self.eval_input_fn = eval_input_fn
         self.eval_hooks = eval_hooks
+        self.serving_input_fn = serving_input_fn
         self.model_fn = model_fn
         self.run_config = run_config
-        self.serving_input_receiver_fn = serving_input_receiver_fn
 
     @property
     def params(self):
@@ -88,10 +88,10 @@ class Model(ABC):
         return self.__eval_hooks
 
     @property
-    def serving_input_receiver_fn(self):
-        if self.__serving_input_receiver_fn is None:
-            self.serving_input_receiver_fn = self._serving_input_receiver_fn()
-        return self.__serving_input_receiver_fn
+    def serving_input_fn(self):
+        if self.__serving_input_fn is None:
+            self.serving_input_fn = self._srving_input_fn()
+        return self.__serving_input_fn
 
     @property
     def estimator(self):
@@ -141,9 +141,9 @@ class Model(ABC):
             eval_hooks = []
         self.__eval_hooks = eval_hooks
 
-    @serving_input_receiver_fn.setter
-    def serving_input_receiver_fn(self, serving_input_receiver_fn):
-        self.__serving_input_receiver_fn = serving_input_receiver_fn
+    @serving_input_fn.setter
+    def serving_input_fn(self, serving_input_fn):
+        self.__serving_input_fn = serving_input_fn
 
     @run_config.setter
     def run_config(self, run_config):
@@ -169,6 +169,10 @@ class Model(ABC):
         pass
 
     @abstractmethod
+    def _serving_input_fn(self):
+        pass
+
+    @abstractmethod
     def _model_fn(self):
         pass
 
@@ -179,42 +183,62 @@ class Model(ABC):
         return []
 
     def _serving_input_receiver_fn(self):
-        def default_serving_input_receiver_fn():
-            serialized_tf_example = tf.placeholder(dtype=tf.string, shape=[1])
+        self.serving_input_fn = self._serving_input_fn()
 
-            context_features = {
+        def serving_input_receiver_fn():
+            inputs_serialized = tf.placeholder(dtype=tf.string, shape=[1])
+
+            feature_spec = {
                 "sentence": tf.FixedLenFeature(dtype=tf.string, shape=[1]),
                 "target_lit": tf.FixedLenFeature(dtype=tf.string, shape=[1]),
                 "left_lit": tf.FixedLenFeature(dtype=tf.string, shape=[1]),
                 "right_lit": tf.FixedLenFeature(dtype=tf.string, shape=[1]),
-                "sen_length": tf.FixedLenFeature(dtype=tf.int64, shape=[1]),
-            }
-            sequence_features = {
+                "sen_length": tf.FixedLenFeature(dtype=tf.int64, shape=[]),
                 "left_map": tf.VarLenFeature(dtype=tf.int64),
                 "right_map": tf.VarLenFeature(dtype=tf.int64),
                 "target_map": tf.VarLenFeature(dtype=tf.int64),
             }
 
-            receiver_tensors = {"examples": serialized_tf_example}
-            received_features = tf.parse_single_sequence_example(
-                serialized=serialized_tf_example[0],
-                context_features=context_features,
-                sequence_features=sequence_features,
+            input_features = tf.parse_example(inputs_serialized, feature_spec)
+
+            left_map = tf.sparse_to_dense(
+                input_features["left_map"].indices,
+                input_features["left_map"].dense_shape,
+                input_features["left_map"].values,
             )
-            left_mapping = tf.sparse_to_dense(
-                received_features[1]["left_map"].indices,
-                received_features[1]["left_map"].dense_shape,
-                received_features[1]["left_map"].values,
+            target_map = tf.sparse_to_dense(
+                input_features["target_map"].indices,
+                input_features["target_map"].dense_shape,
+                input_features["target_map"].values,
             )
-            features = {
-                "x": left_mapping,
-                "len": received_features[0]["sen_length"],
-            }
-            return tf.estimator.export.ServingInputReceiver(
-                features, receiver_tensors
+            right_map = tf.sparse_to_dense(
+                input_features["right_map"].indices,
+                input_features["right_map"].dense_shape,
+                input_features["right_map"].values,
             )
 
-        return default_serving_input_receiver_fn
+            standard_features = {
+                "sentence": input_features["sentence"],
+                "sentence_length": input_features["sen_length"],
+                "target": input_features["target_lit"],
+                "left": input_features["left_lit"],
+                "right": input_features["right_lit"],
+                "mappings": {
+                    "left": left_map,
+                    "target": target_map,
+                    "right": right_map,
+                },
+            }
+
+            custom_features = self.__serving_input_fn(standard_features)
+
+            inputs = {"instances": inputs_serialized}
+
+            return tf.estimator.export.ServingInputReceiver(
+                custom_features, inputs
+            )
+
+        return serving_input_receiver_fn
 
     def train(self, dataset, steps, distribution=None, hooks=[]):
         self._add_embedding_params(embedding=dataset.embedding)
@@ -295,7 +319,7 @@ class Model(ABC):
     def export(self, directory, embedding=None):
         self.estimator.export_savedmodel(
             export_dir_base=directory,
-            serving_input_receiver_fn=self.serving_input_receiver_fn,
+            serving_input_receiver_fn=self._serving_input_receiver_fn(),
             assets_extra={"embedding": embedding},
             strip_default_attrs=True,
         )
@@ -306,15 +330,17 @@ class Model(ABC):
             spec = _model_fn(features, labels, mode, params)
             if mode == ModeKeys.PREDICT:
                 logits = spec.predictions["logits"]
+                probs = spec.predictions["probabilities"]
                 classify_output = ClassificationOutput(
                     classes=tf.constant(
                         [["Negative", "Neutral", "Positive"]], dtype=tf.string
                     ),
-                    scores=logits,
+                    scores=probs,
                 )
-                predict_output = PredictOutput(logits)
+                predict_output = PredictOutput(probs)
                 export_outputs = {
-                    DEFAULT_SERVING_SIGNATURE_DEF_KEY: predict_output
+                    # DEFAULT_SERVING_SIGNATURE_DEF_KEY: predict_output
+                    DEFAULT_SERVING_SIGNATURE_DEF_KEY: classify_output
                 }
                 all_export_outputs = spec.export_outputs or {}
                 all_export_outputs.update(export_outputs)

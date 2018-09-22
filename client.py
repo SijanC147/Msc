@@ -5,7 +5,9 @@ from argparse import ArgumentParser
 
 from grpc.beta import implementations
 
-from tensorflow_serving.apis import predict_pb2
+from tensorflow_serving.apis.input_pb2 import Input, ExampleList
+from tensorflow_serving.apis.predict_pb2 import PredictRequest
+from tensorflow_serving.apis.classification_pb2 import ClassificationRequest
 from tensorflow_serving.apis import prediction_service_pb2
 from tensorflow.contrib.util import make_tensor_proto  # pylint: disable=E0611
 
@@ -13,6 +15,7 @@ from os import getcwd, listdir
 from os.path import join, isfile
 
 from tensorflow.train import (
+    Example,
     SequenceExample,
     FeatureLists,
     FeatureList,
@@ -99,37 +102,35 @@ def main():
             "left_lit": Feature(bytes_list=BytesList(value=[left_lit])),
             "right_lit": Feature(bytes_list=BytesList(value=[right_lit])),
             "target_lit": Feature(bytes_list=BytesList(value=[target])),
-        }
-    )
-    features_lists = FeatureLists(
-        feature_list={
-            "left_map": FeatureList(
-                feature=[Feature(int64_list=Int64List(value=left_map))]
-            ),
-            "target_map": FeatureList(
-                feature=[Feature(int64_list=Int64List(value=target_map))]
-            ),
-            "right_map": FeatureList(
-                feature=[Feature(int64_list=Int64List(value=right_map))]
-            ),
+            "left_map": Feature(int64_list=Int64List(value=left_map)),
+            "target_map": Feature(int64_list=Int64List(value=target_map)),
+            "right_map": Feature(int64_list=Int64List(value=right_map)),
         }
     )
 
-    tf_example = SequenceExample(feature_lists=features_lists, context=context)
+    tf_example = Example(features=context)
     serialized = tf_example.SerializeToString()
-
-    tensor_proto = make_tensor_proto(serialized, dtype=tf.string, shape=[1])
 
     channel = implementations.insecure_channel(host="127.0.0.1", port=8500)
     stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
 
-    request = predict_pb2.PredictRequest()
-    request.model_spec.name = "lcro"  # pylint: disable=E1101
-    request.inputs["examples"].CopyFrom(tensor_proto)  # pylint: disable=E1101
+    # CLASSIFICATION
+    classification_req = ClassificationRequest()
+    inputs = Input(example_list=ExampleList(examples=[tf_example]))
+    classification_req.input.CopyFrom(inputs)  # pylint: disable=E1101
+    classification_req.model_spec.name = "lcro"  # pylint: disable=E1101
+    classification = stub.Classify(classification_req, 60.0)
+    print(classification)
 
-    result = stub.Predict(request, 60.0)
-
-    print(result)
+    # PREDICTION
+    prediction_req = PredictRequest()
+    tensor_proto = make_tensor_proto(serialized, dtype=tf.string, shape=[1])
+    prediction_req.inputs["instances"].CopyFrom(  # pylint: disable=E1101
+        tensor_proto
+    )
+    prediction_req.model_spec.name = "lcro"  # pylint: disable=E1101
+    # prediction = stub.Predict(prediciton_req, 60.0)
+    # print(prediction)
 
 
 if __name__ == "__main__":

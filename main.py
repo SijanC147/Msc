@@ -4,12 +4,13 @@ from tensorflow.python import debug as tf_debug  # pylint: disable=E0611
 from tsaplay.datasets.Dataset import Dataset, DATASETS
 from tsaplay.embeddings.Embedding import Embedding, EMBEDDINGS
 from tsaplay.models.Tang2016a.Lstm import Lstm
-from tsaplay.models.Zheng2018.LcrRot import LcrRot
-from tsaplay.models.Ma2017.InteractiveAttentionNetwork import (
-    InteractiveAttentionNetwork
-)
-from tsaplay.models.Tang2016b.MemNet import MemNet
 from tsaplay.experiments.Experiment import Experiment
+
+# from tsaplay.models.Zheng2018.LcrRot import LcrRot
+# from tsaplay.models.Ma2017.InteractiveAttentionNetwork import (
+#     InteractiveAttentionNetwork
+# )
+# from tsaplay.models.Tang2016b.MemNet import MemNet
 
 tf.logging.set_verbosity(tf.logging.INFO)
 

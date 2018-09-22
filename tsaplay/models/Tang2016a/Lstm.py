@@ -35,6 +35,12 @@ class Lstm(Model):
             eval_input=True,
         )
 
+    def _serving_input_fn(self):
+        return lambda features: {
+            "x": features["mappings"]["left"],
+            "len": features["sentence_length"],
+        }
+
     def _model_fn(self):
         def _default(features, labels, mode, params=self.params):
             inputs = tf.contrib.layers.embed_sequence(
