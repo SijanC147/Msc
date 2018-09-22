@@ -9,6 +9,7 @@ matplotlib = "*"
 spacy = "*"
 pillow = "*"
 docker = "*"
+tensorflow-serving-api = "*"
 
 [dev-packages]
 tox-pipenv = "*"

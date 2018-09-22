@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "9cedc056dde2345b442089b41a3ee3d4f6736bb42bb48b767425d28a611ea24f"
+            "sha256": "d76dea90b818241f16eab052158364701bd8e21641f884dd5d53352bad6cf4ce"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -419,6 +419,13 @@
                 "sha256:a6aeda09080852f762bdfbde4acbef6d6aa2e729febaee87fd55700e82060cf2",
                 "sha256:b82d124316ce8dea1f8ead72bbd92a83e0fb455b82b4a23d04d392972f820347",
                 "sha256:c94cdd829fbb76d885c95172128e9261bb2b930a75a721b2972ad465ed532aff"
+            ],
+            "index": "pypi",
+            "version": "==1.10.1"
+        },
+        "tensorflow-serving-api": {
+            "hashes": [
+                "sha256:77bc67484c3d7ce58de24b68b9f4ba26f9f7c459361a257e970350105cae4838"
             ],
             "index": "pypi",
             "version": "==1.10.1"

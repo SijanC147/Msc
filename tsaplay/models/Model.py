@@ -8,6 +8,7 @@ from tensorflow.saved_model.signature_constants import (
 from tensorflow.estimator.export import (  # pylint: disable=E0401
     PredictOutput,
     RegressionOutput,
+    ClassificationOutput,
 )
 from os.path import join, dirname, exists
 from inspect import getsource, getfile
@@ -178,20 +179,59 @@ class Model(ABC):
         return []
 
     def _serving_input_receiver_fn(self):
-        feature_spec = {
-            "x": tf.FixedLenFeature(
-                dtype=tf.int64, shape=[self.params["max_seq_length"]]
-            ),
-            "len": tf.FixedLenFeature(dtype=tf.int64, shape=[]),
-        }
+        # feature_spec = {
+        #     "x": tf.FixedLenFeature(
+        #         dtype=tf.int64,
+        #         shape=[1]
+        #         # dtype=tf.int64, shape=[self.params["max_seq_length"]]
+        #     ),
+        #     "len": tf.FixedLenFeature(dtype=tf.int64, shape=[]),
+        # }
 
         def default_serving_input_receiver_fn():
-            serialized_tf_example = tf.placeholder(
-                dtype=tf.string, shape=[None]
-            )
+            serialized_tf_example = tf.placeholder(dtype=tf.string, shape=[1])
 
-            receiver_tensors = {"x": serialized_tf_example}
-            features = tf.parse_example(serialized_tf_example, feature_spec)
+            context_features = {
+                "sentence": tf.FixedLenFeature(dtype=tf.string, shape=[1]),
+                "target_literal": tf.FixedLenFeature(
+                    dtype=tf.string, shape=[1]
+                ),
+                "left_literal": tf.FixedLenFeature(dtype=tf.string, shape=[1]),
+                "right_literal": tf.FixedLenFeature(
+                    dtype=tf.string, shape=[1]
+                ),
+                "sentence_length": tf.FixedLenFeature(
+                    dtype=tf.int64, shape=[1]
+                ),
+            }
+
+            sequence_features = {
+                "left_mapping": tf.VarLenFeature(dtype=tf.int64),
+                "right_mapping": tf.VarLenFeature(dtype=tf.int64),
+                "target_mapping": tf.VarLenFeature(dtype=tf.int64),
+            }
+
+            # example = tf.train.Example(
+            #     features=tf.train.Features(feature=feature_dict)
+            # )
+            # serialized_example = example.SerializeToString()
+            # tf_example = tf.parse_example([serialized_example], feature_spec)
+
+            receiver_tensors = {"examples": serialized_tf_example}
+            received_features = tf.parse_single_sequence_example(
+                serialized=serialized_tf_example[0],
+                context_features=context_features,
+                sequence_features=sequence_features,
+            )
+            left_mapping = tf.sparse_to_dense(
+                received_features[1]["left_mapping"].indices,
+                received_features[1]["left_mapping"].dense_shape,
+                received_features[1]["left_mapping"].values,
+            )
+            features = {
+                "x": left_mapping,
+                "len": received_features[0]["sentence_length"],
+            }
             return tf.estimator.export.ServingInputReceiver(
                 features, receiver_tensors
             )
@@ -288,13 +328,15 @@ class Model(ABC):
             spec = _model_fn(features, labels, mode, params)
             if mode == ModeKeys.PREDICT:
                 logits = spec.predictions["logits"]
-                preds = spec.predictions["class_ids"]
-                export_outputs = {
-                    DEFAULT_SERVING_SIGNATURE_DEF_KEY: RegressionOutput(
-                        logits
+                classify_output = ClassificationOutput(
+                    classes=tf.constant(
+                        [["Negative", "Neutral", "Positive"]], dtype=tf.string
                     ),
-                    REGRESS_OUTPUTS: RegressionOutput(logits),
-                    PREDICT_OUTPUTS: PredictOutput(preds),
+                    scores=logits,
+                )
+                predict_output = PredictOutput(logits)
+                export_outputs = {
+                    DEFAULT_SERVING_SIGNATURE_DEF_KEY: predict_output
                 }
                 all_export_outputs = spec.export_outputs or {}
                 all_export_outputs.update(export_outputs)

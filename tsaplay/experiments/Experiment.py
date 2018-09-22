@@ -97,7 +97,8 @@ class Experiment:
                 print("Updating tfserve.conf with new exported model info")
                 self._update_export_models_config()
                 print("Restarting tsaplay docker container to load new config")
-                restart_tf_serve_container()
+                logs = restart_tf_serve_container()
+                print(logs)
 
     def _init_exp_dir(self, model, dataset, contd_tag):
         all_exps_path = _join(dirname(abspath(__file__)), "data")
@@ -132,14 +133,15 @@ class Experiment:
 
     def _update_export_models_config(self):
         config_file = _join(self.export_dir, "tfserve.conf")
-        exported_models = self._list_exported_models()
+        names, base_paths = self._get_exported_models_names_and_paths(
+            container_base="models"
+        )
         config_file_str = "model_config_list: {\n"
-        container_base = "/models/"
-        for model in exported_models:
+        for name, path in zip(names, base_paths):
             config_file_str += (
                 "    config: { \n"
-                '        name: "' + model + '",\n'
-                '        base_path: "' + container_base + model + '",\n'
+                '        name: "' + name + '",\n'
+                '        base_path: "' + path + '",\n'
                 '        model_platform: "tensorflow"\n'
                 "    }\n"
             )
@@ -155,3 +157,19 @@ class Experiment:
             if not isfile(_join(self.export_dir, m))
         ]
         return exported_models
+
+    def _get_exported_models_names_and_paths(self, container_base):
+        models = self._list_exported_models()
+        names = ["".join([m[0] for m in model.split("_")]) for model in models]
+
+        for name in names:
+            indices = [i for i, a in enumerate(names) if a == name]
+            if len(indices) > 1:
+                cnt = 1
+                for index in indices[1:]:
+                    name[index] = name + str(cnt)
+                    cnt += 1
+
+        paths = [("/" + container_base + "/" + model) for model in models]
+
+        return names, paths
