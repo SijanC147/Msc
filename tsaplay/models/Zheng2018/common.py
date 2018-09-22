@@ -3,10 +3,8 @@ from tensorflow.python.keras.preprocessing import (  # pylint: disable=E0611
     sequence
 )
 from tsaplay.utils._data import (
-    make_labels_dataset_from_list,
     prep_features_for_dataset,
-    wrap_mapping_length_literal,
-    wrap_left_target_right_label,
+    package_feature_dict,
     prep_dataset_and_get_iterator,
 )
 
@@ -30,29 +28,27 @@ def lcr_rot_input_fn(
     left_map, left_len = prep_features_for_dataset(
         mappings=features["mappings"]["left"], max_seq_length=max_seq_length
     )
-    left = wrap_mapping_length_literal(left_map, left_len, features["left"])
+    left = package_feature_dict(
+        left_map, left_len, literal=features["left"], key="left"
+    )
 
     right_map, right_len = prep_features_for_dataset(
         mappings=features["mappings"]["right"], max_seq_length=max_seq_length
     )
-    right = wrap_mapping_length_literal(
-        right_map, right_len, features["right"]
+    right = package_feature_dict(
+        right_map, right_len, literal=features["right"], key="right"
     )
 
     target_map, target_len = prep_features_for_dataset(
         mappings=features["mappings"]["target"]
     )
-    target = wrap_mapping_length_literal(
-        target_map, target_len, features["target"]
+    target = package_feature_dict(
+        target_map, target_len, literal=features["target"], key="target"
     )
 
-    labels = make_labels_dataset_from_list(labels)
-
-    dataset = wrap_left_target_right_label(left, target, right, labels)
-
     iterator = prep_dataset_and_get_iterator(
-        dataset=dataset,
-        shuffle_buffer=len(features),
+        features={**left, **target, **right},
+        labels=labels,
         batch_size=batch_size,
         eval_input=eval_input,
     )

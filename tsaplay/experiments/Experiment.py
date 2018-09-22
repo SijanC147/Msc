@@ -167,7 +167,7 @@ class Experiment:
             if len(indices) > 1:
                 cnt = 1
                 for index in indices[1:]:
-                    name[index] = name + str(cnt)
+                    names[index] = name + str(cnt)
                     cnt += 1
 
         paths = [("/" + container_base + "/" + model) for model in models]

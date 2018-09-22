@@ -6,9 +6,8 @@ from tsaplay.utils._data import (
     prep_dataset_and_get_iterator,
     zip_list_join,
     prep_features_for_dataset,
-    wrap_mapping_length_literal,
+    package_feature_dict,
     make_labels_dataset_from_list,
-    wrap_left_target_right_label,
 )
 
 params = {
@@ -36,14 +35,11 @@ def lstm_input_fn(
     sen_map, sen_len = prep_features_for_dataset(
         mappings=sentences, max_seq_length=max_seq_length
     )
-    sentence = wrap_mapping_length_literal(sen_map, sen_len)
-    labels = make_labels_dataset_from_list(labels)
-
-    dataset = tf.data.Dataset.zip((sentence, labels))
+    sentence = package_feature_dict(sen_map, sen_len)
 
     iterator = prep_dataset_and_get_iterator(
-        dataset=dataset,
-        shuffle_buffer=len(features),
+        features=sentence,
+        labels=labels,
         batch_size=batch_size,
         eval_input=eval_input,
     )
@@ -68,7 +64,7 @@ def tdlstm_input_fn(
     left_map, left_len = prep_features_for_dataset(
         mappings=left_contexts, max_seq_length=max_seq_length
     )
-    left = wrap_mapping_length_literal(left_map, left_len)
+    left = package_feature_dict(left_map, left_len, key="left")
 
     right_contexts = zip_list_join(
         features["mappings"]["target"],
@@ -78,18 +74,11 @@ def tdlstm_input_fn(
     right_map, right_len = prep_features_for_dataset(
         mappings=right_contexts, max_seq_length=max_seq_length
     )
-    right = wrap_mapping_length_literal(right_map, right_len)
-
-    labels = make_labels_dataset_from_list(labels)
-
-    dataset = tf.data.Dataset.zip((left, right, labels))
-    dataset = dataset.map(
-        lambda left, right, label: ({"left": left, "right": right}, label)
-    )
+    right = package_feature_dict(right_map, right_len, key="right")
 
     iterator = prep_dataset_and_get_iterator(
-        dataset=dataset,
-        shuffle_buffer=len(features),
+        features={**left, **right},
+        labels=labels,
         batch_size=batch_size,
         eval_input=eval_input,
     )
@@ -99,18 +88,14 @@ def tdlstm_input_fn(
 
 def tdlstm_serving_fn(features):
     return {
-        "left": {
-            "x": features["mappings"]["left_target"],
-            "len": tf.add(
-                features["lengths"]["left"], features["lengths"]["target"]
-            ),
-        },
-        "right": {
-            "x": features["mappings"]["target_right"],
-            "len": tf.add(
-                features["lengths"]["target"], features["lengths"]["right"]
-            ),
-        },
+        "left_x": features["mappings"]["left_target"],
+        "left_len": tf.add(
+            features["lengths"]["left"], features["lengths"]["target"]
+        ),
+        "right_x": features["mappings"]["target_right"],
+        "right_len": tf.add(
+            features["lengths"]["target"], features["lengths"]["right"]
+        ),
     }
 
 
@@ -120,11 +105,10 @@ def tclstm_input_fn(
     left_contexts = zip_list_join(
         features["mappings"]["left"], features["mappings"]["target"]
     )
-
     left_map, left_len = prep_features_for_dataset(
         mappings=left_contexts, max_seq_length=max_seq_length
     )
-    left = wrap_mapping_length_literal(left_map, left_len)
+    left = package_feature_dict(left_map, left_len, key="left")
 
     right_contexts = zip_list_join(
         features["mappings"]["target"],
@@ -134,20 +118,16 @@ def tclstm_input_fn(
     right_map, right_len = prep_features_for_dataset(
         mappings=right_contexts, max_seq_length=max_seq_length
     )
-    right = wrap_mapping_length_literal(right_map, right_len)
+    right = package_feature_dict(right_map, right_len, key="right")
 
     target_map, target_len = prep_features_for_dataset(
         mappings=features["mappings"]["target"]
     )
-    target = wrap_mapping_length_literal(target_map, target_len)
-
-    labels = make_labels_dataset_from_list(labels)
-
-    dataset = wrap_left_target_right_label(left, target, right, labels)
+    target = package_feature_dict(target_map, target_len, key="target")
 
     iterator = prep_dataset_and_get_iterator(
-        dataset=dataset,
-        shuffle_buffer=len(features),
+        features={**left, **target, **right},
+        labels=labels,
         batch_size=batch_size,
         eval_input=eval_input,
     )
@@ -157,20 +137,14 @@ def tclstm_input_fn(
 
 def tclstm_serving_fn(features):
     return {
-        "left": {
-            "x": features["mappings"]["left_target"],
-            "len": tf.add(
-                features["lengths"]["left"], features["lengths"]["target"]
-            ),
-        },
-        "right": {
-            "x": features["mappings"]["target_right"],
-            "len": tf.add(
-                features["lengths"]["target"], features["lengths"]["right"]
-            ),
-        },
-        "target": {
-            "x": features["mappings"]["target"],
-            "len": features["lengths"]["target"],
-        },
+        "left_x": features["mappings"]["left_target"],
+        "left_len": tf.add(
+            features["lengths"]["left"], features["lengths"]["target"]
+        ),
+        "right_x": features["mappings"]["target_right"],
+        "right_len": tf.add(
+            features["lengths"]["target"], features["lengths"]["right"]
+        ),
+        "target_x": features["mappings"]["target"],
+        "target_len": features["lengths"]["target"],
     }

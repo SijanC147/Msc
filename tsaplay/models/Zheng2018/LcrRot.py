@@ -56,21 +56,21 @@ class LcrRot(Model):
                 )
 
             left_embeddings = tf.contrib.layers.embed_sequence(
-                ids=features["left"]["x"],
+                ids=features["left_x"],
                 initializer=embeddings,
                 scope="embedding_layer",
                 reuse=True,
             )
 
             target_embeddings = tf.contrib.layers.embed_sequence(
-                ids=features["target"]["x"],
+                ids=features["target_x"],
                 initializer=embeddings,
                 scope="embedding_layer",
                 reuse=True,
             )
 
             right_embeddings = tf.contrib.layers.embed_sequence(
-                ids=features["right"]["x"],
+                ids=features["right_x"],
                 initializer=embeddings,
                 scope="embedding_layer",
                 reuse=True,
@@ -93,12 +93,12 @@ class LcrRot(Model):
                         )
                     ],
                     inputs=target_embeddings,
-                    sequence_length=features["target"]["len"],
+                    sequence_length=features["target_len"],
                     dtype=tf.float32,
                 )
                 r_t = variable_len_batch_mean(
                     input_tensor=target_hidden_states,
-                    seq_lengths=features["target"]["len"],
+                    seq_lengths=features["target_len"],
                     op_name="target_avg_pooling",
                 )
 
@@ -119,7 +119,7 @@ class LcrRot(Model):
                         )
                     ],
                     inputs=left_embeddings,
-                    sequence_length=features["left"]["len"],
+                    sequence_length=features["left_len"],
                     dtype=tf.float32,
                 )
 
@@ -140,7 +140,7 @@ class LcrRot(Model):
                         )
                     ],
                     inputs=right_embeddings,
-                    sequence_length=features["right"]["len"],
+                    sequence_length=features["right_len"],
                     dtype=tf.float32,
                 )
 
@@ -148,40 +148,40 @@ class LcrRot(Model):
                 r_l, left_attn_info = attention_unit(
                     h_states=left_hidden_states,
                     hidden_units=params["hidden_units"] * 2,
-                    seq_lengths=features["left"]["len"],
+                    seq_lengths=features["left_len"],
                     attn_focus=r_t,
                     init=params["initializer"],
-                    literal=features["left"]["lit"],
+                    literal=features["left_lit"],
                 )
 
             with tf.variable_scope("right_t2c_attn"):
                 r_r, right_attn_info = attention_unit(
                     h_states=right_hidden_states,
                     hidden_units=params["hidden_units"] * 2,
-                    seq_lengths=features["right"]["len"],
+                    seq_lengths=features["right_len"],
                     attn_focus=r_t,
                     init=params["initializer"],
-                    literal=features["right"]["lit"],
+                    literal=features["right_lit"],
                 )
 
             with tf.variable_scope("left_c2t_attn"):
                 r_t_l, left_target_attn_info = attention_unit(
                     h_states=target_hidden_states,
                     hidden_units=params["hidden_units"] * 2,
-                    seq_lengths=features["target"]["len"],
+                    seq_lengths=features["target_len"],
                     attn_focus=tf.expand_dims(r_l, axis=1),
                     init=params["initializer"],
-                    literal=features["target"]["lit"],
+                    literal=features["target_lit"],
                 )
 
             with tf.variable_scope("right_c2t_attn"):
                 r_t_r, right_target_attn_info = attention_unit(
                     h_states=target_hidden_states,
                     hidden_units=params["hidden_units"] * 2,
-                    seq_lengths=features["target"]["len"],
+                    seq_lengths=features["target_len"],
                     attn_focus=tf.expand_dims(r_r, axis=1),
                     init=params["initializer"],
-                    literal=features["target"]["lit"],
+                    literal=features["target_lit"],
                 )
 
             generate_attn_heatmap_summary(

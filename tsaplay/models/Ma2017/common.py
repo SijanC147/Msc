@@ -6,9 +6,7 @@ from tsaplay.utils._data import (
     zip_list_join,
     zip_str_join,
     prep_features_for_dataset,
-    wrap_mapping_length_literal,
-    make_labels_dataset_from_list,
-    wrap_left_target_right_label,
+    package_feature_dict,
     prep_dataset_and_get_iterator,
 )
 
@@ -36,31 +34,20 @@ def ian_input_fn(
     contexts_map, contexts_len = prep_features_for_dataset(
         mappings=context_mappings, max_seq_length=max_seq_length
     )
-    contexts = wrap_mapping_length_literal(
-        contexts_map, contexts_len, context_literals
+    contexts = package_feature_dict(
+        contexts_map, contexts_len, literal=context_literals, key="context"
     )
 
     target_map, target_len = prep_features_for_dataset(
         mappings=features["mappings"]["target"]
     )
-    targets = wrap_mapping_length_literal(
-        target_map, target_len, features["target"]
-    )
-
-    labels = make_labels_dataset_from_list(labels)
-
-    dataset = tf.data.Dataset.zip((contexts, targets, labels))
-
-    dataset = dataset.map(
-        lambda context, target, label: (
-            {"context": context, "target": target},
-            label,
-        )
+    targets = package_feature_dict(
+        target_map, target_len, literal=features["target"], key="target"
     )
 
     iterator = prep_dataset_and_get_iterator(
-        dataset=dataset,
-        shuffle_buffer=len(features),
+        features={**contexts, **targets},
+        labels=labels,
         batch_size=batch_size,
         eval_input=eval_input,
     )

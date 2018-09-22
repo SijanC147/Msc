@@ -50,14 +50,14 @@ class InteractiveAttentionNetwork(Model):
                 )
 
             context_embeddings = tf.contrib.layers.embed_sequence(
-                ids=features["context"]["x"],
+                ids=features["context_x"],
                 initializer=embeddings,
                 scope="embedding_layer",
                 reuse=True,
             )
 
             target_embeddings = tf.contrib.layers.embed_sequence(
-                ids=features["target"]["x"],
+                ids=features["target_x"],
                 initializer=embeddings,
                 scope="embedding_layer",
                 reuse=True,
@@ -71,12 +71,12 @@ class InteractiveAttentionNetwork(Model):
                         keep_prob=params["keep_prob"],
                     ),
                     inputs=context_embeddings,
-                    sequence_length=features["context"]["len"],
+                    sequence_length=features["context_len"],
                     dtype=tf.float32,
                 )
                 c_avg = variable_len_batch_mean(
                     input_tensor=context_hidden_states,
-                    seq_lengths=features["context"]["len"],
+                    seq_lengths=features["context_len"],
                     op_name="context_avg_pooling",
                 )
 
@@ -88,12 +88,12 @@ class InteractiveAttentionNetwork(Model):
                         keep_prob=params["keep_prob"],
                     ),
                     inputs=target_embeddings,
-                    sequence_length=features["target"]["len"],
+                    sequence_length=features["target_len"],
                     dtype=tf.float32,
                 )
                 t_avg = variable_len_batch_mean(
                     input_tensor=target_hidden_states,
-                    seq_lengths=features["target"]["len"],
+                    seq_lengths=features["target_len"],
                     op_name="target_avg_pooling",
                 )
 
@@ -101,18 +101,18 @@ class InteractiveAttentionNetwork(Model):
                 c_r, ctxt_attn_info = attention_unit(
                     h_states=context_hidden_states,
                     hidden_units=params["hidden_units"],
-                    seq_lengths=features["context"]["len"],
+                    seq_lengths=features["context_len"],
                     attn_focus=t_avg,
                     init=params["initializer"],
-                    literal=features["context"]["lit"],
+                    literal=features["context_lit"],
                 )
                 t_r, trg_attn_info = attention_unit(
                     h_states=target_hidden_states,
                     hidden_units=params["hidden_units"],
-                    seq_lengths=features["target"]["len"],
+                    seq_lengths=features["target_len"],
                     attn_focus=c_avg,
                     init=params["initializer"],
-                    literal=features["target"]["lit"],
+                    literal=features["target_lit"],
                 )
 
             generate_attn_heatmap_summary(trg_attn_info, ctxt_attn_info)

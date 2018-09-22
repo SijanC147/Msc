@@ -49,14 +49,14 @@ class TdLstm(Model):
                 )
 
             left_inputs = tf.contrib.layers.embed_sequence(
-                ids=features["left"]["x"],
+                ids=features["left_x"],
                 initializer=embeddings,
                 scope="embedding_layer",
                 reuse=True,
             )
 
             right_inputs = tf.contrib.layers.embed_sequence(
-                ids=features["right"]["x"],
+                ids=features["right_x"],
                 initializer=embeddings,
                 scope="embedding_layer",
                 reuse=True,
@@ -70,7 +70,7 @@ class TdLstm(Model):
                         keep_prob=params["keep_prob"],
                     ),
                     inputs=left_inputs,
-                    sequence_length=features["left"]["len"],
+                    sequence_length=features["left_len"],
                     dtype=tf.float32,
                 )
 
@@ -82,7 +82,7 @@ class TdLstm(Model):
                         keep_prob=params["keep_prob"],
                     ),
                     inputs=right_inputs,
-                    sequence_length=features["right"]["len"],
+                    sequence_length=features["right_len"],
                     dtype=tf.float32,
                 )
 

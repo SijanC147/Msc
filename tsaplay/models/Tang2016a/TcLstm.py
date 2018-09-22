@@ -49,21 +49,21 @@ class TcLstm(Model):
                 )
 
             target_embedding = tf.contrib.layers.embed_sequence(
-                ids=features["target"]["x"],
+                ids=features["target_x"],
                 initializer=embeddings,
                 scope="embedding_layer",
                 reuse=True,
             )
 
             left_inputs = tf.contrib.layers.embed_sequence(
-                ids=features["left"]["x"],
+                ids=features["left_x"],
                 initializer=embeddings,
                 scope="embedding_layer",
                 reuse=True,
             )
 
             right_inputs = tf.contrib.layers.embed_sequence(
-                ids=features["right"]["x"],
+                ids=features["right_x"],
                 initializer=embeddings,
                 scope="embedding_layer",
                 reuse=True,
@@ -72,7 +72,7 @@ class TcLstm(Model):
             with tf.name_scope("target_connection"):
                 mean_target_embedding = variable_len_batch_mean(
                     input_tensor=target_embedding,
-                    seq_lengths=features["target"]["len"],
+                    seq_lengths=features["target_len"],
                     op_name="target_embedding_avg",
                 )
                 left_inputs = tf.stack(
@@ -115,7 +115,7 @@ class TcLstm(Model):
                         keep_prob=params["keep_prob"],
                     ),
                     inputs=left_inputs,
-                    sequence_length=features["left"]["len"],
+                    sequence_length=features["left_len"],
                     dtype=tf.float32,
                 )
 
@@ -127,7 +127,7 @@ class TcLstm(Model):
                         keep_prob=params["keep_prob"],
                     ),
                     inputs=right_inputs,
-                    sequence_length=features["right"]["len"],
+                    sequence_length=features["right_len"],
                     dtype=tf.float32,
                 )
 

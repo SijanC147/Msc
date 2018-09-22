@@ -7,9 +7,7 @@ from tsaplay.utils._data import (
     zip_list_join,
     zip_str_join,
     prep_features_for_dataset,
-    wrap_mapping_length_literal,
-    make_labels_dataset_from_list,
-    wrap_left_target_right_label,
+    package_feature_dict,
     prep_dataset_and_get_iterator,
 )
 from tsaplay.utils._tf import masked_softmax
@@ -37,8 +35,8 @@ def memnet_input_fn(
     contexts_map, contexts_len = prep_features_for_dataset(
         mappings=context_mappings, max_seq_length=max_seq_length
     )
-    contexts = wrap_mapping_length_literal(
-        contexts_map, contexts_len, context_literals
+    contexts = package_feature_dict(
+        contexts_map, contexts_len, literal=context_literals, key="context"
     )
 
     target_map, target_len = prep_features_for_dataset(
@@ -47,32 +45,14 @@ def memnet_input_fn(
     target_locations = [
         len(mapping) + 1 for mapping in features["mappings"]["left"]
     ]
-    targets = tf.data.Dataset.from_tensor_slices(
-        (target_map, target_len, features["target"], target_locations)
+    targets = package_feature_dict(
+        target_map, target_len, literal=features["target"], key="target"
     )
-    targets = targets.map(
-        lambda mapping, length, literal, location: {
-            "x": mapping,
-            "len": length,
-            "lit": literal,
-            "loc": location,
-        }
-    )
-
-    labels = make_labels_dataset_from_list(labels)
-
-    dataset = tf.data.Dataset.zip((contexts, targets, labels))
-
-    dataset = dataset.map(
-        lambda context, target, label: (
-            {"context": context, "target": target},
-            label,
-        )
-    )
+    targets = {**targets, "target_loc": target_locations}
 
     iterator = prep_dataset_and_get_iterator(
-        dataset=dataset,
-        shuffle_buffer=len(features),
+        features={**contexts, **targets},
+        labels=labels,
         batch_size=batch_size,
         eval_input=eval_input,
     )

@@ -54,20 +54,20 @@ class MemNet(Model):
                 )
 
             m = tf.contrib.layers.embed_sequence(
-                ids=features["context"]["x"],
+                ids=features["context_x"],
                 initializer=embeddings,
                 scope="embedding_layer",
                 reuse=True,
             )
 
             context_locations = get_absolute_distance_vector(
-                target_locs=features["target"]["loc"],
-                seq_lens=features["context"]["len"],
+                target_locs=features["target_loc"],
+                seq_lens=features["context_len"],
                 max_seq_len=params["max_seq_length"],
             )
 
             target_embeddings = tf.contrib.layers.embed_sequence(
-                ids=features["target"]["x"],
+                ids=features["target_x"],
                 initializer=embeddings,
                 scope="embedding_layer",
                 reuse=True,
@@ -75,7 +75,7 @@ class MemNet(Model):
 
             v_aspect = variable_len_batch_mean(
                 input_tensor=target_embeddings,
-                seq_lengths=features["target"]["len"],
+                seq_lengths=features["target_len"],
                 op_name="target_embedding_avg",
             )
 
@@ -89,7 +89,7 @@ class MemNet(Model):
 
                 v_loc = location_vector_model_fn(
                     locs=context_locations,
-                    seq_lens=features["context"]["len"],
+                    seq_lens=features["context_len"],
                     emb_dim=params["embedding_dim"],
                     hop=hop_num,
                     init=params["initializer"],
@@ -111,12 +111,12 @@ class MemNet(Model):
 
                 with tf.variable_scope("attention_layer", reuse=tf.AUTO_REUSE):
                     attn_out, attn_snapshot = content_attention_model(
-                        seq_lens=features["context"]["len"],
+                        seq_lens=features["context_len"],
                         memory=ext_memory,
                         v_aspect=input_vec,
                         emb_dim=params["embedding_dim"],
                         init=params["initializer"],
-                        literal=features["context"]["lit"],
+                        literal=features["context_lit"],
                     )
 
                 attn_snapshot.set_shape([None, params["max_seq_length"], 1])
@@ -170,7 +170,7 @@ class MemNet(Model):
             )
 
             literals, attn_snapshots = zip_hop_attn_snapshots_with_literals(
-                literals=features["context"]["lit"],
+                literals=features["context_lit"],
                 snapshots=attn_snapshots,
                 max_len=params["max_seq_length"],
                 num_hops=params["n_hops"],

@@ -383,16 +383,11 @@ class Model(ABC):
             tf.summary.scalar("auc", std_metrics["auc"][1])
             if mode == ModeKeys.EVAL:
                 all_eval_hooks = spec.evaluation_hooks or []
-                targets = features.get("target")
-                target_literals_available = (
-                    isinstance(targets, dict)
-                    and targets.get("lit") is not None
-                )
-                if target_literals_available:
+                if features.get("target_lit") is not None:
                     attn_hook = SaveAttentionWeightVectorHook(
                         labels=labels,
                         predictions=spec.predictions["class_ids"],
-                        targets=features["target"]["lit"],
+                        targets=features["target_lit"],
                         summary_writer=tf.summary.FileWriterCache.get(
                             join(self.run_config.model_dir, "eval")
                         ),

@@ -33,40 +33,26 @@ def prep_features_for_dataset(mappings, max_seq_length=None):
     return mappings, lengths
 
 
-def wrap_mapping_length_literal(mapping, length, literal=None):
-    if literal is None:
-        dataset = tf.data.Dataset.from_tensor_slices((mapping, length))
-        dataset = dataset.map(
-            lambda mapping, length: {"x": mapping, "len": length}
-        )
+def package_feature_dict(mapping, length, key=None, literal=None):
+    if key is None:
+        pre = ""
     else:
-        dataset = tf.data.Dataset.from_tensor_slices(
-            (mapping, length, literal)
-        )
-        dataset = dataset.map(
-            lambda mapping, length, literal: {
-                "x": mapping,
-                "len": length,
-                "lit": literal,
-            }
-        )
-    return dataset
+        pre = key + "_"
+
+    if literal is None:
+        return {pre + "x": mapping, pre + "len": length}
+    else:
+        return {pre + "x": mapping, pre + "len": length, pre + "lit": literal}
 
 
-def wrap_left_target_right_label(left, target, right, label):
-    dataset = tf.data.Dataset.zip((left, target, right, label))
-    dataset = dataset.map(
-        lambda left, target, right, label: (
-            {"left": left, "target": target, "right": right},
-            label,
-        )
-    )
-    return dataset
+def prep_dataset_and_get_iterator(features, labels, batch_size, eval_input):
+    shuffle_buffer = len(labels)
 
+    features = tf.data.Dataset.from_tensor_slices(features)
+    labels = make_labels_dataset_from_list(labels)
 
-def prep_dataset_and_get_iterator(
-    dataset, shuffle_buffer, batch_size, eval_input
-):
+    dataset = tf.data.Dataset.zip((features, labels))
+
     if eval_input:
         dataset = dataset.shuffle(buffer_size=shuffle_buffer)
     else:

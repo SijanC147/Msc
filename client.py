@@ -142,7 +142,7 @@ def main():
     prediction_req.inputs["instances"].CopyFrom(  # pylint: disable=E1101
         tensor_proto
     )
-    prediction_req.model_spec.name = "lcro"  # pylint: disable=E1101
+    prediction_req.model_spec.name = "tcro1"  # pylint: disable=E1101
     # prediction = stub.Predict(prediciton_req, 60.0)
     # print(prediction)
 
