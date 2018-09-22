@@ -34,8 +34,8 @@ experiment = Experiment(
         embedding=Embedding(path=EMBEDDINGS.DEBUG),
     ),
     model=Lstm(),
-    # contd_tag="changin_regression_outputs",
+    contd_tag="changin_regression_outputs",
     # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
 )
 experiment.run(job="train+eval", steps=1)
-# experiment.export_model(overwrite=True, restart_tfserve=True)
+experiment.export_model(overwrite=True, restart_tfserve=True)

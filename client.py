@@ -1,135 +1,136 @@
-import argparse
-import requests
-import json
+import time
 import tensorflow as tf
 
+from argparse import ArgumentParser
+
+from grpc.beta import implementations
+
 from tensorflow_serving.apis import predict_pb2
+from tensorflow_serving.apis import prediction_service_pb2
+from tensorflow.contrib.util import make_tensor_proto  # pylint: disable=E0611
+
 from os import getcwd, listdir
 from os.path import join, isfile
+
+from tensorflow.train import (
+    SequenceExample,
+    FeatureLists,
+    FeatureList,
+    Features,
+    Feature,
+    BytesList,
+    Int64List,
+)
+
 from tsaplay.embeddings.Embedding import Embedding
-from tsaplay.utils._nlp import get_sentence_contexts
+from tsaplay.utils._nlp import get_sentence_target_features
 
-parser = argparse.ArgumentParser(
-    description="Run Target Sentiment Analysis on a sentence"
-)
 
-parser.add_argument(
-    "--model",
-    "-m",
-    nargs=1,
-    type=str,
-    # required=True,
-    help="Which model to use",
-    default="lstm_changin_regression_outputs",
-)
+def parse_args():
 
-parser.add_argument(
-    "--sentence",
-    "-s",
-    nargs=1,
-    type=str,
-    # required=True,
-    help="Sentence to analyze, must contain the target",
-    default="Hello my name is deep sean.",
-)
-parser.add_argument(
-    "--target",
-    "-t",
-    nargs=1,
-    type=str,
-    # required=True,
-    help="Target to focus on, must be in the sentence",
-    default="sean",
-)
+    parser = ArgumentParser(
+        description="Run targeted sentiment analysis on a sentence."
+    )
 
-args = parser.parse_args()
+    parser.add_argument(
+        "--model",
+        "-m",
+        dest="model",
+        type=str,
+        required=True,
+        help="Which model to use",
+    )
 
-model = args.model[0]
-sentence = args.sentence[0]
-target = args.target[0]
+    parser.add_argument(
+        "--phrase",
+        "-p",
+        dest="phrase",
+        type=str,
+        required=True,
+        help="Phrase to analyze, must contain the target",
+    )
+    parser.add_argument(
+        "--target",
+        "-t",
+        dest="target",
+        type=str,
+        required=True,
+        help="Target to focus on, must be in the sentence",
+    )
 
-export_directory = join(getcwd(), "export", model)
-last_version = max(
-    [int(v) for v in listdir(export_directory) if not isfile(v)]
-)
-embedding = Embedding(
-    path=join(export_directory, str(last_version), "assets.extra", "embedding")
-)
+    args = parser.parse_args()
 
-sentence = sentence.strip()
-target = target.strip()
+    return args.phrase, args.target, args.model
 
-left_context, right_context = get_sentence_contexts(
-    sentence=sentence, target=target
-)
 
-left_mapping = [embedding.get_index_ids(left_context)]
-target_mapping = [embedding.get_index_ids(target)]
-right_mapping = [embedding.get_index_ids(right_context)]
+def get_export_embedding_path(model):
+    export_dir = join(getcwd(), "export", model)
+    versions = [int(v) for v in listdir(export_dir) if not isfile(v)]
+    last_version = str(max(versions))
+    assets_extra_path = join(export_dir, last_version, "assets.extra")
+    embedding_path = join(assets_extra_path, "embedding")
 
-sentence_length = len(left_mapping + target_mapping + right_mapping)
+    return embedding_path
 
-sentence = sentence.encode()
-left_context = left_context.encode()
-right_context = right_context.encode()
-target = target.encode()
 
-context_features = tf.train.Features(
-    feature={
-        "sentence": tf.train.Feature(
-            bytes_list=tf.train.BytesList(value=[sentence])
-        ),
-        "sentence_length": tf.train.Feature(
-            int64_list=tf.train.Int64List(value=[sentence_length])
-        ),
-        "left_literal": tf.train.Feature(
-            bytes_list=tf.train.BytesList(value=[left_context])
-        ),
-        "right_literal": tf.train.Feature(
-            bytes_list=tf.train.BytesList(value=[right_context])
-        ),
-        "target_literal": tf.train.Feature(
-            bytes_list=tf.train.BytesList(value=[target])
-        ),
-    }
-)
-features_lists = tf.train.FeatureLists(
-    feature_list={
-        "left_mapping": tf.train.FeatureList(
-            feature=[
-                tf.train.Feature(int64_list=tf.train.Int64List(value=mapping))
-                for mapping in left_mapping
-            ]
-        ),
-        "target_mapping": tf.train.FeatureList(
-            feature=[
-                tf.train.Feature(int64_list=tf.train.Int64List(value=mapping))
-                for mapping in target_mapping
-            ]
-        ),
-        "right_mapping": tf.train.FeatureList(
-            feature=[
-                tf.train.Feature(int64_list=tf.train.Int64List(value=mapping))
-                for mapping in right_mapping
-            ]
-        ),
-    }
-)
+def main():
 
-tf_example = tf.train.SequenceExample(
-    feature_lists=features_lists, context=context_features
-)
-# print(tf_example)
+    phrase, target, model = parse_args()
 
-serialized_tf_example = tf_example.SerializeToString()
-# print(serialized_tf_example)
+    export_embedding = Embedding(path=get_export_embedding_path(model))
 
-# URL = "http://localhost:8501/v1/models/lcro:classify"
+    feat_dict = get_sentence_target_features(
+        embedding=export_embedding, sentence=phrase, target=target
+    )
 
-# body = {"examples": [serialized_tf_example]}
+    sentence = feat_dict["sentence"].encode()
+    sen_length = feat_dict["sentence_len"]
+    left_lit = feat_dict["left_lit"].encode()
+    target = feat_dict["target_lit"].encode()
+    right_lit = feat_dict["right_lit"].encode()
+    left_map = feat_dict["left_map"]
+    target_map = feat_dict["target_map"]
+    right_map = feat_dict["right_map"]
 
-# data = json.dumps(body)
+    context = Features(
+        feature={
+            "sentence": Feature(bytes_list=BytesList(value=[sentence])),
+            "sen_length": Feature(int64_list=Int64List(value=[sen_length])),
+            "left_lit": Feature(bytes_list=BytesList(value=[left_lit])),
+            "right_lit": Feature(bytes_list=BytesList(value=[right_lit])),
+            "target_lit": Feature(bytes_list=BytesList(value=[target])),
+        }
+    )
+    features_lists = FeatureLists(
+        feature_list={
+            "left_map": FeatureList(
+                feature=[Feature(int64_list=Int64List(value=left_map))]
+            ),
+            "target_map": FeatureList(
+                feature=[Feature(int64_list=Int64List(value=target_map))]
+            ),
+            "right_map": FeatureList(
+                feature=[Feature(int64_list=Int64List(value=right_map))]
+            ),
+        }
+    )
 
-# r = requests.post(url=URL, data=data)
+    tf_example = SequenceExample(feature_lists=features_lists, context=context)
+    serialized = tf_example.SerializeToString()
 
-# print(r.text)
+    tensor_proto = make_tensor_proto(serialized, dtype=tf.string, shape=[1])
+
+    channel = implementations.insecure_channel(host="127.0.0.1", port=8500)
+    stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
+
+    request = predict_pb2.PredictRequest()
+    request.model_spec.name = "lcro"  # pylint: disable=E1101
+    request.inputs["examples"].CopyFrom(tensor_proto)  # pylint: disable=E1101
+
+    result = stub.Predict(request, 60.0)
+
+    print(result)
+
+
+if __name__ == "__main__":
+    main()
