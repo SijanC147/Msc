@@ -12,9 +12,9 @@ from tsaplay.experiments.Experiment import Experiment
 
 from tsaplay.models.Zheng2018.LcrRot import LcrRot
 
-# from tsaplay.models.Ma2017.InteractiveAttentionNetwork import (
-#     InteractiveAttentionNetwork
-# )
+from tsaplay.models.Ma2017.InteractiveAttentionNetwork import (
+    InteractiveAttentionNetwork
+)
 from tsaplay.models.Tang2016b.MemNet import MemNet
 
 tf.logging.set_verbosity(tf.logging.INFO)
@@ -39,8 +39,8 @@ experiment = Experiment(
         parser=DATASETS.DEBUG_PARSER,
         embedding=Embedding(path=EMBEDDINGS.DEBUG),
     ),
-    model=LcrRot(),
-    contd_tag="rotary_attention",
+    model=InteractiveAttentionNetwork(),
+    contd_tag="my_ian",
     # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
 )
 experiment.run(job="train+eval", steps=1)

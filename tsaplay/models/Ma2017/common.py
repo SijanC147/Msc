@@ -53,3 +53,19 @@ def ian_input_fn(
     )
 
     return iterator.get_next()
+
+
+def ian_serving_fn(features):
+    return {
+        "context_x": features["mappings"]["context"],
+        "context_len": tf.add(
+            features["lengths"]["left"], features["lengths"]["right"]
+        ),
+        "context_lit": tf.strings.join(
+            [features["literals"]["left"], features["literals"]["right"]],
+            separator=" ",
+        ),
+        "target_x": features["mappings"]["target"],
+        "target_len": features["lengths"]["target"],
+        "target_lit": features["literals"]["target"],
+    }

@@ -4,7 +4,11 @@ from tensorflow.estimator import (  # pylint: disable=E0401
     ModeKeys,
 )
 from tsaplay.models.Model import Model
-from tsaplay.models.Ma2017.common import params as default_params, ian_input_fn
+from tsaplay.models.Ma2017.common import (
+    params as default_params,
+    ian_input_fn,
+    ian_serving_fn,
+)
 from tsaplay.utils._tf import (
     variable_len_batch_mean,
     dropout_lstm_cell,
@@ -38,6 +42,9 @@ class InteractiveAttentionNetwork(Model):
             max_seq_length=self.params["max_seq_length"],
             eval_input=True,
         )
+
+    def _serving_input_fn(self):
+        return lambda features: ian_serving_fn(features)
 
     def _model_fn(self):
         def default(features, labels, mode, params=self.params):
