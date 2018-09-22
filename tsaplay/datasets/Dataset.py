@@ -9,6 +9,7 @@ from tsaplay.utils._nlp import (
     inspect_dist,
     get_sentence_contexts,
     corpus_from_docs,
+    get_sentence_target_features,
 )
 from tsaplay.utils._io import (
     search_dir,
@@ -248,36 +249,22 @@ class Dataset:
 
             start = _time()
 
-            sentence = dictionary["sentences"][index].strip()
-            target = dictionary["targets"][index].strip()
-            label = (
-                int(dictionary["labels"][index].strip())
-                if type(dictionary["labels"][index]) == str
-                else dictionary["labels"][index]
-            )
-
-            features["sentence"].append(sentence)
-            features["target"].append(target)
-            labels.append(label)
-            left_context, right_context = get_sentence_contexts(
-                sentence=sentence,
-                target=target,
+            single_feature = get_sentence_target_features(
+                embedding=self.embedding,
+                sentence=dictionary["sentences"][index],
+                target=dictionary["targets"][index],
+                label=dictionary["labels"][index],
                 offset=dictionary.get("offset"),
             )
-            features["left"].append(left_context)
-            features["right"].append(right_context)
-
-            left_mapping = self.embedding.get_index_ids(left_context)
-            target_mapping = self.embedding.get_index_ids(target)
-            right_mapping = self.embedding.get_index_ids(right_context)
-
-            features["sentence_length"].append(
-                len(left_mapping + target_mapping + right_mapping)
-            )
-
-            features["mappings"]["left"].append(left_mapping)
-            features["mappings"]["target"].append(target_mapping)
-            features["mappings"]["right"].append(right_mapping)
+            features["sentence"].append(single_feature["sentence"])
+            features["target"].append(single_feature["target_lit"])
+            features["sentence_length"].append(single_feature["sentence_len"])
+            features["left"].append(single_feature["left_lit"])
+            features["right"].append(single_feature["right_lit"])
+            features["mappings"]["left"].append(single_feature["left_map"])
+            features["mappings"]["target"].append(single_feature["target_map"])
+            features["mappings"]["right"].append(single_feature["right_map"])
+            labels.append(single_feature["label"])
 
             total_time += _time() - start
             if index % 60 == 0:

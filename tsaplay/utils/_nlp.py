@@ -249,6 +249,38 @@ def get_sentence_contexts(sentence, target, offset=None):
     return left.strip(), right.strip()
 
 
+def get_sentence_target_features(
+    embedding, sentence, target, label=None, offset=None
+):
+    sentence_literal = sentence.strip()
+    target_literal = target.strip()
+
+    left_literal, right_literal = get_sentence_contexts(
+        sentence=sentence_literal, target=target_literal, offset=offset
+    )
+
+    left_mapping = embedding.get_index_ids(left_literal)
+    target_mapping = embedding.get_index_ids(target_literal)
+    right_mapping = embedding.get_index_ids(right_literal)
+
+    sentence_length = len(left_mapping + target_mapping + right_mapping)
+
+    if label is not None and isinstance(label, str):
+        label = int(label.strip())
+
+    return {
+        "sentence": sentence_literal,
+        "sentence_len": sentence_length,
+        "left_lit": left_literal,
+        "target_lit": target_literal,
+        "right_lit": right_literal,
+        "left_map": left_mapping,
+        "target_map": target_mapping,
+        "right_map": right_mapping,
+        "label": label,
+    }
+
+
 def cmap_int(value, cmap_name="Oranges", alpha=0.8):
     cmap = plt.get_cmap(cmap_name)
     rgba_flt = cmap(value, alpha=alpha)
