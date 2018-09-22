@@ -179,3 +179,13 @@ def image_to_summary(name, image):
         value=[tf.Summary.Value(tag=name, image=summary_image)]
     )
     return summary
+
+
+def get_dense_tensor(sparse_tensor):
+    dense_tensor = tf.sparse_to_dense(
+        sparse_indices=sparse_tensor.indices,
+        output_shape=sparse_tensor.dense_shape,
+        sparse_values=sparse_tensor.values,
+    )
+
+    return dense_tensor

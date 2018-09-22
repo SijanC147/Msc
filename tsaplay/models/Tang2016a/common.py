@@ -51,6 +51,13 @@ def lstm_input_fn(
     return iterator.get_next()
 
 
+def lstm_serving_fn(features):
+    return {
+        "x": features["mappings"]["sentence"],
+        "len": features["lengths"]["sentence"],
+    }
+
+
 def tdlstm_input_fn(
     features, labels, batch_size, max_seq_length, eval_input=False
 ):
@@ -88,6 +95,23 @@ def tdlstm_input_fn(
     )
 
     return iterator.get_next()
+
+
+def tdlstm_serving_fn(features):
+    return {
+        "left": {
+            "x": features["mappings"]["left_target"],
+            "len": tf.add(
+                features["lengths"]["left"], features["lengths"]["target"]
+            ),
+        },
+        "right": {
+            "x": features["mappings"]["target_right"],
+            "len": tf.add(
+                features["lengths"]["target"], features["lengths"]["right"]
+            ),
+        },
+    }
 
 
 def tclstm_input_fn(
@@ -129,3 +153,24 @@ def tclstm_input_fn(
     )
 
     return iterator.get_next()
+
+
+def tclstm_serving_fn(features):
+    return {
+        "left": {
+            "x": features["mappings"]["left_target"],
+            "len": tf.add(
+                features["lengths"]["left"], features["lengths"]["target"]
+            ),
+        },
+        "right": {
+            "x": features["mappings"]["target_right"],
+            "len": tf.add(
+                features["lengths"]["target"], features["lengths"]["right"]
+            ),
+        },
+        "target": {
+            "x": features["mappings"]["target"],
+            "len": features["lengths"]["target"],
+        },
+    }

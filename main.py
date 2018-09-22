@@ -4,6 +4,7 @@ from tensorflow.python import debug as tf_debug  # pylint: disable=E0611
 from tsaplay.datasets.Dataset import Dataset, DATASETS
 from tsaplay.embeddings.Embedding import Embedding, EMBEDDINGS
 from tsaplay.models.Tang2016a.Lstm import Lstm
+from tsaplay.models.Tang2016a.TcLstm import TcLstm
 from tsaplay.experiments.Experiment import Experiment
 
 # from tsaplay.models.Zheng2018.LcrRot import LcrRot
@@ -34,7 +35,7 @@ experiment = Experiment(
         parser=DATASETS.DEBUG_PARSER,
         embedding=Embedding(path=EMBEDDINGS.DEBUG),
     ),
-    model=Lstm(),
+    model=TcLstm(),
     contd_tag="changin_regression_outputs",
     # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
 )

@@ -7,6 +7,7 @@ from tsaplay.models.Model import Model
 from tsaplay.models.Tang2016a.common import (
     params as default_params,
     tdlstm_input_fn,
+    tdlstm_serving_fn,
 )
 from tsaplay.utils._tf import dropout_lstm_cell
 
@@ -34,6 +35,9 @@ class TdLstm(Model):
             max_seq_length=self.params["max_seq_length"],
             eval_input=True,
         )
+
+    def _serving_input_fn(self):
+        return lambda features: tdlstm_serving_fn(features)
 
     def _model_fn(self):
         def _default(features, labels, mode, params=self.params):

@@ -94,17 +94,31 @@ def main():
     left_map = feat_dict["left_map"]
     target_map = feat_dict["target_map"]
     right_map = feat_dict["right_map"]
+    left_len = len(left_map)
+    right_len = len(right_map)
+    target_len = len(target_map)
+    sen_map = left_map + target_map + right_map
+    ctxt_map = left_map + right_map
+    lft_trg_map = left_map + target_map
+    trg_rht_map = list(reversed(target_map + right_map))
 
     context = Features(
         feature={
-            "sentence": Feature(bytes_list=BytesList(value=[sentence])),
-            "sen_length": Feature(int64_list=Int64List(value=[sen_length])),
+            "sen_lit": Feature(bytes_list=BytesList(value=[sentence])),
             "left_lit": Feature(bytes_list=BytesList(value=[left_lit])),
             "right_lit": Feature(bytes_list=BytesList(value=[right_lit])),
             "target_lit": Feature(bytes_list=BytesList(value=[target])),
+            "sen_len": Feature(int64_list=Int64List(value=[sen_length])),
+            "left_len": Feature(int64_list=Int64List(value=[left_len])),
+            "right_len": Feature(int64_list=Int64List(value=[right_len])),
+            "target_len": Feature(int64_list=Int64List(value=[target_len])),
+            "sen_map": Feature(int64_list=Int64List(value=sen_map)),
+            "right_map": Feature(int64_list=Int64List(value=right_map)),
             "left_map": Feature(int64_list=Int64List(value=left_map)),
             "target_map": Feature(int64_list=Int64List(value=target_map)),
-            "right_map": Feature(int64_list=Int64List(value=right_map)),
+            "ctxt_map": Feature(int64_list=Int64List(value=ctxt_map)),
+            "lft_trg_map": Feature(int64_list=Int64List(value=lft_trg_map)),
+            "trg_rht_map": Feature(int64_list=Int64List(value=trg_rht_map)),
         }
     )
 

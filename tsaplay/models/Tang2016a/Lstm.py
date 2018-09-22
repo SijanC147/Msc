@@ -7,6 +7,7 @@ from tsaplay.models.Model import Model
 from tsaplay.models.Tang2016a.common import (
     params as default_params,
     lstm_input_fn,
+    lstm_serving_fn,
 )
 from tsaplay.utils._tf import dropout_lstm_cell
 
@@ -36,10 +37,7 @@ class Lstm(Model):
         )
 
     def _serving_input_fn(self):
-        return lambda features: {
-            "x": features["mappings"]["left"],
-            "len": features["sentence_length"],
-        }
+        return lambda features: lstm_serving_fn(features)
 
     def _model_fn(self):
         def _default(features, labels, mode, params=self.params):

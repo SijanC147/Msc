@@ -16,6 +16,7 @@ from datetime import timedelta
 from time import time as _time
 from abc import ABC, abstractmethod
 from functools import wraps
+from tsaplay.utils._tf import get_dense_tensor
 from tsaplay.utils.SaveConfusionMatrixHook import SaveConfusionMatrixHook
 from tsaplay.utils.SaveAttentionWeightVectorHook import (
     SaveAttentionWeightVectorHook
@@ -90,7 +91,7 @@ class Model(ABC):
     @property
     def serving_input_fn(self):
         if self.__serving_input_fn is None:
-            self.serving_input_fn = self._srving_input_fn()
+            self.serving_input_fn = self._serving_input_fn()
         return self.__serving_input_fn
 
     @property
@@ -189,54 +190,62 @@ class Model(ABC):
             inputs_serialized = tf.placeholder(dtype=tf.string, shape=[1])
 
             feature_spec = {
-                "sentence": tf.FixedLenFeature(dtype=tf.string, shape=[1]),
+                "sen_lit": tf.FixedLenFeature(dtype=tf.string, shape=[1]),
                 "target_lit": tf.FixedLenFeature(dtype=tf.string, shape=[1]),
                 "left_lit": tf.FixedLenFeature(dtype=tf.string, shape=[1]),
                 "right_lit": tf.FixedLenFeature(dtype=tf.string, shape=[1]),
-                "sen_length": tf.FixedLenFeature(dtype=tf.int64, shape=[]),
+                "sen_len": tf.FixedLenFeature(dtype=tf.int64, shape=[]),
+                "left_len": tf.FixedLenFeature(dtype=tf.int64, shape=[]),
+                "right_len": tf.FixedLenFeature(dtype=tf.int64, shape=[]),
+                "target_len": tf.FixedLenFeature(dtype=tf.int64, shape=[]),
                 "left_map": tf.VarLenFeature(dtype=tf.int64),
                 "right_map": tf.VarLenFeature(dtype=tf.int64),
                 "target_map": tf.VarLenFeature(dtype=tf.int64),
+                "sen_map": tf.VarLenFeature(dtype=tf.int64),
+                "ctxt_map": tf.VarLenFeature(dtype=tf.int64),
+                "lft_trg_map": tf.VarLenFeature(dtype=tf.int64),
+                "trg_rht_map": tf.VarLenFeature(dtype=tf.int64),
             }
 
             input_features = tf.parse_example(inputs_serialized, feature_spec)
 
-            left_map = tf.sparse_to_dense(
-                input_features["left_map"].indices,
-                input_features["left_map"].dense_shape,
-                input_features["left_map"].values,
-            )
-            target_map = tf.sparse_to_dense(
-                input_features["target_map"].indices,
-                input_features["target_map"].dense_shape,
-                input_features["target_map"].values,
-            )
-            right_map = tf.sparse_to_dense(
-                input_features["right_map"].indices,
-                input_features["right_map"].dense_shape,
-                input_features["right_map"].values,
-            )
+            left_map = get_dense_tensor(input_features["left_map"])
+            target_map = get_dense_tensor(input_features["target_map"])
+            right_map = get_dense_tensor(input_features["right_map"])
+            sen_map = get_dense_tensor(input_features["sen_map"])
+            ctxt_map = get_dense_tensor(input_features["ctxt_map"])
+            lft_trg_map = get_dense_tensor(input_features["lft_trg_map"])
+            trg_rht_map = get_dense_tensor(input_features["trg_rht_map"])
 
-            standard_features = {
-                "sentence": input_features["sentence"],
-                "sentence_length": input_features["sen_length"],
-                "target": input_features["target_lit"],
-                "left": input_features["left_lit"],
-                "right": input_features["right_lit"],
+            std_feat = {
+                "literals": {
+                    "sentence": input_features["sen_lit"],
+                    "target": input_features["target_lit"],
+                    "left": input_features["left_lit"],
+                    "right": input_features["right_lit"],
+                },
+                "lengths": {
+                    "sentence": input_features["sen_len"],
+                    "left": input_features["sen_len"],
+                    "right": input_features["sen_len"],
+                    "target": input_features["sen_len"],
+                },
                 "mappings": {
                     "left": left_map,
                     "target": target_map,
                     "right": right_map,
+                    "sentence": sen_map,
+                    "context": ctxt_map,
+                    "left_target": lft_trg_map,
+                    "target_right": trg_rht_map,
                 },
             }
 
-            custom_features = self.__serving_input_fn(standard_features)
+            input_feat = self.__serving_input_fn(std_feat)
 
             inputs = {"instances": inputs_serialized}
 
-            return tf.estimator.export.ServingInputReceiver(
-                custom_features, inputs
-            )
+            return tf.estimator.export.ServingInputReceiver(input_feat, inputs)
 
         return serving_input_receiver_fn
 
@@ -374,7 +383,12 @@ class Model(ABC):
             tf.summary.scalar("auc", std_metrics["auc"][1])
             if mode == ModeKeys.EVAL:
                 all_eval_hooks = spec.evaluation_hooks or []
-                if features.get("target") is not None:
+                targets = features.get("target")
+                target_literals_available = (
+                    isinstance(targets, dict)
+                    and targets.get("lit") is not None
+                )
+                if target_literals_available:
                     attn_hook = SaveAttentionWeightVectorHook(
                         labels=labels,
                         predictions=spec.predictions["class_ids"],
