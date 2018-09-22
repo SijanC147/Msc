@@ -10,7 +10,8 @@ from tsaplay.models.Tang2016a.TcLstm import TcLstm
 # from tsaplay.models.Tang2016a.TdLstm import TdLstm
 from tsaplay.experiments.Experiment import Experiment
 
-# from tsaplay.models.Zheng2018.LcrRot import LcrRot
+from tsaplay.models.Zheng2018.LcrRot import LcrRot
+
 # from tsaplay.models.Ma2017.InteractiveAttentionNetwork import (
 #     InteractiveAttentionNetwork
 # )
@@ -38,9 +39,9 @@ experiment = Experiment(
         parser=DATASETS.DEBUG_PARSER,
         embedding=Embedding(path=EMBEDDINGS.DEBUG),
     ),
-    model=MemNet(),
-    contd_tag="fixing_max_seq_len",
+    model=LcrRot(),
+    contd_tag="rotary_attention",
     # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
 )
-experiment.run(job="train+eval", steps=10)
+experiment.run(job="train+eval", steps=1)
 experiment.export_model(overwrite=True, restart_tfserve=True)

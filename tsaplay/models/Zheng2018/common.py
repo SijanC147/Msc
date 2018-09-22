@@ -54,3 +54,17 @@ def lcr_rot_input_fn(
     )
 
     return iterator.get_next()
+
+
+def lcr_rot_serving_fn(features):
+    return {
+        "left_x": features["mappings"]["left"],
+        "left_len": features["lengths"]["left"],
+        "left_lit": features["literals"]["left"],
+        "target_x": features["mappings"]["target"],
+        "target_len": features["lengths"]["target"],
+        "target_lit": features["literals"]["target"],
+        "right_x": features["mappings"]["right"],
+        "right_len": features["lengths"]["right"],
+        "right_lit": features["literals"]["right"],
+    }

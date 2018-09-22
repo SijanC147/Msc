@@ -131,7 +131,7 @@ def main():
     classification_req = ClassificationRequest()
     inputs = Input(example_list=ExampleList(examples=[tf_example]))
     classification_req.input.CopyFrom(inputs)  # pylint: disable=E1101
-    classification_req.model_spec.name = "mfmsl"  # pylint: disable=E1101
+    classification_req.model_spec.name = "lra"  # pylint: disable=E1101
     classification = stub.Classify(classification_req, 60.0)
     print(classification)
 

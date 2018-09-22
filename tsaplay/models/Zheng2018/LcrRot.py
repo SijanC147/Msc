@@ -10,6 +10,7 @@ from tsaplay.models.Model import Model
 from tsaplay.models.Zheng2018.common import (
     params as default_params,
     lcr_rot_input_fn,
+    lcr_rot_serving_fn,
 )
 from tsaplay.utils._tf import (
     variable_len_batch_mean,
@@ -44,6 +45,9 @@ class LcrRot(Model):
             max_seq_length=self.params["max_seq_length"],
             eval_input=True,
         )
+
+    def _serving_input_fn(self):
+        return lambda features: lcr_rot_serving_fn(features)
 
     def _model_fn(self):
         def default(features, labels, mode, params=self.params):

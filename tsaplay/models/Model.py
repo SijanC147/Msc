@@ -226,9 +226,9 @@ class Model(ABC):
                 },
                 "lengths": {
                     "sentence": tf.cast(input_features["sen_len"], tf.int32),
-                    "left": tf.cast(input_features["sen_len"], tf.int32),
-                    "right": tf.cast(input_features["sen_len"], tf.int32),
-                    "target": tf.cast(input_features["sen_len"], tf.int32),
+                    "left": tf.cast(input_features["left_len"], tf.int32),
+                    "right": tf.cast(input_features["right_len"], tf.int32),
+                    "target": tf.cast(input_features["target_len"], tf.int32),
                 },
                 "mappings": {
                     "left": left_map,
