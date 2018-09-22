@@ -69,6 +69,9 @@ class TcLstm(Model):
                 reuse=True,
             )
 
+            max_left_len = tf.shape(left_inputs)[1]
+            max_right_len = tf.shape(right_inputs)[1]
+
             with tf.name_scope("target_connection"):
                 mean_target_embedding = variable_len_batch_mean(
                     input_tensor=target_embedding,
@@ -84,11 +87,7 @@ class TcLstm(Model):
                 )
                 left_inputs = tf.reshape(
                     tensor=left_inputs,
-                    shape=[
-                        -1,
-                        params["max_seq_length"],
-                        2 * params["embedding_dim"],
-                    ],
+                    shape=[-1, max_left_len, 2 * params["embedding_dim"]],
                 )
                 right_inputs = tf.stack(
                     values=[
@@ -100,11 +99,7 @@ class TcLstm(Model):
                 )
                 right_inputs = tf.reshape(
                     tensor=right_inputs,
-                    shape=[
-                        -1,
-                        params["max_seq_length"],
-                        2 * params["embedding_dim"],
-                    ],
+                    shape=[-1, max_right_len, 2 * params["embedding_dim"]],
                 )
 
             with tf.variable_scope("left_lstm"):

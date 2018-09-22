@@ -60,6 +60,26 @@ def memnet_input_fn(
     return iterator.get_next()
 
 
+def memnet_serving_fn(features):
+    return {
+        "context_x": features["mappings"]["context"],
+        "context_len": tf.add(
+            features["lengths"]["left"], features["lengths"]["right"]
+        ),
+        "context_lit": tf.strings.join(
+            [features["literals"]["left"], features["literals"]["right"]],
+            separator=" ",
+        ),
+        "target_x": features["mappings"]["target"],
+        "target_len": features["lengths"]["target"],
+        "target_lit": features["literals"]["target"],
+        "target_loc": tf.add(
+            features["lengths"]["left"],
+            tf.ones_like(features["lengths"]["left"]),
+        ),
+    }
+
+
 def get_location_vector_model(model_num):
     location_vector_model = {
         1: location_vector_model_one,
@@ -90,9 +110,8 @@ def get_absolute_distance_vector(target_locs, seq_lens, max_seq_len):
     return abs_dist_masked
 
 
-def zip_hop_attn_snapshots_with_literals(
-    literals, snapshots, max_len, num_hops
-):
+def zip_hop_attn_snapshots_with_literals(literals, snapshots, num_hops):
+    max_len = tf.shape(snapshots)[2]
     snapshots = tf.transpose(snapshots, perm=[1, 0, 2, 3])
     snapshots = tf.reshape(snapshots, shape=[-1, max_len, 1])
 
@@ -181,9 +200,7 @@ def location_vector_model_four(locs, seq_lens, emb_dim, init, hop=None):
     return v_loc
 
 
-def content_attention_model(
-    seq_lens, memory, v_aspect, emb_dim, init, literal=None
-):
+def content_attention_model(seq_lens, memory, v_aspect, emb_dim, init):
     batch_size = tf.shape(memory)[0]
     max_seq_len = tf.shape(memory)[1]
     w_att = tf.get_variable(

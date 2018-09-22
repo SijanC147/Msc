@@ -6,14 +6,15 @@ from tsaplay.embeddings.Embedding import Embedding, EMBEDDINGS
 
 # from tsaplay.models.Tang2016a.Lstm import Lstm
 from tsaplay.models.Tang2016a.TcLstm import TcLstm
-from tsaplay.models.Tang2016a.TdLstm import TdLstm
+
+# from tsaplay.models.Tang2016a.TdLstm import TdLstm
 from tsaplay.experiments.Experiment import Experiment
 
 # from tsaplay.models.Zheng2018.LcrRot import LcrRot
 # from tsaplay.models.Ma2017.InteractiveAttentionNetwork import (
 #     InteractiveAttentionNetwork
 # )
-# from tsaplay.models.Tang2016b.MemNet import MemNet
+from tsaplay.models.Tang2016b.MemNet import MemNet
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
@@ -37,9 +38,9 @@ experiment = Experiment(
         parser=DATASETS.DEBUG_PARSER,
         embedding=Embedding(path=EMBEDDINGS.DEBUG),
     ),
-    model=TdLstm(),
-    contd_tag="changin_regression_outputs",
+    model=MemNet(),
+    contd_tag="fixing_max_seq_len",
     # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
 )
-experiment.run(job="train+eval", steps=3)
+experiment.run(job="train+eval", steps=10)
 experiment.export_model(overwrite=True, restart_tfserve=True)

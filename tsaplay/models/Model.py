@@ -190,10 +190,10 @@ class Model(ABC):
             inputs_serialized = tf.placeholder(dtype=tf.string, shape=[1])
 
             feature_spec = {
-                "sen_lit": tf.FixedLenFeature(dtype=tf.string, shape=[1]),
-                "target_lit": tf.FixedLenFeature(dtype=tf.string, shape=[1]),
-                "left_lit": tf.FixedLenFeature(dtype=tf.string, shape=[1]),
-                "right_lit": tf.FixedLenFeature(dtype=tf.string, shape=[1]),
+                "sen_lit": tf.FixedLenFeature(dtype=tf.string, shape=[]),
+                "target_lit": tf.FixedLenFeature(dtype=tf.string, shape=[]),
+                "left_lit": tf.FixedLenFeature(dtype=tf.string, shape=[]),
+                "right_lit": tf.FixedLenFeature(dtype=tf.string, shape=[]),
                 "sen_len": tf.FixedLenFeature(dtype=tf.int64, shape=[]),
                 "left_len": tf.FixedLenFeature(dtype=tf.int64, shape=[]),
                 "right_len": tf.FixedLenFeature(dtype=tf.int64, shape=[]),
@@ -225,10 +225,10 @@ class Model(ABC):
                     "right": input_features["right_lit"],
                 },
                 "lengths": {
-                    "sentence": input_features["sen_len"],
-                    "left": input_features["sen_len"],
-                    "right": input_features["sen_len"],
-                    "target": input_features["sen_len"],
+                    "sentence": tf.cast(input_features["sen_len"], tf.int32),
+                    "left": tf.cast(input_features["sen_len"], tf.int32),
+                    "right": tf.cast(input_features["sen_len"], tf.int32),
+                    "target": tf.cast(input_features["sen_len"], tf.int32),
                 },
                 "mappings": {
                     "left": left_map,

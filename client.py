@@ -123,7 +123,6 @@ def main():
     )
 
     tf_example = Example(features=context)
-    serialized = tf_example.SerializeToString()
 
     channel = implementations.insecure_channel(host="127.0.0.1", port=8500)
     stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
@@ -132,17 +131,18 @@ def main():
     classification_req = ClassificationRequest()
     inputs = Input(example_list=ExampleList(examples=[tf_example]))
     classification_req.input.CopyFrom(inputs)  # pylint: disable=E1101
-    classification_req.model_spec.name = "lcro"  # pylint: disable=E1101
+    classification_req.model_spec.name = "mfmsl"  # pylint: disable=E1101
     classification = stub.Classify(classification_req, 60.0)
     print(classification)
 
     # PREDICTION
-    prediction_req = PredictRequest()
-    tensor_proto = make_tensor_proto(serialized, dtype=tf.string, shape=[1])
-    prediction_req.inputs["instances"].CopyFrom(  # pylint: disable=E1101
-        tensor_proto
-    )
-    prediction_req.model_spec.name = "tcro1"  # pylint: disable=E1101
+    # serialized = tf_example.SerializeToString()
+    # prediction_req = PredictRequest()
+    # tensor_proto = make_tensor_proto(serialized, dtype=tf.string, shape=[1])
+    # prediction_req.inputs["instances"].CopyFrom(  # pylint: disable=E1101
+    #     tensor_proto
+    # )
+    # prediction_req.model_spec.name = "tcro1"  # pylint: disable=E1101
     # prediction = stub.Predict(prediciton_req, 60.0)
     # print(prediction)
 
