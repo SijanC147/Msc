@@ -102,6 +102,11 @@ def make_example(feat_dict):
     lft_trg_map = left_map + target_map
     trg_rht_map = list(reversed(target_map + right_map))
 
+    if left_len == 0:
+        left_map += [0]
+    if right_len == 0:
+        right_map += [0]
+
     context = Features(
         feature={
             "sen_lit": Feature(bytes_list=BytesList(value=[sentence])),
@@ -140,14 +145,14 @@ def main():
             with open(batch_file, "r") as f:
                 for line in f:
                     target, _, phrase = line.partition(",")
-                    phrases.append(phrase)
-                    targets.append(target)
+                    phrases.append(phrase.strip())
+                    targets.append(target.strip())
         elif batch_file_ext == ".csv":
             with open(batch_file, "r") as f:
                 csvreader = DictReader(f, fieldnames=["target", "phrase"])
                 for row in csvreader:
-                    phrases.append(row["phrase"])
-                    targets.append(row["target"])
+                    phrases.append(row["phrase"].strip())
+                    targets.append(row["target"].strip())
         else:
             print("supported batch_file types: txt, csv")
             return
