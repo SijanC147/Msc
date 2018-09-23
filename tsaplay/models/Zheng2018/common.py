@@ -3,7 +3,7 @@ from tensorflow.python.keras.preprocessing import (  # pylint: disable=E0611
     sequence
 )
 from tsaplay.utils._data import (
-    prep_features_for_dataset,
+    pad_for_dataset,
     package_feature_dict,
     prep_dataset_and_get_iterator,
 )
@@ -21,27 +21,19 @@ params = {
 }
 
 
-def lcr_rot_input_fn(
-    features, labels, batch_size, max_seq_length, eval_input=False
-):
+def lcr_rot_input_fn(features, labels, batch_size, eval_input=False):
 
-    left_map, left_len = prep_features_for_dataset(
-        mappings=features["mappings"]["left"], max_seq_length=max_seq_length
-    )
+    left_map, left_len = pad_for_dataset(features["mappings"]["left"])
     left = package_feature_dict(
         left_map, left_len, literal=features["left"], key="left"
     )
 
-    right_map, right_len = prep_features_for_dataset(
-        mappings=features["mappings"]["right"], max_seq_length=max_seq_length
-    )
+    right_map, right_len = pad_for_dataset(features["mappings"]["right"])
     right = package_feature_dict(
         right_map, right_len, literal=features["right"], key="right"
     )
 
-    target_map, target_len = prep_features_for_dataset(
-        mappings=features["mappings"]["target"]
-    )
+    target_map, target_len = pad_for_dataset(features["mappings"]["target"])
     target = package_feature_dict(
         target_map, target_len, literal=features["target"], key="target"
     )

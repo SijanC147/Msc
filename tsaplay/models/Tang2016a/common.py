@@ -5,7 +5,7 @@ from tensorflow.python.keras.preprocessing import (  # pylint: disable=E0611
 from tsaplay.utils._data import (
     prep_dataset_and_get_iterator,
     zip_list_join,
-    prep_features_for_dataset,
+    pad_for_dataset,
     package_feature_dict,
     make_labels_dataset_from_list,
 )
@@ -21,9 +21,7 @@ params = {
 }
 
 
-def lstm_input_fn(
-    features, labels, batch_size, max_seq_length, eval_input=False
-):
+def lstm_input_fn(features, labels, batch_size, eval_input=False):
     sentences = [
         l + t + r
         for l, t, r in zip(
@@ -32,9 +30,7 @@ def lstm_input_fn(
             features["mappings"]["right"],
         )
     ]
-    sen_map, sen_len = prep_features_for_dataset(
-        mappings=sentences, max_seq_length=max_seq_length
-    )
+    sen_map, sen_len = pad_for_dataset(sentences)
     sentence = package_feature_dict(sen_map, sen_len)
 
     iterator = prep_dataset_and_get_iterator(
@@ -54,16 +50,12 @@ def lstm_serving_fn(features):
     }
 
 
-def tdlstm_input_fn(
-    features, labels, batch_size, max_seq_length, eval_input=False
-):
+def tdlstm_input_fn(features, labels, batch_size, eval_input=False):
     left_contexts = zip_list_join(
         features["mappings"]["left"], features["mappings"]["target"]
     )
 
-    left_map, left_len = prep_features_for_dataset(
-        mappings=left_contexts, max_seq_length=max_seq_length
-    )
+    left_map, left_len = pad_for_dataset(left_contexts)
     left = package_feature_dict(left_map, left_len, key="left")
 
     right_contexts = zip_list_join(
@@ -71,9 +63,7 @@ def tdlstm_input_fn(
         features["mappings"]["left"],
         reverse=True,
     )
-    right_map, right_len = prep_features_for_dataset(
-        mappings=right_contexts, max_seq_length=max_seq_length
-    )
+    right_map, right_len = pad_for_dataset(right_contexts)
     right = package_feature_dict(right_map, right_len, key="right")
 
     iterator = prep_dataset_and_get_iterator(
@@ -99,15 +89,11 @@ def tdlstm_serving_fn(features):
     }
 
 
-def tclstm_input_fn(
-    features, labels, batch_size, max_seq_length, eval_input=False
-):
+def tclstm_input_fn(features, labels, batch_size, eval_input=False):
     left_contexts = zip_list_join(
         features["mappings"]["left"], features["mappings"]["target"]
     )
-    left_map, left_len = prep_features_for_dataset(
-        mappings=left_contexts, max_seq_length=max_seq_length
-    )
+    left_map, left_len = pad_for_dataset(left_contexts)
     left = package_feature_dict(left_map, left_len, key="left")
 
     right_contexts = zip_list_join(
@@ -115,14 +101,10 @@ def tclstm_input_fn(
         features["mappings"]["left"],
         reverse=True,
     )
-    right_map, right_len = prep_features_for_dataset(
-        mappings=right_contexts, max_seq_length=max_seq_length
-    )
+    right_map, right_len = pad_for_dataset(right_contexts)
     right = package_feature_dict(right_map, right_len, key="right")
 
-    target_map, target_len = prep_features_for_dataset(
-        mappings=features["mappings"]["target"]
-    )
+    target_map, target_len = pad_for_dataset(features["mappings"]["target"])
     target = package_feature_dict(target_map, target_len, key="target")
 
     iterator = prep_dataset_and_get_iterator(

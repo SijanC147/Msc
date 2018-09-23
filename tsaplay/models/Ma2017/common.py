@@ -5,7 +5,7 @@ from tensorflow.python.keras.preprocessing import (  # pylint: disable=E0611
 from tsaplay.utils._data import (
     zip_list_join,
     zip_str_join,
-    prep_features_for_dataset,
+    pad_for_dataset,
     package_feature_dict,
     prep_dataset_and_get_iterator,
 )
@@ -23,22 +23,18 @@ params = {
 }
 
 
-def ian_input_fn(
-    features, labels, batch_size, max_seq_length, eval_input=False
-):
+def ian_input_fn(features, labels, batch_size, eval_input=False):
     context_literals = zip_str_join(features["left"], features["right"])
     context_mappings = zip_list_join(
         features["mappings"]["left"], features["mappings"]["right"]
     )
 
-    contexts_map, contexts_len = prep_features_for_dataset(
-        mappings=context_mappings, max_seq_length=max_seq_length
-    )
+    contexts_map, contexts_len = pad_for_dataset(mappings=context_mappings)
     contexts = package_feature_dict(
         contexts_map, contexts_len, literal=context_literals, key="context"
     )
 
-    target_map, target_len = prep_features_for_dataset(
+    target_map, target_len = pad_for_dataset(
         mappings=features["mappings"]["target"]
     )
     targets = package_feature_dict(

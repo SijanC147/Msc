@@ -21,11 +21,11 @@ def make_labels_dataset_from_list(labels):
     return tf.data.Dataset.from_tensor_slices(labels)
 
 
-def prep_features_for_dataset(mappings, max_seq_length=None):
+def pad_for_dataset(mappings):
     lengths = [len(mapping) for mapping in mappings]
     mappings = sequence.pad_sequences(
         sequences=mappings,
-        maxlen=max_seq_length or max(lengths),
+        maxlen=max(lengths) + 1,
         truncating="post",
         padding="post",
         value=0,

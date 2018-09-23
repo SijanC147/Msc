@@ -34,14 +34,14 @@ debug_params = {
 
 experiment = Experiment(
     dataset=Dataset(
-        path=DATASETS.DEBUG_PATH,
-        parser=DATASETS.DEBUG_PARSER,
-        embedding=Embedding(path=EMBEDDINGS.DEBUG),
+        path=DATASETS.DONG2014_PATH,
+        parser=DATASETS.DONG2014_PARSER,
+        embedding=Embedding(path=EMBEDDINGS.GLOVE_TWITTER_25D),
     ),
-    model=MemNet(),
-    contd_tag="test_embedding_fns",
+    model=LcrRot(),
+    contd_tag="test_not_using_max_seq_length",
     # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
 )
-experiment.run(job="train+eval", steps=7)
-experiment.export_model(overwrite=True)
+experiment.run(job="train+eval", steps=300)
+# experiment.export_model(overwrite=True)
 # experiment.export_model(overwrite=True, restart_tfserve=True)

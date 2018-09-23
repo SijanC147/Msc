@@ -25,19 +25,12 @@ class TdLstm(Model):
 
     def _train_input_fn(self):
         return lambda features, labels, batch_size: tdlstm_input_fn(
-            features,
-            labels,
-            batch_size,
-            max_seq_length=self.params["max_seq_length"],
+            features, labels, batch_size
         )
 
     def _eval_input_fn(self):
         return lambda features, labels, batch_size: tdlstm_input_fn(
-            features,
-            labels,
-            batch_size,
-            max_seq_length=self.params["max_seq_length"],
-            eval_input=True,
+            features, labels, batch_size, eval_input=True
         )
 
     def _serving_input_fn(self):
