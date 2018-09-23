@@ -33,28 +33,20 @@ debug_params = {
     "initializer": tf.initializers.random_uniform(minval=-0.1, maxval=0.1),
 }
 
-restaurants = Dataset(
-    path=DATASETS.XUE2018_RESTAURANTS_PATH, parser=DATASETS.XUE2018_PARSER
-)
-laptops = Dataset(
-    path=DATASETS.XUE2018_LAPTOPS_PATH, parser=DATASETS.XUE2018_PARSER
-)
 
-rest_lapt = bundle_datasets(restaurants, laptops)
-
-# experiment = Experiment(
-#     dataset=Dataset(
-#         path=DATASETS.DEBUG_PATH,
-#         parser=DATASETS.DEBUG_PARSER,
-#         embedding=Embedding(path=EMBEDDINGS.DEBUG),
-#     ),
-#     model=LcrRot(),
-#     contd_tag="debug",
-#     # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
-# )
-# experiment.run(job="train+eval", steps=1)
-# # experiment.export_model(overwrite=True)
-# experiment.export_model(overwrite=True, restart_tfserve=True)
+experiment = Experiment(
+    dataset=Dataset(
+        path=DATASETS.DEBUG_PATH,
+        parser=DATASETS.DEBUG_PARSER,
+        embedding=Embedding(path=EMBEDDINGS.DEBUG),
+    ),
+    model=LcrRot(),
+    contd_tag="debug",
+    # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
+)
+experiment.run(job="train+eval", steps=1)
+# experiment.export_model(overwrite=True)
+experiment.export_model(overwrite=True, restart_tfserve=True)
 # experiment = Experiment(
 #     dataset=Dataset(
 #         path=DATASETS.XUE2018_LAPTOPS_PATH,
