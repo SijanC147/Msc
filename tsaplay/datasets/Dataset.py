@@ -315,6 +315,7 @@ class Dataset:
                     "sentences": sentences,
                     "targets": targets,
                     "labels": labels,
+                    "offsets": [None] * len(labels),
                 }
 
         return wrapper
