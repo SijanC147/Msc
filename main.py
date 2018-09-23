@@ -42,6 +42,6 @@ experiment = Experiment(
     contd_tag="test_not_using_max_seq_length",
     # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
 )
-experiment.run(job="train+eval", steps=300)
+experiment.run(job="train+eval", steps=600)
 # experiment.export_model(overwrite=True)
-# experiment.export_model(overwrite=True, restart_tfserve=True)
+experiment.export_model(overwrite=True, restart_tfserve=True)

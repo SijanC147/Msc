@@ -241,11 +241,10 @@ def corpus_from_docs(docs):
 
 def get_sentence_contexts(sentence, target, offset=None):
     if offset is None:
-        left, _, right = sentence.partition(target)
-    else:
-        left = sentence[:offset]
-        start = offset + len(target)
-        right = sentence[start:]
+        offset = sentence.lower().find(target.lower())
+    left = sentence[:offset]
+    start = offset + len(target)
+    right = sentence[start:]
     return left.strip(), right.strip()
 
 
