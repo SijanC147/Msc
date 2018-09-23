@@ -1,9 +1,13 @@
 import tensorflow as tf
 from itertools import chain
+from os import makedirs
+from os.path import join, exists
 from collections import defaultdict
 from tensorflow.python.keras.preprocessing import (  # pylint: disable=E0611
     sequence
 )
+from tsaplay.datasets.Dataset import Dataset, DATASETS
+from tsaplay.utils._io import pickle_file
 
 
 def zip_str_join(first, second):
@@ -22,6 +26,33 @@ def concat_dicts_lists(first, second):
         new_dict[k] = new_dict[k] + v
 
     return dict(new_dict)
+
+
+def bundle_datasets(*datasets, rebuild=False):
+    dataset_names = []
+    train_dict = {}
+    test_dict = {}
+    for dataset in datasets:
+        if isinstance(dataset, Dataset) and dataset.name not in dataset_names:
+            dataset_names.append(dataset.name)
+            train_dict = concat_dicts_lists(dataset.train_dict, train_dict)
+            test_dict = concat_dicts_lists(dataset.test_dict, test_dict)
+
+    dataset_name = "_".join(dataset_names)
+    gen_path = join(DATASETS.PARENT_DIR, "_generated", dataset_name)
+
+    makedirs(gen_path, exist_ok=True)
+
+    train_dict_path = join(gen_path, "train_dict.pkl")
+    test_dict_path = join(gen_path, "test_dict.pkl")
+
+    if not exists(train_dict_path) and not rebuild:
+        pickle_file(train_dict_path, train_dict)
+
+    if not exists(test_dict_path) and not rebuild:
+        pickle_file(test_dict_path, test_dict)
+
+    return Dataset(path=gen_path, parser=None)
 
 
 def make_labels_dataset_from_list(labels):

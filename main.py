@@ -15,6 +15,7 @@ from tsaplay.models.Ma2017.InteractiveAttentionNetwork import (
     InteractiveAttentionNetwork
 )
 from tsaplay.models.Tang2016b.MemNet import MemNet
+from tsaplay.utils._data import bundle_datasets
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
@@ -32,19 +33,28 @@ debug_params = {
     "initializer": tf.initializers.random_uniform(minval=-0.1, maxval=0.1),
 }
 
-experiment = Experiment(
-    dataset=Dataset(
-        path=DATASETS.DEBUG_PATH,
-        parser=DATASETS.DEBUG_PARSER,
-        embedding=Embedding(path=EMBEDDINGS.DEBUG),
-    ),
-    model=LcrRot(),
-    contd_tag="debug",
-    # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
+restaurants = Dataset(
+    path=DATASETS.XUE2018_RESTAURANTS_PATH, parser=DATASETS.XUE2018_PARSER
 )
-experiment.run(job="train+eval", steps=1)
-# experiment.export_model(overwrite=True)
-experiment.export_model(overwrite=True, restart_tfserve=True)
+laptops = Dataset(
+    path=DATASETS.XUE2018_LAPTOPS_PATH, parser=DATASETS.XUE2018_PARSER
+)
+
+rest_lapt = bundle_datasets(restaurants, laptops)
+
+# experiment = Experiment(
+#     dataset=Dataset(
+#         path=DATASETS.DEBUG_PATH,
+#         parser=DATASETS.DEBUG_PARSER,
+#         embedding=Embedding(path=EMBEDDINGS.DEBUG),
+#     ),
+#     model=LcrRot(),
+#     contd_tag="debug",
+#     # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
+# )
+# experiment.run(job="train+eval", steps=1)
+# # experiment.export_model(overwrite=True)
+# experiment.export_model(overwrite=True, restart_tfserve=True)
 # experiment = Experiment(
 #     dataset=Dataset(
 #         path=DATASETS.XUE2018_LAPTOPS_PATH,
