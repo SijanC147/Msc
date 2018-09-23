@@ -1,4 +1,6 @@
 import tensorflow as tf
+from itertools import chain
+from collections import defaultdict
 from tensorflow.python.keras.preprocessing import (  # pylint: disable=E0611
     sequence
 )
@@ -12,6 +14,14 @@ def zip_list_join(first, second, reverse=False):
     if reverse:
         return [list(reversed(f + s)) for f, s in zip(first, second)]
     return [f + s for f, s in zip(first, second)]
+
+
+def concat_dicts_lists(first, second):
+    new_dict = defaultdict(list)
+    for k, v in chain(first.items(), second.items()):
+        new_dict[k] = new_dict[k] + v
+
+    return dict(new_dict)
 
 
 def make_labels_dataset_from_list(labels):

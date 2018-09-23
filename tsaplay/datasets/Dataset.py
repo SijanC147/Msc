@@ -20,6 +20,7 @@ from tsaplay.utils._io import (
     unpickle_file as _unpickle,
     pickle_file as _pickle,
 )
+from tsaplay.utils._data import concat_dicts_lists
 import tsaplay.datasets._constants as DATASETS
 
 
@@ -219,6 +220,23 @@ class Dataset:
         stats = inspect_dist(features=features, labels=labels)
 
         return features, labels, stats
+
+    def __add__(self, other):
+        if isinstance(other, Dataset):
+            gen_name = "_".join([self.name, other.name])
+            gen_path = join(DATASETS.PARENT_DIR, "_generated", gen_name)
+
+            joined_train_dict = concat_dicts_lists(
+                self.train_dict, other.train_dict
+            )
+            joined_test_dict = concat_dicts_lists(
+                self.test_dict, other.test_dict
+            )
+
+            _pickle(joined_train_dict, join(gen_path, "train_dict.pkl"))
+            _pickle(joined_test_dict, join(gen_path, "test_dict.pkl"))
+
+            return Dataset(path=gen_path, parser=None)
 
     def _reset(self, path):
         self.__path = path
