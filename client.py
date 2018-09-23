@@ -128,23 +128,26 @@ def main():
     stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 
     # CLASSIFICATION
-    classification_req = ClassificationRequest()
-    inputs = Input(example_list=ExampleList(examples=[tf_example]))
-    classification_req.input.CopyFrom(inputs)  # pylint: disable=E1101
-    classification_req.model_spec.name = "ltnumsl"  # pylint: disable=E1101
-    classification = stub.Classify(classification_req, 60.0)
-    print(classification)
+    # classification_req = ClassificationRequest()
+    # inputs = Input(example_list=ExampleList(examples=[tf_example]))
+    # classification_req.input.CopyFrom(inputs)  # pylint: disable=E1101
+    # classification_req.model_spec.name = "lg"  # pylint: disable=E1101
+    # classification = stub.Classify(classification_req, 60.0)
+    # print(classification)
 
     # PREDICTION
-    # serialized = tf_example.SerializeToString()
-    # prediction_req = PredictRequest()
-    # tensor_proto = make_tensor_proto(serialized, dtype=tf.string, shape=[1])
-    # prediction_req.inputs["instances"].CopyFrom(  # pylint: disable=E1101
-    #     tensor_proto
-    # )
-    # prediction_req.model_spec.name = "tcro1"  # pylint: disable=E1101
-    # prediction = stub.Predict(prediciton_req, 60.0)
-    # print(prediction)
+    serialized = tf_example.SerializeToString()
+    prediction_req = PredictRequest()
+    tensor_proto = make_tensor_proto(serialized, dtype=tf.string, shape=[1])
+    prediction_req.inputs["instances"].CopyFrom(  # pylint: disable=E1101
+        tensor_proto
+    )
+    prediction_req.model_spec.signature_name = (  # pylint: disable=E1101
+        "outputs"
+    )
+    prediction_req.model_spec.name = "ld"  # pylint: disable=E1101
+    prediction = stub.Predict(prediction_req, 60.0)
+    print(prediction)
 
 
 if __name__ == "__main__":

@@ -4,6 +4,8 @@ from tensorflow.saved_model.signature_constants import (
     DEFAULT_SERVING_SIGNATURE_DEF_KEY,
     REGRESS_OUTPUTS,
     PREDICT_OUTPUTS,
+    CLASSIFY_OUTPUT_CLASSES,
+    CLASSIFY_OUTPUT_SCORES,
 )
 from tensorflow.estimator.export import (  # pylint: disable=E0401
     PredictOutput,
@@ -338,18 +340,15 @@ class Model(ABC):
         def wrapper(features, labels, mode, params):
             spec = _model_fn(features, labels, mode, params)
             if mode == ModeKeys.PREDICT:
-                logits = spec.predictions["logits"]
                 probs = spec.predictions["probabilities"]
+                classes = tf.constant([["Negative", "Neutral", "Positive"]])
                 classify_output = ClassificationOutput(
-                    classes=tf.constant(
-                        [["Negative", "Neutral", "Positive"]], dtype=tf.string
-                    ),
-                    scores=probs,
+                    classes=classes, scores=probs
                 )
-                predict_output = PredictOutput(probs)
+                predict_output = PredictOutput(spec.predictions)
                 export_outputs = {
-                    # DEFAULT_SERVING_SIGNATURE_DEF_KEY: predict_output
-                    DEFAULT_SERVING_SIGNATURE_DEF_KEY: classify_output
+                    DEFAULT_SERVING_SIGNATURE_DEF_KEY: classify_output,
+                    PREDICT_OUTPUTS: predict_output,
                 }
                 all_export_outputs = spec.export_outputs or {}
                 all_export_outputs.update(export_outputs)
