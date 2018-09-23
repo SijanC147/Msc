@@ -34,29 +34,29 @@ debug_params = {
 }
 
 
-experiment = Experiment(
-    dataset=Dataset(
-        path=DATASETS.DEBUG_PATH,
-        parser=DATASETS.DEBUG_PARSER,
-        embedding=Embedding(path=EMBEDDINGS.DEBUG),
-    ),
-    model=LcrRot(),
-    contd_tag="debug",
-    # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
-)
-experiment.run(job="train+eval", steps=1)
-# experiment.export_model(overwrite=True)
-experiment.export_model(overwrite=True, restart_tfserve=True)
 # experiment = Experiment(
 #     dataset=Dataset(
-#         path=DATASETS.XUE2018_LAPTOPS_PATH,
-#         parser=DATASETS.XUE2018_PARSER,
-#         embedding=Embedding(path=EMBEDDINGS.GLOVE_TWITTER_100D),
+#         path=DATASETS.DEBUG_PATH,
+#         parser=DATASETS.DEBUG_PARSER,
+#         embedding=Embedding(path=EMBEDDINGS.DEBUG),
 #     ),
 #     model=LcrRot(),
-#     contd_tag="gold",
+#     contd_tag="debug",
 #     # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
 # )
-# experiment.run(job="train+eval", steps=500)
+# experiment.run(job="train+eval", steps=1)
 # # experiment.export_model(overwrite=True)
 # experiment.export_model(overwrite=True, restart_tfserve=True)
+experiment = Experiment(
+    dataset=Dataset(
+        path=DATASETS.DONG2014_PATH,
+        parser=DATASETS.DONG2014_PARSER,
+        embedding=Embedding(path=EMBEDDINGS.GLOVE_TWITTER_100D),
+    ),
+    model=LcrRot(),
+    contd_tag="gold",
+    # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
+)
+experiment.run(job="train+eval", steps=500)
+# experiment.export_model(overwrite=True)
+experiment.export_model(overwrite=True, restart_tfserve=True)

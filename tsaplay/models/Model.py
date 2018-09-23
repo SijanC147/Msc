@@ -334,6 +334,8 @@ class Model(ABC):
     def _wrap_model_fn(self, _model_fn):
         @wraps(_model_fn)
         def wrapper(features, labels, mode, params):
+            if mode == ModeKeys.PREDICT:
+                params["keep_prob"] = 1
             spec = _model_fn(features, labels, mode, params)
             if mode == ModeKeys.PREDICT:
                 probs = spec.predictions["probabilities"]

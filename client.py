@@ -196,7 +196,7 @@ def main():
     prediction_req.model_spec.signature_name = (  # pylint: disable=E1101
         "inspect"
     )
-    prediction_req.model_spec.name = "ld"  # pylint: disable=E1101
+    prediction_req.model_spec.name = "lg"  # pylint: disable=E1101
     prediction = stub.Predict(prediction_req, 60.0)
     print(prediction)
 
