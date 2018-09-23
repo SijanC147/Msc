@@ -185,7 +185,7 @@ class Model(ABC):
         self.serving_input_fn = self._serving_input_fn()
 
         def serving_input_receiver_fn():
-            inputs_serialized = tf.placeholder(dtype=tf.string, shape=[1])
+            inputs_serialized = tf.placeholder(dtype=tf.string)
 
             feature_spec = {
                 "sen_lit": tf.FixedLenFeature(dtype=tf.string, shape=[]),

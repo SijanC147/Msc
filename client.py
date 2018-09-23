@@ -1,4 +1,3 @@
-import time
 import tensorflow as tf
 
 from argparse import ArgumentParser
@@ -12,7 +11,8 @@ from tensorflow_serving.apis import prediction_service_pb2_grpc
 from tensorflow.contrib.util import make_tensor_proto  # pylint: disable=E0611
 
 from os import getcwd, listdir
-from os.path import join, isfile
+from os.path import join, isfile, splitext
+from csv import DictReader
 
 from tensorflow.train import (
     Example,
@@ -45,11 +45,20 @@ def parse_args():
     )
 
     parser.add_argument(
+        "--batch_file",
+        "-b",
+        dest="batch_file",
+        type=str,
+        required=False,
+        help="Process batch of targets,phrases in file",
+    )
+
+    parser.add_argument(
         "--phrase",
         "-p",
         dest="phrase",
         type=str,
-        required=True,
+        required=False,
         help="Phrase to analyze, must contain the target",
     )
     parser.add_argument(
@@ -57,13 +66,13 @@ def parse_args():
         "-t",
         dest="target",
         type=str,
-        required=True,
+        required=False,
         help="Target to focus on, must be in the sentence",
     )
 
     args = parser.parse_args()
 
-    return args.phrase, args.target, args.model
+    return args.phrase, args.target, args.model, args.batch_file
 
 
 def get_export_embedding_path(model):
@@ -76,16 +85,7 @@ def get_export_embedding_path(model):
     return embedding_path
 
 
-def main():
-
-    phrase, target, model = parse_args()
-
-    export_embedding = Embedding(path=get_export_embedding_path(model))
-
-    feat_dict = get_sentence_target_features(
-        embedding=export_embedding, sentence=phrase, target=target
-    )
-
+def make_example(feat_dict):
     sentence = feat_dict["sentence"].encode()
     sen_length = feat_dict["sentence_len"]
     left_lit = feat_dict["left_lit"].encode()
@@ -122,7 +122,55 @@ def main():
         }
     )
 
-    tf_example = Example(features=context)
+    return Example(features=context)
+
+
+def main():
+
+    phrase, target, model, batch_file = parse_args()
+
+    export_embedding = Embedding(path=get_export_embedding_path(model))
+
+    if batch_file is not None:
+        tf_examples = []
+        phrases = []
+        targets = []
+        batch_file_ext = splitext(batch_file)[1]
+        if batch_file_ext == ".txt":
+            with open(batch_file, "r") as f:
+                for line in f:
+                    target, _, phrase = line.partition(",")
+                    phrases.append(phrase)
+                    targets.append(target)
+        elif batch_file_ext == ".csv":
+            with open(batch_file, "r") as f:
+                csvreader = DictReader(f, fieldnames=["target", "phrase"])
+                for row in csvreader:
+                    phrases.append(row["phrase"])
+                    targets.append(row["target"])
+        else:
+            print("supported batch_file types: txt, csv")
+            return
+
+        for (target, phrase) in zip(targets, phrases):
+            feat_dict = get_sentence_target_features(
+                embedding=export_embedding, sentence=phrase, target=target
+            )
+            tf_example = make_example(feat_dict)
+            tf_examples.append(tf_example.SerializeToString())
+        tensor_proto = make_tensor_proto(
+            tf_examples, dtype=tf.string, shape=[len(tf_examples)]
+        )
+
+    else:
+        feat_dict = get_sentence_target_features(
+            embedding=export_embedding, sentence=phrase, target=target
+        )
+        tf_example = make_example(feat_dict)
+        serialized = tf_example.SerializeToString()
+        tensor_proto = make_tensor_proto(
+            serialized, dtype=tf.string, shape=[1]
+        )
 
     channel = insecure_channel("127.0.0.1:8500")
     stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
@@ -136,9 +184,7 @@ def main():
     # print(classification)
 
     # PREDICTION
-    serialized = tf_example.SerializeToString()
     prediction_req = PredictRequest()
-    tensor_proto = make_tensor_proto(serialized, dtype=tf.string, shape=[1])
     prediction_req.inputs["instances"].CopyFrom(  # pylint: disable=E1101
         tensor_proto
     )
