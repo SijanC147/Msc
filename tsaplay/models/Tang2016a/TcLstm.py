@@ -9,7 +9,12 @@ from tsaplay.models.Tang2016a.common import (
     tclstm_input_fn,
     tclstm_serving_fn,
 )
-from tsaplay.utils._tf import variable_len_batch_mean, dropout_lstm_cell
+from tsaplay.utils._tf import (
+    variable_len_batch_mean,
+    dropout_lstm_cell,
+    setup_embedding_layer,
+    get_embedded_seq,
+)
 
 
 class TcLstm(Model):
@@ -41,64 +46,53 @@ class TcLstm(Model):
 
     def _model_fn(self):
         def _default(features, labels, mode, params=self.params):
-            with tf.variable_scope("embedding_layer", reuse=tf.AUTO_REUSE):
-                embeddings = tf.get_variable(
-                    "embeddings",
-                    shape=[params["vocab_size"], params["embedding_dim"]],
-                    initializer=params["embedding_initializer"],
-                )
-
-            target_embedding = tf.contrib.layers.embed_sequence(
-                ids=features["target_x"],
-                initializer=embeddings,
-                scope="embedding_layer",
-                reuse=True,
+            embedding_matrix = setup_embedding_layer(
+                vocab_size=params["vocab_size"],
+                dim_size=params["embedding_dim"],
+                init=params["embedding_initializer"],
             )
 
-            left_inputs = tf.contrib.layers.embed_sequence(
-                ids=features["left_x"],
-                initializer=embeddings,
-                scope="embedding_layer",
-                reuse=True,
+            left_embeddings = get_embedded_seq(
+                features["left_x"], embedding_matrix
+            )
+            target_embeddings = get_embedded_seq(
+                features["target_x"], embedding_matrix
+            )
+            right_embeddings = get_embedded_seq(
+                features["right_x"], embedding_matrix
             )
 
-            right_inputs = tf.contrib.layers.embed_sequence(
-                ids=features["right_x"],
-                initializer=embeddings,
-                scope="embedding_layer",
-                reuse=True,
-            )
-
-            max_left_len = tf.shape(left_inputs)[1]
-            max_right_len = tf.shape(right_inputs)[1]
+            max_left_len = tf.shape(left_embeddings)[1]
+            max_right_len = tf.shape(right_embeddings)[1]
 
             with tf.name_scope("target_connection"):
                 mean_target_embedding = variable_len_batch_mean(
-                    input_tensor=target_embedding,
+                    input_tensor=target_embeddings,
                     seq_lengths=features["target_len"],
                     op_name="target_embedding_avg",
                 )
-                left_inputs = tf.stack(
+                left_embeddings = tf.stack(
                     values=[
-                        left_inputs,
-                        tf.ones(tf.shape(left_inputs)) * mean_target_embedding,
-                    ],
-                    axis=2,
-                )
-                left_inputs = tf.reshape(
-                    tensor=left_inputs,
-                    shape=[-1, max_left_len, 2 * params["embedding_dim"]],
-                )
-                right_inputs = tf.stack(
-                    values=[
-                        right_inputs,
-                        tf.ones(tf.shape(right_inputs))
+                        left_embeddings,
+                        tf.ones(tf.shape(left_embeddings))
                         * mean_target_embedding,
                     ],
                     axis=2,
                 )
-                right_inputs = tf.reshape(
-                    tensor=right_inputs,
+                left_embeddings = tf.reshape(
+                    tensor=left_embeddings,
+                    shape=[-1, max_left_len, 2 * params["embedding_dim"]],
+                )
+                right_embeddings = tf.stack(
+                    values=[
+                        right_embeddings,
+                        tf.ones(tf.shape(right_embeddings))
+                        * mean_target_embedding,
+                    ],
+                    axis=2,
+                )
+                right_embeddings = tf.reshape(
+                    tensor=right_embeddings,
                     shape=[-1, max_right_len, 2 * params["embedding_dim"]],
                 )
 
@@ -109,7 +103,7 @@ class TcLstm(Model):
                         initializer=params["initializer"],
                         keep_prob=params["keep_prob"],
                     ),
-                    inputs=left_inputs,
+                    inputs=left_embeddings,
                     sequence_length=features["left_len"],
                     dtype=tf.float32,
                 )
@@ -121,7 +115,7 @@ class TcLstm(Model):
                         initializer=params["initializer"],
                         keep_prob=params["keep_prob"],
                     ),
-                    inputs=right_inputs,
+                    inputs=right_embeddings,
                     sequence_length=features["right_len"],
                     dtype=tf.float32,
                 )

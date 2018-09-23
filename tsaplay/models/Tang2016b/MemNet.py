@@ -16,6 +16,10 @@ from tsaplay.models.Tang2016b.common import (
 from tsaplay.utils._tf import (
     variable_len_batch_mean,
     generate_attn_heatmap_summary,
+    setup_embedding_layer,
+    get_embedded_seq,
+    append_snapshot,
+    create_snapshots_container,
 )
 
 
@@ -49,34 +53,23 @@ class MemNet(Model):
 
     def _model_fn(self):
         def default(features, labels, mode, params=self.params):
-            with tf.variable_scope("embedding_layer", reuse=tf.AUTO_REUSE):
-                embeddings = tf.get_variable(
-                    "embeddings",
-                    shape=[params["vocab_size"], params["embedding_dim"]],
-                    initializer=params["embedding_initializer"],
-                    trainable=False,
-                )
-
-            m = tf.contrib.layers.embed_sequence(
-                ids=features["context_x"],
-                initializer=embeddings,
-                scope="embedding_layer",
-                reuse=True,
+            embedding_matrix = setup_embedding_layer(
+                vocab_size=params["vocab_size"],
+                dim_size=params["embedding_dim"],
+                init=params["embedding_initializer"],
+                trainable=False,
+            )
+            memory = get_embedded_seq(features["context_x"], embedding_matrix)
+            target_embeddings = get_embedded_seq(
+                features["target_x"], embedding_matrix
             )
 
-            max_ctxt_len = tf.shape(m)[1]
+            max_ctxt_len = tf.shape(memory)[1]
 
             context_locations = get_absolute_distance_vector(
                 target_locs=features["target_loc"],
                 seq_lens=features["context_len"],
                 max_seq_len=max_ctxt_len,
-            )
-
-            target_embeddings = tf.contrib.layers.embed_sequence(
-                ids=features["target_x"],
-                initializer=embeddings,
-                scope="embedding_layer",
-                reuse=True,
             )
 
             v_aspect = variable_len_batch_mean(
@@ -85,10 +78,18 @@ class MemNet(Model):
                 op_name="target_embedding_avg",
             )
 
-            def condition(hop_num, input_vec, ext_memory, attn_snapshots):
+            attn_snapshots = create_snapshots_container(
+                shape_like=features["context_x"], n_snaps=params["n_hops"]
+            )
+
+            hop_number = tf.constant(1)
+
+            initial_hop_inputs = (hop_number, memory, v_aspect, attn_snapshots)
+
+            def condition(hop_num, ext_memory, input_vec, attn_snapshots):
                 return tf.less_equal(hop_num, params["n_hops"])
 
-            def hop(hop_num, input_vec, ext_memory, attn_snapshots):
+            def hop(hop_num, ext_memory, input_vec, attn_snapshots):
                 location_vector_model_fn = get_location_vector_model(
                     model_num=params["location_model"]
                 )
@@ -104,7 +105,7 @@ class MemNet(Model):
                 if params["location_model"] == 3:
                     ext_memory = ext_memory + v_loc
                 else:
-                    ext_memory = tf.multiply(m, v_loc)
+                    ext_memory = tf.multiply(memory, v_loc)
 
                 with tf.variable_scope("linear_layer", reuse=tf.AUTO_REUSE):
                     linear_out = tf.layers.dense(
@@ -124,48 +125,27 @@ class MemNet(Model):
                         init=params["initializer"],
                     )
 
-                attn_snapshot = tf.expand_dims(attn_snapshot, axis=0)
-                batch_diff = (
-                    tf.shape(attn_snapshots)[1] - tf.shape(attn_snapshot)[1]
+                attn_snapshots = append_snapshot(
+                    container=attn_snapshots,
+                    new_snap=attn_snapshot,
+                    index=hop_num,
                 )
-                attn_snapshot = tf.pad(
-                    attn_snapshot,
-                    paddings=[
-                        [hop_num - 1, params["n_hops"] - hop_num],
-                        [0, batch_diff],
-                        [0, 0],
-                        [0, 0],
-                    ],
-                )
-                attn_snapshots = tf.add(attn_snapshots, attn_snapshot)
 
                 output_vec = attn_out + linear_out
                 output_vec = tf.expand_dims(output_vec, axis=1)
 
                 hop_num = tf.add(hop_num, 1)
 
-                return (hop_num, output_vec, ext_memory, attn_snapshots)
+                return (hop_num, ext_memory, output_vec, attn_snapshots)
 
-            attn_snapshots = tf.zeros_like(
-                features["context_x"], dtype=tf.float32
-            )
-            attn_snapshots = tf.expand_dims(attn_snapshots, axis=0)
-            attn_snapshots = tf.expand_dims(attn_snapshots, axis=3)
-            attn_snapshots = tf.tile(
-                attn_snapshots, multiples=[params["n_hops"], 1, 1, 1]
-            )
-            hop_number = tf.constant(1)
-
-            initial_hop_inputs = (hop_number, v_aspect, m, attn_snapshots)
-
-            _, final_sentence_rep, _, attn_snapshots = tf.while_loop(
+            _, _, final_sentence_rep, attn_snapshots = tf.while_loop(
                 cond=condition,
                 body=hop,
                 loop_vars=initial_hop_inputs,
                 shape_invariants=(
                     hop_number.get_shape(),
+                    memory.get_shape(),
                     v_aspect.get_shape(),
-                    m.get_shape(),
                     tf.TensorShape(dims=[params["n_hops"], None, None, 1]),
                 ),
             )

@@ -18,6 +18,8 @@ from tsaplay.utils._tf import (
     dropout_lstm_cell,
     l2_regularized_loss,
     generate_attn_heatmap_summary,
+    setup_embedding_layer,
+    get_embedded_seq,
 )
 
 
@@ -51,33 +53,20 @@ class LcrRot(Model):
 
     def _model_fn(self):
         def default(features, labels, mode, params=self.params):
-            with tf.variable_scope("embedding_layer", reuse=tf.AUTO_REUSE):
-                embeddings = tf.get_variable(
-                    "embeddings",
-                    shape=[params["vocab_size"], params["embedding_dim"]],
-                    initializer=params["embedding_initializer"],
-                    trainable=False,
-                )
-
-            left_embeddings = tf.contrib.layers.embed_sequence(
-                ids=features["left_x"],
-                initializer=embeddings,
-                scope="embedding_layer",
-                reuse=True,
+            embedding_matrix = setup_embedding_layer(
+                vocab_size=params["vocab_size"],
+                dim_size=params["embedding_dim"],
+                init=params["embedding_initializer"],
             )
 
-            target_embeddings = tf.contrib.layers.embed_sequence(
-                ids=features["target_x"],
-                initializer=embeddings,
-                scope="embedding_layer",
-                reuse=True,
+            left_embeddings = get_embedded_seq(
+                features["left_x"], embedding_matrix
             )
-
-            right_embeddings = tf.contrib.layers.embed_sequence(
-                ids=features["right_x"],
-                initializer=embeddings,
-                scope="embedding_layer",
-                reuse=True,
+            target_embeddings = get_embedded_seq(
+                features["target_x"], embedding_matrix
+            )
+            right_embeddings = get_embedded_seq(
+                features["right_x"], embedding_matrix
             )
 
             with tf.variable_scope("target_bi_lstm"):

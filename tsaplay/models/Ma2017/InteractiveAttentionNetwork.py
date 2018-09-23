@@ -15,6 +15,8 @@ from tsaplay.utils._tf import (
     l2_regularized_loss,
     attention_unit,
     generate_attn_heatmap_summary,
+    setup_embedding_layer,
+    get_embedded_seq,
 )
 
 
@@ -48,26 +50,18 @@ class InteractiveAttentionNetwork(Model):
 
     def _model_fn(self):
         def default(features, labels, mode, params=self.params):
-            with tf.variable_scope("embedding_layer", reuse=tf.AUTO_REUSE):
-                embeddings = tf.get_variable(
-                    "embeddings",
-                    shape=[params["vocab_size"], params["embedding_dim"]],
-                    initializer=params["embedding_initializer"],
-                    trainable=False,
-                )
-
-            context_embeddings = tf.contrib.layers.embed_sequence(
-                ids=features["context_x"],
-                initializer=embeddings,
-                scope="embedding_layer",
-                reuse=True,
+            embedding_matrix = setup_embedding_layer(
+                vocab_size=params["vocab_size"],
+                dim_size=params["embedding_dim"],
+                init=params["embedding_initializer"],
+                trainable=False,
             )
 
-            target_embeddings = tf.contrib.layers.embed_sequence(
-                ids=features["target_x"],
-                initializer=embeddings,
-                scope="embedding_layer",
-                reuse=True,
+            context_embeddings = get_embedded_seq(
+                features["context_x"], embedding_matrix
+            )
+            target_embeddings = get_embedded_seq(
+                features["target_x"], embedding_matrix
             )
 
             with tf.variable_scope("context_lstm"):

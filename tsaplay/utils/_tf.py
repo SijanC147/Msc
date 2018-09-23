@@ -4,6 +4,8 @@ import numpy as np
 import matplotlib
 import io
 
+from tensorflow.contrib.layers import embed_sequence  # pylint: disable=E0611
+
 
 def variable_len_batch_mean(input_tensor, seq_lengths, op_name):
     with tf.name_scope(name=op_name):
@@ -128,6 +130,33 @@ def attention_unit(
     )
 
 
+def append_snapshot(container, new_snap, index):
+    new_snap = tf.expand_dims(new_snap, axis=0)
+    total_snaps = tf.shape(container)[0]
+    batch_diff = tf.shape(container)[1] - tf.shape(new_snap)[1]
+    new_snap = tf.pad(
+        new_snap,
+        paddings=[
+            [index - 1, total_snaps - index],
+            [0, batch_diff],
+            [0, 0],
+            [0, 0],
+        ],
+    )
+    container = tf.add(container, new_snap)
+
+    return container
+
+
+def create_snapshots_container(shape_like, n_snaps):
+    container = tf.zeros_like(shape_like, dtype=tf.float32)
+    container = tf.expand_dims(container, axis=0)
+    container = tf.expand_dims(container, axis=3)
+    container = tf.tile(container, multiples=[n_snaps, 1, 1, 1])
+
+    return container
+
+
 def bulk_add_to_collection(collection, *variables):
     for variable in variables:
         tf.add_to_collection(collection, variable)
@@ -189,3 +218,27 @@ def get_dense_tensor(sparse_tensor):
     )
 
     return dense_tensor
+
+
+def setup_embedding_layer(
+    vocab_size, dim_size, init, trainable=True, var_scope="embedding_layer"
+):
+    with tf.variable_scope(var_scope, reuse=tf.AUTO_REUSE):
+        embeddings = tf.get_variable(
+            "embeddings",
+            shape=[vocab_size, dim_size],
+            initializer=init,
+            trainable=trainable,
+        )
+
+    return embeddings
+
+
+def get_embedded_seq(
+    ids, embedding_matrix, reuse=True, var_scope="embedding_layer"
+):
+    embedded_seq = embed_sequence(
+        ids=ids, initializer=embedding_matrix, scope=var_scope, reuse=True
+    )
+
+    return embedded_seq

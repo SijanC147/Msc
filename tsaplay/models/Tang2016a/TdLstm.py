@@ -9,7 +9,11 @@ from tsaplay.models.Tang2016a.common import (
     tdlstm_input_fn,
     tdlstm_serving_fn,
 )
-from tsaplay.utils._tf import dropout_lstm_cell
+from tsaplay.utils._tf import (
+    dropout_lstm_cell,
+    setup_embedding_layer,
+    get_embedded_seq,
+)
 
 
 class TdLstm(Model):
@@ -41,25 +45,17 @@ class TdLstm(Model):
 
     def _model_fn(self):
         def _default(features, labels, mode, params=self.params):
-            with tf.variable_scope("embedding_layer", reuse=tf.AUTO_REUSE):
-                embeddings = tf.get_variable(
-                    "embeddings",
-                    shape=[params["vocab_size"], params["embedding_dim"]],
-                    initializer=params["embedding_initializer"],
-                )
-
-            left_inputs = tf.contrib.layers.embed_sequence(
-                ids=features["left_x"],
-                initializer=embeddings,
-                scope="embedding_layer",
-                reuse=True,
+            embedding_matrix = setup_embedding_layer(
+                vocab_size=params["vocab_size"],
+                dim_size=params["embedding_dim"],
+                init=params["embedding_initializer"],
             )
 
-            right_inputs = tf.contrib.layers.embed_sequence(
-                ids=features["right_x"],
-                initializer=embeddings,
-                scope="embedding_layer",
-                reuse=True,
+            left_inputs = get_embedded_seq(
+                features["left_x"], embedding_matrix
+            )
+            right_inputs = get_embedded_seq(
+                features["right_x"], embedding_matrix
             )
 
             with tf.variable_scope("left_lstm"):

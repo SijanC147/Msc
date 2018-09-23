@@ -6,8 +6,7 @@ from tsaplay.embeddings.Embedding import Embedding, EMBEDDINGS
 
 # from tsaplay.models.Tang2016a.Lstm import Lstm
 from tsaplay.models.Tang2016a.TcLstm import TcLstm
-
-# from tsaplay.models.Tang2016a.TdLstm import TdLstm
+from tsaplay.models.Tang2016a.TdLstm import TdLstm
 from tsaplay.experiments.Experiment import Experiment
 
 from tsaplay.models.Zheng2018.LcrRot import LcrRot
@@ -39,9 +38,10 @@ experiment = Experiment(
         parser=DATASETS.DEBUG_PARSER,
         embedding=Embedding(path=EMBEDDINGS.DEBUG),
     ),
-    model=InteractiveAttentionNetwork(),
-    contd_tag="my_ian",
+    model=MemNet(),
+    contd_tag="test_embedding_fns",
     # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
 )
-experiment.run(job="train+eval", steps=1)
-experiment.export_model(overwrite=True, restart_tfserve=True)
+experiment.run(job="train+eval", steps=7)
+experiment.export_model(overwrite=True)
+# experiment.export_model(overwrite=True, restart_tfserve=True)

@@ -3,12 +3,12 @@ import tensorflow as tf
 
 from argparse import ArgumentParser
 
-from grpc.beta import implementations
+from grpc import insecure_channel
 
 from tensorflow_serving.apis.input_pb2 import Input, ExampleList
 from tensorflow_serving.apis.predict_pb2 import PredictRequest
 from tensorflow_serving.apis.classification_pb2 import ClassificationRequest
-from tensorflow_serving.apis import prediction_service_pb2
+from tensorflow_serving.apis import prediction_service_pb2_grpc
 from tensorflow.contrib.util import make_tensor_proto  # pylint: disable=E0611
 
 from os import getcwd, listdir
@@ -124,8 +124,8 @@ def main():
 
     tf_example = Example(features=context)
 
-    channel = implementations.insecure_channel(host="127.0.0.1", port=8500)
-    stub = prediction_service_pb2.beta_create_PredictionService_stub(channel)
+    channel = insecure_channel("127.0.0.1:8500")
+    stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 
     # CLASSIFICATION
     classification_req = ClassificationRequest()

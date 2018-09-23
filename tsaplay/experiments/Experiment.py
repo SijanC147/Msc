@@ -96,9 +96,10 @@ class Experiment:
             if prev_exported_models != self._list_exported_models():
                 print("Updating tfserve.conf with new exported model info")
                 self._update_export_models_config()
-                print("Restarting tsaplay docker container to load new config")
-                logs = restart_tf_serve_container()
-                print(logs)
+                if restart_tfserve:
+                    print("Restarting tsaplay docker container")
+                    logs = restart_tf_serve_container()
+                    print(logs)
 
     def _init_exp_dir(self, model, dataset, contd_tag):
         all_exps_path = _join(dirname(abspath(__file__)), "data")
