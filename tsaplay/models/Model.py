@@ -1,11 +1,7 @@
 import tensorflow as tf
 from tensorflow.estimator import ModeKeys  # pylint: disable=E0401
 from tensorflow.saved_model.signature_constants import (
-    DEFAULT_SERVING_SIGNATURE_DEF_KEY,
-    REGRESS_OUTPUTS,
-    PREDICT_OUTPUTS,
-    CLASSIFY_OUTPUT_CLASSES,
-    CLASSIFY_OUTPUT_SCORES,
+    DEFAULT_SERVING_SIGNATURE_DEF_KEY
 )
 from tensorflow.estimator.export import (  # pylint: disable=E0401
     PredictOutput,
@@ -345,10 +341,12 @@ class Model(ABC):
                 classify_output = ClassificationOutput(
                     classes=classes, scores=probs
                 )
-                predict_output = PredictOutput(spec.predictions)
+                predict_output = PredictOutput(
+                    {**spec.predictions, **features}
+                )
                 export_outputs = {
                     DEFAULT_SERVING_SIGNATURE_DEF_KEY: classify_output,
-                    PREDICT_OUTPUTS: predict_output,
+                    "inspect": predict_output,
                 }
                 all_export_outputs = spec.export_outputs or {}
                 all_export_outputs.update(export_outputs)

@@ -143,7 +143,7 @@ def main():
         tensor_proto
     )
     prediction_req.model_spec.signature_name = (  # pylint: disable=E1101
-        "outputs"
+        "inspect"
     )
     prediction_req.model_spec.name = "ld"  # pylint: disable=E1101
     prediction = stub.Predict(prediction_req, 60.0)
