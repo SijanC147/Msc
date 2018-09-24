@@ -13,13 +13,12 @@ from tsaplay.utils._tf import masked_softmax
 
 params = {
     "batch_size": 25,
-    "max_seq_length": 85,
     "n_out_classes": 3,
     "learning_rate": 0.1,
     "l2_weight": 1e-5,
     "keep_prob": 0.5,
-    "lstm_hidden_units": 1,
-    "gru_hidden_units": 1,
+    "lstm_hidden_units": 100,
+    "gru_hidden_units": 50,
     "n_lstm_layers": 2,
     "n_attn_layers": 3,
     "initializer": tf.initializers.random_uniform(minval=-0.1, maxval=0.1),

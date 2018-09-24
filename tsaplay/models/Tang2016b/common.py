@@ -182,7 +182,7 @@ def location_vector_model_four(locs, seq_lens, emb_dim, init, hop=None):
     return v_loc
 
 
-def content_attention_model(seq_lens, memory, v_aspect, emb_dim, init):
+def memnet_content_attn_unit(seq_lens, memory, v_aspect, emb_dim, init):
     batch_size = tf.shape(memory)[0]
     max_seq_len = tf.shape(memory)[1]
     w_att = tf.get_variable(

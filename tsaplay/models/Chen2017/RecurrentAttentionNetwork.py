@@ -19,7 +19,6 @@ from tsaplay.models.Chen2017.common import (
 )
 from tsaplay.utils._tf import (
     variable_len_batch_mean,
-    attention_unit,
     dropout_lstm_cell,
     dropout_gru_cell,
     l2_regularized_loss,
@@ -59,6 +58,7 @@ class RecurrentAttentionNetwork(Model):
                 vocab_size=params["vocab_size"],
                 dim_size=params["embedding_dim"],
                 init=params["embedding_initializer"],
+                trainable=False,
             )
 
             sentence_embeddings = get_embedded_seq(
@@ -112,7 +112,7 @@ class RecurrentAttentionNetwork(Model):
             memory = get_location_weighted_memory(memory_star, w_t, u_t)
 
             episode_0 = tf.zeros(
-                shape=[batch_size, params["gru_hidden_units"], 1]
+                shape=[batch_size, 1, params["gru_hidden_units"]]
             )
 
             target_avg = variable_len_batch_mean(

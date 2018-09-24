@@ -34,27 +34,27 @@ debug_params = {
 }
 
 
-experiment = Experiment(
-    dataset=Dataset(
-        path=DATASETS.DEBUG_PATH,
-        parser=DATASETS.DEBUG_PARSER,
-        embedding=Embedding(path=EMBEDDINGS.DEBUG),
-    ),
-    model=RecurrentAttentionNetwork(),
-    # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
-)
-experiment.run(job="train+eval", steps=5)
-# # experiment.export_model(overwrite=True)
 # experiment = Experiment(
 #     dataset=Dataset(
-#         path=DATASETS.DONG2014_PATH,
-#         parser=DATASETS.DONG2014_PARSER,
-#         embedding=Embedding(path=EMBEDDINGS.GLOVE_TWITTER_100D),
+#         path=DATASETS.DEBUG_PATH,
+#         parser=DATASETS.DEBUG_PARSER,
+#         embedding=Embedding(path=EMBEDDINGS.DEBUG),
 #     ),
-#     model=LcrRot(),
-#     contd_tag="gold",
+#     model=RecurrentAttentionNetwork(),
 #     # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
 # )
-# experiment.run(job="train+eval", steps=500)
+# experiment.run(job="train+eval", steps=5)
+# # experiment.export_model(overwrite=True)
+experiment = Experiment(
+    dataset=Dataset(
+        path=DATASETS.DONG2014_PATH,
+        parser=DATASETS.DONG2014_PARSER,
+        embedding=Embedding(path=EMBEDDINGS.GLOVE_TWITTER_100D),
+    ),
+    model=RecurrentAttentionNetwork(),
+    contd_tag="gold",
+    # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
+)
+experiment.run(job="train+eval", steps=500)
 # # experiment.export_model(overwrite=True)
 # experiment.export_model(overwrite=True, restart_tfserve=True)

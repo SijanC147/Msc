@@ -42,6 +42,7 @@ class Experiment:
         self,
         job,
         steps,
+        early_stopping=False,
         dist=None,
         hooks=[],
         debug=False,
@@ -64,7 +65,9 @@ class Experiment:
             write_stats_to_disk(job="eval", stats=stats, path=self.exp_dir)
         elif job == "train+eval":
             train, test = self.model.train_and_eval(
-                dataset=self.dataset, steps=steps
+                dataset=self.dataset,
+                steps=steps,
+                early_stopping=early_stopping,
             )
             write_stats_to_disk(job="train", stats=train, path=self.exp_dir)
             write_stats_to_disk(job="eval", stats=test, path=self.exp_dir)

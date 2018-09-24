@@ -10,7 +10,7 @@ from tsaplay.models.Tang2016b.common import (
     memnet_serving_fn,
     get_absolute_distance_vector,
     get_location_vector_model,
-    content_attention_model,
+    memnet_content_attn_unit,
 )
 from tsaplay.utils._tf import (
     variable_len_batch_mean,
@@ -110,7 +110,7 @@ class MemNet(Model):
                     )
 
                 with tf.variable_scope("attention_layer", reuse=tf.AUTO_REUSE):
-                    attn_out, attn_snapshot = content_attention_model(
+                    attn_out, attn_snapshot = memnet_content_attn_unit(
                         seq_lens=features["context_len"],
                         memory=ext_memory,
                         v_aspect=input_vec,

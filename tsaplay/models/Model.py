@@ -8,11 +8,15 @@ from tensorflow.estimator.export import (  # pylint: disable=E0401
     RegressionOutput,
     ClassificationOutput,
 )
+from tensorflow.contrib.estimator import (  # pylint: disable=E0611
+    stop_if_no_decrease_hook
+)
 from os.path import join, dirname, exists
 from inspect import getsource, getfile
 from datetime import timedelta
 from time import time as _time
 from abc import ABC, abstractmethod
+from os import makedirs
 from functools import wraps
 from tsaplay.utils._tf import get_dense_tensor
 from tsaplay.utils.SaveConfusionMatrixHook import SaveConfusionMatrixHook
@@ -286,10 +290,24 @@ class Model(ABC):
         duration_dict = {"job": "eval", "time": time_taken}
         return {"duration": duration_dict, **run_stats}
 
-    def train_and_eval(self, dataset, steps):
+    def train_and_eval(self, dataset, steps, early_stopping=False):
         self._add_embedding_params(embedding=dataset.embedding)
         features, labels, stats = dataset.get_features_and_labels(mode="train")
         train_stats = self._export_statistics(dataset_stats=stats, steps=steps)
+        if early_stopping or self.params.get("early_stopping", False):
+            makedirs(self.estimator.eval_dir())
+            early_stopping_hook = [
+                stop_if_no_decrease_hook(
+                    estimator=self.estimator,
+                    metric_name="loss",
+                    max_steps_without_decrease=self.params.get(
+                        "max_steps", 1000
+                    ),
+                    min_steps=self.params.get("min_steps", 100),
+                )
+            ]
+        else:
+            early_stopping_hook = []
         train_spec = tf.estimator.TrainSpec(
             input_fn=lambda: self.__train_input_fn(
                 features=features,
@@ -297,7 +315,8 @@ class Model(ABC):
                 batch_size=self.params["batch_size"],
             ),
             max_steps=steps,
-            hooks=self._attach_std_train_hooks(self.train_hooks),
+            hooks=self._attach_std_train_hooks(self.train_hooks)
+            + early_stopping_hook,
         )
         features, labels, stats = dataset.get_features_and_labels(mode="eval")
         eval_stats = self._export_statistics(dataset_stats=stats, steps=steps)
