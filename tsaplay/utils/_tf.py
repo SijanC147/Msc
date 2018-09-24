@@ -43,6 +43,20 @@ def masked_softmax(logits, mask):
     return masked_sm
 
 
+def gru_cell(hidden_units, inititalizer):
+    return tf.nn.rnn_cell.GRUCell(
+        num_units=hidden_units,
+        kernel_initializer=inititalizer,
+        bias_initializer=inititalizer,
+    )
+
+
+def dropout_gru_cell(hidden_units, initializer, keep_prob):
+    return tf.contrib.rnn.DropoutWrapper(
+        cell=gru_cell(hidden_units, initializer), output_keep_prob=keep_prob
+    )
+
+
 def lstm_cell(hidden_units, initializer):
     return tf.nn.rnn_cell.LSTMCell(
         num_units=hidden_units, initializer=initializer
@@ -155,6 +169,18 @@ def create_snapshots_container(shape_like, n_snaps):
     container = tf.tile(container, multiples=[n_snaps, 1, 1, 1])
 
     return container
+
+
+def zip_attn_snapshots_with_literals(literals, snapshots, num_layers):
+    max_len = tf.shape(snapshots)[2]
+    snapshots = tf.transpose(snapshots, perm=[1, 0, 2, 3])
+    snapshots = tf.reshape(snapshots, shape=[-1, max_len, 1])
+
+    literals = tf.expand_dims(literals, axis=1)
+    literals = tf.tile(literals, multiples=[1, num_layers])
+    literals = tf.reshape(literals, shape=[-1])
+
+    return literals, snapshots
 
 
 def bulk_add_to_collection(collection, *variables):

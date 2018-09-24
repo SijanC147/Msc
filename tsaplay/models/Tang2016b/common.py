@@ -104,18 +104,6 @@ def get_absolute_distance_vector(target_locs, seq_lens, max_seq_len):
     return abs_dist_masked
 
 
-def zip_hop_attn_snapshots_with_literals(literals, snapshots, num_hops):
-    max_len = tf.shape(snapshots)[2]
-    snapshots = tf.transpose(snapshots, perm=[1, 0, 2, 3])
-    snapshots = tf.reshape(snapshots, shape=[-1, max_len, 1])
-
-    literals = tf.expand_dims(literals, axis=1)
-    literals = tf.tile(literals, multiples=[1, num_hops])
-    literals = tf.reshape(literals, shape=[-1])
-
-    return literals, snapshots
-
-
 def location_vector_model_one(locs, seq_lens, emb_dim, hop, init=None):
     max_seq_len = tf.shape(locs)[1]
     mask = tf.sequence_mask(lengths=seq_lens, maxlen=max_seq_len)

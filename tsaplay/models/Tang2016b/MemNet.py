@@ -11,7 +11,6 @@ from tsaplay.models.Tang2016b.common import (
     get_absolute_distance_vector,
     get_location_vector_model,
     content_attention_model,
-    zip_hop_attn_snapshots_with_literals,
 )
 from tsaplay.utils._tf import (
     variable_len_batch_mean,
@@ -20,6 +19,7 @@ from tsaplay.utils._tf import (
     get_embedded_seq,
     append_snapshot,
     create_snapshots_container,
+    zip_attn_snapshots_with_literals,
 )
 
 
@@ -143,10 +143,10 @@ class MemNet(Model):
                 ),
             )
 
-            literals, attn_snapshots = zip_hop_attn_snapshots_with_literals(
+            literals, attn_snapshots = zip_attn_snapshots_with_literals(
                 literals=features["context_lit"],
                 snapshots=attn_snapshots,
-                num_hops=params["n_hops"],
+                num_layers=params["n_hops"],
             )
             attn_info = tf.tuple([literals, attn_snapshots])
             generate_attn_heatmap_summary(attn_info)
