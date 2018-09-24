@@ -294,20 +294,6 @@ class Model(ABC):
         self._add_embedding_params(embedding=dataset.embedding)
         features, labels, stats = dataset.get_features_and_labels(mode="train")
         train_stats = self._export_statistics(dataset_stats=stats, steps=steps)
-        if early_stopping or self.params.get("early_stopping", False):
-            makedirs(self.estimator.eval_dir())
-            early_stopping_hook = [
-                stop_if_no_decrease_hook(
-                    estimator=self.estimator,
-                    metric_name="loss",
-                    max_steps_without_decrease=self.params.get(
-                        "max_steps", 1000
-                    ),
-                    min_steps=self.params.get("min_steps", 100),
-                )
-            ]
-        else:
-            early_stopping_hook = []
         train_spec = tf.estimator.TrainSpec(
             input_fn=lambda: self.__train_input_fn(
                 features=features,
@@ -316,7 +302,7 @@ class Model(ABC):
             ),
             max_steps=steps,
             hooks=self._attach_std_train_hooks(self.train_hooks)
-            + early_stopping_hook,
+            + self._get_early_stopping_hook(early_stopping),
         )
         features, labels, stats = dataset.get_features_and_labels(mode="eval")
         eval_stats = self._export_statistics(dataset_stats=stats, steps=steps)
@@ -423,7 +409,8 @@ class Model(ABC):
                 tf.summary.scalar("loss", spec.loss)
                 trainable = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
                 for variable in trainable:
-                    tf.summary.histogram(variable.name, variable)
+                    histogram_name = variable.name.replace(":", "_")
+                    tf.summary.histogram(histogram_name, variable)
                 logging_hook = tf.train.LoggingTensorHook(
                     tensors={
                         "loss": spec.loss,
@@ -491,3 +478,21 @@ class Model(ABC):
     def _attach_std_train_hooks(self, train_hooks):
         std_train_hooks = []
         return train_hooks + std_train_hooks
+
+    def _get_early_stopping_hook(self, early_stopping):
+        if early_stopping or self.params.get("early_stopping", False):
+            makedirs(self.estimator.eval_dir())
+            early_stopping_hook = [
+                stop_if_no_decrease_hook(
+                    estimator=self.estimator,
+                    metric_name="loss",
+                    max_steps_without_decrease=self.params.get(
+                        "max_steps", 1000
+                    ),
+                    min_steps=self.params.get("min_steps", 100),
+                )
+            ]
+        else:
+            early_stopping_hook = []
+
+        return early_stopping_hook

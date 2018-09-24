@@ -122,8 +122,7 @@ class RecurrentAttentionNetwork(Model):
             )
 
             attn_snapshots = create_snapshots_container(
-                shape_like=features["sentence_x"],
-                n_snaps=params["n_attn_layers"],
+                shape_like=features["sentence_x"], n_snaps=params["n_hops"]
             )
 
             attn_layer_num = tf.constant(1)
@@ -131,7 +130,7 @@ class RecurrentAttentionNetwork(Model):
             initial_layer_inputs = (attn_layer_num, episode_0, attn_snapshots)
 
             def condition(attn_layer_num, episode, attn_snapshots):
-                return tf.less_equal(attn_layer_num, params["n_attn_layers"])
+                return tf.less_equal(attn_layer_num, params["n_hops"])
 
             def attn_layer_run(attn_layer_num, episode, attn_snapshots):
                 mem_prev_ep_v_target = var_len_concatenate(
@@ -193,7 +192,7 @@ class RecurrentAttentionNetwork(Model):
             literals, attn_snapshots = zip_attn_snapshots_with_literals(
                 literals=features["sentence_lit"],
                 snapshots=attn_snapshots,
-                num_layers=params["n_attn_layers"],
+                num_layers=params["n_hops"],
             )
             attn_info = tf.tuple([literals, attn_snapshots])
             generate_attn_heatmap_summary(attn_info)

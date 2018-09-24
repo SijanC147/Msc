@@ -20,7 +20,7 @@ params = {
     "lstm_hidden_units": 100,
     "gru_hidden_units": 50,
     "n_lstm_layers": 2,
-    "n_attn_layers": 3,
+    "n_hops": 3,
     "initializer": tf.initializers.random_uniform(minval=-0.1, maxval=0.1),
 }
 

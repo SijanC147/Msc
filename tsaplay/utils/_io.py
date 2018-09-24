@@ -3,7 +3,7 @@ import docker
 import time
 from datetime import datetime, timedelta
 from pickle import load, dump, HIGHEST_PROTOCOL
-from os.path import isfile, join
+from os.path import isfile, join, dirname
 from json import dumps
 from os import listdir, system, makedirs
 from csv import DictReader, DictWriter
@@ -53,6 +53,7 @@ def unpickle_file(path):
 
 
 def pickle_file(path, data):
+    makedirs(dirname(path), exist_ok=True)
     with open(path, "wb") as f:
         return dump(data, f, HIGHEST_PROTOCOL)
 

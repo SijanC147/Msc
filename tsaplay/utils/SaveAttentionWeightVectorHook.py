@@ -61,7 +61,6 @@ class SaveAttentionWeightVectorHook(SessionRunHook):
         targets = results["targets"]
         labels = results["labels"]
         preds = results["predictions"]
-        attn_samples = attn_mechs[0][0]
         if self.n_picks > len(targets):
             self.n_picks = len(targets)
         rnd_picked = np.random.choice(
