@@ -10,7 +10,6 @@ from tsaplay.utils._data import (
 
 params = {
     "batch_size": 35,
-    "max_seq_length": 85,
     "n_out_classes": 3,
     "learning_rate": 0.1,
     "l2_weight": 1e-5,

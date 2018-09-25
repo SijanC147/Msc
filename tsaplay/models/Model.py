@@ -340,11 +340,12 @@ class Model(ABC):
             {"duration": duration_dict, **eval_stats},
         )
 
-    def export(self, directory, embedding=None):
+    def export(self, directory, embedding):
+        self._add_embedding_params(embedding)
         self.estimator.export_savedmodel(
             export_dir_base=directory,
             serving_input_receiver_fn=self._serving_input_receiver_fn(),
-            assets_extra={"embedding": embedding},
+            assets_extra={"vocab_file": embedding.vocab_file_path},
             strip_default_attrs=True,
         )
 

@@ -58,7 +58,6 @@ class RecurrentAttentionNetwork(Model):
 
     def _model_fn(self):
         def default(features, labels, mode, params=self.params):
-            gprint(params["vocab_file_path"])
             ids_table = setup_embedding_lookup_table(params["vocab_file_path"])
             sentence_ids = lookup_embedding_ids(
                 ids_table, features["sentence_tok"]
@@ -73,19 +72,11 @@ class RecurrentAttentionNetwork(Model):
                 init=params["embedding_initializer"],
                 trainable=False,
             )
-            gprint(embedding_matrix)
 
             sentence_embeddings = get_embedded_seq(
                 sentence_ids, embedding_matrix
             )
             target_embeddings = get_embedded_seq(target_ids, embedding_matrix)
-
-            # sentence_embeddings = get_embedded_seq(
-            #     features["sentence_x"], embedding_matrix
-            # )
-            # target_embeddings = get_embedded_seq(
-            #     features["target_x"], embedding_matrix
-            # )
 
             batch_size = tf.shape(sentence_embeddings)[0]
             max_seq_len = tf.shape(sentence_embeddings)[1]

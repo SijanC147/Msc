@@ -93,7 +93,7 @@ class Experiment:
 
             prev_exported_models = self._list_exported_models()
             self.model.export(
-                directory=model_export_dir, embedding=self.embedding.path
+                directory=model_export_dir, embedding=self.embedding
             )
 
             if prev_exported_models != self._list_exported_models():

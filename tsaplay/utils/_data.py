@@ -114,10 +114,15 @@ def prep_dataset_and_get_iterator(features, labels, batch_size, eval_input):
     return iterator
 
 
-def tf_encoded_tokenisation(string_list, separator="<SEP>"):
+def tf_encoded_tokenisation(string_list, separator="<SEP>", to_bytes=False):
     token_lists = [
         tokenize_phrase(string, lower=True) for string in string_list
     ]
-    encoded_tokens = [separator.join(token_list) for token_list in token_lists]
+    encoded_tokens = [
+        separator.join(token_list).encode()
+        if to_bytes
+        else separator.join(token_list)
+        for token_list in token_lists
+    ]
 
     return encoded_tokens

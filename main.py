@@ -8,14 +8,15 @@ from tsaplay.experiments.Experiment import Experiment
 # from tsaplay.models.Tang2016a.Lstm import Lstm
 # from tsaplay.models.Tang2016a.TcLstm import TcLstm
 # from tsaplay.models.Tang2016a.TdLstm import TdLstm
-# from tsaplay.models.Zheng2018.LcrRot import LcrRot
+from tsaplay.models.Zheng2018.LcrRot import LcrRot
+
 # from tsaplay.models.Tang2016b.MemNet import MemNet
-from tsaplay.models.Chen2017.RecurrentAttentionNetwork import (
-    RecurrentAttentionNetwork
-)
-from tsaplay.models.Ma2017.InteractiveAttentionNetwork import (
-    InteractiveAttentionNetwork
-)
+# from tsaplay.models.Chen2017.RecurrentAttentionNetwork import (
+#     RecurrentAttentionNetwork
+# )
+# from tsaplay.models.Ma2017.InteractiveAttentionNetwork import (
+#     InteractiveAttentionNetwork
+# )
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
@@ -56,10 +57,10 @@ experiment = Experiment(
         embedding=Embedding(source="glove-twitter-25"),
         filter_embedding=False,
     ),
-    model=RecurrentAttentionNetwork(),
-    # contd_tag="gold",
+    model=LcrRot(),
+    contd_tag="gold",
     # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
 )
-experiment.run(job="train+eval", steps=300)
-# # experiment.export_model(overwrite=True)
+# experiment.run(job="train+eval", steps=500)
+experiment.export_model(overwrite=True)
 # experiment.export_model(overwrite=True, restart_tfserve=True)

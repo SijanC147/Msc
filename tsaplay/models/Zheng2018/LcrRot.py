@@ -20,6 +20,8 @@ from tsaplay.utils._tf import (
     generate_attn_heatmap_summary,
     setup_embedding_layer,
     get_embedded_seq,
+    setup_embedding_lookup_table,
+    lookup_embedding_ids,
 )
 
 
@@ -46,21 +48,21 @@ class LcrRot(Model):
 
     def _model_fn(self):
         def default(features, labels, mode, params=self.params):
+            ids_table = setup_embedding_lookup_table(params["vocab_file_path"])
+            left_ids = lookup_embedding_ids(ids_table, features["left_tok"])
+            target_ids = lookup_embedding_ids(
+                ids_table, features["target_tok"]
+            )
+            right_ids = lookup_embedding_ids(ids_table, features["right_tok"])
             embedding_matrix = setup_embedding_layer(
                 vocab_size=params["vocab_size"],
                 dim_size=params["embedding_dim"],
                 init=params["embedding_initializer"],
             )
 
-            left_embeddings = get_embedded_seq(
-                features["left_x"], embedding_matrix
-            )
-            target_embeddings = get_embedded_seq(
-                features["target_x"], embedding_matrix
-            )
-            right_embeddings = get_embedded_seq(
-                features["right_x"], embedding_matrix
-            )
+            left_embeddings = get_embedded_seq(left_ids, embedding_matrix)
+            target_embeddings = get_embedded_seq(target_ids, embedding_matrix)
+            right_embeddings = get_embedded_seq(right_ids, embedding_matrix)
 
             with tf.variable_scope("target_bi_lstm"):
                 target_hidden_states, _, _ = stack_bidirectional_dynamic_rnn(
