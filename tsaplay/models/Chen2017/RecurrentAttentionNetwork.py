@@ -24,11 +24,15 @@ from tsaplay.utils._tf import (
     l2_regularized_loss,
     generate_attn_heatmap_summary,
     setup_embedding_layer,
+    setup_embedding_lookup_table,
+    lookup_embedding_ids,
     get_embedded_seq,
     create_snapshots_container,
     append_snapshot,
     zip_attn_snapshots_with_literals,
+    get_dense_tensor,
 )
+from tsaplay.utils._io import gprint
 
 
 class RecurrentAttentionNetwork(Model):
@@ -54,26 +58,41 @@ class RecurrentAttentionNetwork(Model):
 
     def _model_fn(self):
         def default(features, labels, mode, params=self.params):
+            gprint(params["vocab_file_path"])
+            ids_table = setup_embedding_lookup_table(params["vocab_file_path"])
+            sentence_ids = lookup_embedding_ids(
+                ids_table, features["sentence_tok"]
+            )
+            target_ids = lookup_embedding_ids(
+                ids_table, features["target_tok"]
+            )
+
             embedding_matrix = setup_embedding_layer(
                 vocab_size=params["vocab_size"],
                 dim_size=params["embedding_dim"],
                 init=params["embedding_initializer"],
                 trainable=False,
             )
+            gprint(embedding_matrix)
 
             sentence_embeddings = get_embedded_seq(
-                features["sentence_x"], embedding_matrix
+                sentence_ids, embedding_matrix
             )
-            target_embeddings = get_embedded_seq(
-                features["target_x"], embedding_matrix
-            )
+            target_embeddings = get_embedded_seq(target_ids, embedding_matrix)
+
+            # sentence_embeddings = get_embedded_seq(
+            #     features["sentence_x"], embedding_matrix
+            # )
+            # target_embeddings = get_embedded_seq(
+            #     features["target_x"], embedding_matrix
+            # )
 
             batch_size = tf.shape(sentence_embeddings)[0]
             max_seq_len = tf.shape(sentence_embeddings)[1]
 
             forward_cells = []
             backward_cells = []
-            for n in range(params["n_lstm_layers"]):
+            for _ in range(params["n_lstm_layers"]):
                 forward_cells.append(
                     dropout_lstm_cell(
                         hidden_units=params["lstm_hidden_units"],
@@ -122,7 +141,7 @@ class RecurrentAttentionNetwork(Model):
             )
 
             attn_snapshots = create_snapshots_container(
-                shape_like=features["sentence_x"], n_snaps=params["n_hops"]
+                shape_like=sentence_ids, n_snaps=params["n_hops"]
             )
 
             attn_layer_num = tf.constant(1)

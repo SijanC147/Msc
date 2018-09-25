@@ -1,6 +1,6 @@
 from time import time as _time
 from os import listdir, makedirs
-from os.path import normpath, basename, isfile, join, exists
+from os.path import normpath, basename, isfile, join, exists, dirname
 from statistics import mean
 from functools import wraps
 from tsaplay.utils._nlp import (
@@ -24,9 +24,10 @@ import tsaplay.datasets._constants as DATASETS
 
 
 class Dataset:
-    def __init__(self, path, parser, embedding=None):
+    def __init__(self, path, parser, embedding=None, filter_embedding=True):
         self.path = path
         self.parser = parser
+        self.filter_embedding = filter_embedding
         self.embedding = embedding
 
     @property
@@ -146,24 +147,33 @@ class Dataset:
     @embedding.setter
     def embedding(self, embedding):
         if embedding is not None:
-            name = embedding.name
-            version = embedding.version
-            emb_gen_dir = join(self.gen_dir, name)
-            makedirs(emb_gen_dir, exist_ok=True)
-            partial_name = "partial_{0}.txt".format(version)
-            partial_path = join(emb_gen_dir, partial_name)
-            tb_tsv_path = join(emb_gen_dir, "projection_meta.tsv")
-            if exists(partial_path):
-                embedding.path = partial_path
+            if self.filter_embedding:
+                name = embedding.name
+                version = embedding.version
+                emb_gen_dir = join(self.gen_dir, name)
+                makedirs(emb_gen_dir, exist_ok=True)
+                partial_name = "partial_{0}.txt".format(version)
+                partial_path = join(emb_gen_dir, partial_name)
+                tb_tsv_path = join(emb_gen_dir, "projection_meta.tsv")
+                if exists(partial_path):
+                    embedding.path = partial_path
+                else:
+                    embedding.filter_on_vocab(self.corpus)
+                    write_embedding_to_disk(
+                        path=partial_path, emb_dict=embedding.dictionary
+                    )
+                if not exists(tb_tsv_path):
+                    write_emb_tsv_to_disk(
+                        path=tb_tsv_path, emb_dict=embedding.dictionary
+                    )
             else:
-                embedding.filter_on_vocab(self.corpus)
-                write_embedding_to_disk(
-                    path=partial_path, emb_dict=embedding.dictionary
-                )
-            if not exists(tb_tsv_path):
-                write_emb_tsv_to_disk(
-                    path=tb_tsv_path, emb_dict=embedding.dictionary
-                )
+                name = embedding.name
+                version = embedding.version
+                emb_gen_dir = join(self.gen_dir, name)
+                makedirs(emb_gen_dir, exist_ok=True)
+                # emb_gen_dir = join(
+                #     dirname(embedding.path), "_generated", self.name
+                # )
             self.__emb_gen_dir = emb_gen_dir
         self.__embedding = embedding
 

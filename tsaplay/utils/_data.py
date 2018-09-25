@@ -8,6 +8,7 @@ from tensorflow.python.keras.preprocessing import (  # pylint: disable=E0611
 )
 from tsaplay.datasets.Dataset import Dataset, DATASETS
 from tsaplay.utils._io import pickle_file
+from tsaplay.utils._nlp import tokenize_phrase
 
 
 def zip_str_join(first, second):
@@ -74,16 +75,21 @@ def pad_for_dataset(mappings):
     return mappings, lengths
 
 
-def package_feature_dict(mapping, length, key=None, literal=None):
-    if key is None:
-        pre = ""
-    else:
-        pre = key + "_"
+def package_feature_dict(mappings, lengths, literals, key=None):
 
-    if literal is None:
-        return {pre + "x": mapping, pre + "len": length}
+    if key is None:
+        prefix = ""
     else:
-        return {pre + "x": mapping, pre + "len": length, pre + "lit": literal}
+        prefix = key + "_"
+
+    tensorflow_tokens = tf_encoded_tokenisation(literals)
+
+    return {
+        prefix + "x": mappings,
+        prefix + "len": lengths,
+        prefix + "lit": literals,
+        prefix + "tok": tensorflow_tokens,
+    }
 
 
 def prep_dataset_and_get_iterator(features, labels, batch_size, eval_input):
@@ -106,3 +112,12 @@ def prep_dataset_and_get_iterator(features, labels, batch_size, eval_input):
     iterator = dataset.make_one_shot_iterator()
 
     return iterator
+
+
+def tf_encoded_tokenisation(string_list, separator="<SEP>"):
+    token_lists = [
+        tokenize_phrase(string, lower=True) for string in string_list
+    ]
+    encoded_tokens = [separator.join(token_list) for token_list in token_lists]
+
+    return encoded_tokens

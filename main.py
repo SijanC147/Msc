@@ -33,15 +33,19 @@ debug_params = {
     "initializer": tf.initializers.random_uniform(minval=-0.1, maxval=0.1),
 }
 
+# embedding = Embedding(path=EMBEDDINGS.GLOVE_TWITTER_100D)
+# embedding.export_vocabulary_file()
+
 
 # experiment = Experiment(
 #     dataset=Dataset(
 #         path=DATASETS.DEBUG_PATH,
 #         parser=DATASETS.DEBUG_PARSER,
 #         embedding=Embedding(path=EMBEDDINGS.DEBUG),
+#         filter_embedding=False,
 #     ),
 #     model=RecurrentAttentionNetwork(),
-#     # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
+#     run_config=tf.estimator.RunConfig(tf_random_seed=1234),
 # )
 # experiment.run(job="train+eval", steps=5)
 # # experiment.export_model(overwrite=True)
@@ -49,12 +53,13 @@ experiment = Experiment(
     dataset=Dataset(
         path=DATASETS.DONG2014_PATH,
         parser=DATASETS.DONG2014_PARSER,
-        embedding=Embedding(path=EMBEDDINGS.GLOVE_TWITTER_100D),
+        embedding=Embedding(source="glove-twitter-25"),
+        filter_embedding=False,
     ),
     model=RecurrentAttentionNetwork(),
-    contd_tag="gold",
+    # contd_tag="gold",
     # run_config=tf.estimator.RunConfig(tf_random_seed=1234),
 )
-experiment.run(job="train+eval", steps=500)
+experiment.run(job="train+eval", steps=300)
 # # experiment.export_model(overwrite=True)
 # experiment.export_model(overwrite=True, restart_tfserve=True)

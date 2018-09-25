@@ -31,14 +31,20 @@ def ian_input_fn(features, labels, batch_size, eval_input=False):
 
     contexts_map, contexts_len = pad_for_dataset(mappings=context_mappings)
     contexts = package_feature_dict(
-        contexts_map, contexts_len, literal=context_literals, key="context"
+        mappings=contexts_map,
+        lengths=contexts_len,
+        literals=context_literals,
+        key="context",
     )
 
     target_map, target_len = pad_for_dataset(
         mappings=features["mappings"]["target"]
     )
     targets = package_feature_dict(
-        target_map, target_len, literal=features["target"], key="target"
+        mappings=target_map,
+        lengths=target_len,
+        literals=features["target"],
+        key="target",
     )
 
     iterator = prep_dataset_and_get_iterator(
@@ -61,7 +67,12 @@ def ian_serving_fn(features):
             [features["literals"]["left"], features["literals"]["right"]],
             separator=" ",
         ),
+        "context_tok": tf.strings.join(
+            [features["tok_enc"]["left"], features["tok_enc"]["right"]],
+            separator="<SEP>",
+        ),
         "target_x": features["mappings"]["target"],
         "target_len": features["lengths"]["target"],
         "target_lit": features["literals"]["target"],
+        "target_tok": features["tok_enc"]["target"],
     }

@@ -8,8 +8,11 @@ from tsaplay.utils._data import (
     pad_for_dataset,
     package_feature_dict,
     prep_dataset_and_get_iterator,
+    tf_encoded_tokenisation,
 )
+from tsaplay.utils._nlp import tokenize_phrase
 from tsaplay.utils._tf import masked_softmax
+from tsaplay.utils._io import gprint
 
 params = {
     "batch_size": 25,
@@ -36,9 +39,9 @@ def ram_input_fn(features, labels, batch_size, eval_input=False):
     ]
     sentence_map, sentence_len = pad_for_dataset(sentences)
     sentences = package_feature_dict(
-        sentence_map,
-        sentence_len,
-        literal=features["sentence"],
+        mappings=sentence_map,
+        lengths=sentence_len,
+        literals=features["sentence"],
         key="sentence",
     )
 
@@ -54,7 +57,7 @@ def ram_input_fn(features, labels, batch_size, eval_input=False):
         mappings=features["mappings"]["target"]
     )
     targets = package_feature_dict(
-        target_map, target_len, literal=features["target"], key="target"
+        target_map, target_len, literals=features["target"], key="target"
     )
     targets = {
         **targets,
@@ -77,9 +80,11 @@ def ram_serving_fn(features):
         "sentence_x": features["mappings"]["sentence"],
         "sentence_len": features["lengths"]["sentence"],
         "sentence_lit": features["literals"]["sentence"],
+        "sentence_tok": features["tok_enc"]["sentence"],
         "target_x": features["mappings"]["target"],
         "target_len": features["lengths"]["target"],
         "target_lit": features["literals"]["target"],
+        "target_tok": features["tok_enc"]["target"],
     }
 
 

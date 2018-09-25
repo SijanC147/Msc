@@ -27,6 +27,7 @@ from tensorflow.train import (
 
 from tsaplay.embeddings.Embedding import Embedding
 from tsaplay.utils._nlp import get_sentence_target_features
+from tsaplay.utils._data import tf_encoded_tokenisation
 
 
 def parse_args():
@@ -101,6 +102,10 @@ def make_example(feat_dict):
     ctxt_map = left_map + right_map
     lft_trg_map = left_map + target_map
     trg_rht_map = list(reversed(target_map + right_map))
+    sen_tok = tf_encoded_tokenisation(feat_dict["sentence"])
+    left_tok = tf_encoded_tokenisation(feat_dict["left_lit"])
+    right_tok = tf_encoded_tokenisation(feat_dict["right_lit"])
+    target_tok = tf_encoded_tokenisation(feat_dict["target_lit"])
 
     if left_len == 0:
         left_map += [0]
@@ -113,6 +118,10 @@ def make_example(feat_dict):
             "left_lit": Feature(bytes_list=BytesList(value=[left_lit])),
             "right_lit": Feature(bytes_list=BytesList(value=[right_lit])),
             "target_lit": Feature(bytes_list=BytesList(value=[target])),
+            "sen_tok": Feature(bytes_list=BytesList(value=[sen_tok])),
+            "left_tok": Feature(bytes_list=BytesList(value=[left_tok])),
+            "right_tok": Feature(bytes_list=BytesList(value=[right_tok])),
+            "target_tok": Feature(bytes_list=BytesList(value=[target_tok])),
             "sen_len": Feature(int64_list=Int64List(value=[sen_length])),
             "left_len": Feature(int64_list=Int64List(value=[left_len])),
             "right_len": Feature(int64_list=Int64List(value=[right_len])),
@@ -134,7 +143,7 @@ def main():
 
     phrase, target, model, batch_file = parse_args()
 
-    export_embedding = Embedding(path=get_export_embedding_path(model))
+    export_embedding = Embedding(source=get_export_embedding_path(model))
 
     if batch_file is not None:
         tf_examples = []

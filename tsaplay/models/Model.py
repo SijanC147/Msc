@@ -196,6 +196,10 @@ class Model(ABC):
                 "target_lit": tf.FixedLenFeature(dtype=tf.string, shape=[]),
                 "left_lit": tf.FixedLenFeature(dtype=tf.string, shape=[]),
                 "right_lit": tf.FixedLenFeature(dtype=tf.string, shape=[]),
+                "sen_tok": tf.FixedLenFeature(dtype=tf.string, shape=[]),
+                "target_tok": tf.FixedLenFeature(dtype=tf.string, shape=[]),
+                "left_tok": tf.FixedLenFeature(dtype=tf.string, shape=[]),
+                "right_tok": tf.FixedLenFeature(dtype=tf.string, shape=[]),
                 "sen_len": tf.FixedLenFeature(dtype=tf.int64, shape=[]),
                 "left_len": tf.FixedLenFeature(dtype=tf.int64, shape=[]),
                 "right_len": tf.FixedLenFeature(dtype=tf.int64, shape=[]),
@@ -225,6 +229,12 @@ class Model(ABC):
                     "target": input_features["target_lit"],
                     "left": input_features["left_lit"],
                     "right": input_features["right_lit"],
+                },
+                "tok_enc": {
+                    "sentence": input_features["sen_tok"],
+                    "target": input_features["target_tok"],
+                    "left": input_features["left_tok"],
+                    "right": input_features["right_tok"],
                 },
                 "lengths": {
                     "sentence": tf.cast(input_features["sen_len"], tf.int32),
@@ -293,6 +303,7 @@ class Model(ABC):
     def train_and_eval(self, dataset, steps, early_stopping=False):
         self._add_embedding_params(embedding=dataset.embedding)
         features, labels, stats = dataset.get_features_and_labels(mode="train")
+        features["vocab_file"] = dataset.embedding.vocab_file_path
         train_stats = self._export_statistics(dataset_stats=stats, steps=steps)
         train_spec = tf.estimator.TrainSpec(
             input_fn=lambda: self.__train_input_fn(
@@ -305,6 +316,7 @@ class Model(ABC):
             + self._get_early_stopping_hook(early_stopping),
         )
         features, labels, stats = dataset.get_features_and_labels(mode="eval")
+        features["vocab_file"] = dataset.embedding.vocab_file_path
         eval_stats = self._export_statistics(dataset_stats=stats, steps=steps)
         eval_spec = tf.estimator.EvalSpec(
             input_fn=lambda: self.__eval_input_fn(
@@ -458,10 +470,11 @@ class Model(ABC):
 
     def _add_embedding_params(self, embedding):
         self.params = {
+            **self.params,
             "embedding_initializer": embedding.initializer,
             "vocab_size": embedding.vocab_size,
             "embedding_dim": embedding.dim_size,
-            **self.params,
+            "vocab_file_path": embedding.vocab_file_path,
         }
 
     def _attach_std_eval_hooks(self, eval_hooks):

@@ -8,6 +8,7 @@ from tsaplay.utils._data import (
     pad_for_dataset,
     package_feature_dict,
     make_labels_dataset_from_list,
+    tf_encoded_tokenisation,
 )
 
 params = {
@@ -31,7 +32,9 @@ def lstm_input_fn(features, labels, batch_size, eval_input=False):
         )
     ]
     sen_map, sen_len = pad_for_dataset(sentences)
-    sentence = package_feature_dict(sen_map, sen_len)
+    sentence = package_feature_dict(
+        mappings=sen_map, lengths=sen_len, literals=features["sentence"]
+    )
 
     iterator = prep_dataset_and_get_iterator(
         features=sentence,
@@ -47,6 +50,8 @@ def lstm_serving_fn(features):
     return {
         "x": features["mappings"]["sentence"],
         "len": features["lengths"]["sentence"],
+        "lit": features["literal"]["sentence"],
+        "tok": features["tok_enc"]["sentence"],
     }
 
 
@@ -56,7 +61,12 @@ def tdlstm_input_fn(features, labels, batch_size, eval_input=False):
     )
 
     left_map, left_len = pad_for_dataset(left_contexts)
-    left = package_feature_dict(left_map, left_len, key="left")
+    left = package_feature_dict(
+        mappings=left_map,
+        lengths=left_len,
+        literals=features["left"],
+        key="left",
+    )
 
     right_contexts = zip_list_join(
         features["mappings"]["target"],
@@ -64,7 +74,12 @@ def tdlstm_input_fn(features, labels, batch_size, eval_input=False):
         reverse=True,
     )
     right_map, right_len = pad_for_dataset(right_contexts)
-    right = package_feature_dict(right_map, right_len, key="right")
+    right = package_feature_dict(
+        mappings=right_map,
+        lengths=right_len,
+        literals=features["right"],
+        key="right",
+    )
 
     iterator = prep_dataset_and_get_iterator(
         features={**left, **right},
@@ -82,10 +97,12 @@ def tdlstm_serving_fn(features):
         "left_len": tf.add(
             features["lengths"]["left"], features["lengths"]["target"]
         ),
+        "left_tok": features["tok_enc"]["left"],
         "right_x": features["mappings"]["target_right"],
         "right_len": tf.add(
             features["lengths"]["target"], features["lengths"]["right"]
         ),
+        "right_tok": features["tok_enc"]["right"],
     }
 
 
@@ -94,7 +111,12 @@ def tclstm_input_fn(features, labels, batch_size, eval_input=False):
         features["mappings"]["left"], features["mappings"]["target"]
     )
     left_map, left_len = pad_for_dataset(left_contexts)
-    left = package_feature_dict(left_map, left_len, key="left")
+    left = package_feature_dict(
+        mappings=left_map,
+        lengths=left_len,
+        literals=features["left"],
+        key="left",
+    )
 
     right_contexts = zip_list_join(
         features["mappings"]["target"],
@@ -102,10 +124,20 @@ def tclstm_input_fn(features, labels, batch_size, eval_input=False):
         reverse=True,
     )
     right_map, right_len = pad_for_dataset(right_contexts)
-    right = package_feature_dict(right_map, right_len, key="right")
+    right = package_feature_dict(
+        mappings=right_map,
+        lengths=right_len,
+        literals=features["right"],
+        key="right",
+    )
 
     target_map, target_len = pad_for_dataset(features["mappings"]["target"])
-    target = package_feature_dict(target_map, target_len, key="target")
+    target = package_feature_dict(
+        mappings=target_map,
+        lengths=target_len,
+        literals=features["target"],
+        key="target",
+    )
 
     iterator = prep_dataset_and_get_iterator(
         features={**left, **target, **right},
@@ -123,10 +155,13 @@ def tclstm_serving_fn(features):
         "left_len": tf.add(
             features["lengths"]["left"], features["lengths"]["target"]
         ),
+        "left_tok": features["tok_enc"]["left"],
         "right_x": features["mappings"]["target_right"],
         "right_len": tf.add(
             features["lengths"]["target"], features["lengths"]["right"]
         ),
+        "right_tok": features["tok_enc"]["right"],
         "target_x": features["mappings"]["target"],
         "target_len": features["lengths"]["target"],
+        "target_tok": features["tok_enc"]["target"],
     }

@@ -12,12 +12,14 @@ mpl.use("TkAgg")
 import matplotlib.pyplot as plt  # nopep8
 
 
-def tokenize_phrase(phrase):
+def tokenize_phrase(phrase, lower=False):
     tokens_list = []
     nlp = spacy.load("en", disable=["parser", "ner"])
     tokens = nlp(str(phrase))
     tokens_list = list(filter(token_filter, tokens))
-    return [token.text for token in tokens_list]
+    return [
+        token.text.lower() if lower else token.text for token in tokens_list
+    ]
 
 
 def token_filter(token):

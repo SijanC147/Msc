@@ -10,6 +10,7 @@ spacy = "*"
 pillow = "*"
 docker = "*"
 tensorflow-serving-api = "*"
+gensim = "*"
 
 [dev-packages]
 tox-pipenv = "*"

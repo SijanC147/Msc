@@ -1,6 +1,7 @@
 import sys
 import docker
 import time
+from termcolor import colored
 from datetime import datetime, timedelta
 from pickle import load, dump, HIGHEST_PROTOCOL
 from os.path import isfile, join, dirname
@@ -16,6 +17,10 @@ def get_platform():
         "darwin": "MacOS",
         "win32": "Windows",
     }.get(sys.platform, sys.platform)
+
+
+def gprint(string):
+    print(colored(string, "green"))
 
 
 def start_tensorboard(model_dir, port=6006, debug=False, debug_port=6064):
