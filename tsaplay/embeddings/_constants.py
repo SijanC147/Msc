@@ -1,9 +1,9 @@
 from os import getcwd
 from os.path import join
 
-__data = join(getcwd(), "tsaplay", "embeddings", "data")
-__glove = join(__data, "GloVe")
-__debug = join(__data, "DeBuGEmB")
+DATA_PATH = join(getcwd(), "tsaplay", "embeddings", "data")
+__glove = join(DATA_PATH, "GloVe")
+__debug = join(DATA_PATH, "DeBuGEmB")
 
 DEBUG = join(__debug, "debug.25d.txt")
 GLOVE_42B = join(__glove, "glove.42B.300d.txt")
