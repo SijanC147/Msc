@@ -34,10 +34,6 @@ debug_params = {
     "initializer": tf.initializers.random_uniform(minval=-0.1, maxval=0.1),
 }
 
-# embedding = Embedding(path=EMBEDDINGS.GLOVE_TWITTER_100D)
-# embedding.export_vocabulary_file()
-
-
 # experiment = Experiment(
 #     dataset=Dataset(
 #         path=DATASETS.DEBUG_PATH,

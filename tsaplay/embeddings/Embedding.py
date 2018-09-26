@@ -20,12 +20,12 @@ class Embedding:
         return self.__source
 
     @property
-    def oov(self):
-        return self.__oov
+    def name(self):
+        return self.__source
 
     @property
-    def gensim_model(self):
-        return self.__gensim_model
+    def oov(self):
+        return self.__oov
 
     @property
     def dictionary(self):
@@ -41,7 +41,7 @@ class Embedding:
 
     @property
     def dim_size(self):
-        return self.gensim_model.vector_size
+        return self.__gensim_model.vector_size
 
     @property
     def vocab_size(self):
@@ -56,7 +56,7 @@ class Embedding:
         flags = np.asarray(
             [self.dictionary["<PAD>"], self.dictionary["<OOV>"]]
         )
-        vectors = self.gensim_model.vectors
+        vectors = self.__gensim_model.vectors
         return np.concatenate([flags, vectors])
 
     @property
@@ -73,12 +73,12 @@ class Embedding:
     def source(self, new_source):
         try:
             self.__source = new_source
-            self.gensim_model = gensim_data.load(self.__source)
+            self.__gensim_model = gensim_data.load(self.__source)
             self.__dictionary = {
                 **self._get_flags(self.dim_size),
-                **self._get_dict_from_gensim_model(self.gensim_model),
+                **self._build_embedding_dictionary(),
             }
-            self._export_vocabulary_file(self.vocab_file_path)
+            self._export_vocabulary_files()
         except:
             raise ValueError("Invalid source {0}".format(new_source))
 
@@ -99,27 +99,21 @@ class Embedding:
             "<OOV>": self.oov(dim_size=dim_size),
         }
 
-    def _export_vocabulary_file(self, vocab_file_path):
-        print(
-            "Exporting {0} words to vocab file ({1})...".format(
-                self.vocab_size, vocab_file_path
-            )
-        )
-        start = time.time()
-        cnt = 0
-        makedirs(dirname(vocab_file_path), exist_ok=True)
-        with open(vocab_file_path, "w") as f:
+    def _export_vocabulary_files(self):
+        makedirs(dirname(self.vocab_file_path), exist_ok=True)
+        with open(self.vocab_file_path, "w") as f:
             for word in [*self.dictionary]:
                 if word != "<PAD>":
                     f.write("{0}\n".format(word))
-                    cnt += 1
-        time_taken = time.time() - start
-        print("Exported {0} words in {1:.2f}sec".format(cnt, time_taken))
+        tsv_file_path = join(self.data_dir, "_vocab.tsv")
+        with open(tsv_file_path, "w") as f:
+            for word in [*self.dictionary]:
+                f.write("{0}\n".format(word))
 
-    def _get_dict_from_gensim_model(self, gensim_model):
+    def _build_embedding_dictionary(self):
         dictionary = {}
-        words = [*gensim_model.vocab]
-        vectors = gensim_model.vectors
+        words = [*self.__gensim_model.vocab]
+        vectors = self.__gensim_model.vectors
         for (word, vector) in zip(words, vectors):
             dictionary[word] = vector
 

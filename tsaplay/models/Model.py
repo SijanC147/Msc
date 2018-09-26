@@ -185,6 +185,122 @@ class Model(ABC):
     def _eval_hooks(self):
         return []
 
+    def train(self, dataset, embedding, steps, distribution=None, hooks=[]):
+        self._add_embedding_params(embedding)
+        if "partial" in embedding.name and not (
+            exists(join(embedding.data_dir, "train.tfrecord"))
+        ):
+            sentence_list = tf.train.BytesList(
+                value=[s.encode() for s in dataset.train_dict["sentences"]]
+            )
+            target_list = tf.train.BytesList(
+                value=[t.encode() for t in dataset.train_dict["targets"]]
+            )
+            label_list = tf.train.Int64List(
+                value=[int(l) for l in dataset.train_dict["labels"]]
+            )
+            sentences = tf.train.Feature(bytes_list=sentence_list)
+            targets = tf.train.Feature(bytes_list=target_list)
+            labels = tf.train.Feature(int64_list=label_list)
+
+            train_dict = {
+                "sentences": sentences,
+                "targets": targets,
+                "labels": labels,
+            }
+
+            dataset = tf.train.Features(feature=train_dict)
+            example = tf.train.Example(features=dataset)
+
+            with tf.python_io.TFRecordWriter("sentneces.tfrecord") as writer:
+                writer.write(example.SerializeToString())
+
+        features, labels, stats = dataset.get_features_and_labels(
+            mode="train", distribution=distribution
+        )
+        run_stats = self._export_statistics(dataset_stats=stats, steps=steps)
+        start = _time()
+        self.estimator.train(
+            input_fn=lambda: self.__train_input_fn(
+                features=features,
+                labels=labels,
+                batch_size=self.params["batch_size"],
+            ),
+            steps=steps,
+            hooks=self._attach_std_train_hooks(self.train_hooks) + hooks,
+        )
+        time_taken = str(timedelta(seconds=_time() - start))
+        duration_dict = {"job": "train", "time": time_taken}
+        return {"duration": duration_dict, **run_stats}
+
+    def evaluate(self, dataset, embedding, distribution=None, hooks=[]):
+        self._add_embedding_params(embedding)
+        features, labels, stats = dataset.get_features_and_labels(
+            mode="test", distribution=distribution
+        )
+        run_stats = self._export_statistics(dataset_stats=stats)
+        start = _time()
+        self.estimator.evaluate(
+            input_fn=lambda: self.__eval_input_fn(
+                features=features,
+                labels=labels,
+                batch_size=self.params["batch_size"],
+            ),
+            hooks=self._attach_std_eval_hooks(self.eval_hooks) + hooks,
+        )
+        time_taken = str(timedelta(seconds=_time() - start))
+        duration_dict = {"job": "eval", "time": time_taken}
+        return {"duration": duration_dict, **run_stats}
+
+    def train_and_eval(self, dataset, embedding, steps, early_stopping=False):
+        self._add_embedding_params(embedding)
+        features, labels, stats = dataset.get_features_and_labels(mode="train")
+        features["vocab_file"] = dataset.embedding.vocab_file_path
+        train_stats = self._export_statistics(dataset_stats=stats, steps=steps)
+        train_spec = tf.estimator.TrainSpec(
+            input_fn=lambda: self.__train_input_fn(
+                features=features,
+                labels=labels,
+                batch_size=self.params["batch_size"],
+            ),
+            max_steps=steps,
+            hooks=self._attach_std_train_hooks(self.train_hooks)
+            + self._get_early_stopping_hook(early_stopping),
+        )
+        features, labels, stats = dataset.get_features_and_labels(mode="eval")
+        features["vocab_file"] = dataset.embedding.vocab_file_path
+        eval_stats = self._export_statistics(dataset_stats=stats, steps=steps)
+        eval_spec = tf.estimator.EvalSpec(
+            input_fn=lambda: self.__eval_input_fn(
+                features=features,
+                labels=labels,
+                batch_size=self.params["batch_size"],
+            ),
+            steps=None,
+            hooks=self._attach_std_eval_hooks(self.eval_hooks),
+        )
+        start = _time()
+        tf.estimator.train_and_evaluate(
+            estimator=self.estimator,
+            train_spec=train_spec,
+            eval_spec=eval_spec,
+        )
+        time_taken = str(timedelta(seconds=_time() - start))
+        duration_dict = {"job": "train+eval", "time": time_taken}
+        return (
+            {"duration": duration_dict, **train_stats},
+            {"duration": duration_dict, **eval_stats},
+        )
+
+    def export(self, directory, embedding):
+        self._add_embedding_params(embedding)
+        self.estimator.export_savedmodel(
+            export_dir_base=directory,
+            serving_input_receiver_fn=self._serving_input_receiver_fn(),
+            assets_extra={"vocab_file": embedding.vocab_file_path},
+            strip_default_attrs=True,
+        )
+
     def _serving_input_receiver_fn(self):
         self.serving_input_fn = self._serving_input_fn()
 
@@ -260,94 +376,6 @@ class Model(ABC):
             return tf.estimator.export.ServingInputReceiver(input_feat, inputs)
 
         return serving_input_receiver_fn
-
-    def train(self, dataset, steps, distribution=None, hooks=[]):
-        self._add_embedding_params(embedding=dataset.embedding)
-        features, labels, stats = dataset.get_features_and_labels(
-            mode="train", distribution=distribution
-        )
-        run_stats = self._export_statistics(dataset_stats=stats, steps=steps)
-        start = _time()
-        self.estimator.train(
-            input_fn=lambda: self.__train_input_fn(
-                features=features,
-                labels=labels,
-                batch_size=self.params["batch_size"],
-            ),
-            steps=steps,
-            hooks=self._attach_std_train_hooks(self.train_hooks) + hooks,
-        )
-        time_taken = str(timedelta(seconds=_time() - start))
-        duration_dict = {"job": "train", "time": time_taken}
-        return {"duration": duration_dict, **run_stats}
-
-    def evaluate(self, dataset, distribution=None, hooks=[]):
-        self._add_embedding_params(embedding=dataset.embedding)
-        features, labels, stats = dataset.get_features_and_labels(
-            mode="test", distribution=distribution
-        )
-        run_stats = self._export_statistics(dataset_stats=stats)
-        start = _time()
-        self.estimator.evaluate(
-            input_fn=lambda: self.__eval_input_fn(
-                features=features,
-                labels=labels,
-                batch_size=self.params["batch_size"],
-            ),
-            hooks=self._attach_std_eval_hooks(self.eval_hooks) + hooks,
-        )
-        time_taken = str(timedelta(seconds=_time() - start))
-        duration_dict = {"job": "eval", "time": time_taken}
-        return {"duration": duration_dict, **run_stats}
-
-    def train_and_eval(self, dataset, steps, early_stopping=False):
-        self._add_embedding_params(embedding=dataset.embedding)
-        features, labels, stats = dataset.get_features_and_labels(mode="train")
-        features["vocab_file"] = dataset.embedding.vocab_file_path
-        train_stats = self._export_statistics(dataset_stats=stats, steps=steps)
-        train_spec = tf.estimator.TrainSpec(
-            input_fn=lambda: self.__train_input_fn(
-                features=features,
-                labels=labels,
-                batch_size=self.params["batch_size"],
-            ),
-            max_steps=steps,
-            hooks=self._attach_std_train_hooks(self.train_hooks)
-            + self._get_early_stopping_hook(early_stopping),
-        )
-        features, labels, stats = dataset.get_features_and_labels(mode="eval")
-        features["vocab_file"] = dataset.embedding.vocab_file_path
-        eval_stats = self._export_statistics(dataset_stats=stats, steps=steps)
-        eval_spec = tf.estimator.EvalSpec(
-            input_fn=lambda: self.__eval_input_fn(
-                features=features,
-                labels=labels,
-                batch_size=self.params["batch_size"],
-            ),
-            steps=None,
-            hooks=self._attach_std_eval_hooks(self.eval_hooks),
-        )
-        start = _time()
-        tf.estimator.train_and_evaluate(
-            estimator=self.estimator,
-            train_spec=train_spec,
-            eval_spec=eval_spec,
-        )
-        time_taken = str(timedelta(seconds=_time() - start))
-        duration_dict = {"job": "train+eval", "time": time_taken}
-        return (
-            {"duration": duration_dict, **train_stats},
-            {"duration": duration_dict, **eval_stats},
-        )
-
-    def export(self, directory, embedding):
-        self._add_embedding_params(embedding)
-        self.estimator.export_savedmodel(
-            export_dir_base=directory,
-            serving_input_receiver_fn=self._serving_input_receiver_fn(),
-            assets_extra={"vocab_file": embedding.vocab_file_path},
-            strip_default_attrs=True,
-        )
 
     def _wrap_model_fn(self, _model_fn):
         @wraps(_model_fn)

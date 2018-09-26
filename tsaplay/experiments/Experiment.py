@@ -11,32 +11,14 @@ from tsaplay.utils._io import (
 
 
 class Experiment:
-    def __init__(
-        self, dataset, model, embedding=None, run_config=None, contd_tag=None
-    ):
+    def __init__(self, dataset, embedding, model, contd_tag=None):
+        self.contd_tag = contd_tag
         self.dataset = dataset
         self.model = model
+        self.embedding = embedding
         self.model_name = model.__class__.__name__
         self.export_dir = _join(getcwd(), "export")
-        if embedding is not None:
-            self.embedding = embedding
-            self.dataset.embedding = self.embedding
-        else:
-            if self.dataset.embedding is None:
-                raise ValueError(
-                    "No embedding found in experiment or dataset."
-                )
-            else:
-                self.embedding = self.dataset.embedding
-        self.contd_tag = contd_tag
-        self.exp_dir = self._init_exp_dir(
-            model=self.model, dataset=self.dataset, contd_tag=self.contd_tag
-        )
-        if run_config is None:
-            run_config = self.model.run_config
-        self.model.run_config = self._init_model_dir(
-            exp_dir=self.exp_dir, run_config=run_config
-        )
+        self.exp_dir = self._init_experiment_dir()
 
     def run(
         self,
@@ -53,6 +35,7 @@ class Experiment:
         if job == "train":
             stats = self.model.train(
                 dataset=self.dataset,
+                embedding=self.embedding,
                 steps=steps,
                 distribution=dist,
                 hooks=hooks,
@@ -60,12 +43,16 @@ class Experiment:
             write_stats_to_disk(job="train", stats=stats, path=self.exp_dir)
         elif job == "eval":
             stats = self.model.evaluate(
-                dataset=self.dataset, distribution=dist, hooks=hooks
+                dataset=self.dataset,
+                embedding=self.embedding,
+                distribution=dist,
+                hooks=hooks,
             )
             write_stats_to_disk(job="eval", stats=stats, path=self.exp_dir)
         elif job == "train+eval":
             train, test = self.model.train_and_eval(
                 dataset=self.dataset,
+                embedding=self.embedding,
                 steps=steps,
                 early_stopping=early_stopping,
             )
@@ -104,36 +91,32 @@ class Experiment:
                     logs = restart_tf_serve_container()
                     print(logs)
 
-    def _init_exp_dir(self, model, dataset, contd_tag):
+    def _init_experiment_dir(self):
         all_exps_path = _join(dirname(abspath(__file__)), "data")
         rel_model_path = _join(
             relpath(
-                dirname(getfile(model.__class__)),
+                dirname(getfile(self.model.__class__)),
                 _join(getcwd(), "tsaplay", "models"),
             ),
-            model.__class__.__name__,
+            self.model.__class__.__name__,
         )
-        if contd_tag is not None:
-            exp_dir_name = contd_tag.replace(" ", "_")
+        if self.contd_tag is not None:
+            exp_dir_name = self.contd_tag.replace(" ", "_")
         else:
-            exp_dir_name = "_".join([dataset.name, dataset.embedding.version])
+            exp_dir_name = "_".join([self.dataset.name, self.embedding.name])
 
         exp_dir = _join(all_exps_path, rel_model_path, exp_dir_name)
-        if exists(exp_dir) and contd_tag is None:
+        if exists(exp_dir) and self.contd_tag is None:
             i = 0
             while exists(exp_dir):
                 i += 1
                 exp_dir = _join(
                     all_exps_path, rel_model_path, exp_dir_name + "_" + str(i)
                 )
-        return exp_dir
-
-    def _init_model_dir(self, exp_dir, run_config):
         summary_dir = _join(exp_dir, "tb_summary")
-        if run_config.model_dir is None:
-            return run_config.replace(model_dir=summary_dir)
-        else:
-            return run_config
+        self.model.run_config.replace(model_dir=summary_dir)
+
+        return exp_dir
 
     def _update_export_models_config(self):
         config_file = _join(self.export_dir, "tfserve.conf")
