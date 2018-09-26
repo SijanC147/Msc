@@ -12,28 +12,30 @@ import tsaplay.embeddings._constants as EMBEDDINGS
 
 class Embedding:
     def __init__(self, source, oov=None):
-        self.source = source
         self.oov = oov
+        self.source = source
 
     @property
     def source(self):
-        return self.__source
+        return self._source
 
     @property
     def name(self):
-        return self.__source
+        return self._source
 
     @property
     def oov(self):
-        return self.__oov
+        return self._oov
 
     @property
     def dictionary(self):
-        return self.__dictionary
+        return self._dictionary
 
     @property
     def data_dir(self):
-        return join(EMBEDDINGS.DATA_PATH, self.source)
+        data_dir = join(EMBEDDINGS.DATA_PATH, self.name)
+        makedirs(data_dir, exist_ok=True)
+        return data_dir
 
     @property
     def vocab(self):
@@ -41,7 +43,7 @@ class Embedding:
 
     @property
     def dim_size(self):
-        return self.__gensim_model.vector_size
+        return self._gensim_model.vector_size
 
     @property
     def vocab_size(self):
@@ -56,7 +58,7 @@ class Embedding:
         flags = np.asarray(
             [self.dictionary["<PAD>"], self.dictionary["<OOV>"]]
         )
-        vectors = self.__gensim_model.vectors
+        vectors = self._gensim_model.vectors
         return np.concatenate([flags, vectors])
 
     @property
@@ -72,9 +74,9 @@ class Embedding:
     @source.setter
     def source(self, new_source):
         try:
-            self.__source = new_source
-            self.__gensim_model = gensim_data.load(self.__source)
-            self.__dictionary = {
+            self._source = new_source
+            self._gensim_model = gensim_data.load(self._source)
+            self._dictionary = {
                 **self._get_flags(self.dim_size),
                 **self._build_embedding_dictionary(),
             }
@@ -85,13 +87,9 @@ class Embedding:
     @oov.setter
     def oov(self, oov):
         if oov is None:
-            self.__oov = lambda dim_size: default_oov(dim_size)
+            self._oov = lambda dim_size: default_oov(dim_size)
         else:
-            self.__oov = lambda dim_size: oov(dim_size)
-
-    @gensim_model.setter
-    def gensim_model(self, gensim_model):
-        self.__gensim_model = gensim_model
+            self._oov = lambda dim_size: oov(dim_size)
 
     def _get_flags(self, dim_size):
         return {
@@ -112,8 +110,8 @@ class Embedding:
 
     def _build_embedding_dictionary(self):
         dictionary = {}
-        words = [*self.__gensim_model.vocab]
-        vectors = self.__gensim_model.vectors
+        words = [*self._gensim_model.vocab]
+        vectors = self._gensim_model.vectors
         for (word, vector) in zip(words, vectors):
             dictionary[word] = vector
 

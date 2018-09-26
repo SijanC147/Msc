@@ -187,34 +187,6 @@ class Model(ABC):
 
     def train(self, dataset, embedding, steps, distribution=None, hooks=[]):
         self._add_embedding_params(embedding)
-        if "partial" in embedding.name and not (
-            exists(join(embedding.data_dir, "train.tfrecord"))
-        ):
-            sentence_list = tf.train.BytesList(
-                value=[s.encode() for s in dataset.train_dict["sentences"]]
-            )
-            target_list = tf.train.BytesList(
-                value=[t.encode() for t in dataset.train_dict["targets"]]
-            )
-            label_list = tf.train.Int64List(
-                value=[int(l) for l in dataset.train_dict["labels"]]
-            )
-            sentences = tf.train.Feature(bytes_list=sentence_list)
-            targets = tf.train.Feature(bytes_list=target_list)
-            labels = tf.train.Feature(int64_list=label_list)
-
-            train_dict = {
-                "sentences": sentences,
-                "targets": targets,
-                "labels": labels,
-            }
-
-            dataset = tf.train.Features(feature=train_dict)
-            example = tf.train.Example(features=dataset)
-
-            with tf.python_io.TFRecordWriter("sentneces.tfrecord") as writer:
-                writer.write(example.SerializeToString())
-
         features, labels, stats = dataset.get_features_and_labels(
             mode="train", distribution=distribution
         )

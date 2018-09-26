@@ -27,7 +27,8 @@ import tsaplay.datasets._constants as DATASETS
 class Dataset:
     def __init__(self, path, parser):
         self.__parser = self._wrap_parser(parser)
-        self.path = path
+        self.__path = path
+        self._initialize_all_internals()
 
     @property
     def name(self):
@@ -58,38 +59,21 @@ class Dataset:
         return self.__test_dict
 
     @property
-    def gen_dir(self):
-        return self.__gen_dir
-
-    @property
     def corpus(self):
-        return self.__corpus
+        return [*self.__corpus]
 
     @property
     def all_docs(self):
         return self.__all_docs
 
-    @path.setter
-    def path(self, path):
-        try:
-            path_changed = self.path != path
-        except:
-            path_changed = True
-
-        if path_changed:
-            self.__path = path
-            self._reset()
-
-    def _reset(self):
-        self.__gen_dir = join(self.path, "_generated")
-        makedirs(self.__gen_dir, exist_ok=True)
+    def _initialize_all_internals(self):
         self.__train_file = search_dir(
             dir=self.__path, query="train", first=True, files_only=True
         )
         self.__test_file = search_dir(
             dir=self.__path, query="test", first=True, files_only=True
         )
-        self.__train_dict = self._load_dataset_dictionary(dict_type="trian")
+        self.__train_dict = self._load_dataset_dictionary(dict_type="train")
         self.__test_dict = self._load_dataset_dictionary(dict_type="test")
         self.__all_docs = set(
             self.__train_dict["sentences"] + self.__test_dict["sentences"]
@@ -98,10 +82,10 @@ class Dataset:
 
     def _load_dataset_dictionary(self, dict_type):
         if dict_type == "train":
-            dict_file = join(self.gen_dir, "train_dict.pkl")
+            dict_file = join(self.path, "_train_dict.pkl")
             data_file = self.__train_file
         else:
-            dict_file = join(self.gen_dir, "test_dict.pkl")
+            dict_file = join(self.path, "_test_dict.pkl")
             data_file = self.__test_file
         if exists(dict_file):
             dictionary = _unpickle(path=dict_file)
@@ -111,7 +95,7 @@ class Dataset:
         return dictionary
 
     def _generate_corpus(self):
-        corpus_file = join(self.gen_dir, "corpus.csv")
+        corpus_file = join(self.path, "_corpus.csv")
         if exists(corpus_file):
             corpus = corpus_from_csv(path=corpus_file)
         else:
@@ -131,12 +115,16 @@ class Dataset:
                     "labels": labels,
                 }
             except:
-                sentences, targets, labels, = _parser(path)
+                sentences, targets, labels = _parser(path)
+                offsets = [
+                    sentence.index(target)
+                    for sentence, target in zip(sentences, targets)
+                ]
                 return {
                     "sentences": sentences,
                     "targets": targets,
+                    "offsets": offsets,
                     "labels": labels,
-                    "offsets": [None] * len(labels),
                 }
 
         return wrapper

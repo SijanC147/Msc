@@ -100,10 +100,12 @@ def corpus_to_csv(path, corpus):
 def search_dir(dir, query, first=False, files_only=False):
     if files_only:
         results = [
-            f for f in listdir(dir) if isfile(join(dir, f)) and query in f
+            join(dir, f)
+            for f in listdir(dir)
+            if isfile(join(dir, f)) and query in f
         ]
     else:
-        results = [f for f in listdir(dir) if query in f]
+        results = [join(dir, f) for f in listdir(dir) if query in f]
     return results[0] if first else results
 
 
