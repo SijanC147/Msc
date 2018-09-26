@@ -201,6 +201,12 @@ def inspect_dist(features, labels):
     positive = [label for label in labels if label == 1]
     neutral = [label for label in labels if label == 0]
     negative = [label for label in labels if label == -1]
+    mappings_zip = zip(
+        features["mappings"]["left"],
+        features["mappings"]["target"],
+        features["mappings"]["right"],
+    )
+    lengths = [len(l + t + r) for (l, t, r) in mappings_zip]
     return {
         "num_samples": len(labels),
         "positive": {
@@ -215,7 +221,7 @@ def inspect_dist(features, labels):
             "count": len(negative),
             "percent": round((len(negative) / len(labels)) * 100, 2),
         },
-        "mean_sen_length": round(np.mean(features["sentence_length"]), 2),
+        "mean_sen_length": round(np.mean(lengths), 2),
     }
 
 

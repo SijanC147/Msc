@@ -76,16 +76,6 @@ def parse_args():
     return args.phrase, args.target, args.model, args.batch_file
 
 
-def get_export_embedding_path(model):
-    export_dir = join(getcwd(), "export", model)
-    versions = [int(v) for v in listdir(export_dir) if not isfile(v)]
-    last_version = str(max(versions))
-    assets_extra_path = join(export_dir, last_version, "assets.extra")
-    embedding_path = join(assets_extra_path, "embedding")
-
-    return embedding_path
-
-
 def make_example(feat_dict):
     sen_tok = tf_encoded_tokenisation([feat_dict["sentence"]], to_bytes=True)
     left_tok = tf_encoded_tokenisation([feat_dict["left_lit"]], to_bytes=True)
@@ -147,7 +137,6 @@ def main():
 
     phrase, target, model, batch_file = parse_args()
 
-    # export_embedding = Embedding(source=get_export_embedding_path(model))
     export_embedding = Embedding(source=EMBEDDINGS.DEBUG)
 
     if batch_file is not None:

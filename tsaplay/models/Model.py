@@ -49,6 +49,10 @@ class Model(ABC):
         self.run_config = run_config
 
     @property
+    def name(self):
+        return self.__class__.__name__
+
+    @property
     def params(self):
         if self.__params is None:
             self.params = self._params()
@@ -185,11 +189,9 @@ class Model(ABC):
     def _eval_hooks(self):
         return []
 
-    def train(self, dataset, embedding, steps, distribution=None, hooks=[]):
-        self._add_embedding_params(embedding)
-        features, labels, stats = dataset.get_features_and_labels(
-            mode="train", distribution=distribution
-        )
+    def train(self, feature_provider, steps, hooks=[]):
+        self.params = {**self.params, **feature_provider.embedding_params}
+        features, labels, stats = feature_provider.get_features("train")
         run_stats = self._export_statistics(dataset_stats=stats, steps=steps)
         start = _time()
         self.estimator.train(
@@ -205,11 +207,9 @@ class Model(ABC):
         duration_dict = {"job": "train", "time": time_taken}
         return {"duration": duration_dict, **run_stats}
 
-    def evaluate(self, dataset, embedding, distribution=None, hooks=[]):
-        self._add_embedding_params(embedding)
-        features, labels, stats = dataset.get_features_and_labels(
-            mode="test", distribution=distribution
-        )
+    def evaluate(self, feature_provider, hooks=[]):
+        self.params = {**self.params, **feature_provider.embedding_params}
+        features, labels, stats = feature_provider.get_features("test")
         run_stats = self._export_statistics(dataset_stats=stats)
         start = _time()
         self.estimator.evaluate(
@@ -224,10 +224,9 @@ class Model(ABC):
         duration_dict = {"job": "eval", "time": time_taken}
         return {"duration": duration_dict, **run_stats}
 
-    def train_and_eval(self, dataset, embedding, steps, early_stopping=False):
-        self._add_embedding_params(embedding)
-        features, labels, stats = dataset.get_features_and_labels(mode="train")
-        features["vocab_file"] = dataset.embedding.vocab_file_path
+    def train_and_eval(self, feature_provider, steps, early_stopping=False):
+        self.params = {**self.params, **feature_provider.embedding_params}
+        features, labels, stats = feature_provider.get_features("train")
         train_stats = self._export_statistics(dataset_stats=stats, steps=steps)
         train_spec = tf.estimator.TrainSpec(
             input_fn=lambda: self.__train_input_fn(
@@ -239,8 +238,7 @@ class Model(ABC):
             hooks=self._attach_std_train_hooks(self.train_hooks)
             + self._get_early_stopping_hook(early_stopping),
         )
-        features, labels, stats = dataset.get_features_and_labels(mode="eval")
-        features["vocab_file"] = dataset.embedding.vocab_file_path
+        features, labels, stats = feature_provider.get_features("test")
         eval_stats = self._export_statistics(dataset_stats=stats, steps=steps)
         eval_spec = tf.estimator.EvalSpec(
             input_fn=lambda: self.__eval_input_fn(
@@ -264,8 +262,8 @@ class Model(ABC):
             {"duration": duration_dict, **eval_stats},
         )
 
-    def export(self, directory, embedding):
-        self._add_embedding_params(embedding)
+    def export(self, directory, embedding_params):
+        self.params = {**self.params, **embedding_params}
         self.estimator.export_savedmodel(
             export_dir_base=directory,
             serving_input_receiver_fn=self._serving_input_receiver_fn(),

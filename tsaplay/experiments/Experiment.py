@@ -8,24 +8,26 @@ from tsaplay.utils._io import (
     write_stats_to_disk,
     restart_tf_serve_container,
 )
+import tsaplay.experiments._constants as EXPERIMENTS
 
 
 class Experiment:
-    def __init__(self, dataset, embedding, model, contd_tag=None):
-        self.contd_tag = contd_tag
-        self.dataset = dataset
+    def __init__(self, feature_provider, model, contd_tag=None):
+        self.fp = feature_provider
         self.model = model
-        self.embedding = embedding
-        self.model_name = model.__class__.__name__
-        self.export_dir = _join(getcwd(), "export")
-        self.exp_dir = self._init_experiment_dir()
+
+        if contd_tag is not None:
+            self.contd_tag = contd_tag.replace(" ", "_").lower()
+        else:
+            self.contd_tag = None
+
+        self._initialize_experiment_dir()
 
     def run(
         self,
         job,
         steps,
         early_stopping=False,
-        dist=None,
         hooks=[],
         debug=False,
         start_tb=False,
@@ -34,30 +36,28 @@ class Experiment:
     ):
         if job == "train":
             stats = self.model.train(
-                dataset=self.dataset,
-                embedding=self.embedding,
-                steps=steps,
-                distribution=dist,
-                hooks=hooks,
+                feature_provider=self.fp, steps=steps, hooks=hooks
             )
-            write_stats_to_disk(job="train", stats=stats, path=self.exp_dir)
+            write_stats_to_disk(
+                job="train", stats=stats, path=self._experiment_dir
+            )
         elif job == "eval":
-            stats = self.model.evaluate(
-                dataset=self.dataset,
-                embedding=self.embedding,
-                distribution=dist,
-                hooks=hooks,
+            stats = self.model.evaluate(feature_provider=self.fp, hooks=hooks)
+            write_stats_to_disk(
+                job="eval", stats=stats, path=self._experiment_dir
             )
-            write_stats_to_disk(job="eval", stats=stats, path=self.exp_dir)
         elif job == "train+eval":
             train, test = self.model.train_and_eval(
-                dataset=self.dataset,
-                embedding=self.embedding,
+                feature_provider=self.fp,
                 steps=steps,
                 early_stopping=early_stopping,
             )
-            write_stats_to_disk(job="train", stats=train, path=self.exp_dir)
-            write_stats_to_disk(job="eval", stats=test, path=self.exp_dir)
+            write_stats_to_disk(
+                job="train", stats=train, path=self._experiment_dir
+            )
+            write_stats_to_disk(
+                job="eval", stats=test, path=self._experiment_dir
+            )
 
         if start_tb:
             start_tensorboard(
@@ -71,16 +71,17 @@ class Experiment:
         if self.contd_tag is None:
             print("No continue tag defined, nothing to export!")
         else:
-            export_model_name = "_".join(
-                [self.model_name.lower(), self.contd_tag]
+            export_model_name = self.model.name.lower() + "_" + self.contd_tag
+            model_export_dir = _join(
+                EXPERIMENTS.EXPORT_PATH, export_model_name
             )
-            model_export_dir = _join(self.export_dir, export_model_name)
             if exists(model_export_dir) and overwrite:
                 rmtree(model_export_dir)
 
             prev_exported_models = self._list_exported_models()
             self.model.export(
-                directory=model_export_dir, embedding=self.embedding
+                directory=model_export_dir,
+                embedding_params=self.fp.embedding_params,
             )
 
             if prev_exported_models != self._list_exported_models():
@@ -91,35 +92,32 @@ class Experiment:
                     logs = restart_tf_serve_container()
                     print(logs)
 
-    def _init_experiment_dir(self):
-        all_exps_path = _join(dirname(abspath(__file__)), "data")
+    def _initialize_experiment_dir(self):
         rel_model_path = _join(
             relpath(
                 dirname(getfile(self.model.__class__)),
                 _join(getcwd(), "tsaplay", "models"),
             ),
-            self.model.__class__.__name__,
+            self.model.name,
         )
-        if self.contd_tag is not None:
-            exp_dir_name = self.contd_tag.replace(" ", "_")
-        else:
-            exp_dir_name = "_".join([self.dataset.name, self.embedding.name])
+        exp_dir_name = self.contd_tag or self.fp.name
 
-        exp_dir = _join(all_exps_path, rel_model_path, exp_dir_name)
+        exp_dir = _join(EXPERIMENTS.DATA_PATH, rel_model_path, exp_dir_name)
         if exists(exp_dir) and self.contd_tag is None:
             i = 0
             while exists(exp_dir):
                 i += 1
                 exp_dir = _join(
-                    all_exps_path, rel_model_path, exp_dir_name + "_" + str(i)
+                    EXPERIMENTS.DATA_PATH,
+                    rel_model_path,
+                    exp_dir_name + "_" + str(i),
                 )
         summary_dir = _join(exp_dir, "tb_summary")
         self.model.run_config.replace(model_dir=summary_dir)
-
-        return exp_dir
+        self._experiment_dir = exp_dir
 
     def _update_export_models_config(self):
-        config_file = _join(self.export_dir, "tfserve.conf")
+        config_file = _join(EXPERIMENTS.EXPORT_PATH, "tfserve.conf")
         names, base_paths = self._get_exported_models_names_and_paths(
             container_base="models"
         )
@@ -140,8 +138,8 @@ class Experiment:
     def _list_exported_models(self):
         exported_models = [
             m
-            for m in listdir(self.export_dir)
-            if not isfile(_join(self.export_dir, m))
+            for m in listdir(EXPERIMENTS.EXPORT_PATH)
+            if not isfile(_join(EXPERIMENTS.EXPORT_PATH, m))
         ]
         return exported_models
 
