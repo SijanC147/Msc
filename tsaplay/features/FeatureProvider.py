@@ -31,7 +31,50 @@ class FeatureProvider:
         if not exists(self._tfrecord_file(mode)):
             self._export_tf_records(mode)
 
-        return self._tfrecord_file(mode)
+        return self._parse_tf_records_file(mode)
+
+    def _parse_tf_records_file(self, mode):
+        feature_spec = {
+            "left_ids": tf.VarLenFeature(dtype=tf.int64),
+            "target_ids": tf.VarLenFeature(dtype=tf.int64),
+            "right_ids": tf.VarLenFeature(dtype=tf.int64),
+            "labels": tf.FixedLenFeature(dtype=tf.int64, shape=[]),
+        }
+
+        dataset = tf.data.TFRecordDataset(self._tfrecord_file(mode))
+        dataset = dataset.map(
+            lambda example: tf.parse_example([example], feature_spec)
+        )
+        iterator = dataset.make_one_shot_iterator()
+        next_example = iterator.get_next()
+
+        features = {"left_ids": [], "target_ids": [], "right_ids": []}
+        labels = []
+
+        sess = tf.Session()
+        while True:
+            try:
+                feature = sess.run(next_example)
+                left = tf.sparse_tensor_to_dense(feature["left_ids"])
+                target = tf.sparse_tensor_to_dense(feature["target_ids"])
+                right = tf.sparse_tensor_to_dense(feature["right_ids"])
+
+                features["left_ids"].append(
+                    left.eval(session=sess)[0].tolist()
+                )
+                features["target_ids"].append(
+                    target.eval(session=sess)[0].tolist()
+                )
+                features["right_ids"].append(
+                    right.eval(session=sess)[0].tolist()
+                )
+                labels.append(feature["labels"][0])
+            except tf.errors.OutOfRangeError:
+                break
+        sess.close()
+        tf.reset_default_graph()
+
+        return features, labels
 
     def _convert_to_id_mappings(self, dictionary):
         tf_dict = self._partition_dictionary_sentences(dictionary)
