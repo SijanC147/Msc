@@ -5,3 +5,5 @@ from tsaplay.features.FeatureProvider import FeatureProvider
 from tsaplay.experiments.Experiment import Experiment
 
 dataset = Dataset(path=DATASETS.DEBUG_PATH, parser=DATASETS.DEBUG_PARSER)
+embedding = PartialEmbedding(dataset.name, dataset.corpus, "glove-twitter-25")
+

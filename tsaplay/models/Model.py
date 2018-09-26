@@ -269,7 +269,6 @@ class Model(ABC):
         self.estimator.export_savedmodel(
             export_dir_base=directory,
             serving_input_receiver_fn=self._serving_input_receiver_fn(),
-            assets_extra={"vocab_file": embedding.vocab_file_path},
             strip_default_attrs=True,
         )
 

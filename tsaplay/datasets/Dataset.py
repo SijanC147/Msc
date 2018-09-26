@@ -1,23 +1,10 @@
-from time import time as _time
-from os import listdir, makedirs
-from os.path import normpath, basename, isfile, join, exists, dirname
-from statistics import mean
+from os.path import normpath, basename, join, exists
 from functools import wraps
-from csv import DictWriter, DictReader
-from tsaplay.utils._nlp import (
-    token_filter,
-    re_dist,
-    inspect_dist,
-    get_sentence_contexts,
-    corpus_from_docs,
-    get_sentence_target_features,
-)
+from tsaplay.utils._nlp import corpus_from_docs
 from tsaplay.utils._io import (
     search_dir,
     corpus_from_csv,
     corpus_to_csv,
-    write_embedding_to_disk,
-    write_emb_tsv_to_disk,
     unpickle_file as _unpickle,
     pickle_file as _pickle,
 )
@@ -117,7 +104,7 @@ class Dataset:
             except:
                 sentences, targets, labels = _parser(path)
                 offsets = [
-                    sentence.index(target)
+                    sentence.lower().find(target.lower())
                     for sentence, target in zip(sentences, targets)
                 ]
                 return {

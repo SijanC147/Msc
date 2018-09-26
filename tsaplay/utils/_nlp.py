@@ -219,10 +219,6 @@ def inspect_dist(features, labels):
     }
 
 
-def default_oov(dim_size):
-    return np.random.uniform(low=-0.03, high=0.03, size=dim_size)
-
-
 def corpus_from_docs(docs):
     corpus = {}
 

@@ -182,12 +182,9 @@ def main():
         )
 
     else:
-        # print(phrase)
-        # print(target)
         feat_dict = get_sentence_target_features(
             embedding=export_embedding, sentence=phrase, target=target
         )
-        # print(feat_dict)
         tf_example = make_example(feat_dict)
         serialized = tf_example.SerializeToString()
         tensor_proto = make_tensor_proto(

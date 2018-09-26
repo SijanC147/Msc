@@ -1,11 +1,8 @@
 import numpy as np
-import tensorflow as tf
-import time
 import gensim.downloader as gensim_data
-from os import makedirs, getcwd
+from tensorflow import float32 as tf_flt32
+from os import makedirs
 from os.path import join, normpath, basename, splitext, dirname, exists
-from tsaplay.utils._nlp import tokenize_phrase, default_oov
-from tsaplay.utils._io import gprint
 
 import tsaplay.embeddings._constants as EMBEDDINGS
 
@@ -65,7 +62,7 @@ class Embedding:
     def initializer(self):
         shape = (self.vocab_size, self.dim_size)
 
-        def _init(shape=shape, dtype=tf.float32, partition_info=None):
+        def _init(shape=shape, dtype=tf_flt32, partition_info=None):
             return self.vectors
 
         self.__initializer = _init
@@ -87,14 +84,17 @@ class Embedding:
     @oov.setter
     def oov(self, oov):
         if oov is None:
-            self._oov = lambda dim_size: default_oov(dim_size)
+            self._oov = lambda size: self._default_oov(size)
         else:
-            self._oov = lambda dim_size: oov(dim_size)
+            self._oov = lambda size: oov(size)
+
+    def _default_oov(self, size):
+        return np.random.uniform(low=-0.03, high=0.03, size=size)
 
     def _get_flags(self, dim_size):
         return {
             "<PAD>": np.zeros(shape=dim_size),
-            "<OOV>": self.oov(dim_size=dim_size),
+            "<OOV>": self.oov(size=dim_size),
         }
 
     def _export_vocabulary_files(self):
