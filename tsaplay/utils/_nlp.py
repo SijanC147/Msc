@@ -298,10 +298,6 @@ def draw_attention_heatmap(phrases, attn_vecs):
     phrases = [[t for t in tokenize_phrase(str(p, "utf-8"))] for p in phrases]
     attn_vecs = [a[: len(p)] for a, p in zip(attn_vecs, phrases)]
 
-    # for tokens, vectors in zip(phrases, attn_vecs):
-    #     print(" ".join(tokens))
-    #     print(" ".join(str(np.squeeze(vectors, axis=1))))
-
     v_space = 5
     h_space = 10
     images = []
