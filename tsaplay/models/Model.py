@@ -11,14 +11,13 @@ from tensorflow.estimator.export import (  # pylint: disable=E0401
 from tensorflow.contrib.estimator import (  # pylint: disable=E0611
     stop_if_no_decrease_hook
 )
-from os.path import join, dirname, exists
+from os.path import join, dirname, exists, relpath
 from inspect import getsource, getfile
 from datetime import timedelta
 from time import time as _time
 from abc import ABC, abstractmethod
-from os import makedirs
+from os import makedirs, getcwd
 from functools import wraps
-from tsaplay.utils._tf import get_dense_tensor
 from tsaplay.utils.SaveConfusionMatrixHook import SaveConfusionMatrixHook
 from tsaplay.utils.SaveAttentionWeightVectorHook import (
     SaveAttentionWeightVectorHook
@@ -51,6 +50,13 @@ class Model(ABC):
     @property
     def name(self):
         return self.__class__.__name__
+
+    @property
+    def relative_path(self):
+        models_dir = join(getcwd(), "tsaplay", "models")
+        model_dir = dirname(getfile(self.__class__))
+        relative_path = relpath(model_dir, models_dir)
+        return join(relative_path, self.name)
 
     @property
     def params(self):
@@ -189,7 +195,7 @@ class Model(ABC):
     def _eval_hooks(self):
         return []
 
-    def train(self, feature_provider, steps, hooks=[]):
+    def train(self, feature_provider, steps):
         self.params = {**self.params, **feature_provider.embedding_params}
         features, labels, stats = feature_provider.get_features("train")
         run_stats = self._export_statistics(dataset_stats=stats, steps=steps)
@@ -201,13 +207,13 @@ class Model(ABC):
                 batch_size=self.params["batch_size"],
             ),
             steps=steps,
-            hooks=self._attach_std_train_hooks(self.train_hooks) + hooks,
+            hooks=self._attach_std_train_hooks(self.train_hooks),
         )
         time_taken = str(timedelta(seconds=_time() - start))
         duration_dict = {"job": "train", "time": time_taken}
         return {"duration": duration_dict, **run_stats}
 
-    def evaluate(self, feature_provider, hooks=[]):
+    def evaluate(self, feature_provider):
         self.params = {**self.params, **feature_provider.embedding_params}
         features, labels, stats = feature_provider.get_features("test")
         run_stats = self._export_statistics(dataset_stats=stats)
@@ -218,14 +224,15 @@ class Model(ABC):
                 labels=labels,
                 batch_size=self.params["batch_size"],
             ),
-            hooks=self._attach_std_eval_hooks(self.eval_hooks) + hooks,
+            hooks=self._attach_std_eval_hooks(self.eval_hooks),
         )
         time_taken = str(timedelta(seconds=_time() - start))
         duration_dict = {"job": "eval", "time": time_taken}
         return {"duration": duration_dict, **run_stats}
 
-    def train_and_eval(self, feature_provider, steps, early_stopping=False):
+    def train_and_eval(self, feature_provider, steps):
         self.params = {**self.params, **feature_provider.embedding_params}
+        stop_early = self.params.get("early_stopping", False)
         features, labels, stats = feature_provider.get_features("train")
         train_stats = self._export_statistics(dataset_stats=stats, steps=steps)
         train_spec = tf.estimator.TrainSpec(
@@ -235,8 +242,7 @@ class Model(ABC):
                 batch_size=self.params["batch_size"],
             ),
             max_steps=steps,
-            hooks=self._attach_std_train_hooks(self.train_hooks)
-            + self._get_early_stopping_hook(early_stopping),
+            hooks=self._attach_std_train_hooks(self.train_hooks, stop_early),
         )
         features, labels, stats = feature_provider.get_features("test")
         eval_stats = self._export_statistics(dataset_stats=stats, steps=steps)
@@ -300,13 +306,19 @@ class Model(ABC):
 
             input_features = tf.parse_example(inputs_serialized, feature_spec)
 
-            left_map = get_dense_tensor(input_features["left_map"])
-            target_map = get_dense_tensor(input_features["target_map"])
-            right_map = get_dense_tensor(input_features["right_map"])
-            sen_map = get_dense_tensor(input_features["sen_map"])
-            ctxt_map = get_dense_tensor(input_features["ctxt_map"])
-            lft_trg_map = get_dense_tensor(input_features["lft_trg_map"])
-            trg_rht_map = get_dense_tensor(input_features["trg_rht_map"])
+            left_map = tf.sparse_tensor_to_dense(input_features["left_map"])
+            target_map = tf.sparse_tensor_to_dense(
+                input_features["target_map"]
+            )
+            right_map = tf.sparse_tensor_to_dense(input_features["right_map"])
+            sen_map = tf.sparse_tensor_to_dense(input_features["sen_map"])
+            ctxt_map = tf.sparse_tensor_to_dense(input_features["ctxt_map"])
+            lft_trg_map = tf.sparse_tensor_to_dense(
+                input_features["lft_trg_map"]
+            )
+            trg_rht_map = tf.sparse_tensor_to_dense(
+                input_features["trg_rht_map"]
+            )
 
             std_feat = {
                 "literals": {
@@ -435,6 +447,36 @@ class Model(ABC):
 
         return wrapper
 
+    def _attach_std_eval_hooks(self, eval_hooks):
+        confusion_matrix_save_hook = SaveConfusionMatrixHook(
+            labels=["Negative", "Neutral", "Positive"],
+            confusion_matrix_tensor_name="mean_iou/total_confusion_matrix",
+            summary_writer=tf.summary.FileWriterCache.get(
+                join(self.run_config.model_dir, "eval")
+            ),
+        )
+        std_eval_hooks = [confusion_matrix_save_hook]
+        return eval_hooks + std_eval_hooks
+
+    def _attach_std_train_hooks(self, train_hooks, early_stopping=False):
+        std_train_hooks = []
+        if early_stopping:
+            makedirs(self.estimator.eval_dir())
+            std_train_hooks.append(
+                [
+                    stop_if_no_decrease_hook(
+                        estimator=self.estimator,
+                        metric_name="loss",
+                        max_steps_without_decrease=self.params.get(
+                            "max_steps", 1000
+                        ),
+                        min_steps=self.params.get("min_steps", 100),
+                    )
+                ]
+            )
+
+        return train_hooks + std_train_hooks
+
     def _export_statistics(self, dataset_stats=None, steps=None):
         train_input_fn_source = getsource(self.train_input_fn)
         eval_input_fn_source = getsource(self.eval_input_fn)
@@ -465,45 +507,3 @@ class Model(ABC):
             },
             "common": common_content,
         }
-
-    def _add_embedding_params(self, embedding):
-        self.params = {
-            **self.params,
-            "embedding_initializer": embedding.initializer,
-            "vocab_size": embedding.vocab_size,
-            "embedding_dim": embedding.dim_size,
-            "vocab_file_path": embedding.vocab_file_path,
-        }
-
-    def _attach_std_eval_hooks(self, eval_hooks):
-        confusion_matrix_save_hook = SaveConfusionMatrixHook(
-            labels=["Negative", "Neutral", "Positive"],
-            confusion_matrix_tensor_name="mean_iou/total_confusion_matrix",
-            summary_writer=tf.summary.FileWriterCache.get(
-                join(self.run_config.model_dir, "eval")
-            ),
-        )
-        std_eval_hooks = [confusion_matrix_save_hook]
-        return eval_hooks + std_eval_hooks
-
-    def _attach_std_train_hooks(self, train_hooks):
-        std_train_hooks = []
-        return train_hooks + std_train_hooks
-
-    def _get_early_stopping_hook(self, early_stopping):
-        if early_stopping or self.params.get("early_stopping", False):
-            makedirs(self.estimator.eval_dir())
-            early_stopping_hook = [
-                stop_if_no_decrease_hook(
-                    estimator=self.estimator,
-                    metric_name="loss",
-                    max_steps_without_decrease=self.params.get(
-                        "max_steps", 1000
-                    ),
-                    min_steps=self.params.get("min_steps", 100),
-                )
-            ]
-        else:
-            early_stopping_hook = []
-
-        return early_stopping_hook

@@ -109,7 +109,7 @@ def search_dir(dir, query, first=False, files_only=False):
     return results[0] if first else results
 
 
-def write_stats_to_disk(job, stats, path):
+def write_stats(job, stats, path):
     target_dir = join(path, job)
     makedirs(target_dir, exist_ok=True)
     with open(join(target_dir, "dataset.json"), "w") as file:
