@@ -60,13 +60,9 @@ class FeatureProvider:
 
     def _parse_tf_records_file(self, mode):
         feature_spec = {
-            "sentence": tf.FixedLenFeature(dtype=tf.string, shape=[]),
-            "left_lit": tf.FixedLenFeature(dtype=tf.string, shape=[]),
-            "target_lit": tf.FixedLenFeature(dtype=tf.string, shape=[]),
-            "right_lit": tf.FixedLenFeature(dtype=tf.string, shape=[]),
-            "left_tok": tf.FixedLenFeature(dtype=tf.string, shape=[]),
-            "target_tok": tf.FixedLenFeature(dtype=tf.string, shape=[]),
-            "right_tok": tf.FixedLenFeature(dtype=tf.string, shape=[]),
+            "left": tf.VarLenFeature(dtype=tf.string),
+            "target": tf.VarLenFeature(dtype=tf.string),
+            "right": tf.VarLenFeature(dtype=tf.string),
             "left_ids": tf.VarLenFeature(dtype=tf.int64),
             "target_ids": tf.VarLenFeature(dtype=tf.int64),
             "right_ids": tf.VarLenFeature(dtype=tf.int64),
@@ -81,11 +77,12 @@ class FeatureProvider:
         next_example = iterator.get_next()
 
         features = {
-            "sentence": [],
             "left": [],
             "target": [],
             "right": [],
-            "mappings": {"left": [], "target": [], "right": []},
+            "left_ids": [],
+            "target_ids": [],
+            "right_ids": [],
         }
         labels = []
 
@@ -94,28 +91,35 @@ class FeatureProvider:
             try:
                 feature = sess.run(next_example)
 
+                left_op = tf.sparse_tensor_to_dense(
+                    feature["left"], default_value=b"<PAD>"
+                )
+                target_op = tf.sparse_tensor_to_dense(
+                    feature["target"], default_value=b"<PAD>"
+                )
+                right_op = tf.sparse_tensor_to_dense(
+                    feature["right"], default_value=b"<PAD>"
+                )
                 left_ids_op = tf.sparse_tensor_to_dense(feature["left_ids"])
                 target_ids_op = tf.sparse_tensor_to_dense(
                     feature["target_ids"]
                 )
                 right_ids_op = tf.sparse_tensor_to_dense(feature["right_ids"])
 
-                sentence = feature["sentence"][0].decode("utf-8")
-                left_lit = feature["left_lit"][0].decode("utf-8")
-                target_lit = feature["target_lit"][0].decode("utf-8")
-                right_lit = feature["right_lit"][0].decode("utf-8")
+                left = left_op.eval(session=sess)[0].tolist()
+                target = target_op.eval(session=sess)[0].tolist()
+                right = right_op.eval(session=sess)[0].tolist()
 
                 left_ids = left_ids_op.eval(session=sess)[0].tolist()
                 target_ids = target_ids_op.eval(session=sess)[0].tolist()
                 right_ids = right_ids_op.eval(session=sess)[0].tolist()
 
-                features["sentence"].append(sentence)
-                features["left"].append(left_lit)
-                features["target"].append(target_lit)
-                features["right"].append(right_lit)
-                features["mappings"]["left"].append(left_ids)
-                features["mappings"]["target"].append(target_ids)
-                features["mappings"]["right"].append(right_ids)
+                features["left"].append(left)
+                features["target"].append(target)
+                features["right"].append(right)
+                features["left_ids"].append(left_ids)
+                features["target_ids"].append(target_ids)
+                features["right_ids"].append(right_ids)
                 labels.append(feature["labels"][0])
             except tf.errors.OutOfRangeError:
                 break

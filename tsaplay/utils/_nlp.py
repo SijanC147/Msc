@@ -202,9 +202,7 @@ def inspect_dist(features, labels):
     neutral = [label for label in labels if label == 0]
     negative = [label for label in labels if label == -1]
     mappings_zip = zip(
-        features["mappings"]["left"],
-        features["mappings"]["target"],
-        features["mappings"]["right"],
+        features["left_ids"], features["target_ids"], features["right_ids"]
     )
     lengths = [len(l + t + r) for (l, t, r) in mappings_zip]
     return {
