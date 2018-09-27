@@ -48,13 +48,6 @@ class LcrRot(Model):
 
     def _model_fn(self):
         def default(features, labels, mode, params=self.params):
-            # ids_table = setup_embedding_lookup_table(params["vocab_file_path"])
-            # left_ids = lookup_embedding_ids(ids_table, features["left_tok"])
-            # target_ids = lookup_embedding_ids(
-            #     ids_table, features["target_tok"]
-            # )
-            # right_ids = lookup_embedding_ids(ids_table, features["right_tok"])
-
             embedding_matrix = setup_embedding_layer(
                 vocab_size=params["vocab_size"],
                 dim_size=params["embedding_dim"],

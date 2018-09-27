@@ -149,7 +149,6 @@ class FeatureProvider:
             ids_dict["labels"],
         )
 
-        print(ids_dict)
         tf_examples = []
 
         for (

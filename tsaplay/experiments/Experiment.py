@@ -1,4 +1,4 @@
-import tensorflow as tfj
+import tensorflow as tf
 from shutil import rmtree
 from os import getcwd, listdir
 from os.path import join as _join, isfile, relpath, dirname, exists, abspath
@@ -9,6 +9,8 @@ from tsaplay.utils._io import (
     restart_tf_serve_container,
 )
 import tsaplay.experiments._constants as EXPERIMENTS
+
+tf.logging.set_verbosity(tf.logging.INFO)
 
 
 class Experiment:
@@ -113,7 +115,9 @@ class Experiment:
                     exp_dir_name + "_" + str(i),
                 )
         summary_dir = _join(exp_dir, "tb_summary")
-        self.model.run_config.replace(model_dir=summary_dir)
+        self.model.run_config = self.model.run_config.replace(
+            model_dir=summary_dir
+        )
         self._experiment_dir = exp_dir
 
     def _update_export_models_config(self):
