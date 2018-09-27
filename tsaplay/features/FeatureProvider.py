@@ -38,10 +38,10 @@ class FeatureProvider:
     @property
     def embedding_params(self):
         return {
-            "embedding_initializer": self._embedding.initializer,
             "vocab_size": self._embedding.vocab_size,
-            "embedding_dim": self._embedding.dim_size,
             "vocab_file_path": self._embedding.vocab_file_path,
+            "embedding_dim": self._embedding.dim_size,
+            "embedding_initializer": self._embedding.initializer,
         }
 
     def get_features(self, mode):
@@ -127,73 +127,40 @@ class FeatureProvider:
 
     def _export_tf_records(self, mode):
         if mode == "train":
-            dictionary = self._dataset.train_dict
+            data = self._dataset.train_dict
         else:
-            dictionary = self._dataset.test_dict
+            data = self._dataset.test_dict
 
-        partition_dict = self._partition_dictionary_sentences(dictionary)
-        tf_encoded_dict = self._tf_encode_dictionary(partition_dict)
-        ids_dict = self._convert_to_id_mappings(tf_encoded_dict)
+        left_ctxts, targets, right_ctxts = self._partition_sentences(
+            sentences=data["sentences"],
+            targets=data["targets"],
+            offsets=data["offsets"],
+        )
+        left_enc = [self._tf_encode_string(l) for l in left_ctxts]
+        target_enc = [self._tf_encode_string(t) for t in targets]
+        right_enc = [self._tf_encode_string(r) for r in right_ctxts]
 
-        ids_dict_zip = zip(
-            ids_dict["sentence"],
-            ids_dict["left_lit"],
-            ids_dict["target_lit"],
-            ids_dict["right_lit"],
-            ids_dict["left_tok"],
-            ids_dict["target_tok"],
-            ids_dict["right_tok"],
-            ids_dict["left_ids"],
-            ids_dict["target_ids"],
-            ids_dict["right_ids"],
-            ids_dict["labels"],
+        left_sp = [self._get_tokens_sp_tensor(l) for l in left_enc]
+        target_sp = [self._get_tokens_sp_tensor(t) for t in target_enc]
+        right_sp = [self._get_tokens_sp_tensor(r) for r in right_enc]
+
+        left, l_ids, target, t_ids, right, r_ids = self._get_ids_bytes_lists(
+            left_sp=left_sp, target_sp=target_sp, right_sp=right_sp
+        )
+        data_zip = zip(
+            left, l_ids, target, t_ids, right, r_ids, data["labels"]
         )
 
         tf_examples = []
-
-        for (
-            sentence,
-            left_lit,
-            target_lit,
-            right_lit,
-            left_tok,
-            target_tok,
-            right_tok,
-            left_ids,
-            target_ids,
-            right_ids,
-            label,
-        ) in ids_dict_zip:
+        for (left, l_ids, target, t_ids, right, r_ids, label) in data_zip:
             features = Features(
                 feature={
-                    "sentence": Feature(
-                        bytes_list=BytesList(value=[sentence.encode()])
-                    ),
-                    "left_lit": Feature(
-                        bytes_list=BytesList(value=[left_lit.encode()])
-                    ),
-                    "target_lit": Feature(
-                        bytes_list=BytesList(value=[target_lit.encode()])
-                    ),
-                    "right_lit": Feature(
-                        bytes_list=BytesList(value=[right_lit.encode()])
-                    ),
-                    "left_tok": Feature(
-                        bytes_list=BytesList(value=[left_tok])
-                    ),
-                    "target_tok": Feature(
-                        bytes_list=BytesList(value=[target_tok])
-                    ),
-                    "right_tok": Feature(
-                        bytes_list=BytesList(value=[right_tok])
-                    ),
-                    "left_ids": Feature(int64_list=Int64List(value=left_ids)),
-                    "target_ids": Feature(
-                        int64_list=Int64List(value=target_ids)
-                    ),
-                    "right_ids": Feature(
-                        int64_list=Int64List(value=right_ids)
-                    ),
+                    "left": Feature(bytes_list=BytesList(value=left)),
+                    "target": Feature(bytes_list=BytesList(value=target)),
+                    "right": Feature(bytes_list=BytesList(value=right)),
+                    "left_ids": Feature(int64_list=Int64List(value=l_ids)),
+                    "target_ids": Feature(int64_list=Int64List(value=t_ids)),
+                    "right_ids": Feature(int64_list=Int64List(value=r_ids)),
                     "labels": Feature(int64_list=Int64List(value=[label])),
                 }
             )
@@ -204,63 +171,21 @@ class FeatureProvider:
             for serialized_example in tf_examples:
                 tf_writer.write(serialized_example)
 
-    def _partition_dictionary_sentences(self, dictionary):
-        new_dict = {
-            "sentence": [s.strip() for s in dictionary["sentences"]],
-            "left_lit": [],
-            "target_lit": [t.strip() for t in dictionary["targets"]],
-            "right_lit": [],
-            "labels": dictionary["labels"],
-        }
-        dict_zip = zip(
-            dictionary["sentences"],
-            dictionary["targets"],
-            dictionary["offsets"],
-        )
+    def _partition_sentences(self, sentences, targets, offsets):
+        left_ctxts, _targets, right_ctxts = [], [], []
 
-        for (sentence, target, offset) in dict_zip:
-            left_lit = sentence[:offset].strip()
-            r_offset = offset + len(target.strip())
-            right_lit = sentence[r_offset:].strip()
+        for (sen, trg, off) in zip(sentences, targets, offsets):
+            left_ctxts.append(sen[:off].strip())
+            target = trg.strip()
+            r_off = off + len(target)
+            _targets.append(target)
+            right_ctxts.append(sen[r_off:].strip())
 
-            new_dict["left_lit"].append(left_lit)
-            new_dict["right_lit"].append(right_lit)
+        return left_ctxts, _targets, right_ctxts
 
-        return new_dict
-
-    def _tf_encode_dictionary(self, dictionary):
-        new_dict = {
-            **dictionary,
-            "left_tok": [],
-            "target_tok": [],
-            "right_tok": [],
-        }
-        dict_zip = zip(
-            dictionary["left_lit"],
-            dictionary["target_lit"],
-            dictionary["right_lit"],
-        )
-
-        for (left, target, right) in dict_zip:
-            new_dict["left_tok"].append(self._tf_encode_string(left))
-            new_dict["target_tok"].append(self._tf_encode_string(target))
-            new_dict["right_tok"].append(self._tf_encode_string(right))
-
-        return new_dict
-
-    def _convert_to_id_mappings(self, dictionary):
-        new_dict = {
-            **dictionary,
-            "left_ids": [],
-            "target_ids": [],
-            "right_ids": [],
-        }
-        tf_dict_zip = zip(
-            dictionary["left_tok"],
-            dictionary["target_tok"],
-            dictionary["right_tok"],
-        )
-
+    def _get_ids_bytes_lists(self, left_sp, target_sp, right_sp):
+        left, target, right = [], [], []
+        left_ids, target_ids, right_ids = [], [], []
         ids_table = tf.contrib.lookup.index_table_from_file(
             vocabulary_file=self._embedding.vocab_file_path, default_value=1
         )
@@ -268,23 +193,35 @@ class FeatureProvider:
         with tf.Session():
             tf.tables_initializer().run()
 
-            for (left, target, right) in tf_dict_zip:
-                left_ids = self._tf_lookup_ids(ids_table, left)
-                target_ids = self._tf_lookup_ids(ids_table, target)
-                right_ids = self._tf_lookup_ids(ids_table, right)
+            for (l, t, r) in zip(left_sp, target_sp, right_sp):
+                left_ids_op = self._tf_lookup_ids(ids_table, l)
+                target_ids_op = self._tf_lookup_ids(ids_table, t)
+                right_ids_op = self._tf_lookup_ids(ids_table, r)
 
-                new_dict["left_ids"].append(left_ids.eval()[0])
-                new_dict["target_ids"].append(target_ids.eval()[0])
-                new_dict["right_ids"].append(right_ids.eval()[0])
+                left_ids.append(left_ids_op.eval()[0])
+                target_ids.append(target_ids_op.eval()[0])
+                right_ids.append(right_ids_op.eval()[0])
+
+                left_op = tf.sparse_tensor_to_dense(l, default_value=b"")
+                target_op = tf.sparse_tensor_to_dense(t, default_value=b"")
+                right_op = tf.sparse_tensor_to_dense(r, default_value=b"")
+
+                left.append(left_op.eval()[0])
+                target.append(target_op.eval()[0])
+                right.append(right_op.eval()[0])
 
         tf.reset_default_graph()
 
-        return new_dict
+        return left, left_ids, target, target_ids, right, right_ids
 
-    def _tf_lookup_ids(self, table, tf_encoded_string):
+    def _get_tokens_sp_tensor(self, tf_encoded_string, delimiter="<SEP>"):
         string_tensor = tf.constant([tf_encoded_string], dtype=tf.string)
-        token_sp_tensor = tf.string_split(string_tensor, delimiter="<SEP>")
-        ids_sp_tensor = table.lookup(token_sp_tensor)
+        tokens_sp_tensor = tf.string_split(string_tensor, delimiter)
+
+        return tokens_sp_tensor
+
+    def _tf_lookup_ids(self, table, tokens_sp_tensor):
+        ids_sp_tensor = table.lookup(tokens_sp_tensor)
         ids_tensor = tf.sparse_tensor_to_dense(ids_sp_tensor)
 
         return ids_tensor
