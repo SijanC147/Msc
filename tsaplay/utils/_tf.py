@@ -9,8 +9,11 @@ from tensorflow.contrib.lookup import (  # pylint: disable=E0611
 from tensorflow.contrib.layers import embed_sequence  # pylint: disable=E0611
 
 
-def sparse_seq_lengths(sp_input):
-    batch_groups, _, _ = tf.unstack(sp_input.indices, axis=1)
+def sparse_seq_lengths(sp_input, batched=True):
+    if not (batched):
+        batch_groups, _ = tf.unstack(sp_input.indicesl, axis=1)
+    else:
+        batch_groups, _, _ = tf.unstack(sp_input.indices, axis=1)
     _, _, counts = tf.unique_with_counts(batch_groups)
 
     return counts

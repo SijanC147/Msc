@@ -18,6 +18,7 @@ from tsaplay.models.Chen2017.common import (
     ram_attn_unit,
 )
 from tsaplay.utils._tf import (
+    sparse_seq_lengths,
     variable_len_batch_mean,
     dropout_lstm_cell,
     dropout_gru_cell,
@@ -44,13 +45,11 @@ class RecurrentAttentionNetwork(Model):
         return default
 
     def _train_input_fn(self):
-        return lambda features, labels, batch_size: ram_input_fn(
-            features, labels, batch_size
-        )
+        return lambda tfrecord, batch_size: ram_input_fn(tfrecord, batch_size)
 
     def _eval_input_fn(self):
-        return lambda features, labels, batch_size: ram_input_fn(
-            features, labels, batch_size, eval_input=True
+        return lambda tfrecord, batch_size: ram_input_fn(
+            tfrecord, batch_size, _eval=True
         )
 
     def _serving_input_fn(self):
@@ -58,13 +57,11 @@ class RecurrentAttentionNetwork(Model):
 
     def _model_fn(self):
         def default(features, labels, mode, params=self.params):
-            ids_table = setup_embedding_lookup_table(params["vocab_file_path"])
-            sentence_ids = lookup_embedding_ids(
-                ids_table, features["sentence_tok"]
-            )
-            target_ids = lookup_embedding_ids(
-                ids_table, features["target_tok"]
-            )
+            sentence_len = sparse_seq_lengths(features["sentence_ids"])
+            target_len = sparse_seq_lengths(features["target"])
+            sentence_ids = tf.sparse_tensor_to_dense(features["sentence_ids"])
+            target_ids = tf.sparse_tensor_to_dense(features["target_ids"])
+            target_offset = tf.cast(features["target_offset"], tf.int32)
 
             embedding_matrix = setup_embedding_layer(
                 vocab_size=params["vocab_size"],
@@ -104,20 +101,18 @@ class RecurrentAttentionNetwork(Model):
                     cells_fw=forward_cells,
                     cells_bw=backward_cells,
                     inputs=sentence_embeddings,
-                    sequence_length=features["sentence_len"],
+                    sequence_length=sentence_len,
                     dtype=tf.float32,
                 )
 
             distances = get_bounded_distance_vectors(
-                left_bounds=features["target_left_bound"],
-                right_bounds=features["target_right_bound"],
-                seq_lens=features["sentence_len"],
+                left_bounds=target_offset,
+                right_bounds=target_offset + target_len,
+                seq_lens=sentence_len,
                 max_seq_len=max_seq_len,
             )
 
-            u_t, w_t = calculate_u_t_w_t(
-                features["sentence_len"], max_seq_len, distances
-            )
+            u_t, w_t = calculate_u_t_w_t(sentence_len, max_seq_len, distances)
 
             memory = get_location_weighted_memory(memory_star, w_t, u_t)
 
@@ -127,12 +122,13 @@ class RecurrentAttentionNetwork(Model):
 
             target_avg = variable_len_batch_mean(
                 input_tensor=target_embeddings,
-                seq_lengths=features["target_len"],
+                seq_lengths=target_len,
                 op_name="target_avg_pooling",
             )
 
             attn_snapshots = create_snapshots_container(
-                shape_like=sentence_ids, n_snaps=params["n_hops"]
+                shape_like=tf.squeeze(sentence_ids, axis=1),
+                n_snaps=params["n_hops"],
             )
 
             attn_layer_num = tf.constant(1)
@@ -144,7 +140,7 @@ class RecurrentAttentionNetwork(Model):
 
             def attn_layer_run(attn_layer_num, episode, attn_snapshots):
                 mem_prev_ep_v_target = var_len_concatenate(
-                    seq_lens=features["sentence_len"],
+                    seq_lens=sentence_len,
                     memory=memory,
                     v_target=target_avg,
                     prev_episode=episode,
@@ -159,7 +155,7 @@ class RecurrentAttentionNetwork(Model):
 
                 with tf.variable_scope("attention_layer", reuse=tf.AUTO_REUSE):
                     attn_scores = ram_attn_unit(
-                        seq_lens=features["sentence_len"],
+                        seq_lens=sentence_len,
                         attn_focus=mem_prev_ep_v_target,
                         weight_dim=weight_dim,
                         init=params["initializer"],
@@ -177,7 +173,7 @@ class RecurrentAttentionNetwork(Model):
                             keep_prob=params["keep_prob"],
                         ),
                         inputs=content_i_al,
-                        sequence_length=features["sentence_len"],
+                        sequence_length=sentence_len,
                         dtype=tf.float32,
                     )
 
@@ -199,13 +195,13 @@ class RecurrentAttentionNetwork(Model):
                 loop_vars=initial_layer_inputs,
             )
 
-            literals, attn_snapshots = zip_attn_snapshots_with_literals(
-                literals=features["sentence_lit"],
-                snapshots=attn_snapshots,
-                num_layers=params["n_hops"],
-            )
-            attn_info = tf.tuple([literals, attn_snapshots])
-            generate_attn_heatmap_summary(attn_info)
+            # literals, attn_snapshots = zip_attn_snapshots_with_literals(
+            #     literals=features["sentence_lit"],
+            #     snapshots=attn_snapshots,
+            #     num_layers=params["n_hops"],
+            # )
+            # attn_info = tf.tuple([literals, attn_snapshots])
+            # generate_attn_heatmap_summary(attn_info)
 
             final_sentence_rep = tf.squeeze(final_episode, axis=1)
 

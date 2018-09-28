@@ -9,9 +9,14 @@ from tsaplay.utils._data import (
     package_feature_dict,
     prep_dataset_and_get_iterator,
     tf_encoded_tokenisation,
+    parse_tf_example,
 )
 from tsaplay.utils._nlp import tokenize_phrase
-from tsaplay.utils._tf import masked_softmax
+from tsaplay.utils._tf import (
+    masked_softmax,
+    concat_seq_sparse,
+    sparse_seq_lengths,
+)
 from tsaplay.utils._io import gprint
 
 params = {
@@ -28,51 +33,47 @@ params = {
 }
 
 
-def ram_input_fn(features, labels, batch_size, eval_input=False):
-    sentences = [
-        l + t + r
-        for l, t, r in zip(
-            features["mappings"]["left"],
-            features["mappings"]["target"],
-            features["mappings"]["right"],
-        )
-    ]
-    sentence_map, sentence_len = pad_for_dataset(sentences)
-    sentences = package_feature_dict(
-        mappings=sentence_map,
-        lengths=sentence_len,
-        literals=features["sentence"],
-        key="sentence",
-    )
-
-    left_lens = [len(mapping) for mapping in features["mappings"]["left"]]
-    right_lens = [len(mapping) for mapping in features["mappings"]["right"]]
-
-    target_left_bounds = [left_len + 1 for left_len in left_lens]
-    target_right_bounds = [
-        sen_len - right_len
-        for (sen_len, right_len) in zip(sentence_len, right_lens)
-    ]
-    target_map, target_len = pad_for_dataset(
-        mappings=features["mappings"]["target"]
-    )
-    targets = package_feature_dict(
-        target_map, target_len, literals=features["target"], key="target"
-    )
-    targets = {
-        **targets,
-        "target_left_bound": target_left_bounds,
-        "target_right_bound": target_right_bounds,
+def ram_pre_processing_fn(features, labels):
+    processed_features = {
+        "sentence": tf.sparse_concat(
+            sp_inputs=[
+                features["left"],
+                features["target"],
+                features["right"],
+            ],
+            axis=1,
+        ),
+        "sentence_ids": tf.sparse_concat(
+            sp_inputs=[
+                features["left_ids"],
+                features["target_ids"],
+                features["right_ids"],
+            ],
+            axis=1,
+        ),
+        "target": features["target"],
+        "target_ids": features["target_ids"],
+        "target_offset": features["left"].dense_shape[1] + 1,
     }
+    return processed_features, labels
 
-    iterator = prep_dataset_and_get_iterator(
-        features={**sentences, **targets},
-        labels=labels,
-        batch_size=batch_size,
-        eval_input=eval_input,
-    )
 
-    return iterator.get_next()
+def ram_input_fn(tfrecord, batch_size, _eval=False):
+    shuffle_buffer = batch_size * 10
+    dataset = tf.data.TFRecordDataset(tfrecord)
+    dataset = dataset.map(parse_tf_example)
+    dataset = dataset.map(ram_pre_processing_fn)
+
+    if _eval:
+        dataset = dataset.shuffle(buffer_size=shuffle_buffer)
+    else:
+        dataset = dataset.apply(
+            tf.contrib.data.shuffle_and_repeat(buffer_size=shuffle_buffer)
+        )
+
+    dataset = dataset.batch(batch_size)
+
+    return dataset.make_one_shot_iterator().get_next()
 
 
 def ram_serving_fn(features):
