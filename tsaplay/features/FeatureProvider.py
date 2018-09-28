@@ -121,7 +121,7 @@ class FeatureProvider:
     def get_target_offset_array(cls, dictionary):
         offsets = []
         for (s, t) in zip(dictionary["sentences"], dictionary["targets"]):
-            offsets.append(s.find(t))
+            offsets.append(s.lower().find(t.lower()))
         return offsets
 
     @classmethod

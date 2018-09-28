@@ -3,9 +3,6 @@ from tensorflow.estimator import ModeKeys  # pylint: disable=E0401
 import numpy as np
 import matplotlib
 import io
-from tensorflow.contrib.lookup import (  # pylint: disable=E0611
-    index_table_from_file
-)
 from tensorflow.contrib.layers import embed_sequence  # pylint: disable=E0611
 
 
@@ -285,38 +282,6 @@ def image_to_summary(name, image):
         value=[tf.Summary.Value(tag=name, image=summary_image)]
     )
     return summary
-
-
-def get_dense_tensor(sparse_tensor):
-    dense_tensor = tf.sparse_to_dense(
-        sparse_indices=sparse_tensor.indices,
-        output_shape=sparse_tensor.dense_shape,
-        sparse_values=sparse_tensor.values,
-    )
-
-    return dense_tensor
-
-
-def setup_embedding_lookup_table(vocab_file_path):
-    index_table = index_table_from_file(
-        vocabulary_file=vocab_file_path, default_value=1
-    )
-
-    return index_table
-
-
-def lookup_embedding_ids(index_table, string_tensors, back_pad=True):
-    sparse_tokens_tensor = tf.string_split(string_tensors, delimiter="<SEP>")
-    sparse_ids = index_table.lookup(sparse_tokens_tensor)
-
-    dense_ids = get_dense_tensor(sparse_ids)
-
-    if back_pad:
-        batch_size = tf.shape(dense_ids)[0]
-        padding = tf.zeros(shape=[batch_size, 1], dtype=tf.int64)
-        dense_ids = tf.concat([dense_ids, padding], axis=1)
-
-    return dense_ids
 
 
 def setup_embedding_layer(

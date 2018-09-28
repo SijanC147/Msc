@@ -1,6 +1,5 @@
 import sys
 import docker
-import time
 from inspect import getsource, getfile
 from termcolor import colored
 from datetime import datetime, timedelta
@@ -64,22 +63,6 @@ def pickle_file(path, data):
         return dump(data, f, HIGHEST_PROTOCOL)
 
 
-def write_embedding_to_disk(path, emb_dict):
-    with open(path, "w+") as f:
-        for word in [*emb_dict]:
-            if word != "<OOV>" and word != "<PAD>":
-                vector = " ".join(emb_dict[word].astype(str))
-                f.write("{w} {v}\n".format(w=word, v=vector))
-
-
-def write_emb_tsv_to_disk(path, emb_dict):
-    with open(path, "w+") as f:
-        f.write("Words\n")
-        for word in [*emb_dict]:
-            if word != "<OOV>" and word != "<PAD>":
-                f.write(word + "\n")
-
-
 def corpus_from_csv(path):
     corpus = {}
     with open(path) as csvfile:
@@ -110,89 +93,89 @@ def search_dir(dir, query, first=False, files_only=False):
     return results[0] if first else results
 
 
-def _export_statistics(model, dataset_stats=None, steps=None):
-    train_input_fn_source = getsource(model.train_input_fn)
-    eval_input_fn_source = getsource(model.eval_input_fn)
-    model_fn_source = getsource(model.model_fn)
-    model_common_file = join(dirname(getfile(model.__class__)), "common.py")
-    estimator_train_fn_source = getsource(model.train)
-    estimator_eval_fn_source = getsource(model.evaluate)
-    estimator_train_eval_fn_source = getsource(model.train_and_eval)
-    if exists(model_common_file):
-        common_content = open(model_common_file, "r").read()
-    else:
-        common_content = ""
-    return {
-        "dataset": dataset_stats,
-        "steps": steps,
-        "model": {
-            "params": model.params,
-            "train_input_fn": train_input_fn_source,
-            "eval_input_fn": eval_input_fn_source,
-            "model_fn": model_fn_source,
-        },
-        "estimator": {
-            "train_hooks": model.train_hooks,
-            "eval_hooks": model.eval_hooks,
-            "train_fn": estimator_train_fn_source,
-            "eval_fn": estimator_eval_fn_source,
-            "train_eval_fn": estimator_train_eval_fn_source,
-        },
-        "common": common_content,
-    }
+# def _export_statistics(model, dataset_stats=None, steps=None):
+#     train_input_fn_source = getsource(model.train_input_fn)
+#     eval_input_fn_source = getsource(model.eval_input_fn)
+#     model_fn_source = getsource(model.model_fn)
+#     model_common_file = join(dirname(getfile(model.__class__)), "common.py")
+#     estimator_train_fn_source = getsource(model.train)
+#     estimator_eval_fn_source = getsource(model.evaluate)
+#     estimator_train_eval_fn_source = getsource(model.train_and_eval)
+#     if exists(model_common_file):
+#         common_content = open(model_common_file, "r").read()
+#     else:
+#         common_content = ""
+#     return {
+#         "dataset": dataset_stats,
+#         "steps": steps,
+#         "model": {
+#             "params": model.params,
+#             "train_input_fn": train_input_fn_source,
+#             "eval_input_fn": eval_input_fn_source,
+#             "model_fn": model_fn_source,
+#         },
+#         "estimator": {
+#             "train_hooks": model.train_hooks,
+#             "eval_hooks": model.eval_hooks,
+#             "train_fn": estimator_train_fn_source,
+#             "eval_fn": estimator_eval_fn_source,
+#             "train_eval_fn": estimator_train_eval_fn_source,
+#         },
+#         "common": common_content,
+#     }
 
 
-def write_stats(job, stats, path):
-    target_dir = join(path, job)
-    makedirs(target_dir, exist_ok=True)
-    with open(join(target_dir, "dataset.json"), "w") as file:
-        file.write(dumps(stats["dataset"]))
-    with open(join(target_dir, "job.json"), "w") as file:
-        file.write(
-            dumps({"duration": stats["duration"], "steps": stats["steps"]})
-        )
-    with open(join(target_dir, "model.md"), "w") as file:
-        file.write("## Model Params\n")
-        file.write("````Python\n")
-        file.write(str(stats["model"]["params"]) + "\n")
-        file.write("````\n")
-        file.write("## Train Input Fn\n")
-        file.write("````Python\n")
-        file.write(str(stats["model"]["train_input_fn"]) + "\n")
-        file.write("````\n")
-        file.write("## Eval Input Fn\n")
-        file.write("````Python\n")
-        file.write(str(stats["model"]["eval_input_fn"]) + "\n")
-        file.write("````\n")
-        file.write("## Model Fn\n")
-        file.write("````Python\n")
-        file.write(str(stats["model"]["model_fn"]) + "\n")
-        file.write("````\n")
-    with open(join(target_dir, "estimator.md"), "w") as file:
-        file.write("## Train Hooks\n")
-        file.write("````Python\n")
-        file.write(str(stats["estimator"]["train_hooks"]) + "\n")
-        file.write("````\n")
-        file.write("## Eval Hooks\n")
-        file.write("````Python\n")
-        file.write(str(stats["estimator"]["eval_hooks"]) + "\n")
-        file.write("````\n")
-        file.write("## Train Fn\n")
-        file.write("````Python\n")
-        file.write(str(stats["estimator"]["train_fn"]) + "\n")
-        file.write("````\n")
-        file.write("## Eval Fn\n")
-        file.write("````Python\n")
-        file.write(str(stats["estimator"]["eval_fn"]) + "\n")
-        file.write("````\n")
-        file.write("## Train And Eval Fn\n")
-        file.write("````Python\n")
-        file.write(str(stats["estimator"]["train_eval_fn"]) + "\n")
-        file.write("````\n")
-    if len(stats["common"]) > 0:
-        with open(join(target_dir, "common.md"), "w") as file:
-            file.write("## Model Common Functions\n")
-            file.write("````Python\n")
-            file.write(str(stats["common"]) + "\n")
-            file.write("````\n")
+# def write_stats(job, stats, path):
+#     target_dir = join(path, job)
+#     makedirs(target_dir, exist_ok=True)
+#     with open(join(target_dir, "dataset.json"), "w") as file:
+#         file.write(dumps(stats["dataset"]))
+#     with open(join(target_dir, "job.json"), "w") as file:
+#         file.write(
+#             dumps({"duration": stats["duration"], "steps": stats["steps"]})
+#         )
+#     with open(join(target_dir, "model.md"), "w") as file:
+#         file.write("## Model Params\n")
+#         file.write("````Python\n")
+#         file.write(str(stats["model"]["params"]) + "\n")
+#         file.write("````\n")
+#         file.write("## Train Input Fn\n")
+#         file.write("````Python\n")
+#         file.write(str(stats["model"]["train_input_fn"]) + "\n")
+#         file.write("````\n")
+#         file.write("## Eval Input Fn\n")
+#         file.write("````Python\n")
+#         file.write(str(stats["model"]["eval_input_fn"]) + "\n")
+#         file.write("````\n")
+#         file.write("## Model Fn\n")
+#         file.write("````Python\n")
+#         file.write(str(stats["model"]["model_fn"]) + "\n")
+#         file.write("````\n")
+#     with open(join(target_dir, "estimator.md"), "w") as file:
+#         file.write("## Train Hooks\n")
+#         file.write("````Python\n")
+#         file.write(str(stats["estimator"]["train_hooks"]) + "\n")
+#         file.write("````\n")
+#         file.write("## Eval Hooks\n")
+#         file.write("````Python\n")
+#         file.write(str(stats["estimator"]["eval_hooks"]) + "\n")
+#         file.write("````\n")
+#         file.write("## Train Fn\n")
+#         file.write("````Python\n")
+#         file.write(str(stats["estimator"]["train_fn"]) + "\n")
+#         file.write("````\n")
+#         file.write("## Eval Fn\n")
+#         file.write("````Python\n")
+#         file.write(str(stats["estimator"]["eval_fn"]) + "\n")
+#         file.write("````\n")
+#         file.write("## Train And Eval Fn\n")
+#         file.write("````Python\n")
+#         file.write(str(stats["estimator"]["train_eval_fn"]) + "\n")
+#         file.write("````\n")
+#     if len(stats["common"]) > 0:
+#         with open(join(target_dir, "common.md"), "w") as file:
+#             file.write("## Model Common Functions\n")
+#             file.write("````Python\n")
+#             file.write(str(stats["common"]) + "\n")
+#             file.write("````\n")
 
