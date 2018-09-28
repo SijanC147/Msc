@@ -324,6 +324,7 @@ def setup_embedding_layer(
 def get_embedded_seq(
     ids, embedding_matrix, reuse=True, var_scope="embedding_layer"
 ):
+    ids = tf.squeeze(ids, axis=1)
     embedded_seq = embed_sequence(
         ids=ids, initializer=embedding_matrix, scope=var_scope, reuse=True
     )

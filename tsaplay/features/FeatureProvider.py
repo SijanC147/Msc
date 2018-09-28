@@ -1,10 +1,12 @@
 import tensorflow as tf
 from os.path import join, exists
 from os import getcwd, makedirs
+from json import dumps
 from tensorflow.train import BytesList, Feature, Features, Example, Int64List
 from tensorflow.python_io import TFRecordWriter
 
 from tsaplay.utils._nlp import tokenize_phrase, inspect_dist, re_dist
+from tsaplay.utils._data import parse_tf_example
 from tsaplay.embeddings.Embedding import Embedding
 from tsaplay.embeddings.PartialEmbedding import PartialEmbedding
 import tsaplay.features._constants as FEATURES
@@ -44,90 +46,10 @@ class FeatureProvider:
             "embedding_initializer": self._embedding.initializer,
         }
 
-    def get_features(self, mode):
+    def get_tfrecord(self, mode):
         if not exists(self._tfrecord_file(mode)):
             self._export_tf_records(mode)
-        features, labels = self._parse_tf_records_file(mode)
-
-        if mode == "train" and self.train_dist is not None:
-            features, labels = re_dist(features, labels, self.train_dist)
-        if mode == "test" and self.test_dist is not None:
-            features, labels = re_dist(features, labels, self.test_dist)
-
-        stats = inspect_dist(features, labels)
-
-        return features, labels, stats
-
-    def _parse_tf_records_file(self, mode):
-        feature_spec = {
-            "left": tf.VarLenFeature(dtype=tf.string),
-            "target": tf.VarLenFeature(dtype=tf.string),
-            "right": tf.VarLenFeature(dtype=tf.string),
-            "left_ids": tf.VarLenFeature(dtype=tf.int64),
-            "target_ids": tf.VarLenFeature(dtype=tf.int64),
-            "right_ids": tf.VarLenFeature(dtype=tf.int64),
-            "labels": tf.FixedLenFeature(dtype=tf.int64, shape=[]),
-        }
-
-        dataset = tf.data.TFRecordDataset(self._tfrecord_file(mode))
-        dataset = dataset.map(
-            lambda example: tf.parse_example([example], feature_spec)
-        )
-        iterator = dataset.make_one_shot_iterator()
-        next_example = iterator.get_next()
-
-        features = {
-            "left": [],
-            "target": [],
-            "right": [],
-            "left_ids": [],
-            "target_ids": [],
-            "right_ids": [],
-        }
-        labels = []
-
-        sess = tf.Session()
-        while True:
-            try:
-                feature = sess.run(next_example)
-
-                left_op = tf.sparse_tensor_to_dense(
-                    feature["left"], default_value=b"<PAD>"
-                )
-                target_op = tf.sparse_tensor_to_dense(
-                    feature["target"], default_value=b"<PAD>"
-                )
-                right_op = tf.sparse_tensor_to_dense(
-                    feature["right"], default_value=b"<PAD>"
-                )
-                left_ids_op = tf.sparse_tensor_to_dense(feature["left_ids"])
-                target_ids_op = tf.sparse_tensor_to_dense(
-                    feature["target_ids"]
-                )
-                right_ids_op = tf.sparse_tensor_to_dense(feature["right_ids"])
-
-                left = left_op.eval(session=sess)[0].tolist()
-                target = target_op.eval(session=sess)[0].tolist()
-                right = right_op.eval(session=sess)[0].tolist()
-
-                left_ids = left_ids_op.eval(session=sess)[0].tolist()
-                target_ids = target_ids_op.eval(session=sess)[0].tolist()
-                right_ids = right_ids_op.eval(session=sess)[0].tolist()
-
-                features["left"].append(left)
-                features["target"].append(target)
-                features["right"].append(right)
-                features["left_ids"].append(left_ids)
-                features["target_ids"].append(target_ids)
-                features["right_ids"].append(right_ids)
-                labels.append(feature["labels"][0])
-            except tf.errors.OutOfRangeError:
-                break
-
-        sess.close()
-        tf.reset_default_graph()
-
-        return features, labels
+        return self._tfrecord_file(mode)
 
     def _export_tf_records(self, mode):
         if mode == "train":
@@ -151,9 +73,14 @@ class FeatureProvider:
         left, l_ids, target, t_ids, right, r_ids = self._get_ids_bytes_lists(
             left_sp=left_sp, target_sp=target_sp, right_sp=right_sp
         )
+        zero_norm_labels = [
+            [l + abs(min(data["labels"]))] for l in data["labels"]
+        ]
         data_zip = zip(
-            left, l_ids, target, t_ids, right, r_ids, data["labels"]
+            left, l_ids, target, t_ids, right, r_ids, zero_norm_labels
         )
+
+        dataset_stats = inspect_dist(left, target, right, data["labels"])
 
         tf_examples = []
         for (left, l_ids, target, t_ids, right, r_ids, label) in data_zip:
@@ -165,7 +92,7 @@ class FeatureProvider:
                     "left_ids": Feature(int64_list=Int64List(value=l_ids)),
                     "target_ids": Feature(int64_list=Int64List(value=t_ids)),
                     "right_ids": Feature(int64_list=Int64List(value=r_ids)),
-                    "labels": Feature(int64_list=Int64List(value=[label])),
+                    "labels": Feature(int64_list=Int64List(value=label)),
                 }
             )
             tf_example = Example(features=features)
@@ -174,6 +101,9 @@ class FeatureProvider:
         with TFRecordWriter(self._tfrecord_file(mode)) as tf_writer:
             for serialized_example in tf_examples:
                 tf_writer.write(serialized_example)
+
+        with open(join(self.gen_dir, "_" + mode + ".json"), "w") as f:
+            f.write(dumps(dataset_stats))
 
     def _partition_sentences(self, sentences, targets, offsets):
         left_ctxts, _targets, right_ctxts = [], [], []

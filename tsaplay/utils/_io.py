@@ -1,10 +1,11 @@
 import sys
 import docker
 import time
+from inspect import getsource, getfile
 from termcolor import colored
 from datetime import datetime, timedelta
 from pickle import load, dump, HIGHEST_PROTOCOL
-from os.path import isfile, join, dirname
+from os.path import isfile, join, dirname, exists
 from json import dumps
 from os import listdir, system, makedirs
 from csv import DictReader, DictWriter
@@ -107,6 +108,38 @@ def search_dir(dir, query, first=False, files_only=False):
     else:
         results = [join(dir, f) for f in listdir(dir) if query in f]
     return results[0] if first else results
+
+
+def _export_statistics(model, dataset_stats=None, steps=None):
+    train_input_fn_source = getsource(model.train_input_fn)
+    eval_input_fn_source = getsource(model.eval_input_fn)
+    model_fn_source = getsource(model.model_fn)
+    model_common_file = join(dirname(getfile(model.__class__)), "common.py")
+    estimator_train_fn_source = getsource(model.train)
+    estimator_eval_fn_source = getsource(model.evaluate)
+    estimator_train_eval_fn_source = getsource(model.train_and_eval)
+    if exists(model_common_file):
+        common_content = open(model_common_file, "r").read()
+    else:
+        common_content = ""
+    return {
+        "dataset": dataset_stats,
+        "steps": steps,
+        "model": {
+            "params": model.params,
+            "train_input_fn": train_input_fn_source,
+            "eval_input_fn": eval_input_fn_source,
+            "model_fn": model_fn_source,
+        },
+        "estimator": {
+            "train_hooks": model.train_hooks,
+            "eval_hooks": model.eval_hooks,
+            "train_fn": estimator_train_fn_source,
+            "eval_fn": estimator_eval_fn_source,
+            "train_eval_fn": estimator_train_eval_fn_source,
+        },
+        "common": common_content,
+    }
 
 
 def write_stats(job, stats, path):

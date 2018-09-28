@@ -27,17 +27,11 @@ class Experiment:
 
     def run(self, job, steps):
         if job == "train":
-            stats = self.model.train(feature_provider=self.fp, steps=steps)
-            write_stats(job="train", stats=stats, path=self._experiment_dir)
+            self.model.train(feature_provider=self.fp, steps=steps)
         elif job == "eval":
-            stats = self.model.evaluate(feature_provider=self.fp)
-            write_stats(job="eval", stats=stats, path=self._experiment_dir)
+            self.model.evaluate(feature_provider=self.fp)
         elif job == "train+eval":
-            train, test = self.model.train_and_eval(
-                feature_provider=self.fp, steps=steps
-            )
-            write_stats(job="train", stats=train, path=self._experiment_dir)
-            write_stats(job="eval", stats=test, path=self._experiment_dir)
+            self.model.train_and_eval(feature_provider=self.fp, steps=steps)
 
     def launch_tensorboard(self, tb_port=6006, debug=False, debug_port=6064):
         start_tensorboard(

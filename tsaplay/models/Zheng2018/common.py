@@ -3,6 +3,7 @@ from tensorflow.python.keras.preprocessing import (  # pylint: disable=E0611
     sequence
 )
 from tsaplay.utils._data import (
+    parse_tf_example,
     pad_for_dataset,
     package_feature_dict,
     prep_dataset_and_get_iterator,
@@ -20,40 +21,21 @@ params = {
 }
 
 
-def lcr_rot_input_fn(features, labels, batch_size, eval_input=False):
+def lcr_rot_input_fn(tfrecord, batch_size, eval_input=False):
+    shuffle_buffer = batch_size * 10
+    dataset = tf.data.TFRecordDataset(tfrecord)
+    dataset = dataset.map(parse_tf_example)
 
-    left_map, left_len = pad_for_dataset(features["mappings"]["left"])
-    left = package_feature_dict(
-        mappings=left_map,
-        lengths=left_len,
-        literals=features["left"],
-        key="left",
-    )
+    if eval_input:
+        dataset = dataset.shuffle(buffer_size=shuffle_buffer)
+    else:
+        dataset = dataset.apply(
+            tf.contrib.data.shuffle_and_repeat(buffer_size=shuffle_buffer)
+        )
 
-    right_map, right_len = pad_for_dataset(features["mappings"]["right"])
-    right = package_feature_dict(
-        mappings=right_map,
-        lengths=right_len,
-        literals=features["right"],
-        key="right",
-    )
+    dataset = dataset.batch(batch_size)
 
-    target_map, target_len = pad_for_dataset(features["mappings"]["target"])
-    target = package_feature_dict(
-        mappings=target_map,
-        lengths=target_len,
-        literals=features["target"],
-        key="target",
-    )
-
-    iterator = prep_dataset_and_get_iterator(
-        features={**left, **target, **right},
-        labels=labels,
-        batch_size=batch_size,
-        eval_input=eval_input,
-    )
-
-    return iterator.get_next()
+    return dataset.make_one_shot_iterator().get_next()
 
 
 def lcr_rot_serving_fn(features):

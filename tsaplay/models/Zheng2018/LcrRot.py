@@ -13,6 +13,7 @@ from tsaplay.models.Zheng2018.common import (
     lcr_rot_serving_fn,
 )
 from tsaplay.utils._tf import (
+    sparse_seq_lengths,
     variable_len_batch_mean,
     attention_unit,
     dropout_lstm_cell,
@@ -34,13 +35,13 @@ class LcrRot(Model):
         return default
 
     def _train_input_fn(self):
-        return lambda features, labels, batch_size: lcr_rot_input_fn(
-            features, labels, batch_size
+        return lambda tfrecord, batch_size: lcr_rot_input_fn(
+            tfrecord, batch_size
         )
 
     def _eval_input_fn(self):
-        return lambda features, labels, batch_size: lcr_rot_input_fn(
-            features, labels, batch_size, eval_input=True
+        return lambda tfrecord, batch_size: lcr_rot_input_fn(
+            tfrecord, batch_size, eval_input=True
         )
 
     def _serving_input_fn(self):
@@ -48,21 +49,22 @@ class LcrRot(Model):
 
     def _model_fn(self):
         def default(features, labels, mode, params=self.params):
+            left_len = sparse_seq_lengths(features["left_ids"])
+            target_len = sparse_seq_lengths(features["target_ids"])
+            right_len = sparse_seq_lengths(features["right_ids"])
+            left_ids = tf.sparse_tensor_to_dense(features["left_ids"])
+            target_ids = tf.sparse_tensor_to_dense(features["target_ids"])
+            right_ids = tf.sparse_tensor_to_dense(features["right_ids"])
+
             embedding_matrix = setup_embedding_layer(
                 vocab_size=params["vocab_size"],
                 dim_size=params["embedding_dim"],
                 init=params["embedding_initializer"],
             )
 
-            left_embeddings = get_embedded_seq(
-                features["left_x"], embedding_matrix
-            )
-            target_embeddings = get_embedded_seq(
-                features["target_x"], embedding_matrix
-            )
-            right_embeddings = get_embedded_seq(
-                features["right_x"], embedding_matrix
-            )
+            left_embeddings = get_embedded_seq(left_ids, embedding_matrix)
+            target_embeddings = get_embedded_seq(target_ids, embedding_matrix)
+            right_embeddings = get_embedded_seq(right_ids, embedding_matrix)
 
             with tf.variable_scope("target_bi_lstm"):
                 target_hidden_states, _, _ = stack_bidirectional_dynamic_rnn(
@@ -81,12 +83,12 @@ class LcrRot(Model):
                         )
                     ],
                     inputs=target_embeddings,
-                    sequence_length=features["target_len"],
+                    sequence_length=target_len,
                     dtype=tf.float32,
                 )
                 r_t = variable_len_batch_mean(
                     input_tensor=target_hidden_states,
-                    seq_lengths=features["target_len"],
+                    seq_lengths=target_len,
                     op_name="target_avg_pooling",
                 )
 
@@ -107,7 +109,7 @@ class LcrRot(Model):
                         )
                     ],
                     inputs=left_embeddings,
-                    sequence_length=features["left_len"],
+                    sequence_length=left_len,
                     dtype=tf.float32,
                 )
 
@@ -128,7 +130,7 @@ class LcrRot(Model):
                         )
                     ],
                     inputs=right_embeddings,
-                    sequence_length=features["right_len"],
+                    sequence_length=right_len,
                     dtype=tf.float32,
                 )
 
@@ -136,48 +138,44 @@ class LcrRot(Model):
                 r_l, left_attn_info = attention_unit(
                     h_states=left_hidden_states,
                     hidden_units=params["hidden_units"] * 2,
-                    seq_lengths=features["left_len"],
+                    seq_lengths=left_len,
                     attn_focus=r_t,
                     init=params["initializer"],
-                    literal=features["left_lit"],
                 )
 
             with tf.variable_scope("right_t2c_attn"):
                 r_r, right_attn_info = attention_unit(
                     h_states=right_hidden_states,
                     hidden_units=params["hidden_units"] * 2,
-                    seq_lengths=features["right_len"],
+                    seq_lengths=right_len,
                     attn_focus=r_t,
                     init=params["initializer"],
-                    literal=features["right_lit"],
                 )
 
             with tf.variable_scope("left_c2t_attn"):
                 r_t_l, left_target_attn_info = attention_unit(
                     h_states=target_hidden_states,
                     hidden_units=params["hidden_units"] * 2,
-                    seq_lengths=features["target_len"],
+                    seq_lengths=target_len,
                     attn_focus=tf.expand_dims(r_l, axis=1),
                     init=params["initializer"],
-                    literal=features["target_lit"],
                 )
 
             with tf.variable_scope("right_c2t_attn"):
                 r_t_r, right_target_attn_info = attention_unit(
                     h_states=target_hidden_states,
                     hidden_units=params["hidden_units"] * 2,
-                    seq_lengths=features["target_len"],
+                    seq_lengths=target_len,
                     attn_focus=tf.expand_dims(r_r, axis=1),
                     init=params["initializer"],
-                    literal=features["target_lit"],
                 )
 
-            generate_attn_heatmap_summary(
-                left_attn_info,
-                left_target_attn_info,
-                right_target_attn_info,
-                right_attn_info,
-            )
+            # generate_attn_heatmap_summary(
+            #     left_attn_info,
+            #     left_target_attn_info,
+            #     right_target_attn_info,
+            #     right_attn_info,
+            # )
 
             final_sentence_rep = tf.concat([r_l, r_t_l, r_t_r, r_r], axis=1)
 

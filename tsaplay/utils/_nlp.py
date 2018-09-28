@@ -197,14 +197,11 @@ def re_dist(features, labels, distribution):
     return new_features, new_labels
 
 
-def inspect_dist(features, labels):
+def inspect_dist(left, target, right, labels):
     positive = [label for label in labels if label == 1]
     neutral = [label for label in labels if label == 0]
     negative = [label for label in labels if label == -1]
-    mappings_zip = zip(
-        features["left_ids"], features["target_ids"], features["right_ids"]
-    )
-    lengths = [len(l + t + r) for (l, t, r) in mappings_zip]
+    lengths = [len(l + t + r) for l, t, r in zip(left, target, right)]
     return {
         "num_samples": len(labels),
         "positive": {

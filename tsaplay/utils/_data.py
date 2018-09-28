@@ -11,6 +11,31 @@ from tsaplay.utils._io import pickle_file
 from tsaplay.utils._nlp import tokenize_phrase
 
 
+def parse_tf_example(example):
+    feature_spec = {
+        "left": tf.VarLenFeature(dtype=tf.string),
+        "target": tf.VarLenFeature(dtype=tf.string),
+        "right": tf.VarLenFeature(dtype=tf.string),
+        "left_ids": tf.VarLenFeature(dtype=tf.int64),
+        "target_ids": tf.VarLenFeature(dtype=tf.int64),
+        "right_ids": tf.VarLenFeature(dtype=tf.int64),
+        "labels": tf.FixedLenFeature(dtype=tf.int64, shape=[]),
+    }
+    parsed_example = tf.parse_example([example], features=feature_spec)
+
+    features = {
+        "left": parsed_example["left"],
+        "target": parsed_example["target"],
+        "right": parsed_example["right"],
+        "left_ids": parsed_example["left_ids"],
+        "target_ids": parsed_example["target_ids"],
+        "right_ids": parsed_example["right_ids"],
+    }
+    labels = tf.squeeze(parsed_example["labels"], axis=0)
+
+    return (features, labels)
+
+
 def zip_str_join(first, second):
     return [" ".join([f.strip(), s.strip()]) for f, s in zip(first, second)]
 
