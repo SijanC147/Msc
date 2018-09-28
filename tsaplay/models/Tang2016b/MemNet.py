@@ -13,6 +13,7 @@ from tsaplay.models.Tang2016b.common import (
     memnet_content_attn_unit,
 )
 from tsaplay.utils._tf import (
+    sparse_seq_lengths,
     variable_len_batch_mean,
     generate_attn_heatmap_summary,
     setup_embedding_layer,
@@ -32,13 +33,13 @@ class MemNet(Model):
         return default
 
     def _train_input_fn(self):
-        return lambda features, labels, batch_size: memnet_input_fn(
-            features, labels, batch_size
+        return lambda tfrecord, batch_size: memnet_input_fn(
+            tfrecord, batch_size
         )
 
     def _eval_input_fn(self):
-        return lambda features, labels, batch_size: memnet_input_fn(
-            features, labels, batch_size, eval_input=True
+        return lambda tfrecord, batch_size: memnet_input_fn(
+            tfrecord, batch_size, _eval=True
         )
 
     def _serving_input_fn(self):
@@ -46,33 +47,38 @@ class MemNet(Model):
 
     def _model_fn(self):
         def default(features, labels, mode, params=self.params):
+            context_len = sparse_seq_lengths(features["context_ids"])
+            target_len = sparse_seq_lengths(features["target"])
+            context_ids = tf.sparse_tensor_to_dense(features["context_ids"])
+            target_ids = tf.sparse_tensor_to_dense(features["target_ids"])
+            target_offset = tf.cast(features["target_offset"], tf.int32)
+
             embedding_matrix = setup_embedding_layer(
                 vocab_size=params["vocab_size"],
                 dim_size=params["embedding_dim"],
                 init=params["embedding_initializer"],
                 trainable=False,
             )
-            memory = get_embedded_seq(features["context_x"], embedding_matrix)
-            target_embeddings = get_embedded_seq(
-                features["target_x"], embedding_matrix
-            )
+            memory = get_embedded_seq(context_ids, embedding_matrix)
+            target_embeddings = get_embedded_seq(target_ids, embedding_matrix)
 
             max_ctxt_len = tf.shape(memory)[1]
 
             context_locations = get_absolute_distance_vector(
-                target_locs=features["target_loc"],
-                seq_lens=features["context_len"],
+                target_locs=target_offset,
+                seq_lens=context_len,
                 max_seq_len=max_ctxt_len,
             )
 
             v_aspect = variable_len_batch_mean(
                 input_tensor=target_embeddings,
-                seq_lengths=features["target_len"],
+                seq_lengths=target_len,
                 op_name="target_embedding_avg",
             )
 
             attn_snapshots = create_snapshots_container(
-                shape_like=features["context_x"], n_snaps=params["n_hops"]
+                shape_like=tf.squeeze(context_ids, axis=1),
+                n_snaps=params["n_hops"],
             )
 
             hop_number = tf.constant(1)
@@ -89,7 +95,7 @@ class MemNet(Model):
 
                 v_loc = location_vector_model_fn(
                     locs=context_locations,
-                    seq_lens=features["context_len"],
+                    seq_lens=context_len,
                     emb_dim=params["embedding_dim"],
                     hop=hop_num,
                     init=params["initializer"],
@@ -111,7 +117,7 @@ class MemNet(Model):
 
                 with tf.variable_scope("attention_layer", reuse=tf.AUTO_REUSE):
                     attn_out, attn_snapshot = memnet_content_attn_unit(
-                        seq_lens=features["context_len"],
+                        seq_lens=context_len,
                         memory=ext_memory,
                         v_aspect=input_vec,
                         emb_dim=params["embedding_dim"],
@@ -143,13 +149,13 @@ class MemNet(Model):
                 ),
             )
 
-            literals, attn_snapshots = zip_attn_snapshots_with_literals(
-                literals=features["context_lit"],
-                snapshots=attn_snapshots,
-                num_layers=params["n_hops"],
-            )
-            attn_info = tf.tuple([literals, attn_snapshots])
-            generate_attn_heatmap_summary(attn_info)
+            # literals, attn_snapshots = zip_attn_snapshots_with_literals(
+            #     literals=features["context_lit"],
+            #     snapshots=attn_snapshots,
+            #     num_layers=params["n_hops"],
+            # )
+            # attn_info = tf.tuple([literals, attn_snapshots])
+            # generate_attn_heatmap_summary(attn_info)
 
             final_sentence_rep = tf.squeeze(final_sentence_rep, axis=1)
 

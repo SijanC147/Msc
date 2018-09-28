@@ -8,6 +8,7 @@ from tsaplay.utils._data import (
     pad_for_dataset,
     package_feature_dict,
     prep_dataset_and_get_iterator,
+    parse_tf_example,
 )
 
 params = {
@@ -23,38 +24,36 @@ params = {
 }
 
 
-def ian_input_fn(features, labels, batch_size, eval_input=False):
-    context_literals = zip_str_join(features["left"], features["right"])
-    context_mappings = zip_list_join(
-        features["mappings"]["left"], features["mappings"]["right"]
-    )
+def ian_pre_processing_fn(features, labels):
+    processed_features = {
+        "context": tf.sparse_concat(
+            sp_inputs=[features["left"], features["right"]], axis=1
+        ),
+        "context_ids": tf.sparse_concat(
+            sp_inputs=[features["left_ids"], features["right_ids"]], axis=1
+        ),
+        "target": features["target"],
+        "target_ids": features["target_ids"],
+    }
+    return processed_features, labels
 
-    contexts_map, contexts_len = pad_for_dataset(mappings=context_mappings)
-    contexts = package_feature_dict(
-        mappings=contexts_map,
-        lengths=contexts_len,
-        literals=context_literals,
-        key="context",
-    )
 
-    target_map, target_len = pad_for_dataset(
-        mappings=features["mappings"]["target"]
-    )
-    targets = package_feature_dict(
-        mappings=target_map,
-        lengths=target_len,
-        literals=features["target"],
-        key="target",
-    )
+def ian_input_fn(tfrecord, batch_size, _eval=False):
+    shuffle_buffer = batch_size * 10
+    dataset = tf.data.TFRecordDataset(tfrecord)
+    dataset = dataset.map(parse_tf_example)
+    dataset = dataset.map(ian_pre_processing_fn)
 
-    iterator = prep_dataset_and_get_iterator(
-        features={**contexts, **targets},
-        labels=labels,
-        batch_size=batch_size,
-        eval_input=eval_input,
-    )
+    if _eval:
+        dataset = dataset.shuffle(buffer_size=shuffle_buffer)
+    else:
+        dataset = dataset.apply(
+            tf.contrib.data.shuffle_and_repeat(buffer_size=shuffle_buffer)
+        )
 
-    return iterator.get_next()
+    dataset = dataset.batch(batch_size)
+
+    return dataset.make_one_shot_iterator().get_next()
 
 
 def ian_serving_fn(features):
