@@ -52,7 +52,7 @@ def bundle_datasets(*datasets, rebuild=False):
             test_dict = concat_dicts_lists(dataset.test_dict, test_dict)
 
     dataset_name = "_".join(dataset_names)
-    gen_path = join(DATASETS.PARENT_DIR, "_generated", dataset_name)
+    gen_path = join(DATASETS.DATA_DIR, "_generated", dataset_name)
 
     makedirs(gen_path, exist_ok=True)
 

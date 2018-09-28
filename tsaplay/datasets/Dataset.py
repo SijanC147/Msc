@@ -53,6 +53,15 @@ class Dataset:
     def all_docs(self):
         return self.__all_docs
 
+    def _generate_corpus(self):
+        corpus_file = join(self.path, "_corpus.csv")
+        if exists(corpus_file):
+            corpus = corpus_from_csv(path=corpus_file)
+        else:
+            corpus = corpus_from_docs(docs=self.all_docs)
+            corpus_to_csv(corpus_file, corpus)
+        return corpus
+
     def _initialize_all_internals(self):
         self.__train_file = search_dir(
             dir=self.__path, query="train", first=True, files_only=True
@@ -80,15 +89,6 @@ class Dataset:
             dictionary = self.parser(data_file)
             _pickle(path=dict_file, data=dictionary)
         return dictionary
-
-    def _generate_corpus(self):
-        corpus_file = join(self.path, "_corpus.csv")
-        if exists(corpus_file):
-            corpus = corpus_from_csv(path=corpus_file)
-        else:
-            corpus = corpus_from_docs(docs=self.all_docs)
-            corpus_to_csv(corpus_file, corpus)
-        return corpus
 
     def _wrap_parser(self, _parser):
         @wraps(_parser)

@@ -1,15 +1,16 @@
 import tensorflow as tf
-from os.path import join, exists
-from os import getcwd, makedirs
+from os.path import join, exists, isfile
+from os import getcwd, makedirs, listdir
 from json import dumps
 from tensorflow.train import BytesList, Feature, Features, Example, Int64List
 from tensorflow.python_io import TFRecordWriter
 
-from tsaplay.utils._nlp import tokenize_phrase, inspect_dist, re_dist
+from tsaplay.utils._nlp import tokenize_phrase, inspect_dist
 from tsaplay.utils._data import parse_tf_example
 from tsaplay.utils._io import gprint
 from tsaplay.embeddings.Embedding import Embedding
 from tsaplay.embeddings.PartialEmbedding import PartialEmbedding
+from tsaplay.datasets.CompoundDataset import CompoundDataset
 import tsaplay.features._constants as FEATURES
 
 
@@ -50,9 +51,21 @@ class FeatureProvider:
         }
 
     def get_tfrecord(self, mode):
-        if not exists(self._tfrecord_file(mode)):
-            self._export_tf_records(mode)
-        return self._tfrecord_file(mode)
+        compound_dataset = isinstance(self._dataset, CompoundDataset)
+        partial_embedding = isinstance(self._embedding, PartialEmbedding)
+        if compound_dataset and not partial_embedding:
+            tf_record_files = []
+            constituent_datasets = self._dataset.datasets
+            for dataset in constituent_datasets:
+                self._dataset = dataset
+                if not exists(self._tfrecord_file(mode)):
+                    self._export_tf_records(mode)
+                tf_record_files.append(self._tfrecord_file(mode))
+            return tf_record_files
+        else:
+            if not exists(self._tfrecord_file(mode)):
+                self._export_tf_records(mode)
+            return self._tfrecord_file(mode)
 
     def _export_tf_records(self, mode):
         if mode == "train":
