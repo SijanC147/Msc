@@ -10,6 +10,7 @@ from tsaplay.models.Tang2016a.common import (
     tdlstm_serving_fn,
 )
 from tsaplay.utils._tf import (
+    sparse_seq_lengths,
     dropout_lstm_cell,
     setup_embedding_layer,
     get_embedded_seq,
@@ -24,13 +25,13 @@ class TdLstm(Model):
         return []
 
     def _train_input_fn(self):
-        return lambda features, labels, batch_size: tdlstm_input_fn(
-            features, labels, batch_size
+        return lambda tfrecord, batch_size: tdlstm_input_fn(
+            tfrecord, batch_size
         )
 
     def _eval_input_fn(self):
-        return lambda features, labels, batch_size: tdlstm_input_fn(
-            features, labels, batch_size, eval_input=True
+        return lambda tfrecord, batch_size: tdlstm_input_fn(
+            tfrecord, batch_size, _eval=True
         )
 
     def _serving_input_fn(self):
@@ -38,18 +39,19 @@ class TdLstm(Model):
 
     def _model_fn(self):
         def _default(features, labels, mode, params=self.params):
+            left_len = sparse_seq_lengths(features["left_ids"])
+            right_len = sparse_seq_lengths(features["right_ids"])
+            left_ids = tf.sparse_tensor_to_dense(features["left_ids"])
+            right_ids = tf.sparse_tensor_to_dense(features["right_ids"])
+
             embedding_matrix = setup_embedding_layer(
                 vocab_size=params["vocab_size"],
                 dim_size=params["embedding_dim"],
                 init=params["embedding_initializer"],
             )
 
-            left_inputs = get_embedded_seq(
-                features["left_x"], embedding_matrix
-            )
-            right_inputs = get_embedded_seq(
-                features["right_x"], embedding_matrix
-            )
+            left_inputs = get_embedded_seq(left_ids, embedding_matrix)
+            right_inputs = get_embedded_seq(right_ids, embedding_matrix)
 
             with tf.variable_scope("left_lstm"):
                 _, final_states_left = tf.nn.dynamic_rnn(
@@ -59,7 +61,7 @@ class TdLstm(Model):
                         keep_prob=params["keep_prob"],
                     ),
                     inputs=left_inputs,
-                    sequence_length=features["left_len"],
+                    sequence_length=left_len,
                     dtype=tf.float32,
                 )
 
@@ -71,7 +73,7 @@ class TdLstm(Model):
                         keep_prob=params["keep_prob"],
                     ),
                     inputs=right_inputs,
-                    sequence_length=features["right_len"],
+                    sequence_length=right_len,
                     dtype=tf.float32,
                 )
 

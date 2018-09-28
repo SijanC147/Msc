@@ -9,6 +9,14 @@ from tensorflow.contrib.lookup import (  # pylint: disable=E0611
 from tensorflow.contrib.layers import embed_sequence  # pylint: disable=E0611
 
 
+def sparse_reverse(sp_input):
+    reversed_indices = tf.reverse(sp_input.indices, axis=[0])
+    reversed_sp_input = tf.SparseTensor(
+        reversed_indices, sp_input.values, sp_input.dense_shape
+    )
+    return tf.sparse_reorder(reversed_sp_input)
+
+
 def sparse_seq_lengths(sp_input, batched=True):
     if not (batched):
         batch_groups, _ = tf.unstack(sp_input.indicesl, axis=1)

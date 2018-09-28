@@ -10,6 +10,7 @@ from tsaplay.models.Tang2016a.common import (
     tclstm_serving_fn,
 )
 from tsaplay.utils._tf import (
+    sparse_seq_lengths,
     variable_len_batch_mean,
     dropout_lstm_cell,
     setup_embedding_layer,
@@ -25,13 +26,13 @@ class TcLstm(Model):
         return []
 
     def _train_input_fn(self):
-        return lambda features, labels, batch_size: tclstm_input_fn(
-            features, labels, batch_size
+        return lambda tfrecord, batch_size: tclstm_input_fn(
+            tfrecord, batch_size
         )
 
     def _eval_input_fn(self):
-        return lambda features, labels, batch_size: tclstm_input_fn(
-            features, labels, batch_size, eval_input=True
+        return lambda tfrecord, batch_size: tclstm_input_fn(
+            tfrecord, batch_size, _eval=True
         )
 
     def _serving_input_fn(self):
@@ -39,21 +40,22 @@ class TcLstm(Model):
 
     def _model_fn(self):
         def _default(features, labels, mode, params=self.params):
+            left_len = sparse_seq_lengths(features["left_ids"])
+            target_len = sparse_seq_lengths(features["target_ids"])
+            right_len = sparse_seq_lengths(features["right_ids"])
+            left_ids = tf.sparse_tensor_to_dense(features["left_ids"])
+            target_ids = tf.sparse_tensor_to_dense(features["target_ids"])
+            right_ids = tf.sparse_tensor_to_dense(features["right_ids"])
+
             embedding_matrix = setup_embedding_layer(
                 vocab_size=params["vocab_size"],
                 dim_size=params["embedding_dim"],
                 init=params["embedding_initializer"],
             )
 
-            left_embeddings = get_embedded_seq(
-                features["left_x"], embedding_matrix
-            )
-            target_embeddings = get_embedded_seq(
-                features["target_x"], embedding_matrix
-            )
-            right_embeddings = get_embedded_seq(
-                features["right_x"], embedding_matrix
-            )
+            left_embeddings = get_embedded_seq(left_ids, embedding_matrix)
+            target_embeddings = get_embedded_seq(target_ids, embedding_matrix)
+            right_embeddings = get_embedded_seq(right_ids, embedding_matrix)
 
             max_left_len = tf.shape(left_embeddings)[1]
             max_right_len = tf.shape(right_embeddings)[1]
@@ -61,7 +63,7 @@ class TcLstm(Model):
             with tf.name_scope("target_connection"):
                 mean_target_embedding = variable_len_batch_mean(
                     input_tensor=target_embeddings,
-                    seq_lengths=features["target_len"],
+                    seq_lengths=target_len,
                     op_name="target_embedding_avg",
                 )
                 left_embeddings = tf.stack(
@@ -97,7 +99,7 @@ class TcLstm(Model):
                         keep_prob=params["keep_prob"],
                     ),
                     inputs=left_embeddings,
-                    sequence_length=features["left_len"],
+                    sequence_length=left_len,
                     dtype=tf.float32,
                 )
 
@@ -109,7 +111,7 @@ class TcLstm(Model):
                         keep_prob=params["keep_prob"],
                     ),
                     inputs=right_embeddings,
-                    sequence_length=features["right_len"],
+                    sequence_length=right_len,
                     dtype=tf.float32,
                 )
 

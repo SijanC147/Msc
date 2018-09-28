@@ -9,7 +9,7 @@ from tsaplay.models.Tang2016a.common import (
     lstm_input_fn,
     lstm_serving_fn,
 )
-from tsaplay.utils._tf import dropout_lstm_cell
+from tsaplay.utils._tf import dropout_lstm_cell, sparse_seq_lengths
 
 
 class Lstm(Model):
@@ -20,13 +20,11 @@ class Lstm(Model):
         return []
 
     def _train_input_fn(self):
-        return lambda features, labels, batch_size: lstm_input_fn(
-            features, labels, batch_size
-        )
+        return lambda tfrecord, batch_size: lstm_input_fn(tfrecord, batch_size)
 
     def _eval_input_fn(self):
-        return lambda features, labels, batch_size: lstm_input_fn(
-            features, labels, batch_size, eval_input=True
+        return lambda tfrecord, batch_size: lstm_input_fn(
+            tfrecord, batch_size, _eval=True
         )
 
     def _serving_input_fn(self):
@@ -34,8 +32,10 @@ class Lstm(Model):
 
     def _model_fn(self):
         def _default(features, labels, mode, params=self.params):
+            sentence_ids = tf.sparse_tensor_to_dense(features["sentence_ids"])
+            sentence_len = sparse_seq_lengths(features["sentence_ids"])
             inputs = tf.contrib.layers.embed_sequence(
-                ids=features["x"],
+                ids=tf.squeeze(sentence_ids, axis=1),
                 vocab_size=params["vocab_size"],
                 embed_dim=params["embedding_dim"],
                 initializer=params["embedding_initializer"],
@@ -48,7 +48,7 @@ class Lstm(Model):
                     keep_prob=params["keep_prob"],
                 ),
                 inputs=inputs,
-                sequence_length=features["len"],
+                sequence_length=sentence_len,
                 dtype=tf.float32,
             )
 

@@ -25,42 +25,6 @@ params = {
 }
 
 
-# def memnet_input_fn(features, labels, batch_size, eval_input=False):
-#     context_literals = zip_str_join(features["left"], features["right"])
-#     context_mappings = zip_list_join(
-#         features["mappings"]["left"], features["mappings"]["right"]
-#     )
-
-#     contexts_map, contexts_len = pad_for_dataset(context_mappings)
-#     contexts = package_feature_dict(
-#         mappings=contexts_map,
-#         lengths=contexts_len,
-#         literals=context_literals,
-#         key="context",
-#     )
-
-#     target_map, target_len = pad_for_dataset(features["mappings"]["target"])
-#     target_locations = [
-#         len(mapping) + 1 for mapping in features["mappings"]["left"]
-#     ]
-#     targets = package_feature_dict(
-#         mappings=target_map,
-#         lengths=target_len,
-#         literals=features["target"],
-#         key="target",
-#     )
-#     targets = {**targets, "target_loc": target_locations}
-
-#     iterator = prep_dataset_and_get_iterator(
-#         features={**contexts, **targets},
-#         labels=labels,
-#         batch_size=batch_size,
-#         eval_input=eval_input,
-#     )
-
-#     return iterator.get_next()
-
-
 def memnet_pre_processing_fn(features, labels):
     processed_features = {
         "context": tf.sparse_concat(
