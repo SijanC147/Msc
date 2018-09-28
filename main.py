@@ -17,6 +17,8 @@ from tsaplay.models.Ma2017.InteractiveAttentionNetwork import (
 dataset = Dataset(path=DATASETS.DEBUG_PATH, parser=DATASETS.DEBUG_PARSER)
 embedding = PartialEmbedding(dataset.name, dataset.corpus, "glove-twitter-25")
 feature_provider = FeatureProvider(dataset, embedding)
-experiment = Experiment(feature_provider, TcLstm())
+experiment = Experiment(feature_provider, RecurrentAttentionNetwork())
 
-experiment.run(job="train+eval", steps=10)
+experiment.run(job="train+eval", steps=1)
+experiment.launch_tensorboard()
+# experiment.export_model(restart_tfserve=True)

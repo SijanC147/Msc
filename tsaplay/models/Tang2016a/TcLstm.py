@@ -46,6 +46,10 @@ class TcLstm(Model):
             left_ids = tf.sparse_tensor_to_dense(features["left_ids"])
             target_ids = tf.sparse_tensor_to_dense(features["target_ids"])
             right_ids = tf.sparse_tensor_to_dense(features["right_ids"])
+            if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
+                left_ids = tf.squeeze(left_ids, axis=1)
+                target_ids = tf.squeeze(target_ids, axis=1)
+                right_ids = tf.squeeze(right_ids, axis=1)
 
             embedding_matrix = setup_embedding_layer(
                 vocab_size=params["vocab_size"],

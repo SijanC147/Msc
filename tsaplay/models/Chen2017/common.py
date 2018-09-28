@@ -29,11 +29,12 @@ params = {
     "gru_hidden_units": 50,
     "n_lstm_layers": 2,
     "n_hops": 3,
+    "n_attn_heatmaps": 2,
     "initializer": tf.initializers.random_uniform(minval=-0.1, maxval=0.1),
 }
 
 
-def ram_pre_processing_fn(features, labels):
+def ram_pre_processing_fn(features, labels=None):
     processed_features = {
         "sentence": tf.sparse_concat(
             sp_inputs=[
@@ -55,6 +56,8 @@ def ram_pre_processing_fn(features, labels):
         "target_ids": features["target_ids"],
         "target_offset": features["left"].dense_shape[1] + 1,
     }
+    if labels is None:
+        return processed_features
     return processed_features, labels
 
 
@@ -77,16 +80,7 @@ def ram_input_fn(tfrecord, batch_size, _eval=False):
 
 
 def ram_serving_fn(features):
-    return {
-        "sentence_x": features["mappings"]["sentence"],
-        "sentence_len": features["lengths"]["sentence"],
-        "sentence_lit": features["literals"]["sentence"],
-        "sentence_tok": features["tok_enc"]["sentence"],
-        "target_x": features["mappings"]["target"],
-        "target_len": features["lengths"]["target"],
-        "target_lit": features["literals"]["target"],
-        "target_tok": features["tok_enc"]["target"],
-    }
+    return ram_pre_processing_fn(features)
 
 
 def get_bounded_distance_vectors(

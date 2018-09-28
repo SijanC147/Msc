@@ -25,9 +25,8 @@ from tensorflow.train import (
     Int64List,
 )
 
-from tsaplay.embeddings.Embedding import Embedding, EMBEDDINGS
-from tsaplay.utils._nlp import get_sentence_target_features
-from tsaplay.utils._data import tf_encoded_tokenisation
+from tsaplay.features.FeatureProvider import FeatureProvider
+from tsaplay.utils._nlp import tokenize_phrase
 
 
 def parse_args():
@@ -44,7 +43,15 @@ def parse_args():
         required=True,
         help="Which model to use",
     )
-
+    parser.add_argument(
+        "--signature",
+        "-sig",
+        dest="signature",
+        default="inspect",
+        type=str,
+        required=False,
+        help="Specific TF Serving signature to query.",
+    )
     parser.add_argument(
         "--batch_file",
         "-b",
@@ -53,14 +60,13 @@ def parse_args():
         required=False,
         help="Process batch of targets,phrases in file",
     )
-
     parser.add_argument(
-        "--phrase",
-        "-p",
-        dest="phrase",
+        "--sentence",
+        "-s",
+        dest="sentence",
         type=str,
         required=False,
-        help="Phrase to analyze, must contain the target",
+        help="Sentence to analyze, must contain the target",
     )
     parser.add_argument(
         "--target",
@@ -73,112 +79,60 @@ def parse_args():
 
     args = parser.parse_args()
 
-    return args.phrase, args.target, args.model, args.batch_file
-
-
-def make_example(feat_dict):
-    sen_tok = tf_encoded_tokenisation([feat_dict["sentence"]], to_bytes=True)
-    left_tok = tf_encoded_tokenisation([feat_dict["left_lit"]], to_bytes=True)
-    right_tok = tf_encoded_tokenisation(
-        [feat_dict["right_lit"]], to_bytes=True
-    )
-    target_tok = tf_encoded_tokenisation(
-        [feat_dict["target_lit"]], to_bytes=True
-    )
-    sentence = feat_dict["sentence"].encode()
-    sen_length = feat_dict["sentence_len"]
-    left_lit = feat_dict["left_lit"].encode()
-    target = feat_dict["target_lit"].encode()
-    right_lit = feat_dict["right_lit"].encode()
-    left_map = feat_dict["left_map"]
-    target_map = feat_dict["target_map"]
-    right_map = feat_dict["right_map"]
-    left_len = len(left_map)
-    right_len = len(right_map)
-    target_len = len(target_map)
-    sen_map = left_map + target_map + right_map
-    ctxt_map = left_map + right_map
-    lft_trg_map = left_map + target_map
-    trg_rht_map = list(reversed(target_map + right_map))
-
-    if left_len == 0:
-        left_map += [0]
-    if right_len == 0:
-        right_map += [0]
-
-    context = Features(
-        feature={
-            "sen_lit": Feature(bytes_list=BytesList(value=[sentence])),
-            "left_lit": Feature(bytes_list=BytesList(value=[left_lit])),
-            "right_lit": Feature(bytes_list=BytesList(value=[right_lit])),
-            "target_lit": Feature(bytes_list=BytesList(value=[target])),
-            "sen_tok": Feature(bytes_list=BytesList(value=sen_tok)),
-            "left_tok": Feature(bytes_list=BytesList(value=left_tok)),
-            "right_tok": Feature(bytes_list=BytesList(value=right_tok)),
-            "target_tok": Feature(bytes_list=BytesList(value=target_tok)),
-            "sen_len": Feature(int64_list=Int64List(value=[sen_length])),
-            "left_len": Feature(int64_list=Int64List(value=[left_len])),
-            "right_len": Feature(int64_list=Int64List(value=[right_len])),
-            "target_len": Feature(int64_list=Int64List(value=[target_len])),
-            "sen_map": Feature(int64_list=Int64List(value=sen_map)),
-            "right_map": Feature(int64_list=Int64List(value=right_map)),
-            "left_map": Feature(int64_list=Int64List(value=left_map)),
-            "target_map": Feature(int64_list=Int64List(value=target_map)),
-            "ctxt_map": Feature(int64_list=Int64List(value=ctxt_map)),
-            "lft_trg_map": Feature(int64_list=Int64List(value=lft_trg_map)),
-            "trg_rht_map": Feature(int64_list=Int64List(value=trg_rht_map)),
-        }
+    return (
+        args.model,
+        args.signature,
+        args.batch_file,
+        args.sentence,
+        args.target,
     )
 
-    return Example(features=context)
+
+def byte_encode_array(array):
+    return [a.encode() for a in array]
 
 
 def main():
 
-    phrase, target, model, batch_file = parse_args()
+    model, signature, batch_file, sentence, target = parse_args()
 
-    export_embedding = Embedding(source=EMBEDDINGS.DEBUG)
+    feat_dict = {"sentences": [], "targets": []}
 
     if batch_file is not None:
-        tf_examples = []
-        phrases = []
-        targets = []
-        batch_file_ext = splitext(batch_file)[1]
-        if batch_file_ext == ".txt":
-            with open(batch_file, "r") as f:
-                for line in f:
-                    target, _, phrase = line.partition(",")
-                    phrases.append(phrase.strip())
-                    targets.append(target.strip())
-        elif batch_file_ext == ".csv":
-            with open(batch_file, "r") as f:
-                csvreader = DictReader(f, fieldnames=["target", "phrase"])
-                for row in csvreader:
-                    phrases.append(row["phrase"].strip())
-                    targets.append(row["target"].strip())
-        else:
-            print("supported batch_file types: txt, csv")
-            return
-
-        for (target, phrase) in zip(targets, phrases):
-            feat_dict = get_sentence_target_features(
-                embedding=export_embedding, sentence=phrase, target=target
-            )
-            tf_example = make_example(feat_dict)
-            tf_examples.append(tf_example.SerializeToString())
-        tensor_proto = make_tensor_proto(
-            tf_examples, dtype=tf.string, shape=[len(tf_examples)]
-        )
-
+        with open(batch_file, "r") as f:
+            csvreader = DictReader(f, fieldnames=["target", "sentence"])
+            for row in csvreader:
+                feat_dict["targets"].append(row["target"].strip())
+                feat_dict["sentences"].append(row["sentence"].strip())
     else:
-        feat_dict = get_sentence_target_features(
-            embedding=export_embedding, sentence=phrase, target=target
+        feat_dict["targets"].append(target)
+        feat_dict["sentences"].append(sentence)
+
+    l_ctxts, trgs, r_ctxts = FeatureProvider.partition_sentences(
+        sentences=feat_dict["sentences"],
+        targets=feat_dict["targets"],
+        offsets=FeatureProvider.get_target_offset_array(feat_dict),
+    )
+    l_enc = [byte_encode_array(tokenize_phrase(l)) for l in l_ctxts]
+    trg_enc = [byte_encode_array(tokenize_phrase(t)) for t in trgs]
+    r_enc = [byte_encode_array(tokenize_phrase(r)) for r in r_ctxts]
+
+    tf_examples = []
+
+    for left, target, right in zip(l_enc, trg_enc, r_enc):
+        features = Features(
+            feature={
+                "left": Feature(bytes_list=BytesList(value=left)),
+                "target": Feature(bytes_list=BytesList(value=target)),
+                "right": Feature(bytes_list=BytesList(value=right)),
+            }
         )
-        tf_example = make_example(feat_dict)
-        serialized = tf_example.SerializeToString()
-        tensor_proto = make_tensor_proto(
-            serialized, dtype=tf.string, shape=[1]
-        )
+        tf_example = Example(features=features)
+        tf_examples.append(tf_example.SerializeToString())
+
+    tensor_proto = make_tensor_proto(
+        tf_examples, dtype=tf.string, shape=[len(tf_examples)]
+    )
 
     channel = insecure_channel("127.0.0.1:8500")
     stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
@@ -197,9 +151,9 @@ def main():
         tensor_proto
     )
     prediction_req.model_spec.signature_name = (  # pylint: disable=E1101
-        "inspect"
+        signature
     )
-    prediction_req.model_spec.name = "lg"  # pylint: disable=E1101
+    prediction_req.model_spec.name = model  # pylint: disable=E1101
     prediction = stub.Predict(prediction_req, 60.0)
     print(prediction)
 

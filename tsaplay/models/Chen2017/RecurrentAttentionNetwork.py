@@ -30,7 +30,7 @@ from tsaplay.utils._tf import (
     get_embedded_seq,
     create_snapshots_container,
     append_snapshot,
-    zip_attn_snapshots_with_literals,
+    zip_attn_snapshots_with_sp_literals,
     get_dense_tensor,
 )
 from tsaplay.utils._io import gprint
@@ -62,6 +62,9 @@ class RecurrentAttentionNetwork(Model):
             sentence_ids = tf.sparse_tensor_to_dense(features["sentence_ids"])
             target_ids = tf.sparse_tensor_to_dense(features["target_ids"])
             target_offset = tf.cast(features["target_offset"], tf.int32)
+            if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
+                sentence_ids = tf.squeeze(sentence_ids, axis=1)
+                target_ids = tf.squeeze(target_ids, axis=1)
 
             embedding_matrix = setup_embedding_layer(
                 vocab_size=params["vocab_size"],
@@ -127,8 +130,7 @@ class RecurrentAttentionNetwork(Model):
             )
 
             attn_snapshots = create_snapshots_container(
-                shape_like=tf.squeeze(sentence_ids, axis=1),
-                n_snaps=params["n_hops"],
+                shape_like=sentence_ids, n_snaps=params["n_hops"]
             )
 
             attn_layer_num = tf.constant(1)
@@ -195,13 +197,13 @@ class RecurrentAttentionNetwork(Model):
                 loop_vars=initial_layer_inputs,
             )
 
-            # literals, attn_snapshots = zip_attn_snapshots_with_literals(
-            #     literals=features["sentence_lit"],
-            #     snapshots=attn_snapshots,
-            #     num_layers=params["n_hops"],
-            # )
-            # attn_info = tf.tuple([literals, attn_snapshots])
-            # generate_attn_heatmap_summary(attn_info)
+            literals, attn_snapshots = zip_attn_snapshots_with_sp_literals(
+                sp_literals=features["sentence"],
+                snapshots=attn_snapshots,
+                num_layers=params["n_hops"],
+            )
+            attn_info = tf.tuple([literals, attn_snapshots])
+            generate_attn_heatmap_summary(attn_info)
 
             final_sentence_rep = tf.squeeze(final_episode, axis=1)
 

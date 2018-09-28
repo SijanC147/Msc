@@ -55,6 +55,10 @@ class LcrRot(Model):
             left_ids = tf.sparse_tensor_to_dense(features["left_ids"])
             target_ids = tf.sparse_tensor_to_dense(features["target_ids"])
             right_ids = tf.sparse_tensor_to_dense(features["right_ids"])
+            if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
+                left_ids = tf.squeeze(left_ids, axis=1)
+                target_ids = tf.squeeze(target_ids, axis=1)
+                right_ids = tf.squeeze(right_ids, axis=1)
 
             embedding_matrix = setup_embedding_layer(
                 vocab_size=params["vocab_size"],
@@ -141,6 +145,7 @@ class LcrRot(Model):
                     seq_lengths=left_len,
                     attn_focus=r_t,
                     init=params["initializer"],
+                    sp_literal=features["left"],
                 )
 
             with tf.variable_scope("right_t2c_attn"):
@@ -150,6 +155,7 @@ class LcrRot(Model):
                     seq_lengths=right_len,
                     attn_focus=r_t,
                     init=params["initializer"],
+                    sp_literal=features["right"],
                 )
 
             with tf.variable_scope("left_c2t_attn"):
@@ -159,6 +165,7 @@ class LcrRot(Model):
                     seq_lengths=target_len,
                     attn_focus=tf.expand_dims(r_l, axis=1),
                     init=params["initializer"],
+                    sp_literal=features["target"],
                 )
 
             with tf.variable_scope("right_c2t_attn"):
@@ -168,14 +175,15 @@ class LcrRot(Model):
                     seq_lengths=target_len,
                     attn_focus=tf.expand_dims(r_r, axis=1),
                     init=params["initializer"],
+                    sp_literal=features["target"],
                 )
 
-            # generate_attn_heatmap_summary(
-            #     left_attn_info,
-            #     left_target_attn_info,
-            #     right_target_attn_info,
-            #     right_attn_info,
-            # )
+            generate_attn_heatmap_summary(
+                left_attn_info,
+                left_target_attn_info,
+                right_target_attn_info,
+                right_attn_info,
+            )
 
             final_sentence_rep = tf.concat([r_l, r_t_l, r_t_r, r_r], axis=1)
 

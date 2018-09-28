@@ -34,8 +34,11 @@ class Lstm(Model):
         def _default(features, labels, mode, params=self.params):
             sentence_ids = tf.sparse_tensor_to_dense(features["sentence_ids"])
             sentence_len = sparse_seq_lengths(features["sentence_ids"])
+            if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
+                sentence_ids = tf.squeeze(sentence_ids, axis=1)
+
             inputs = tf.contrib.layers.embed_sequence(
-                ids=tf.squeeze(sentence_ids, axis=1),
+                ids=sentence_ids,
                 vocab_size=params["vocab_size"],
                 embed_dim=params["embedding_dim"],
                 initializer=params["embedding_initializer"],

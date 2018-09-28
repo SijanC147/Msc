@@ -20,7 +20,7 @@ from tsaplay.utils._tf import (
     get_embedded_seq,
     append_snapshot,
     create_snapshots_container,
-    zip_attn_snapshots_with_literals,
+    zip_attn_snapshots_with_sp_literals,
 )
 
 
@@ -52,6 +52,9 @@ class MemNet(Model):
             context_ids = tf.sparse_tensor_to_dense(features["context_ids"])
             target_ids = tf.sparse_tensor_to_dense(features["target_ids"])
             target_offset = tf.cast(features["target_offset"], tf.int32)
+            if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
+                context_ids = tf.squeeze(context_ids, axis=1)
+                target_ids = tf.squeeze(target_ids, axis=1)
 
             embedding_matrix = setup_embedding_layer(
                 vocab_size=params["vocab_size"],
@@ -77,8 +80,7 @@ class MemNet(Model):
             )
 
             attn_snapshots = create_snapshots_container(
-                shape_like=tf.squeeze(context_ids, axis=1),
-                n_snaps=params["n_hops"],
+                shape_like=context_ids, n_snaps=params["n_hops"]
             )
 
             hop_number = tf.constant(1)
@@ -149,13 +151,13 @@ class MemNet(Model):
                 ),
             )
 
-            # literals, attn_snapshots = zip_attn_snapshots_with_literals(
-            #     literals=features["context_lit"],
-            #     snapshots=attn_snapshots,
-            #     num_layers=params["n_hops"],
-            # )
-            # attn_info = tf.tuple([literals, attn_snapshots])
-            # generate_attn_heatmap_summary(attn_info)
+            literals, attn_snapshots = zip_attn_snapshots_with_sp_literals(
+                sp_literals=features["context"],
+                snapshots=attn_snapshots,
+                num_layers=params["n_hops"],
+            )
+            attn_info = tf.tuple([literals, attn_snapshots])
+            generate_attn_heatmap_summary(attn_info)
 
             final_sentence_rep = tf.squeeze(final_sentence_rep, axis=1)
 

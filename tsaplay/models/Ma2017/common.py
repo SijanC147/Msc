@@ -24,7 +24,7 @@ params = {
 }
 
 
-def ian_pre_processing_fn(features, labels):
+def ian_pre_processing_fn(features, labels=None):
     processed_features = {
         "context": tf.sparse_concat(
             sp_inputs=[features["left"], features["right"]], axis=1
@@ -35,6 +35,8 @@ def ian_pre_processing_fn(features, labels):
         "target": features["target"],
         "target_ids": features["target_ids"],
     }
+    if labels is None:
+        return processed_features
     return processed_features, labels
 
 
@@ -57,21 +59,4 @@ def ian_input_fn(tfrecord, batch_size, _eval=False):
 
 
 def ian_serving_fn(features):
-    return {
-        "context_x": features["mappings"]["context"],
-        "context_len": tf.add(
-            features["lengths"]["left"], features["lengths"]["right"]
-        ),
-        "context_lit": tf.strings.join(
-            [features["literals"]["left"], features["literals"]["right"]],
-            separator=" ",
-        ),
-        "context_tok": tf.strings.join(
-            [features["tok_enc"]["left"], features["tok_enc"]["right"]],
-            separator="<SEP>",
-        ),
-        "target_x": features["mappings"]["target"],
-        "target_len": features["lengths"]["target"],
-        "target_lit": features["literals"]["target"],
-        "target_tok": features["tok_enc"]["target"],
-    }
+    return ian_pre_processing_fn(features)

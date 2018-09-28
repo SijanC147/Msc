@@ -7,6 +7,7 @@ from tensorflow.python_io import TFRecordWriter
 
 from tsaplay.utils._nlp import tokenize_phrase, inspect_dist, re_dist
 from tsaplay.utils._data import parse_tf_example
+from tsaplay.utils._io import gprint
 from tsaplay.embeddings.Embedding import Embedding
 from tsaplay.embeddings.PartialEmbedding import PartialEmbedding
 import tsaplay.features._constants as FEATURES
@@ -21,7 +22,6 @@ class FeatureProvider:
         self._tfrecord_file = lambda mode: join(
             self.gen_dir, "_" + mode + ".tfrecord"
         )
-        makedirs(self.gen_dir, exist_ok=True)
 
     @property
     def name(self):
@@ -32,10 +32,13 @@ class FeatureProvider:
     @property
     def gen_dir(self):
         if isinstance(self._embedding, PartialEmbedding):
-            return join(FEATURES.DATA_PATH, self._embedding.name)
-        return join(
-            FEATURES.DATA_PATH, self._embedding.name, self._dataset.name
-        )
+            gen_dir = join(FEATURES.DATA_PATH, self._embedding.name)
+        else:
+            gen_dir = join(
+                FEATURES.DATA_PATH, self._embedding.name, self._dataset.name
+            )
+        makedirs(gen_dir, exist_ok=True)
+        return gen_dir
 
     @property
     def embedding_params(self):
@@ -57,18 +60,7 @@ class FeatureProvider:
         else:
             data = self._dataset.test_dict
 
-        left_ctxts, targets, right_ctxts = self._partition_sentences(
-            sentences=data["sentences"],
-            targets=data["targets"],
-            offsets=data["offsets"],
-        )
-        left_enc = [self._tf_encode_string(l) for l in left_ctxts]
-        target_enc = [self._tf_encode_string(t) for t in targets]
-        right_enc = [self._tf_encode_string(r) for r in right_ctxts]
-
-        left_sp = [self._get_tokens_sp_tensor(l) for l in left_enc]
-        target_sp = [self._get_tokens_sp_tensor(t) for t in target_enc]
-        right_sp = [self._get_tokens_sp_tensor(r) for r in right_enc]
+        left_sp, target_sp, right_sp = FeatureProvider.bytes_sp_from_dict(data)
 
         left, l_ids, target, t_ids, right, r_ids = self._get_ids_bytes_lists(
             left_sp=left_sp, target_sp=target_sp, right_sp=right_sp
@@ -105,7 +97,54 @@ class FeatureProvider:
         with open(join(self.gen_dir, "_" + mode + ".json"), "w") as f:
             f.write(dumps(dataset_stats))
 
-    def _partition_sentences(self, sentences, targets, offsets):
+    @classmethod
+    def bytes_sp_from_dict(cls, dictionary):
+        offsets = dictionary.get("offsets", [])
+        if len(offsets) == 0:
+            offsets = FeatureProvider.get_target_offset_array(dictionary)
+        dictionary = {**dictionary, "offsets": offsets}
+        l_ctxts, trgs, r_ctxts = FeatureProvider.partition_sentences(
+            sentences=dictionary["sentences"],
+            targets=dictionary["targets"],
+            offsets=dictionary["offsets"],
+        )
+        l_enc = [FeatureProvider.tf_encode_string(l) for l in l_ctxts]
+        trg_enc = [FeatureProvider.tf_encode_string(t) for t in trgs]
+        r_enc = [FeatureProvider.tf_encode_string(r) for r in r_ctxts]
+
+        l_sp = [FeatureProvider.get_tokens_sp_tensor(l) for l in l_enc]
+        trg_sp = [FeatureProvider.get_tokens_sp_tensor(t) for t in trg_enc]
+        r_sp = [FeatureProvider.get_tokens_sp_tensor(r) for r in r_enc]
+        return l_sp, trg_sp, r_sp
+
+    @classmethod
+    def get_target_offset_array(cls, dictionary):
+        offsets = []
+        for (s, t) in zip(dictionary["sentences"], dictionary["targets"]):
+            offsets.append(s.find(t))
+        return offsets
+
+    @classmethod
+    def tf_encode_string(cls, string):
+        tokenized_string_list = tokenize_phrase(string, lower=True)
+        tokenized_string = "<SEP>".join(tokenized_string_list)
+        encoded_tokenized_string = tokenized_string.encode()
+        return encoded_tokenized_string
+
+    @classmethod
+    def get_tokens_sp_tensor(cls, tf_encoded_string, delimiter="<SEP>"):
+        string_tensor = tf.constant([tf_encoded_string], dtype=tf.string)
+        tokens_sp_tensor = tf.string_split(string_tensor, delimiter)
+        return tokens_sp_tensor
+
+    @classmethod
+    def tf_lookup_string_to_ids(cls, table, tokens_sp_tensor):
+        ids_sp_tensor = table.lookup(tokens_sp_tensor)
+        ids_tensor = tf.sparse_tensor_to_dense(ids_sp_tensor)
+        return ids_tensor
+
+    @classmethod
+    def partition_sentences(cls, sentences, targets, offsets):
         left_ctxts, _targets, right_ctxts = [], [], []
 
         for (sen, trg, off) in zip(sentences, targets, offsets):
@@ -114,7 +153,6 @@ class FeatureProvider:
             r_off = off + len(target)
             _targets.append(target)
             right_ctxts.append(sen[r_off:].strip())
-
         return left_ctxts, _targets, right_ctxts
 
     def _get_ids_bytes_lists(self, left_sp, target_sp, right_sp):
@@ -128,41 +166,27 @@ class FeatureProvider:
             tf.tables_initializer().run()
 
             for (l, t, r) in zip(left_sp, target_sp, right_sp):
-                left_ids_op = self._tf_lookup_ids(ids_table, l)
-                target_ids_op = self._tf_lookup_ids(ids_table, t)
-                right_ids_op = self._tf_lookup_ids(ids_table, r)
+                left_ids_op = FeatureProvider.tf_lookup_string_to_ids(
+                    ids_table, l
+                )
+                target_ids_op = FeatureProvider.tf_lookup_string_to_ids(
+                    ids_table, t
+                )
+                right_ids_op = FeatureProvider.tf_lookup_string_to_ids(
+                    ids_table, r
+                )
 
-                left_ids.append(left_ids_op.eval()[0])
-                target_ids.append(target_ids_op.eval()[0])
-                right_ids.append(right_ids_op.eval()[0])
+                left_ids.append(left_ids_op.eval()[0].tolist())
+                target_ids.append(target_ids_op.eval()[0].tolist())
+                right_ids.append(right_ids_op.eval()[0].tolist())
 
                 left_op = tf.sparse_tensor_to_dense(l, default_value=b"")
                 target_op = tf.sparse_tensor_to_dense(t, default_value=b"")
                 right_op = tf.sparse_tensor_to_dense(r, default_value=b"")
 
-                left.append(left_op.eval()[0])
-                target.append(target_op.eval()[0])
-                right.append(right_op.eval()[0])
-
-        tf.reset_default_graph()
+                left.append(left_op.eval()[0].tolist())
+                target.append(target_op.eval()[0].tolist())
+                right.append(right_op.eval()[0].tolist())
 
         return left, left_ids, target, target_ids, right, right_ids
 
-    def _get_tokens_sp_tensor(self, tf_encoded_string, delimiter="<SEP>"):
-        string_tensor = tf.constant([tf_encoded_string], dtype=tf.string)
-        tokens_sp_tensor = tf.string_split(string_tensor, delimiter)
-
-        return tokens_sp_tensor
-
-    def _tf_lookup_ids(self, table, tokens_sp_tensor):
-        ids_sp_tensor = table.lookup(tokens_sp_tensor)
-        ids_tensor = tf.sparse_tensor_to_dense(ids_sp_tensor)
-
-        return ids_tensor
-
-    def _tf_encode_string(self, string):
-        tokenized_string_list = tokenize_phrase(string, lower=True)
-        tokenized_string = "<SEP>".join(tokenized_string_list)
-        encoded_tokenized_string = tokenized_string.encode()
-
-        return encoded_tokenized_string

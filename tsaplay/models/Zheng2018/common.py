@@ -18,6 +18,7 @@ params = {
     "keep_prob": 0.5,
     "hidden_units": 100,
     "initializer": tf.initializers.random_uniform(minval=-0.1, maxval=0.1),
+    "n_attn_heatmaps": 5,
 }
 
 
@@ -39,17 +40,4 @@ def lcr_rot_input_fn(tfrecord, batch_size, eval_input=False):
 
 
 def lcr_rot_serving_fn(features):
-    return {
-        "left_x": features["mappings"]["left"],
-        "left_len": features["lengths"]["left"],
-        "left_lit": features["literals"]["left"],
-        "left_tok": features["tok_enc"]["left"],
-        "target_x": features["mappings"]["target"],
-        "target_len": features["lengths"]["target"],
-        "target_lit": features["literals"]["target"],
-        "target_tok": features["tok_enc"]["target"],
-        "right_x": features["mappings"]["right"],
-        "right_len": features["lengths"]["right"],
-        "right_lit": features["literals"]["right"],
-        "right_tok": features["tok_enc"]["right"],
-    }
+    return features

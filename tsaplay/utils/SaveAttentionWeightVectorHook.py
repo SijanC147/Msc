@@ -16,6 +16,7 @@ from tsaplay.utils._nlp import (
     tokenize_phrase,
 )
 from tsaplay.utils._tf import image_to_summary
+from tsaplay.utils._io import gprint
 
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt  # nopep8
@@ -63,32 +64,41 @@ class SaveAttentionWeightVectorHook(SessionRunHook):
         preds = results["predictions"]
         if self.n_picks > len(targets):
             self.n_picks = len(targets)
-        rnd_picked = np.random.choice(
-            targets, size=self.n_picks, replace=False
+        indices = np.random.choice(
+            list(range(len(targets))), size=self.n_picks, replace=False
         )
-        indices = [targets.tolist().index(pick) for pick in rnd_picked]
 
         images = []
         for i in indices:
             if self.n_hops is None:
-                phrases = [attn_mech[0][i] for attn_mech in attn_mechs]
-                attn_vecs = [attn_mech[1][i] for attn_mech in attn_mechs]
+                phrases = [
+                    attn_mech[0][i].tolist() for attn_mech in attn_mechs
+                ]
+                attn_vecs = [
+                    attn_mech[1][i].tolist() for attn_mech in attn_mechs
+                ]
                 attn_heatmap = draw_attention_heatmap(
                     phrases=phrases, attn_vecs=attn_vecs
                 )
             else:
                 i_hop = i * self.n_hops
                 hop_images = []
-                for h in range(i_hop, i_hop + self.n_hops):
-                    phrases = [attn_mech[0][h] for attn_mech in attn_mechs]
-                    attn_vecs = [attn_mech[1][h] for attn_mech in attn_mechs]
+                for ih in range(i_hop, i_hop + self.n_hops):
+                    phrases = [
+                        attn_mech[0][ih].tolist() for attn_mech in attn_mechs
+                    ]
+                    attn_vecs = [
+                        attn_mech[1][ih].tolist() for attn_mech in attn_mechs
+                    ]
                     attn_heatmap_hop = draw_attention_heatmap(
                         phrases=phrases, attn_vecs=attn_vecs
                     )
                     hop_images.append(attn_heatmap_hop)
                 attn_heatmap = stack_images(hop_images, h_space=10)
 
-            target = str(targets[i], "utf-8")
+            target = " ".join(
+                [str(t, "utf-8") for t in targets[i] if t != b""]
+            )
             label = labels[i]
             prediction = preds[i]
             pred_label = draw_prediction_label(

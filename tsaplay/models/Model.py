@@ -228,8 +228,6 @@ class Model(ABC):
         )
 
     def _serving_input_receiver_fn(self):
-        # self.serving_input_fn = self._serving_input_fn()
-
         def serving_input_receiver_fn():
             inputs_serialized = tf.placeholder(dtype=tf.string)
 
@@ -237,65 +235,22 @@ class Model(ABC):
                 "left": tf.VarLenFeature(dtype=tf.string),
                 "target": tf.VarLenFeature(dtype=tf.string),
                 "right": tf.VarLenFeature(dtype=tf.string),
-                "left_ids": tf.VarLenFeature(dtype=tf.int64),
-                "target_ids": tf.VarLenFeature(dtype=tf.int64),
-                "right_ids": tf.VarLenFeature(dtype=tf.int64),
             }
 
             parsed_example = tf.parse_example(inputs_serialized, feature_spec)
+
+            ids_table = tf.contrib.lookup.index_table_from_file(
+                vocabulary_file=self.params["vocab_file_path"], default_value=1
+            )
 
             features = {
                 "left": parsed_example["left"],
                 "target": parsed_example["target"],
                 "right": parsed_example["right"],
-                "left_ids": parsed_example["left_ids"],
-                "target_ids": parsed_example["target_ids"],
-                "right_ids": parsed_example["right_ids"],
+                "left_ids": ids_table.lookup(parsed_example["left"]),
+                "target_ids": ids_table.lookup(parsed_example["target"]),
+                "right_ids": ids_table.lookup(parsed_example["right"]),
             }
-
-            # left_map = tf.sparse_tensor_to_dense(input_features["left_map"])
-            # target_map = tf.sparse_tensor_to_dense(
-            #     input_features["target_map"]
-            # )
-            # right_map = tf.sparse_tensor_to_dense(input_features["right_map"])
-            # sen_map = tf.sparse_tensor_to_dense(input_features["sen_map"])
-            # ctxt_map = tf.sparse_tensor_to_dense(input_features["ctxt_map"])
-            # lft_trg_map = tf.sparse_tensor_to_dense(
-            #     input_features["lft_trg_map"]
-            # )
-            # trg_rht_map = tf.sparse_tensor_to_dense(
-            #     input_features["trg_rht_map"]
-            # )
-
-            # std_feat = {
-            #     "literals": {
-            #         "sentence": input_features["sen_lit"],
-            #         "target": input_features["target_lit"],
-            #         "left": input_features["left_lit"],
-            #         "right": input_features["right_lit"],
-            #     },
-            #     "tok_enc": {
-            #         "sentence": input_features["sen_tok"],
-            #         "target": input_features["target_tok"],
-            #         "left": input_features["left_tok"],
-            #         "right": input_features["right_tok"],
-            #     },
-            #     "lengths": {
-            #         "sentence": tf.cast(input_features["sen_len"], tf.int32),
-            #         "left": tf.cast(input_features["left_len"], tf.int32),
-            #         "right": tf.cast(input_features["right_len"], tf.int32),
-            #         "target": tf.cast(input_features["target_len"], tf.int32),
-            #     },
-            #     "mappings": {
-            #         "left": left_map,
-            #         "target": target_map,
-            #         "right": right_map,
-            #         "sentence": sen_map,
-            #         "context": ctxt_map,
-            #         "left_target": lft_trg_map,
-            #         "target_right": trg_rht_map,
-            #     },
-            # }
 
             input_feat = self.__serv_in_fn(features)
 
@@ -317,9 +272,7 @@ class Model(ABC):
                 classify_output = ClassificationOutput(
                     classes=classes, scores=probs
                 )
-                predict_output = PredictOutput(
-                    {**spec.predictions, **features}
-                )
+                predict_output = PredictOutput(spec.predictions)
                 export_outputs = {
                     DEFAULT_SERVING_SIGNATURE_DEF_KEY: classify_output,
                     "inspect": predict_output,
@@ -356,11 +309,14 @@ class Model(ABC):
             tf.summary.scalar("auc", std_metrics["auc"][1])
             if mode == ModeKeys.EVAL:
                 all_eval_hooks = spec.evaluation_hooks or []
-                if features.get("target_lit") is not None:
+                if self.params.get("n_attn_heatmaps", 0) > 0:
+                    targets = tf.sparse_tensor_to_dense(
+                        features["target"], default_value=b""
+                    )
                     attn_hook = SaveAttentionWeightVectorHook(
                         labels=labels,
                         predictions=spec.predictions["class_ids"],
-                        targets=features["target_lit"],
+                        targets=tf.squeeze(targets, axis=1),
                         summary_writer=tf.summary.FileWriterCache.get(
                             join(self.run_config.model_dir, "eval")
                         ),

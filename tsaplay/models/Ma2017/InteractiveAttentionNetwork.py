@@ -46,6 +46,9 @@ class InteractiveAttentionNetwork(Model):
             target_len = sparse_seq_lengths(features["target"])
             context_ids = tf.sparse_tensor_to_dense(features["context_ids"])
             target_ids = tf.sparse_tensor_to_dense(features["target_ids"])
+            if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
+                context_ids = tf.squeeze(context_ids, axis=1)
+                target_ids = tf.squeeze(target_ids, axis=1)
 
             embedding_matrix = setup_embedding_layer(
                 vocab_size=params["vocab_size"],

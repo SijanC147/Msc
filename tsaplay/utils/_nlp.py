@@ -12,7 +12,7 @@ mpl.use("TkAgg")
 import matplotlib.pyplot as plt  # nopep8
 
 
-def tokenize_phrase(phrase, lower=False):
+def tokenize_phrase(phrase, lower=True):
     tokens_list = []
     nlp = spacy.load("en", disable=["parser", "ner"])
     tokens = nlp(str(phrase))
@@ -201,7 +201,9 @@ def inspect_dist(left, target, right, labels):
     positive = [label for label in labels if label == 1]
     neutral = [label for label in labels if label == 0]
     negative = [label for label in labels if label == -1]
-    lengths = [len(l + t + r) for l, t, r in zip(left, target, right)]
+    lengths = [
+        len(np.concatenate([l, t, r])) for l, t, r in zip(left, target, right)
+    ]
     return {
         "num_samples": len(labels),
         "positive": {
@@ -290,7 +292,7 @@ def cmap_int(value, cmap_name="Oranges", alpha=0.8):
 def draw_attention_heatmap(phrases, attn_vecs):
     font = ImageFont.truetype(font="./tsaplay/Symbola.ttf", size=24)
 
-    phrases = [[t for t in tokenize_phrase(str(p, "utf-8"))] for p in phrases]
+    phrases = [[str(t, "utf-8") for t in p if t != b""] for p in phrases]
     attn_vecs = [a[: len(p)] for a, p in zip(attn_vecs, phrases)]
 
     v_space = 5

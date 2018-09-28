@@ -17,12 +17,9 @@ def sparse_reverse(sp_input):
     return tf.sparse_reorder(reversed_sp_input)
 
 
-def sparse_seq_lengths(sp_input, batched=True):
-    if not (batched):
-        batch_groups, _ = tf.unstack(sp_input.indicesl, axis=1)
-    else:
-        batch_groups, _, _ = tf.unstack(sp_input.indices, axis=1)
-    _, _, counts = tf.unique_with_counts(batch_groups)
+def sparse_seq_lengths(sp_input):
+    unstacked_indices = tf.unstack(sp_input.indices, axis=1)
+    _, _, counts = tf.unique_with_counts(unstacked_indices[0])
 
     return counts
 
@@ -31,7 +28,8 @@ def concat_seq_sparse(sp_inputs, axis, reverse=False):
     concatenated = tf.sparse_concat(sp_inputs=sp_inputs, axis=axis)
     indices = concatenated.indices
 
-    batch_group, not_imp, _ = tf.unstack(indices, axis=1)
+    unstacked_indices = tf.unstack(indices, axis=1)
+    batch_group = unstacked_indices[0]
     _, _, counts = tf.unique_with_counts(batch_group)
 
     cumulutive = tf.cumsum(counts, exclusive=True, reverse=reverse)
@@ -45,7 +43,7 @@ def concat_seq_sparse(sp_inputs, axis, reverse=False):
 
     new_value_pos = tf.cast(new_value_pos, tf.int64)
     new_indices = tf.transpose(
-        tf.stack([batch_group, not_imp, new_value_pos]), perm=[1, 0]
+        tf.stack([batch_group, new_value_pos]), perm=[1, 0]
     )
 
     new_sparse = tf.SparseTensor(
@@ -133,7 +131,7 @@ def l2_regularized_loss(
 
 
 def attention_unit(
-    h_states, hidden_units, seq_lengths, attn_focus, init, literal=None
+    h_states, hidden_units, seq_lengths, attn_focus, init, sp_literal=None
 ):
     batch_size = tf.shape(h_states)[0]
     max_seq_len = tf.shape(h_states)[1]
@@ -176,7 +174,10 @@ def attention_unit(
 
     attn_vec = masked_softmax(logits=f_score, mask=mask)
 
-    attn_summary_info = tf.tuple([literal, attn_vec])
+    literal_tensor = tf.sparse_tensor_to_dense(sp_literal, default_value=b"")
+    attn_summary_info = tf.tuple(
+        [tf.squeeze(literal_tensor, axis=1), attn_vec]
+    )
 
     attn_vec = tf.expand_dims(attn_vec, axis=3)
 
@@ -221,16 +222,16 @@ def create_snapshots_container(shape_like, n_snaps):
     return container
 
 
-def zip_attn_snapshots_with_literals(literals, snapshots, num_layers):
+def zip_attn_snapshots_with_sp_literals(sp_literals, snapshots, num_layers):
     max_len = tf.shape(snapshots)[2]
     snapshots = tf.transpose(snapshots, perm=[1, 0, 2, 3])
     snapshots = tf.reshape(snapshots, shape=[-1, max_len, 1])
 
-    literals = tf.expand_dims(literals, axis=1)
-    literals = tf.tile(literals, multiples=[1, num_layers])
-    literals = tf.reshape(literals, shape=[-1])
+    sp_literals = tf.sparse_tensor_to_dense(sp_literals, default_value=b"")
+    sp_literals = tf.tile(sp_literals, multiples=[1, num_layers, 1])
+    sp_literals = tf.reshape(sp_literals, shape=[-1, max_len])
 
-    return literals, snapshots
+    return sp_literals, snapshots
 
 
 def bulk_add_to_collection(collection, *variables):
@@ -335,7 +336,6 @@ def setup_embedding_layer(
 def get_embedded_seq(
     ids, embedding_matrix, reuse=True, var_scope="embedding_layer"
 ):
-    ids = tf.squeeze(ids, axis=1)
     embedded_seq = embed_sequence(
         ids=ids, initializer=embedding_matrix, scope=var_scope, reuse=True
     )
