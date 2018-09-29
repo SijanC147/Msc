@@ -26,11 +26,11 @@ from tsaplay.features.FeatureProvider import FeatureProvider
 # dong = Dataset(path=DATASETS.DONG2014_PATH, parser=DATASETS.DONG2014_PARSER)
 # xue = Dataset(path=DATASETS.XUE2018_PATH, parser=DATASETS.XUE2018_PARSER)
 # compound = CompoundDataset(dong, xue)
-# debug = Dataset(*DATASETS.DEBUG)
+debug = Dataset(*DATASETS.DEBUG)
 dong = Dataset(*DATASETS.DONG)
 glv_wiki = Embedding("glove-wiki-gigaword-50")
 
-feature_provider = FeatureProvider(datasets=[dong], embedding=glv_wiki)
+feature_provider = FeatureProvider(datasets=[dong, debug], embedding=glv_wiki)
 
 # experiment = Experiment(feature_provider, LcrRot())
 

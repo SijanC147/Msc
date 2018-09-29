@@ -1,6 +1,7 @@
 import spacy
 import numpy as np
 import matplotlib as mpl
+from tqdm import tqdm
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from random import choice, randrange
 from math import floor
@@ -25,7 +26,7 @@ def tokenize_phrase(phrase, lower=True):
 def tokenize_phrases(phrases):
     token_lists = []
     nlp = spacy.load("en", disable=["parser", "ner"])
-    for doc in nlp.pipe(phrases, batch_size=50, n_threads=-1):
+    for doc in tqdm(nlp.pipe(phrases, batch_size=100, n_threads=-1)):
         tokens = list(filter(token_filter, doc))
         token_lists.append([t.text.lower() for t in tokens])
     return token_lists

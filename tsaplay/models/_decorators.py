@@ -29,3 +29,21 @@ def timeit(method):
         return result
 
     return timed
+
+
+# @classmethod
+# def short_name(cls, string, numchar=20):
+#     name = str(string, "utf-8")
+#     if len(name) > numchar:
+#         name = name[:numchar]
+#     return "".join(filter(str.isalpha, name))
+
+# @classmethod
+# def print_tensors(cls, left, target, right):
+#     template = "{3}:\t {0}\t {1}\t {2}"
+#     for i in range(20):
+#         gprint(
+#             template.format(
+#                 left[i].name, target[i].name, right[i].name, i + 1
+#             )
+#         )
