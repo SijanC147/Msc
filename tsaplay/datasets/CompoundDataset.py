@@ -13,8 +13,8 @@ import tsaplay.datasets._constants as DATASETS
 
 
 class CompoundDataset:
-    def __init__(self, *datasets):
-        self.__dsts = list(datasets)
+    def __init__(self, datasets):
+        self.__dsts = datasets
 
     @property
     def name(self):

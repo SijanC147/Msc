@@ -21,8 +21,6 @@ from tsaplay.utils._tf import (
     generate_attn_heatmap_summary,
     setup_embedding_layer,
     get_embedded_seq,
-    setup_embedding_lookup_table,
-    lookup_embedding_ids,
 )
 
 

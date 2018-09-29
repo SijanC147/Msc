@@ -15,31 +15,19 @@ import tsaplay.features._constants as FEATURES
 
 
 class FeatureProvider:
-    def __init__(self, dataset, embedding, train_dist=None, test_dist=None):
+    def __init__(self, datasets, embedding, train_dist=None, test_dist=None):
         self.train_dist = train_dist
         self.test_dist = test_dist
-        self._dataset = dataset
         self._embedding = embedding
-        self._tfrecord_file = lambda mode: join(
-            self.gen_dir, "_" + mode + ".tfrecord"
-        )
+        self._datasets = CompoundDataset(datasets)
+        self.__tf_train = self._export_tf_record_files(mode="train")
+        self.__tf_test = self._export_tf_record_files(mode="test")
 
     @property
     def name(self):
         if isinstance(self._embedding, PartialEmbedding):
             return self._embedding.name
-        return "_".join([self._embedding.name, self._dataset.name])
-
-    @property
-    def gen_dir(self):
-        if isinstance(self._embedding, PartialEmbedding):
-            gen_dir = join(FEATURES.DATA_PATH, self._embedding.name)
-        else:
-            gen_dir = join(
-                FEATURES.DATA_PATH, self._embedding.name, self._dataset.name
-            )
-        makedirs(gen_dir, exist_ok=True)
-        return gen_dir
+        return "_".join([self._embedding.name, self._datasets.name])
 
     @property
     def embedding_params(self):
@@ -50,65 +38,84 @@ class FeatureProvider:
             "embedding_initializer": self._embedding.initializer,
         }
 
-    def get_tfrecord(self, mode):
-        compound_dataset = isinstance(self._dataset, CompoundDataset)
-        partial_embedding = isinstance(self._embedding, PartialEmbedding)
-        if compound_dataset and not partial_embedding:
-            tf_record_files = []
-            constituent_datasets = self._dataset.datasets
-            for dataset in constituent_datasets:
-                self._dataset = dataset
-                if not exists(self._tfrecord_file(mode)):
-                    self._export_tf_records(mode)
-                tf_record_files.append(self._tfrecord_file(mode))
-            return tf_record_files
+    @property
+    def train_tfrecords(self):
+        return self.__tf_train
+
+    @property
+    def test_tfrecords(self):
+        return self.__tf_test
+
+    def _get_gen_dir(self, dataset):
+        if isinstance(self._embedding, PartialEmbedding):
+            gen_dir = join(FEATURES.DATA_PATH, self._embedding.name)
         else:
-            if not exists(self._tfrecord_file(mode)):
-                self._export_tf_records(mode)
-            return self._tfrecord_file(mode)
-
-    def _export_tf_records(self, mode):
-        if mode == "train":
-            data = self._dataset.train_dict
-        else:
-            data = self._dataset.test_dict
-
-        left_sp, target_sp, right_sp = FeatureProvider.bytes_sp_from_dict(data)
-
-        left, l_ids, target, t_ids, right, r_ids = self._get_ids_bytes_lists(
-            left_sp=left_sp, target_sp=target_sp, right_sp=right_sp
-        )
-        zero_norm_labels = [
-            [l + abs(min(data["labels"]))] for l in data["labels"]
-        ]
-        data_zip = zip(
-            left, l_ids, target, t_ids, right, r_ids, zero_norm_labels
-        )
-
-        dataset_stats = inspect_dist(left, target, right, data["labels"])
-
-        tf_examples = []
-        for (left, l_ids, target, t_ids, right, r_ids, label) in data_zip:
-            features = Features(
-                feature={
-                    "left": Feature(bytes_list=BytesList(value=left)),
-                    "target": Feature(bytes_list=BytesList(value=target)),
-                    "right": Feature(bytes_list=BytesList(value=right)),
-                    "left_ids": Feature(int64_list=Int64List(value=l_ids)),
-                    "target_ids": Feature(int64_list=Int64List(value=t_ids)),
-                    "right_ids": Feature(int64_list=Int64List(value=r_ids)),
-                    "labels": Feature(int64_list=Int64List(value=label)),
-                }
+            gen_dir = join(
+                FEATURES.DATA_PATH, self._embedding.name, dataset.name
             )
-            tf_example = Example(features=features)
-            tf_examples.append(tf_example.SerializeToString())
+        makedirs(gen_dir, exist_ok=True)
+        return gen_dir
 
-        with TFRecordWriter(self._tfrecord_file(mode)) as tf_writer:
-            for serialized_example in tf_examples:
-                tf_writer.write(serialized_example)
+    def _get_tf_record_file_name(self, dataset, mode):
+        return join(self._get_gen_dir(dataset), "_" + mode + ".tfrecord")
 
-        with open(join(self.gen_dir, "_" + mode + ".json"), "w") as f:
-            f.write(dumps(dataset_stats))
+    def _export_tf_record_files(self, mode):
+        tf_record_files = []
+        for dataset in self._datasets.datasets:
+            if mode == "train":
+                data = dataset.train_dict
+            else:
+                data = dataset.test_dict
+
+            left_sp, target_sp, right_sp = FeatureProvider.bytes_sp_from_dict(
+                data
+            )
+
+            left, l_ids, target, t_ids, right, r_ids = self._get_ids_bytes(
+                left_sp=left_sp, target_sp=target_sp, right_sp=right_sp
+            )
+            zero_norm_labels = [
+                [l + abs(min(data["labels"]))] for l in data["labels"]
+            ]
+            data_zip = zip(
+                left, l_ids, target, t_ids, right, r_ids, zero_norm_labels
+            )
+
+            dataset_stats = inspect_dist(left, target, right, data["labels"])
+
+            tf_examples = []
+            for (left, l_ids, target, t_ids, right, r_ids, label) in data_zip:
+                features = Features(
+                    feature={
+                        "left": Feature(bytes_list=BytesList(value=left)),
+                        "target": Feature(bytes_list=BytesList(value=target)),
+                        "right": Feature(bytes_list=BytesList(value=right)),
+                        "left_ids": Feature(int64_list=Int64List(value=l_ids)),
+                        "target_ids": Feature(
+                            int64_list=Int64List(value=t_ids)
+                        ),
+                        "right_ids": Feature(
+                            int64_list=Int64List(value=r_ids)
+                        ),
+                        "labels": Feature(int64_list=Int64List(value=label)),
+                    }
+                )
+                tf_example = Example(features=features)
+                tf_examples.append(tf_example.SerializeToString())
+
+            tf_record_file = self._get_tf_record_file_name(dataset, mode)
+            with TFRecordWriter(tf_record_file) as tf_writer:
+                for serialized_example in tf_examples:
+                    tf_writer.write(serialized_example)
+            tf_record_files.append(tf_record_file)
+
+            dataset_stats_file = join(
+                self._get_gen_dir(dataset), "_" + mode + ".json"
+            )
+            with open(dataset_stats_file, "w") as f:
+                f.write(dumps(dataset_stats))
+
+        return tf_record_files
 
     @classmethod
     def bytes_sp_from_dict(cls, dictionary):
@@ -168,7 +175,7 @@ class FeatureProvider:
             right_ctxts.append(sen[r_off:].strip())
         return left_ctxts, _targets, right_ctxts
 
-    def _get_ids_bytes_lists(self, left_sp, target_sp, right_sp):
+    def _get_ids_bytes(self, left_sp, target_sp, right_sp):
         left, target, right = [], [], []
         left_ids, target_ids, right_ids = [], [], []
         ids_table = tf.contrib.lookup.index_table_from_file(

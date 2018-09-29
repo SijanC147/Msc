@@ -177,7 +177,7 @@ class Model(ABC):
     def train(self, feature_provider, steps):
         self.estimator.train(
             input_fn=lambda: self.__train_in_fn(
-                tfrecord=feature_provider.get_tfrecord("train"),
+                tfrecord=feature_provider.train_tfrecords,
                 batch_size=self.params["batch_size"],
             ),
             steps=steps,
@@ -188,7 +188,7 @@ class Model(ABC):
     def evaluate(self, feature_provider):
         self.estimator.evaluate(
             input_fn=lambda: self.__eval_in_fn(
-                tfrecord=feature_provider.get_tfrecord("test"),
+                tfrecord=feature_provider.test_tfrecords,
                 batch_size=self.params["batch_size"],
             ),
             hooks=self._attach_std_eval_hooks(self.eval_hooks),
@@ -199,7 +199,7 @@ class Model(ABC):
         stop_early = self.params.get("early_stopping", False)
         train_spec = tf.estimator.TrainSpec(
             input_fn=lambda: self.__train_in_fn(
-                tfrecord=feature_provider.get_tfrecord("train"),
+                tfrecord=feature_provider.train_tfrecords,
                 batch_size=self.params["batch_size"],
             ),
             max_steps=steps,
@@ -207,7 +207,7 @@ class Model(ABC):
         )
         eval_spec = tf.estimator.EvalSpec(
             input_fn=lambda: self.__eval_in_fn(
-                tfrecord=feature_provider.get_tfrecord("test"),
+                tfrecord=feature_provider.test_tfrecords,
                 batch_size=self.params["batch_size"],
             ),
             steps=None,

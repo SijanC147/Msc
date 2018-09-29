@@ -2,12 +2,7 @@ import tensorflow as tf
 from tensorflow.python.keras.preprocessing import (  # pylint: disable=E0611
     sequence
 )
-from tsaplay.utils._data import (
-    parse_tf_example,
-    pad_for_dataset,
-    package_feature_dict,
-    prep_dataset_and_get_iterator,
-)
+from tsaplay.utils._data import parse_tf_example
 
 params = {
     "batch_size": 35,

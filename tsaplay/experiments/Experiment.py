@@ -3,11 +3,7 @@ from shutil import rmtree
 from os import getcwd, listdir
 from os.path import join as _join, isfile, relpath, dirname, exists, abspath
 from inspect import getfile
-from tsaplay.utils._io import (
-    start_tensorboard,
-    write_stats,
-    restart_tf_serve_container,
-)
+from tsaplay.utils._io import start_tensorboard, restart_tf_serve_container
 import tsaplay.experiments._constants as EXPERIMENTS
 
 tf.logging.set_verbosity(tf.logging.INFO)
