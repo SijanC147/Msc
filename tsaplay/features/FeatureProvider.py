@@ -1,11 +1,15 @@
 import tensorflow as tf
+from tqdm import tqdm
+from multiprocessing.dummy import Pool as ThreadPool
 from os.path import join, exists, isfile
 from os import getcwd, makedirs, listdir
 from json import dumps
 from tensorflow.train import BytesList, Feature, Features, Example, Int64List
+from tensorflow.python.client.timeline import Timeline  # pylint: disable=E0611
 from tensorflow.python_io import TFRecordWriter
 
-from tsaplay.utils._nlp import tokenize_phrase, inspect_dist
+from tsaplay.models._decorators import timeit
+from tsaplay.utils._nlp import tokenize_phrase, inspect_dist, tokenize_phrases
 from tsaplay.utils._data import parse_tf_example
 from tsaplay.utils._io import gprint
 from tsaplay.embeddings.Embedding import Embedding
@@ -20,7 +24,7 @@ class FeatureProvider:
         self.test_dist = test_dist
         self._embedding = embedding
         self._datasets = CompoundDataset(datasets)
-        self.__tf_train = self._export_tf_record_files(mode="train")
+        # self.__tf_train = self._export_tf_record_files(mode="train")
         self.__tf_test = self._export_tf_record_files(mode="test")
 
     @property
@@ -38,9 +42,9 @@ class FeatureProvider:
             "embedding_initializer": self._embedding.initializer,
         }
 
-    @property
-    def train_tfrecords(self):
-        return self.__tf_train
+    # @property
+    # def train_tfrecords(self):
+    #     return self.__tf_train
 
     @property
     def test_tfrecords(self):
@@ -59,6 +63,16 @@ class FeatureProvider:
     def _get_tf_record_file_name(self, dataset, mode):
         return join(self._get_gen_dir(dataset), "_" + mode + ".tfrecord")
 
+    def _write_tf_record_file(self, dataset, mode, serialized_examples):
+        file_name = "_" + mode + ".tfrecord"
+        file_path = join(self._get_gen_dir(dataset), file_name)
+
+        with TFRecordWriter(file_path) as tf_writer:
+            for serialized_example in serialized_examples:
+                tf_writer.write(serialized_example)
+
+        return file_path
+
     def _export_tf_record_files(self, mode):
         tf_record_files = []
         for dataset in self._datasets.datasets:
@@ -67,75 +81,166 @@ class FeatureProvider:
             else:
                 data = dataset.test_dict
 
-            left_sp, target_sp, right_sp = FeatureProvider.bytes_sp_from_dict(
-                data
-            )
+            left_sp, target_sp, right_sp = self.bytes_sp_from_dict(data)
 
-            left, l_ids, target, t_ids, right, r_ids = self._get_ids_bytes(
-                left_sp=left_sp, target_sp=target_sp, right_sp=right_sp
-            )
-            zero_norm_labels = [
-                [l + abs(min(data["labels"]))] for l in data["labels"]
-            ]
-            data_zip = zip(
-                left, l_ids, target, t_ids, right, r_ids, zero_norm_labels
-            )
+            return
+            vocab_file = self._export_filtered_vocab_file(dataset)
+            lookup_table = self._get_index_lookup_table(vocab_file)
 
-            dataset_stats = inspect_dist(left, target, right, data["labels"])
+            mapped_features, run_metadata = self._get_ids_bytes(
+                table=lookup_table,
+                left_sp=left_sp,
+                target_sp=target_sp,
+                right_sp=right_sp,
+            )
+            labels = self.zero_norm_labels(data["labels"])
+
+            self._write_run_metadata(dataset, mode, run_metadata)
 
             tf_examples = []
+            data_zip = zip(*mapped_features, labels)
             for (left, l_ids, target, t_ids, right, r_ids, label) in data_zip:
-                features = Features(
-                    feature={
-                        "left": Feature(bytes_list=BytesList(value=left)),
-                        "target": Feature(bytes_list=BytesList(value=target)),
-                        "right": Feature(bytes_list=BytesList(value=right)),
-                        "left_ids": Feature(int64_list=Int64List(value=l_ids)),
-                        "target_ids": Feature(
-                            int64_list=Int64List(value=t_ids)
-                        ),
-                        "right_ids": Feature(
-                            int64_list=Int64List(value=r_ids)
-                        ),
-                        "labels": Feature(int64_list=Int64List(value=label)),
-                    }
-                )
-                tf_example = Example(features=features)
+                feature = {
+                    "left": Feature(bytes_list=BytesList(value=left)),
+                    "target": Feature(bytes_list=BytesList(value=target)),
+                    "right": Feature(bytes_list=BytesList(value=right)),
+                    "left_ids": Feature(int64_list=Int64List(value=l_ids)),
+                    "target_ids": Feature(int64_list=Int64List(value=t_ids)),
+                    "right_ids": Feature(int64_list=Int64List(value=r_ids)),
+                    "labels": Feature(int64_list=Int64List(value=[label])),
+                }
+
+                tf_example = Example(features=Features(feature=feature))
                 tf_examples.append(tf_example.SerializeToString())
 
-            tf_record_file = self._get_tf_record_file_name(dataset, mode)
-            with TFRecordWriter(tf_record_file) as tf_writer:
-                for serialized_example in tf_examples:
-                    tf_writer.write(serialized_example)
-            tf_record_files.append(tf_record_file)
-
-            dataset_stats_file = join(
-                self._get_gen_dir(dataset), "_" + mode + ".json"
-            )
-            with open(dataset_stats_file, "w") as f:
-                f.write(dumps(dataset_stats))
+            file_path = self._write_tf_record_file(dataset, mode, tf_examples)
+            tf_record_files.append(file_path)
 
         return tf_record_files
 
+    # @classmethod
+    # @timeit
+    # def bytes_sp_from_dict(cls, dictionary):
+    #     offsets = dictionary.get("offsets", [])
+    #     if len(offsets) == 0:
+    #         offsets = cls.get_target_offset_array(dictionary)
+    #     dictionary = {**dictionary, "offsets": offsets}
+    #     left, target, right = cls.partition_sentences(
+    #         sentences=dictionary["sentences"],
+    #         targets=dictionary["targets"],
+    #         offsets=dictionary["offsets"],
+    #     )
+    # l_sp = [
+    #     cls.get_tokens_sp_tensor(cls.tf_encode_string(l))
+    #     for l in tqdm(left)
+    # ]
+    # trg_sp = [
+    #     cls.get_tokens_sp_tensor(cls.tf_encode_string(t))
+    #     for t in tqdm(target)
+    # ]
+    # r_sp = [
+    #     cls.get_tokens_sp_tensor(cls.tf_encode_string(r))
+    #     for r in tqdm(right)
+    # ]
+    # l_sp, trg_sp, r_sp = [], [], []
+    # for (l, t, r) in zip(tqdm(left), tqdm(target), tqdm(right)):
+    #     l_sp.append(cls.get_tokens_sp_tensor(cls.tf_encode_string(l)))
+    #     trg_sp.append(cls.get_tokens_sp_tensor(cls.tf_encode_string(t)))
+    #     r_sp.append(cls.get_tokens_sp_tensor(cls.tf_encode_string(r)))
+
+    # return l_sp, trg_sp, r_sp
+
     @classmethod
+    @timeit
     def bytes_sp_from_dict(cls, dictionary):
         offsets = dictionary.get("offsets", [])
         if len(offsets) == 0:
-            offsets = FeatureProvider.get_target_offset_array(dictionary)
+            offsets = cls.get_target_offset_array(dictionary)
         dictionary = {**dictionary, "offsets": offsets}
-        l_ctxts, trgs, r_ctxts = FeatureProvider.partition_sentences(
+        l_ctxts, trgs, r_ctxts = cls.partition_sentences(
             sentences=dictionary["sentences"],
             targets=dictionary["targets"],
             offsets=dictionary["offsets"],
         )
-        l_enc = [FeatureProvider.tf_encode_string(l) for l in l_ctxts]
-        trg_enc = [FeatureProvider.tf_encode_string(t) for t in trgs]
-        r_enc = [FeatureProvider.tf_encode_string(r) for r in r_ctxts]
+        l_enc = ["<SEP>".join(l).encode() for l in tokenize_phrases(l_ctxts)]
+        trg_enc = ["<SEP>".join(t).encode() for t in tokenize_phrases(trgs)]
+        r_enc = ["<SEP>".join(r).encode() for r in tokenize_phrases(r_ctxts)]
 
-        l_sp = [FeatureProvider.get_tokens_sp_tensor(l) for l in l_enc]
-        trg_sp = [FeatureProvider.get_tokens_sp_tensor(t) for t in trg_enc]
-        r_sp = [FeatureProvider.get_tokens_sp_tensor(r) for r in r_enc]
+        l_sp = [cls.get_tokens_sp_tensor(l, cls.short_name(l)) for l in l_enc]
+        trg_sp = [
+            cls.get_tokens_sp_tensor(t, cls.short_name(t)) for t in trg_enc
+        ]
+        r_sp = [cls.get_tokens_sp_tensor(r, cls.short_name(r)) for r in r_enc]
+        cls.print_tensors(l_sp, trg_sp, r_sp)
         return l_sp, trg_sp, r_sp
+
+    # @classmethod
+    # @timeit
+    # def bytes_sp_from_dict(cls, dictionary):
+    #     offsets = dictionary.get("offsets", [])
+    #     if len(offsets) == 0:
+    #         offsets = cls.get_target_offset_array(dictionary)
+    #     dictionary = {**dictionary, "offsets": offsets}
+    #     l_ctxts, trgs, r_ctxts = cls.partition_sentences(
+    #         sentences=dictionary["sentences"],
+    #         targets=dictionary["targets"],
+    #         offsets=dictionary["offsets"],
+    #     )
+    #     l_enc = [cls.tf_encode_string(l) for l in l_ctxts]
+    #     trg_enc = [cls.tf_encode_string(t) for t in trgs]
+    #     r_enc = [cls.tf_encode_string(r) for r in r_ctxts]
+
+    #     l_sp = [cls.get_tokens_sp_tensor(l, cls.short_name(l)) for l in l_enc]
+    #     trg_sp = [
+    #         cls.get_tokens_sp_tensor(t, cls.short_name(t)) for t in trg_enc
+    #     ]
+    #     r_sp = [cls.get_tokens_sp_tensor(r, cls.short_name(r)) for r in r_enc]
+    #     cls.print_tensors(l_sp, trg_sp, r_sp)
+    #     return l_sp, trg_sp, r_sp
+
+    @classmethod
+    def short_name(cls, string, numchar=20):
+        name = str(string, "utf-8")
+        if len(name) > numchar:
+            name = name[:numchar]
+        return "".join(filter(str.isalpha, name))
+
+    @classmethod
+    def print_tensors(cls, left, target, right):
+        template = "{3}:\t {0}\t {1}\t {2}\n"
+        for i in range(20):
+            gprint(
+                template.format(
+                    left[i].name, target[i].name, right[i].name, i + 1
+                )
+            )
+
+    # @classmethod
+    # @timeit
+    # def bytes_sp_from_dict(cls, dictionary):
+    #     offsets = dictionary.get("offsets", [])
+    #     if len(offsets) == 0:
+    #         offsets = cls.get_target_offset_array(dictionary)
+    #     dictionary = {**dictionary, "offsets": offsets}
+    #     l_ctxts, trgs, r_ctxts = cls.partition_sentences(
+    #         sentences=dictionary["sentences"],
+    #         targets=dictionary["targets"],
+    #         offsets=dictionary["offsets"],
+    #     )
+    #     pool = ThreadPool(8)
+
+    #     l_sp = pool.map(cls.get_bytes_sparse, l_ctxts)
+    #     trg_sp = pool.map(cls.get_bytes_sparse, trgs)
+    #     r_sp = pool.map(cls.get_bytes_sparse, r_ctxts)
+
+    #     cls.print_tensors(l_sp, trg_sp, r_sp)
+
+    #     return l_sp, trg_sp, r_sp
+
+    @classmethod
+    def get_bytes_sparse(cls, string):
+        enc = cls.tf_encode_string(string)
+        return cls.get_tokens_sp_tensor(enc, cls.short_name(enc))
 
     @classmethod
     def get_target_offset_array(cls, dictionary):
@@ -152,13 +257,19 @@ class FeatureProvider:
         return encoded_tokenized_string
 
     @classmethod
-    def get_tokens_sp_tensor(cls, tf_encoded_string, delimiter="<SEP>"):
-        string_tensor = tf.constant([tf_encoded_string], dtype=tf.string)
+    def get_tokens_sp_tensor(cls, tf_enc_string, name=None, delimiter="<SEP>"):
+        string_tensor = tf.constant([tf_enc_string], dtype=tf.string)
         tokens_sp_tensor = tf.string_split(string_tensor, delimiter)
-        return tokens_sp_tensor
+        if name is None:
+            return tokens_sp_tensor
+        else:
+            if len(name) > 0:
+                return tf.identity(string_tensor, name=name)
+            else:
+                return tf.identity(string_tensor, name="too_short")
 
     @classmethod
-    def tf_lookup_string_to_ids(cls, table, tokens_sp_tensor):
+    def tf_lookup_string_sp(cls, table, tokens_sp_tensor):
         ids_sp_tensor = table.lookup(tokens_sp_tensor)
         ids_tensor = tf.sparse_tensor_to_dense(ids_sp_tensor)
         return ids_tensor
@@ -173,40 +284,92 @@ class FeatureProvider:
             r_off = off + len(target)
             _targets.append(target)
             right_ctxts.append(sen[r_off:].strip())
-        return left_ctxts, _targets, right_ctxts
+        return left_ctxts[:100], _targets[:100], right_ctxts[:100]
 
-    def _get_ids_bytes(self, left_sp, target_sp, right_sp):
-        left, target, right = [], [], []
-        left_ids, target_ids, right_ids = [], [], []
-        ids_table = tf.contrib.lookup.index_table_from_file(
-            vocabulary_file=self._embedding.vocab_file_path, default_value=1
+    @classmethod
+    def zero_norm_labels(cls, labels):
+        minimum = abs(min(labels))
+        return [l + minimum for l in labels]
+
+    @timeit
+    def _export_filtered_vocab_file(self, dataset):
+        vocab = self._embedding.vocab
+        vocab_set = set(vocab)
+        corpus = ["<PAD>", "<OOV>"] + dataset.corpus
+        corpus_set = set([c.lower() for c in corpus])
+
+        not_oov_set = set.intersection(vocab_set, corpus_set)
+
+        filtered = [(w, vocab.index(w)) for w in not_oov_set]
+
+        vocab_file = join(self._get_gen_dir(dataset), "_vocab_file.txt")
+        with open(vocab_file, "w") as f:
+            for (word, index) in filtered:
+                f.write("{0}\t{1}\n".format(word, index))
+
+        return vocab_file
+
+    def _write_run_metadata(self, dataset, mode, run_metadata):
+        file_name = "_" + mode + "_meta.json"
+        file_path = join(self._get_gen_dir(dataset), file_name)
+
+        tl = Timeline(run_metadata.step_stats)  # pylint: disable=E1101
+        ctf = tl.generate_chrome_trace_format()
+        with open(file_path, "w") as f:
+            f.write(ctf)
+
+        return file_path
+
+    def _get_index_lookup_table(self, vocab_file):
+        return tf.contrib.lookup.index_table_from_file(
+            vocabulary_file=vocab_file,
+            key_column_index=0,
+            value_column_index=1,
+            default_value=1,
+            delimiter="\t",
         )
 
-        with tf.Session():
-            tf.tables_initializer().run()
+    @timeit
+    def _get_ids_bytes(self, table, left_sp, target_sp, right_sp):
+        left, target, right = [], [], []
+        left_ids, target_ids, right_ids = [], [], []
+        left_ids_ops, target_ids_ops, right_ids_ops = [], [], []
+        left_ops, target_ops, right_ops = [], [], []
 
-            for (l, t, r) in zip(left_sp, target_sp, right_sp):
-                left_ids_op = FeatureProvider.tf_lookup_string_to_ids(
-                    ids_table, l
-                )
-                target_ids_op = FeatureProvider.tf_lookup_string_to_ids(
-                    ids_table, t
-                )
-                right_ids_op = FeatureProvider.tf_lookup_string_to_ids(
-                    ids_table, r
-                )
+        for (l, t, r) in zip(left_sp, target_sp, right_sp):
+            left_ids_ops.append(self.tf_lookup_string_sp(table, l))
+            target_ids_ops.append(self.tf_lookup_string_sp(table, t))
+            right_ids_ops.append(self.tf_lookup_string_sp(table, r))
 
-                left_ids.append(left_ids_op.eval()[0].tolist())
-                target_ids.append(target_ids_op.eval()[0].tolist())
-                right_ids.append(right_ids_op.eval()[0].tolist())
+            left_ops.append(tf.sparse_tensor_to_dense(l, default_value=b""))
+            target_ops.append(tf.sparse_tensor_to_dense(t, default_value=b""))
+            right_ops.append(tf.sparse_tensor_to_dense(r, default_value=b""))
 
-                left_op = tf.sparse_tensor_to_dense(l, default_value=b"")
-                target_op = tf.sparse_tensor_to_dense(t, default_value=b"")
-                right_op = tf.sparse_tensor_to_dense(r, default_value=b"")
+        with tf.Session() as sess:
+            sess.run(tf.tables_initializer())
+            run_opts = tf.RunOptions(
+                trace_level=tf.RunOptions.FULL_TRACE  # pylint: disable=E1101
+            )
+            run_meta = tf.RunMetadata()
+            values = sess.run(
+                [
+                    left_ids_ops,
+                    target_ids_ops,
+                    right_ids_ops,
+                    left_ops,
+                    target_ops,
+                    right_ops,
+                ],
+                options=run_opts,
+                run_metadata=run_meta,
+            )
 
-                left.append(left_op.eval()[0].tolist())
-                target.append(target_op.eval()[0].tolist())
-                right.append(right_op.eval()[0].tolist())
+        left_ids = [l.tolist()[0] for l in values[0]]
+        target_ids = [t.tolist()[0] for t in values[1]]
+        right_ids = [r.tolist()[0] for r in values[2]]
 
-        return left, left_ids, target, target_ids, right, right_ids
+        left = [l.tolist()[0] for l in values[3]]
+        target = [t.tolist()[0] for t in values[4]]
+        right = [r.tolist()[0] for r in values[5]]
 
+        return (left, left_ids, target, target_ids, right, right_ids), run_meta

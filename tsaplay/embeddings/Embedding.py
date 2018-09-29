@@ -5,6 +5,7 @@ from os import makedirs
 from os.path import join, normpath, basename, splitext, dirname, exists
 
 import tsaplay.embeddings._constants as EMBEDDINGS
+from tsaplay.models._decorators import timeit
 
 
 class Embedding:
@@ -25,10 +26,6 @@ class Embedding:
         return self._oov
 
     @property
-    def dictionary(self):
-        return self._dictionary
-
-    @property
     def data_dir(self):
         data_dir = join(EMBEDDINGS.DATA_PATH, self.name)
         makedirs(data_dir, exist_ok=True)
@@ -36,7 +33,7 @@ class Embedding:
 
     @property
     def vocab(self):
-        return [*self.dictionary]
+        return [*self.flags] + self._gensim_model.index2word
 
     @property
     def dim_size(self):
@@ -44,19 +41,28 @@ class Embedding:
 
     @property
     def vocab_size(self):
-        return len(self.dictionary)
+        return len(self.vocab)
 
     @property
     def vocab_file_path(self):
         return join(self.data_dir, "_vocab.txt")
 
     @property
+    def flags(self):
+        return {
+            "<PAD>": np.zeros(shape=self.dim_size),
+            "<OOV>": self.oov(size=self.dim_size),
+        }
+
+    @property
     def vectors(self):
-        flags = np.asarray(
-            [self.dictionary["<PAD>"], self.dictionary["<OOV>"]]
+        return np.concatenate(
+            [
+                [self.flags["<PAD>"]],
+                [self.flags["<OOV>"]],
+                self._gensim_model.vectors,
+            ]
         )
-        vectors = self._gensim_model.vectors
-        return np.concatenate([flags, vectors])
 
     @property
     def initializer(self):
@@ -69,14 +75,11 @@ class Embedding:
         return self.__initializer
 
     @source.setter
+    @timeit
     def source(self, new_source):
         try:
             self._source = new_source
             self._gensim_model = gensim_data.load(self._source)
-            self._dictionary = {
-                **self._get_flags(self.dim_size),
-                **self._build_embedding_dictionary(),
-            }
             self._export_vocabulary_files()
         except:
             raise ValueError("Invalid source {0}".format(new_source))
@@ -100,19 +103,10 @@ class Embedding:
     def _export_vocabulary_files(self):
         makedirs(dirname(self.vocab_file_path), exist_ok=True)
         with open(self.vocab_file_path, "w") as f:
-            for word in [*self.dictionary]:
+            for word in self.vocab:
                 if word != "<PAD>":
                     f.write("{0}\n".format(word))
         tsv_file_path = join(self.data_dir, "_vocab.tsv")
         with open(tsv_file_path, "w") as f:
-            for word in [*self.dictionary]:
+            for word in self.vocab:
                 f.write("{0}\n".format(word))
-
-    def _build_embedding_dictionary(self):
-        dictionary = {}
-        words = [*self._gensim_model.vocab]
-        vectors = self._gensim_model.vectors
-        for (word, vector) in zip(words, vectors):
-            dictionary[word] = vector
-
-        return dictionary

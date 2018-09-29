@@ -22,6 +22,15 @@ def tokenize_phrase(phrase, lower=True):
     ]
 
 
+def tokenize_phrases(phrases):
+    token_lists = []
+    nlp = spacy.load("en", disable=["parser", "ner"])
+    for doc in nlp.pipe(phrases, batch_size=50, n_threads=-1):
+        tokens = list(filter(token_filter, doc))
+        token_lists.append([t.text.lower() for t in tokens])
+    return token_lists
+
+
 def token_filter(token):
     if token.like_url:
         return False

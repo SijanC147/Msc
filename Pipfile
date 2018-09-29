@@ -11,6 +11,7 @@ pillow = "*"
 docker = "*"
 tensorflow-serving-api = "*"
 gensim = "*"
+tqdm = "*"
 
 [dev-packages]
 tox-pipenv = "*"
