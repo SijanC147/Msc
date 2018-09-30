@@ -1,5 +1,4 @@
 import tensorflow as tf
-from multiprocessing.dummy import Pool as ThreadPool
 from os.path import join, exists, isfile
 from os import getcwd, makedirs, listdir
 from json import dumps
@@ -8,13 +7,17 @@ from datetime import datetime
 from tensorflow.train import BytesList, Feature, Features, Example, Int64List
 from tensorflow.python.client.timeline import Timeline  # pylint: disable=E0611
 from tensorflow.python_io import TFRecordWriter
+from tensorflow.contrib.lookup import (  # pylint: disable=E0611
+    index_table_from_file,
+    index_table_from_tensor,
+)
+from tensorflow.contrib.data import shuffle_and_repeat  # pylint: disable=E0611
 
 from tsaplay.models._decorators import timeit
 from tsaplay.utils._nlp import tokenize_phrase, inspect_dist, tokenize_phrases
 from tsaplay.utils._data import parse_tf_example
 from tsaplay.utils._io import gprint
 from tsaplay.embeddings.Embedding import Embedding
-from tsaplay.embeddings.PartialEmbedding import PartialEmbedding
 from tsaplay.datasets.CompoundDataset import CompoundDataset
 import tsaplay.features._constants as FEATURES
 
@@ -24,13 +27,13 @@ class FeatureProvider:
         self._embedding = embedding
         self._datasets = CompoundDataset(datasets)
         self.__fetch_dict = self._build_fetch_dict()
-        self._export_fetch_dict_to_tf_records()
+        if len(self.__fetch_dict) > 0:
+            self._generate_missing_tf_record_files()
 
     @property
     def name(self):
-        if isinstance(self._embedding, PartialEmbedding):
-            return self._embedding.name
-        return "_".join([self._embedding.name, self._datasets.name])
+        dataset_names = [dataset.name for dataset in self._datasets.datasets]
+        return "_".join([self._embedding.name] + dataset_names)
 
     @property
     def embedding_params(self):
@@ -103,12 +106,11 @@ class FeatureProvider:
         return feats
 
     @timeit
-    def _export_fetch_dict_to_tf_records(self):
-        tf_record_files = []
+    def _generate_missing_tf_record_files(self):
         values, metadata = self._run_fetches()
         self._write_run_metadata(metadata)
         for dataset in self._datasets.datasets:
-            for mode in values[dataset.name]:
+            for mode in values.get(dataset.name, []):
                 if mode == "train":
                     labels = dataset.train_dict["labels"]
                 else:
@@ -133,11 +135,7 @@ class FeatureProvider:
                     }
                     tf_example = Example(features=Features(feature=feature))
                     tf_examples.append(tf_example.SerializeToString())
-                file_path = self._write_tf_record_file(
-                    dataset, mode, tf_examples
-                )
-            tf_record_files.append(file_path)
-        return tf_record_files
+                self._write_tf_record_file(dataset, mode, tf_examples)
 
     @classmethod
     @timeit
@@ -202,6 +200,79 @@ class FeatureProvider:
         minimum = abs(min(labels))
         return [l + minimum for l in labels]
 
+    @classmethod
+    def index_lookup_table(cls, vocab_file):
+        return index_table_from_file(
+            vocabulary_file=vocab_file,
+            key_column_index=0,
+            value_column_index=1,
+            default_value=1,
+            delimiter="\t",
+        )
+
+    @classmethod
+    def debug_tf_record_iter(cls, tf_records, shuffle=0, batch_size=1):
+        dataset = tf.data.TFRecordDataset(tf_records)
+        dataset = dataset.map(parse_tf_example)
+        if shuffle > 0:
+            dataset = dataset.apply(shuffle_and_repeat(shuffle))
+        else:
+            dataset = dataset.repeat()
+        dataset = dataset.batch(batch_size)
+        iterator = dataset.make_one_shot_iterator()
+
+        return iterator
+
+    @timeit
+    def _append_fetches(self, dataset, mode):
+        if mode == "train":
+            data = dataset.train_dict
+        else:
+            data = dataset.test_dict
+
+        sparse_tokens, tokens = self.bytes_sp_from_dict(data)
+        self._write_tokens_file(dataset, mode, tokens)
+
+        vocab_file = self._get_filtered_vocab_file(dataset)
+        ids_table = self.index_lookup_table(vocab_file)
+
+        left_ids_ops, target_ids_ops, right_ids_ops = [], [], []
+        left_ops, target_ops, right_ops = [], [], []
+
+        for (l, t, r) in zip(*sparse_tokens):
+            left_ids_ops.append(self.tf_lookup_string_sp(ids_table, l))
+            target_ids_ops.append(self.tf_lookup_string_sp(ids_table, t))
+            right_ids_ops.append(self.tf_lookup_string_sp(ids_table, r))
+
+            left_ops.append(tf.sparse_tensor_to_dense(l, default_value=b""))
+            target_ops.append(tf.sparse_tensor_to_dense(t, default_value=b""))
+            right_ops.append(tf.sparse_tensor_to_dense(r, default_value=b""))
+
+        return {
+            "left": left_ops,
+            "target": target_ops,
+            "right": right_ops,
+            "left_ids": left_ids_ops,
+            "target_ids": target_ids_ops,
+            "right_ids": right_ids_ops,
+        }
+
+    @timeit
+    def _run_fetches(self):
+        if tf.executing_eagerly():
+            raise ValueError("Eager execution is not supported.")
+        with tf.Session() as sess:
+            sess.run(tf.tables_initializer())
+            run_opts = tf.RunOptions(
+                trace_level=tf.RunOptions.FULL_TRACE  # pylint: disable=E1101
+            )
+            run_metadata = tf.RunMetadata()
+            values = sess.run(
+                self.__fetch_dict, options=run_opts, run_metadata=run_metadata
+            )
+
+        return values, run_metadata
+
     @timeit
     def _write_filtered_vocab_file(self, dataset):
         vocab = self._embedding.vocab
@@ -246,60 +317,3 @@ class FeatureProvider:
                     }
                 )
         return file_path
-
-    def _get_index_lookup_table(self, vocab_file):
-        return tf.contrib.lookup.index_table_from_file(
-            vocabulary_file=vocab_file,
-            key_column_index=0,
-            value_column_index=1,
-            default_value=1,
-            delimiter="\t",
-        )
-
-    @timeit
-    def _append_fetches(self, dataset, mode):
-        if mode == "train":
-            data = dataset.train_dict
-        else:
-            data = dataset.test_dict
-
-        sparse_tokens, tokens = self.bytes_sp_from_dict(data)
-        self._write_tokens_file(dataset, mode, tokens)
-
-        vocab_file = self._get_filtered_vocab_file(dataset)
-        ids_table = self._get_index_lookup_table(vocab_file)
-
-        left_ids_ops, target_ids_ops, right_ids_ops = [], [], []
-        left_ops, target_ops, right_ops = [], [], []
-
-        for (l, t, r) in zip(*sparse_tokens):
-            left_ids_ops.append(self.tf_lookup_string_sp(ids_table, l))
-            target_ids_ops.append(self.tf_lookup_string_sp(ids_table, t))
-            right_ids_ops.append(self.tf_lookup_string_sp(ids_table, r))
-
-            left_ops.append(tf.sparse_tensor_to_dense(l, default_value=b""))
-            target_ops.append(tf.sparse_tensor_to_dense(t, default_value=b""))
-            right_ops.append(tf.sparse_tensor_to_dense(r, default_value=b""))
-
-        return {
-            "left": left_ops,
-            "target": target_ops,
-            "right": right_ops,
-            "left_ids": left_ids_ops,
-            "target_ids": target_ids_ops,
-            "right_ids": right_ids_ops,
-        }
-
-    @timeit
-    def _run_fetches(self):
-        with tf.Session() as sess:
-            sess.run(tf.tables_initializer())
-            run_opts = tf.RunOptions(
-                trace_level=tf.RunOptions.FULL_TRACE  # pylint: disable=E1101
-            )
-            run_metadata = tf.RunMetadata()
-            values = sess.run(
-                self.__fetch_dict, options=run_opts, run_metadata=run_metadata
-            )
-
-        return values, run_metadata

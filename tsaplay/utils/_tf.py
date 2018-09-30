@@ -6,6 +6,20 @@ import io
 from tensorflow.contrib.layers import embed_sequence  # pylint: disable=E0611
 
 
+def sparse_sequences_to_dense(sp_sequences):
+    if sp_sequences.dtype == tf.string:
+        default = b""
+    else:
+        default = 0
+    dense = tf.sparse_tensor_to_dense(sp_sequences, default_value=default)
+    if tf.equal(tf.size(sp_sequences.dense_shape), 3):
+        dense = tf.squeeze(dense, axis=1)
+
+    dense = tf.pad(dense, paddings=[[0, 0], [0, 1]], constant_values=default)
+
+    return dense
+
+
 def sparse_reverse(sp_input):
     reversed_indices = tf.reverse(sp_input.indices, axis=[0])
     reversed_sp_input = tf.SparseTensor(
@@ -14,11 +28,9 @@ def sparse_reverse(sp_input):
     return tf.sparse_reorder(reversed_sp_input)
 
 
-def sparse_seq_lengths(sp_input):
-    unstacked_indices = tf.unstack(sp_input.indices, axis=1)
-    _, _, counts = tf.unique_with_counts(unstacked_indices[0])
-
-    return counts
+def seq_lengths(batched_sequences):
+    lengths = tf.reduce_sum(tf.sign(batched_sequences), axis=1)
+    return tf.cast(lengths, tf.int32)
 
 
 def concat_seq_sparse(sp_inputs, axis, reverse=False):
@@ -171,10 +183,8 @@ def attention_unit(
 
     attn_vec = masked_softmax(logits=f_score, mask=mask)
 
-    literal_tensor = tf.sparse_tensor_to_dense(sp_literal, default_value=b"")
-    attn_summary_info = tf.tuple(
-        [tf.squeeze(literal_tensor, axis=1), attn_vec]
-    )
+    literal_tensor = sparse_sequences_to_dense(sp_literal)
+    attn_summary_info = tf.tuple([literal_tensor, attn_vec])
 
     attn_vec = tf.expand_dims(attn_vec, axis=3)
 

@@ -1,11 +1,7 @@
 from tsaplay.datasets.Dataset import Dataset, DATASETS
-
-# from tsaplay.datasets.CompoundDataset import CompoundDataset
 from tsaplay.embeddings.Embedding import Embedding
-
 from tsaplay.features.FeatureProvider import FeatureProvider
-
-# from tsaplay.experiments.Experiment import Experiment
+from tsaplay.experiments.Experiment import Experiment
 
 # from tsaplay.models.Tang2016a.Lstm import Lstm
 # from tsaplay.models.Tang2016a.TdLstm import TdLstm
@@ -20,11 +16,6 @@ from tsaplay.features.FeatureProvider import FeatureProvider
 #     InteractiveAttentionNetwork
 # )
 
-# dataset = Dataset(path=DATASETS.DEBUG_PATH, parser=DATASETS.DEBUG_PARSER)
-# embedding = PartialEmbedding(dataset.name, dataset.corpus, "glove-twitter-25") # noqa
-# dong = Dataset(path=DATASETS.DONG2014_PATH, parser=DATASETS.DONG2014_PARSER)
-# xue = Dataset(path=DATASETS.XUE2018_PATH, parser=DATASETS.XUE2018_PARSER)
-# compound = CompoundDataset(dong, xue)
 debug = Dataset(*DATASETS.DEBUG)
 dong = Dataset(*DATASETS.DONG)
 glv_wiki = Embedding("glove-wiki-gigaword-50")

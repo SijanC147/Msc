@@ -1,5 +1,6 @@
 import numpy as np
 import gensim.downloader as gensim_data
+from gensim.models import KeyedVectors
 from tensorflow import float32 as tf_flt32
 from os import makedirs
 from os.path import join, normpath, basename, splitext, dirname, exists
@@ -26,10 +27,10 @@ class Embedding:
         return self._oov
 
     @property
-    def data_dir(self):
-        data_dir = join(EMBEDDINGS.DATA_PATH, self.name)
-        makedirs(data_dir, exist_ok=True)
-        return data_dir
+    def gen_dir(self):
+        gen_dir = join(EMBEDDINGS.DATA_PATH, self.name)
+        makedirs(gen_dir, exist_ok=True)
+        return gen_dir
 
     @property
     def vocab(self):
@@ -45,7 +46,7 @@ class Embedding:
 
     @property
     def vocab_file_path(self):
-        return join(self.data_dir, "_vocab.txt")
+        return join(self.gen_dir, "_vocab.txt")
 
     @property
     def flags(self):
@@ -79,7 +80,7 @@ class Embedding:
     def source(self, new_source):
         try:
             self._source = new_source
-            self._gensim_model = gensim_data.load(self._source)
+            self._gensim_model = self._load_gensim_model(self._source)
             self._export_vocabulary_files()
         except:
             raise ValueError("Invalid source {0}".format(new_source))
@@ -106,7 +107,16 @@ class Embedding:
             for word in self.vocab:
                 if word != "<PAD>":
                     f.write("{0}\n".format(word))
-        tsv_file_path = join(self.data_dir, "_vocab.tsv")
+        tsv_file_path = join(self.gen_dir, "_vocab.tsv")
         with open(tsv_file_path, "w") as f:
             for word in self.vocab:
                 f.write("{0}\n".format(word))
+
+    def _load_gensim_model(self, source):
+        save_model_path = join(self.gen_dir, "_gensim_model.bin")
+        if exists(save_model_path):
+            return KeyedVectors.load(save_model_path)
+        else:
+            gensim_model = gensim_data.load(source)
+            gensim_model.save(save_model_path)
+            return gensim_model

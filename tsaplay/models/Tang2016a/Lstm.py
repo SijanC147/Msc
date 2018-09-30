@@ -9,7 +9,11 @@ from tsaplay.models.Tang2016a.common import (
     lstm_input_fn,
     lstm_serving_fn,
 )
-from tsaplay.utils._tf import dropout_lstm_cell, sparse_seq_lengths
+from tsaplay.utils._tf import (
+    dropout_lstm_cell,
+    seq_lengths,
+    sparse_sequences_to_dense,
+)
 
 
 class Lstm(Model):
@@ -32,10 +36,8 @@ class Lstm(Model):
 
     def _model_fn(self):
         def _default(features, labels, mode, params=self.params):
-            sentence_ids = tf.sparse_tensor_to_dense(features["sentence_ids"])
-            sentence_len = sparse_seq_lengths(features["sentence_ids"])
-            if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
-                sentence_ids = tf.squeeze(sentence_ids, axis=1)
+            sentence_ids = sparse_sequences_to_dense(features["sentence_ids"])
+            sentence_len = seq_lengths(sentence_ids)
 
             inputs = tf.contrib.layers.embed_sequence(
                 ids=sentence_ids,

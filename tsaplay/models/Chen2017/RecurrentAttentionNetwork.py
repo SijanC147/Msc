@@ -18,20 +18,18 @@ from tsaplay.models.Chen2017.common import (
     ram_attn_unit,
 )
 from tsaplay.utils._tf import (
-    sparse_seq_lengths,
+    sparse_sequences_to_dense,
+    seq_lengths,
     variable_len_batch_mean,
     dropout_lstm_cell,
     dropout_gru_cell,
     l2_regularized_loss,
     generate_attn_heatmap_summary,
     setup_embedding_layer,
-    setup_embedding_lookup_table,
-    lookup_embedding_ids,
     get_embedded_seq,
     create_snapshots_container,
     append_snapshot,
     zip_attn_snapshots_with_sp_literals,
-    get_dense_tensor,
 )
 from tsaplay.utils._io import gprint
 
@@ -57,14 +55,11 @@ class RecurrentAttentionNetwork(Model):
 
     def _model_fn(self):
         def default(features, labels, mode, params=self.params):
-            sentence_len = sparse_seq_lengths(features["sentence_ids"])
-            target_len = sparse_seq_lengths(features["target"])
-            sentence_ids = tf.sparse_tensor_to_dense(features["sentence_ids"])
-            target_ids = tf.sparse_tensor_to_dense(features["target_ids"])
             target_offset = tf.cast(features["target_offset"], tf.int32)
-            if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
-                sentence_ids = tf.squeeze(sentence_ids, axis=1)
-                target_ids = tf.squeeze(target_ids, axis=1)
+            sentence_ids = sparse_sequences_to_dense(features["sentence_ids"])
+            target_ids = sparse_sequences_to_dense(features["target_ids"])
+            sentence_len = seq_lengths(sentence_ids)
+            target_len = seq_lengths(target_ids)
 
             embedding_matrix = setup_embedding_layer(
                 vocab_size=params["vocab_size"],

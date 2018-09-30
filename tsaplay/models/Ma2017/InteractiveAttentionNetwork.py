@@ -10,7 +10,8 @@ from tsaplay.models.Ma2017.common import (
     ian_serving_fn,
 )
 from tsaplay.utils._tf import (
-    sparse_seq_lengths,
+    sparse_sequences_to_dense,
+    seq_lengths,
     variable_len_batch_mean,
     dropout_lstm_cell,
     l2_regularized_loss,
@@ -42,13 +43,10 @@ class InteractiveAttentionNetwork(Model):
 
     def _model_fn(self):
         def default(features, labels, mode, params=self.params):
-            context_len = sparse_seq_lengths(features["context_ids"])
-            target_len = sparse_seq_lengths(features["target"])
-            context_ids = tf.sparse_tensor_to_dense(features["context_ids"])
-            target_ids = tf.sparse_tensor_to_dense(features["target_ids"])
-            if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
-                context_ids = tf.squeeze(context_ids, axis=1)
-                target_ids = tf.squeeze(target_ids, axis=1)
+            context_ids = sparse_sequences_to_dense(features["context_ids"])
+            target_ids = sparse_sequences_to_dense(features["target_ids"])
+            context_len = seq_lengths(context_ids)
+            target_len = seq_lengths(target_ids)
 
             embedding_matrix = setup_embedding_layer(
                 vocab_size=params["vocab_size"],

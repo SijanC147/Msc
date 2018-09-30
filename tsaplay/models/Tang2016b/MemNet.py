@@ -13,7 +13,8 @@ from tsaplay.models.Tang2016b.common import (
     memnet_content_attn_unit,
 )
 from tsaplay.utils._tf import (
-    sparse_seq_lengths,
+    sparse_sequences_to_dense,
+    seq_lengths,
     variable_len_batch_mean,
     generate_attn_heatmap_summary,
     setup_embedding_layer,
@@ -47,14 +48,11 @@ class MemNet(Model):
 
     def _model_fn(self):
         def default(features, labels, mode, params=self.params):
-            context_len = sparse_seq_lengths(features["context_ids"])
-            target_len = sparse_seq_lengths(features["target"])
-            context_ids = tf.sparse_tensor_to_dense(features["context_ids"])
-            target_ids = tf.sparse_tensor_to_dense(features["target_ids"])
             target_offset = tf.cast(features["target_offset"], tf.int32)
-            if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
-                context_ids = tf.squeeze(context_ids, axis=1)
-                target_ids = tf.squeeze(target_ids, axis=1)
+            context_ids = sparse_sequences_to_dense(features["context_ids"])
+            target_ids = sparse_sequences_to_dense(features["target_ids"])
+            context_len = seq_lengths(context_ids)
+            target_len = seq_lengths(target_ids)
 
             embedding_matrix = setup_embedding_layer(
                 vocab_size=params["vocab_size"],

@@ -7,3 +7,6 @@ samsung
 I love $T$ ♥
 deep learning
 1
+What happens when the target appears at the $T$
+end
+0

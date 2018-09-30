@@ -13,7 +13,8 @@ from tsaplay.models.Zheng2018.common import (
     lcr_rot_serving_fn,
 )
 from tsaplay.utils._tf import (
-    sparse_seq_lengths,
+    sparse_sequences_to_dense,
+    seq_lengths,
     variable_len_batch_mean,
     attention_unit,
     dropout_lstm_cell,
@@ -47,16 +48,12 @@ class LcrRot(Model):
 
     def _model_fn(self):
         def default(features, labels, mode, params=self.params):
-            left_len = sparse_seq_lengths(features["left_ids"])
-            target_len = sparse_seq_lengths(features["target_ids"])
-            right_len = sparse_seq_lengths(features["right_ids"])
-            left_ids = tf.sparse_tensor_to_dense(features["left_ids"])
-            target_ids = tf.sparse_tensor_to_dense(features["target_ids"])
-            right_ids = tf.sparse_tensor_to_dense(features["right_ids"])
-            if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
-                left_ids = tf.squeeze(left_ids, axis=1)
-                target_ids = tf.squeeze(target_ids, axis=1)
-                right_ids = tf.squeeze(right_ids, axis=1)
+            left_ids = sparse_sequences_to_dense(features["left_ids"])
+            target_ids = sparse_sequences_to_dense(features["target_ids"])
+            right_ids = sparse_sequences_to_dense(features["right_ids"])
+            left_len = seq_lengths(left_ids)
+            target_len = seq_lengths(target_ids)
+            right_len = seq_lengths(right_ids)
 
             embedding_matrix = setup_embedding_layer(
                 vocab_size=params["vocab_size"],

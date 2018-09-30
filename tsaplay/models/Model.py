@@ -22,6 +22,7 @@ from abc import ABC, abstractmethod
 from os import makedirs, getcwd
 from functools import wraps
 from tsaplay.models._decorators import attach_embedding_params
+from tsaplay.utils._tf import sparse_sequences_to_dense
 from tsaplay.utils.SaveConfusionMatrixHook import SaveConfusionMatrixHook
 from tsaplay.utils.SaveAttentionWeightVectorHook import (
     SaveAttentionWeightVectorHook
@@ -310,9 +311,7 @@ class Model(ABC):
             if mode == ModeKeys.EVAL:
                 all_eval_hooks = spec.evaluation_hooks or []
                 if self.params.get("n_attn_heatmaps", 0) > 0:
-                    targets = tf.sparse_tensor_to_dense(
-                        features["target"], default_value=b""
-                    )
+                    targets = sparse_sequences_to_dense(features["target"])
                     attn_hook = SaveAttentionWeightVectorHook(
                         labels=labels,
                         predictions=spec.predictions["class_ids"],
