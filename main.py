@@ -3,7 +3,6 @@ from tsaplay.datasets.Dataset import Dataset, DATASETS
 # from tsaplay.datasets.CompoundDataset import CompoundDataset
 from tsaplay.embeddings.Embedding import Embedding
 
-# from tsaplay.embeddings.PartialEmbedding import PartialEmbedding
 from tsaplay.features.FeatureProvider import FeatureProvider
 
 # from tsaplay.experiments.Experiment import Experiment

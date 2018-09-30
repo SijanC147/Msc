@@ -139,47 +139,6 @@ class FeatureProvider:
             tf_record_files.append(file_path)
         return tf_record_files
 
-    # def _export_tf_record_files(self, mode):
-    #     tf_record_files = []
-    #     for dataset in self._datasets.datasets:
-    #         if mode == "train":
-    #             data = dataset.train_dict
-    #         else:
-    #             data = dataset.test_dict
-
-    #         sparse_tokens, tokens = self.bytes_sp_from_dict(data)
-
-    #         self._write_tokens_file(dataset, mode, tokens)
-
-    #         vocab_file = self._get_filtered_vocab_file(dataset)
-    #         ids_table = self._get_index_lookup_table(vocab_file)
-
-    #         features, metadata = self._get_ids_bytes(ids_table, sparse_tokens)
-
-    #         self._write_run_metadata(dataset, mode, metadata)
-
-    #         tf_examples = []
-    #         labels = self.zero_norm_labels(data["labels"])
-    #         data_zip = zip(*features, labels)
-    #         for (left, l_ids, target, t_ids, right, r_ids, label) in data_zip:
-    #             feature = {
-    #                 "left": Feature(bytes_list=BytesList(value=left)),
-    #                 "target": Feature(bytes_list=BytesList(value=target)),
-    #                 "right": Feature(bytes_list=BytesList(value=right)),
-    #                 "left_ids": Feature(int64_list=Int64List(value=l_ids)),
-    #                 "target_ids": Feature(int64_list=Int64List(value=t_ids)),
-    #                 "right_ids": Feature(int64_list=Int64List(value=r_ids)),
-    #                 "labels": Feature(int64_list=Int64List(value=[label])),
-    #             }
-
-    #             tf_example = Example(features=Features(feature=feature))
-    #             tf_examples.append(tf_example.SerializeToString())
-
-    #         file_path = self._write_tf_record_file(dataset, mode, tf_examples)
-    #         tf_record_files.append(file_path)
-
-    #     return tf_record_files
-
     @classmethod
     @timeit
     def bytes_sp_from_dict(cls, dictionary):
@@ -304,7 +263,7 @@ class FeatureProvider:
         else:
             data = dataset.test_dict
 
-        (l_sp, t_sp, r_sp), tokens = self.bytes_sp_from_dict(data)
+        sparse_tokens, tokens = self.bytes_sp_from_dict(data)
         self._write_tokens_file(dataset, mode, tokens)
 
         vocab_file = self._get_filtered_vocab_file(dataset)
@@ -344,48 +303,3 @@ class FeatureProvider:
             )
 
         return values, run_metadata
-
-    # @timeit
-    # def _get_ids_bytes(self, table, sparse_tokens):
-    #     left, target, right = [], [], []
-    #     left_ids, target_ids, right_ids = [], [], []
-    #     left_ids_ops, target_ids_ops, right_ids_ops = [], [], []
-    #     left_ops, target_ops, right_ops = [], [], []
-
-    #     for (l, t, r) in zip(*sparse_tokens):
-    #         left_ids_ops.append(self.tf_lookup_string_sp(table, l))
-    #         target_ids_ops.append(self.tf_lookup_string_sp(table, t))
-    #         right_ids_ops.append(self.tf_lookup_string_sp(table, r))
-
-    #         left_ops.append(tf.sparse_tensor_to_dense(l, default_value=b""))
-    #         target_ops.append(tf.sparse_tensor_to_dense(t, default_value=b""))
-    #         right_ops.append(tf.sparse_tensor_to_dense(r, default_value=b""))
-
-    #     with tf.Session() as sess:
-    #         sess.run(tf.tables_initializer())
-    #         run_opts = tf.RunOptions(
-    #             trace_level=tf.RunOptions.FULL_TRACE  # pylint: disable=E1101
-    #         )
-    #         run_meta = tf.RunMetadata()
-    #         values = sess.run(
-    #             [
-    #                 left_ids_ops,
-    #                 target_ids_ops,
-    #                 right_ids_ops,
-    #                 left_ops,
-    #                 target_ops,
-    #                 right_ops,
-    #             ],
-    #             options=run_opts,
-    #             run_metadata=run_meta,
-    #         )
-
-    #     left_ids = [l.tolist()[0] for l in values[0]]
-    #     target_ids = [t.tolist()[0] for t in values[1]]
-    #     right_ids = [r.tolist()[0] for r in values[2]]
-
-    #     left = [l.tolist()[0] for l in values[3]]
-    #     target = [t.tolist()[0] for t in values[4]]
-    #     right = [r.tolist()[0] for r in values[5]]
-
-    #     return (left, left_ids, target, target_ids, right, right_ids), run_meta
