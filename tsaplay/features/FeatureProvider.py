@@ -7,16 +7,12 @@ from datetime import datetime
 from tensorflow.train import BytesList, Feature, Features, Example, Int64List
 from tensorflow.python.client.timeline import Timeline  # pylint: disable=E0611
 from tensorflow.python_io import TFRecordWriter
-from tensorflow.contrib.lookup import (  # pylint: disable=E0611
-    index_table_from_file
-)
 from tensorflow.contrib.data import shuffle_and_repeat  # pylint: disable=E0611
 
 from tsaplay.utils.decorators import timeit
 from tsaplay.utils.nlp import tokenize_phrases
 from tsaplay.utils.data import parse_tf_example
 from tsaplay.embeddings.Embedding import Embedding
-from tsaplay.datasets.CompoundDataset import CompoundDataset
 
 
 DATA_PATH = join(getcwd(), "tsaplay", "features", "data")
@@ -25,14 +21,13 @@ DATA_PATH = join(getcwd(), "tsaplay", "features", "data")
 class FeatureProvider:
     def __init__(self, datasets, embedding):
         self._embedding = embedding
-        self._datasets = CompoundDataset(datasets)
+        self._datasets = datasets
         self.__fetch_dict = self._build_fetch_dict()
-        if len(self.__fetch_dict) > 0:
-            self._generate_missing_tf_record_files()
+        self._generate_missing_tf_record_files()
 
     @property
     def name(self):
-        dataset_names = [dataset.name for dataset in self._datasets.datasets]
+        dataset_names = [dataset.name for dataset in self._datasets]
         return "_".join([self._embedding.name] + dataset_names)
 
     @property
@@ -48,14 +43,14 @@ class FeatureProvider:
     def train_tfrecords(self):
         return [
             self._get_tf_record_file_name(dataset, "train")
-            for dataset in self._datasets.datasets
+            for dataset in self._datasets
         ]
 
     @property
     def test_tfrecords(self):
         return [
             self._get_tf_record_file_name(dataset, "test")
-            for dataset in self._datasets.datasets
+            for dataset in self._datasets
         ]
 
     def _get_gen_dir(self, dataset):
@@ -85,7 +80,7 @@ class FeatureProvider:
 
     def _build_fetch_dict(self):
         fetch_dict = {}
-        for dataset in self._datasets.datasets:
+        for dataset in self._datasets:
             name = dataset.name
             for mode in ["train", "test"]:
                 tf_record_file = self._get_tf_record_file_name(dataset, mode)
@@ -96,46 +91,48 @@ class FeatureProvider:
                     )
         return fetch_dict
 
-    def _fix_values(self, feats):
+    def _feature_lists_from_dict(self, feats):
         feats["left"] = [l.tolist()[0] for l in feats["left"]]
         feats["target"] = [t.tolist()[0] for t in feats["target"]]
         feats["right"] = [r.tolist()[0] for r in feats["right"]]
         feats["left_ids"] = [l.tolist()[0] for l in feats["left_ids"]]
         feats["target_ids"] = [t.tolist()[0] for t in feats["target_ids"]]
         feats["right_ids"] = [r.tolist()[0] for r in feats["right_ids"]]
-        return feats
+        feature_lists = (feats[k] for k in [*feats])
+        return feature_lists
+
+    def _build_tf_example(self, features, labels):
+        data_zip = zip(*(features[k] for k in [*features]), labels)
+        for (l, trg, r, l_ids, t_ids, r_ids, label) in data_zip:
+            feature = {
+                "left": Feature(bytes_list=BytesList(value=l)),
+                "target": Feature(bytes_list=BytesList(value=trg)),
+                "right": Feature(bytes_list=BytesList(value=r)),
+                "left_ids": Feature(int64_list=Int64List(value=l_ids)),
+                "target_ids": Feature(int64_list=Int64List(value=t_ids)),
+                "right_ids": Feature(int64_list=Int64List(value=r_ids)),
+                "labels": Feature(int64_list=Int64List(value=[label])),
+            }
+            return Example(features=Features(feature=feature))
 
     @timeit("Generating any missing tfrecord files", "TFrecord files ready.")
     def _generate_missing_tf_record_files(self):
-        values, metadata = self._run_fetches()
-        self._write_run_metadata(metadata)
-        for dataset in self._datasets.datasets:
-            for mode in values.get(dataset.name, []):
-                if mode == "train":
-                    labels = dataset.train_dict["labels"]
-                else:
-                    labels = dataset.test_dict["labels"]
-                labels = self.zero_norm_labels(labels)
-                features = self._fix_values(values[dataset.name][mode])
-                tf_examples = []
-                data_zip = zip(*(features[k] for k in [*features]), labels)
-                for (l, trg, r, l_ids, t_ids, r_ids, label) in data_zip:
-                    feature = {
-                        "left": Feature(bytes_list=BytesList(value=l)),
-                        "target": Feature(bytes_list=BytesList(value=trg)),
-                        "right": Feature(bytes_list=BytesList(value=r)),
-                        "left_ids": Feature(int64_list=Int64List(value=l_ids)),
-                        "target_ids": Feature(
-                            int64_list=Int64List(value=t_ids)
-                        ),
-                        "right_ids": Feature(
-                            int64_list=Int64List(value=r_ids)
-                        ),
-                        "labels": Feature(int64_list=Int64List(value=[label])),
-                    }
-                    tf_example = Example(features=Features(feature=feature))
+        if len(self.__fetch_dict) > 0:
+            values, metadata = self._run_fetches()
+            self._write_run_metadata(metadata)
+            for dataset in self._datasets:
+                for mode in values.get(dataset.name, []):
+                    tf_examples = []
+                    if mode == "train":
+                        labels = dataset.train_dict["labels"]
+                    else:
+                        labels = dataset.test_dict["labels"]
+                    labels = self.zero_norm_labels(labels)
+                    feature_dict = values[dataset.name][mode]
+                    features = self._feature_lists_from_dict(feature_dict)
+                    tf_example = self._build_tf_example(features, labels)
                     tf_examples.append(tf_example.SerializeToString())
-                self._write_tf_record_file(dataset, mode, tf_examples)
+                    self._write_tf_record_file(dataset, mode, tf_examples)
 
     @classmethod
     @timeit("Tokenizing dataset", "Tokenization complete")
@@ -198,7 +195,7 @@ class FeatureProvider:
 
     @classmethod
     def index_lookup_table(cls, vocab_file):
-        return index_table_from_file(
+        return tf.contrib.lookup.index_table_from_file(
             vocabulary_file=vocab_file,
             key_column_index=0,
             value_column_index=1,
@@ -296,6 +293,7 @@ class FeatureProvider:
 
         return vocab_file
 
+    @timeit("Exporting graph run metadata", "Metadata exported")
     def _write_run_metadata(self, run_metadata):
         file_dir = join(DATA_PATH, "_meta")
         makedirs(file_dir, exist_ok=True)
@@ -306,6 +304,7 @@ class FeatureProvider:
         with open(file_path, "w") as f:
             f.write(ctf)
 
+    @timeit("Exporting tokens to csv file", "Tokens csv exported")
     def _write_tokens_file(self, dataset, mode, tokens):
         file_name = "_" + mode + "_tokens.csv"
         file_path = join(self._get_gen_dir(dataset), file_name)
