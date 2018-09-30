@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow.python.keras.preprocessing import (  # pylint: disable=E0611
     sequence
 )
-from tsaplay.utils._data import (
+from tsaplay.utils.data import (
     zip_list_join,
     zip_str_join,
     pad_for_dataset,

@@ -9,7 +9,7 @@ from tsaplay.models.Ma2017.common import (
     ian_input_fn,
     ian_serving_fn,
 )
-from tsaplay.utils._tf import (
+from tsaplay.utils.tf import (
     sparse_sequences_to_dense,
     seq_lengths,
     variable_len_batch_mean,

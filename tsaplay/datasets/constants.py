@@ -1,6 +1,6 @@
 from os import getcwd
 from os.path import join
-import tsaplay.datasets._parsers as PARSERS
+import tsaplay.datasets.parsers as PARSERS
 
 DATA_DIR = join(getcwd(), "tsaplay", "datasets", "data")
 DEBUG_PATH = join(DATA_DIR, "DebugDataset")

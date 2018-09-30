@@ -9,20 +9,19 @@ import matplotlib
 
 from PIL import Image, ImageDraw
 from tensorflow.train import SessionRunHook, SessionRunArgs
-from tsaplay.utils._nlp import (
+from tsaplay.utils.nlp import (
     draw_attention_heatmap,
     draw_prediction_label,
     stack_images,
     tokenize_phrase,
 )
-from tsaplay.utils._tf import image_to_summary
-from tsaplay.utils._io import gprint
+from tsaplay.utils.tf import image_to_summary
 
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt  # nopep8
 
 
-class SaveAttentionWeightVectorHook(SessionRunHook):
+class SaveAttentionWeightVector(SessionRunHook):
     def __init__(
         self,
         labels,

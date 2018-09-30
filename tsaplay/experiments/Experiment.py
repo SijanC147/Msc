@@ -1,12 +1,14 @@
 import tensorflow as tf
 from shutil import rmtree
 from os import getcwd, listdir
-from os.path import join as _join, isfile, relpath, dirname, exists, abspath
+from os.path import join as join, isfile, relpath, dirname, exists, abspath
 from inspect import getfile
-from tsaplay.utils._io import start_tensorboard, restart_tf_serve_container
-import tsaplay.experiments._constants as EXPERIMENTS
+from tsaplay.utils.io import start_tensorboard, restart_tf_serve_container
 
 tf.logging.set_verbosity(tf.logging.INFO)
+
+DATA_PATH = join(getcwd(), "tsaplay", "experiments", "data")
+EXPORT_PATH = join(getcwd(), "export")
 
 
 class Experiment:
@@ -42,9 +44,7 @@ class Experiment:
             print("No continue tag defined, nothing to export!")
         else:
             export_model_name = self.model.name.lower() + "_" + self.contd_tag
-            model_export_dir = _join(
-                EXPERIMENTS.EXPORT_PATH, export_model_name
-            )
+            model_export_dir = join(EXPORT_PATH, export_model_name)
             if exists(model_export_dir) and overwrite:
                 rmtree(model_export_dir)
 
@@ -65,26 +65,26 @@ class Experiment:
     def _initialize_experiment_dir(self):
         exp_dir_name = self.contd_tag or self.fp.name
 
-        experiment_dir = _join(
-            EXPERIMENTS.DATA_PATH, self.model.relative_path, exp_dir_name
+        experiment_dir = join(
+            DATA_PATH, self.model.relative_path, exp_dir_name
         )
         if exists(experiment_dir) and self.contd_tag is None:
             i = 0
             while exists(experiment_dir):
                 i += 1
-                experiment_dir = _join(
-                    EXPERIMENTS.DATA_PATH,
+                experiment_dir = join(
+                    DATA_PATH,
                     self.model.relative_path,
                     exp_dir_name + "_" + str(i),
                 )
-        summary_dir = _join(experiment_dir, "tb_summary")
+        summary_dir = join(experiment_dir, "tb_summary")
         self.model.run_config = self.model.run_config.replace(
             model_dir=summary_dir
         )
         self._experiment_dir = experiment_dir
 
     def _update_export_models_config(self):
-        config_file = _join(EXPERIMENTS.EXPORT_PATH, "tfserve.conf")
+        config_file = join(EXPORT_PATH, "tfserve.conf")
         config_file_str = "model_config_list: {\n"
         for model in self._exported_models_list():
             config_file_str += (
@@ -101,8 +101,6 @@ class Experiment:
 
     def _exported_models_list(self):
         exported_models = [
-            m
-            for m in listdir(EXPERIMENTS.EXPORT_PATH)
-            if not isfile(_join(EXPERIMENTS.EXPORT_PATH, m))
+            m for m in listdir(EXPORT_PATH) if not isfile(join(EXPORT_PATH, m))
         ]
         return exported_models

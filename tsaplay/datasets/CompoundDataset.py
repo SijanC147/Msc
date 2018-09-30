@@ -2,14 +2,14 @@ from itertools import chain
 from collections import defaultdict
 from os.path import join, exists
 
-from tsaplay.utils._nlp import corpus_from_docs
-from tsaplay.utils._io import (
+from tsaplay.utils.nlp import corpus_from_docs
+from tsaplay.utils.io import (
     corpus_from_csv,
     corpus_to_csv,
     unpickle_file as _unpickle,
     pickle_file as _pickle,
 )
-import tsaplay.datasets._constants as DATASETS
+import tsaplay.datasets.constants as DATASETS
 
 
 class CompoundDataset:

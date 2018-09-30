@@ -1,7 +1,6 @@
 import tensorflow as tf
-from tsaplay.utils._data import parse_tf_example
-from tsaplay.utils._tf import masked_softmax
-from tsaplay.utils._io import gprint
+from tsaplay.utils.data import parse_tf_example
+from tsaplay.utils.tf import masked_softmax
 
 params = {
     "batch_size": 25,

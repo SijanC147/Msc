@@ -1,14 +1,14 @@
 from os.path import normpath, basename, join, exists
 from functools import wraps
-from tsaplay.utils._nlp import corpus_from_docs
-from tsaplay.utils._io import (
+from tsaplay.utils.nlp import corpus_from_docs
+from tsaplay.utils.io import (
     search_dir,
     corpus_from_csv,
     corpus_to_csv,
     unpickle_file as _unpickle,
     pickle_file as _pickle,
 )
-import tsaplay.datasets._constants as DATASETS
+import tsaplay.datasets.constants as DATASETS
 
 
 class Dataset:

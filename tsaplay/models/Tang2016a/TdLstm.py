@@ -9,7 +9,7 @@ from tsaplay.models.Tang2016a.common import (
     tdlstm_input_fn,
     tdlstm_serving_fn,
 )
-from tsaplay.utils._tf import (
+from tsaplay.utils.tf import (
     sparse_sequences_to_dense,
     seq_lengths,
     dropout_lstm_cell,

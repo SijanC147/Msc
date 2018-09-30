@@ -8,18 +8,18 @@ from tensorflow.train import BytesList, Feature, Features, Example, Int64List
 from tensorflow.python.client.timeline import Timeline  # pylint: disable=E0611
 from tensorflow.python_io import TFRecordWriter
 from tensorflow.contrib.lookup import (  # pylint: disable=E0611
-    index_table_from_file,
-    index_table_from_tensor,
+    index_table_from_file
 )
 from tensorflow.contrib.data import shuffle_and_repeat  # pylint: disable=E0611
 
-from tsaplay.models._decorators import timeit
-from tsaplay.utils._nlp import tokenize_phrase, inspect_dist, tokenize_phrases
-from tsaplay.utils._data import parse_tf_example
-from tsaplay.utils._io import gprint
+from tsaplay.utils.decorators import timeit
+from tsaplay.utils.nlp import tokenize_phrases
+from tsaplay.utils.data import parse_tf_example
 from tsaplay.embeddings.Embedding import Embedding
 from tsaplay.datasets.CompoundDataset import CompoundDataset
-import tsaplay.features._constants as FEATURES
+
+
+DATA_PATH = join(getcwd(), "tsaplay", "features", "data")
 
 
 class FeatureProvider:
@@ -59,7 +59,7 @@ class FeatureProvider:
         ]
 
     def _get_gen_dir(self, dataset):
-        gen_dir = join(FEATURES.DATA_PATH, self._embedding.name, dataset.name)
+        gen_dir = join(DATA_PATH, self._embedding.name, dataset.name)
         makedirs(gen_dir, exist_ok=True)
         return gen_dir
 
@@ -105,7 +105,7 @@ class FeatureProvider:
         feats["right_ids"] = [r.tolist()[0] for r in feats["right_ids"]]
         return feats
 
-    @timeit
+    @timeit("Generating any missing tfrecord files", "TFrecord files ready.")
     def _generate_missing_tf_record_files(self):
         values, metadata = self._run_fetches()
         self._write_run_metadata(metadata)
@@ -138,8 +138,8 @@ class FeatureProvider:
                 self._write_tf_record_file(dataset, mode, tf_examples)
 
     @classmethod
-    @timeit
-    def bytes_sp_from_dict(cls, dictionary):
+    @timeit("Tokenizing dataset", "Tokenization complete")
+    def tokens_from_dict(cls, dictionary):
         offsets = dictionary.get("offsets", [])
         if len(offsets) == 0:
             offsets = cls.get_target_offset_array(dictionary)
@@ -153,11 +153,7 @@ class FeatureProvider:
         trg_tok = tokenize_phrases(trgs)
         r_tok = tokenize_phrases(r_ctxts)
 
-        l_sp = [cls.get_tokens_sp_tensor(l) for l in l_tok]
-        trg_sp = [cls.get_tokens_sp_tensor(t) for t in trg_tok]
-        r_sp = [cls.get_tokens_sp_tensor(r) for r in r_tok]
-
-        return (l_sp, trg_sp, r_sp), (l_tok, trg_tok, r_tok)
+        return (l_tok, trg_tok, r_tok)
 
     @classmethod
     def get_target_offset_array(cls, dictionary):
@@ -223,15 +219,24 @@ class FeatureProvider:
 
         return iterator
 
-    @timeit
+    @timeit("Generating sparse tensors of tokens", "Sparse tensors generated")
+    def _sparse_tensors_from_tokens(self, l_tok, trg_tok, r_tok):
+        l_sp = [self.get_tokens_sp_tensor(l) for l in l_tok]
+        trg_sp = [self.get_tokens_sp_tensor(t) for t in trg_tok]
+        r_sp = [self.get_tokens_sp_tensor(r) for r in r_tok]
+        return (l_sp, trg_sp, r_sp)
+
+    @timeit("Building graph with required embedding lookup ops", "Graph built")
     def _append_fetches(self, dataset, mode):
         if mode == "train":
             data = dataset.train_dict
         else:
             data = dataset.test_dict
 
-        sparse_tokens, tokens = self.bytes_sp_from_dict(data)
+        tokens = self.tokens_from_dict(data)
         self._write_tokens_file(dataset, mode, tokens)
+
+        sparse_tokens = self._sparse_tensors_from_tokens(*tokens)
 
         vocab_file = self._get_filtered_vocab_file(dataset)
         ids_table = self.index_lookup_table(vocab_file)
@@ -257,7 +262,7 @@ class FeatureProvider:
             "right_ids": right_ids_ops,
         }
 
-    @timeit
+    @timeit("Executing graph", "Graph execution complete")
     def _run_fetches(self):
         if tf.executing_eagerly():
             raise ValueError("Eager execution is not supported.")
@@ -273,7 +278,7 @@ class FeatureProvider:
 
         return values, run_metadata
 
-    @timeit
+    @timeit("Exporting lookup table vocabulary file", "Vocab file exported")
     def _write_filtered_vocab_file(self, dataset):
         vocab = self._embedding.vocab
         vocab_set = set(vocab)
@@ -292,7 +297,7 @@ class FeatureProvider:
         return vocab_file
 
     def _write_run_metadata(self, run_metadata):
-        file_dir = join(FEATURES.DATA_PATH, "_meta")
+        file_dir = join(DATA_PATH, "_meta")
         makedirs(file_dir, exist_ok=True)
         file_name = datetime.now().strftime("%Y%m%d-%H%M%S") + ".json"
         file_path = join(file_dir, file_name)

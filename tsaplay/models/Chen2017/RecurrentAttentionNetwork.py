@@ -17,7 +17,7 @@ from tsaplay.models.Chen2017.common import (
     var_len_concatenate,
     ram_attn_unit,
 )
-from tsaplay.utils._tf import (
+from tsaplay.utils.tf import (
     sparse_sequences_to_dense,
     seq_lengths,
     variable_len_batch_mean,
@@ -31,7 +31,6 @@ from tsaplay.utils._tf import (
     append_snapshot,
     zip_attn_snapshots_with_sp_literals,
 )
-from tsaplay.utils._io import gprint
 
 
 class RecurrentAttentionNetwork(Model):

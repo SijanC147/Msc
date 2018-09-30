@@ -2,11 +2,13 @@ import numpy as np
 import gensim.downloader as gensim_data
 from gensim.models import KeyedVectors
 from tensorflow import float32 as tf_flt32
-from os import makedirs
+from os import makedirs, getcwd
 from os.path import join, normpath, basename, splitext, dirname, exists
 
-import tsaplay.embeddings._constants as EMBEDDINGS
-from tsaplay.models._decorators import timeit
+from tsaplay.utils.decorators import timeit
+
+
+DATA_PATH = join(getcwd(), "tsaplay", "embeddings", "data")
 
 
 class Embedding:
@@ -28,7 +30,7 @@ class Embedding:
 
     @property
     def gen_dir(self):
-        gen_dir = join(EMBEDDINGS.DATA_PATH, self.name)
+        gen_dir = join(DATA_PATH, self.name)
         makedirs(gen_dir, exist_ok=True)
         return gen_dir
 
@@ -76,7 +78,7 @@ class Embedding:
         return self.__initializer
 
     @source.setter
-    @timeit
+    @timeit("Loading embedding model", "Embedding model loaded")
     def source(self, new_source):
         try:
             self._source = new_source

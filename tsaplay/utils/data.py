@@ -4,8 +4,8 @@ from os import makedirs
 from os.path import join, exists
 from collections import defaultdict
 from tsaplay.datasets.Dataset import Dataset, DATASETS
-from tsaplay.utils._io import pickle_file
-from tsaplay.utils._nlp import tokenize_phrase
+from tsaplay.utils.io import pickle_file
+from tsaplay.utils.nlp import tokenize_phrase
 
 
 def parse_tf_example(example):

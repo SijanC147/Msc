@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow.python.keras.preprocessing import (  # pylint: disable=E0611
     sequence
 )
-from tsaplay.utils._data import (
+from tsaplay.utils.data import (
     parse_tf_example,
     prep_dataset_and_get_iterator,
     zip_list_join,
@@ -11,7 +11,7 @@ from tsaplay.utils._data import (
     make_labels_dataset_from_list,
     tf_encoded_tokenisation,
 )
-from tsaplay.utils._tf import sparse_reverse
+from tsaplay.utils.tf import sparse_reverse
 
 params = {
     "batch_size": 25,

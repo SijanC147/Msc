@@ -8,13 +8,13 @@ import itertools
 import matplotlib
 
 from tensorflow.train import SessionRunHook
-from tsaplay.utils._tf import figure_to_summary
+from tsaplay.utils.tf import figure_to_summary
 
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt  # nopep8
 
 
-class SaveConfusionMatrixHook(SessionRunHook):
+class SaveConfusionMatrix(SessionRunHook):
     """
     Saves a confusion matrix as a Summary so that it can be shown in 
     tensorboard

@@ -10,6 +10,31 @@ from os import listdir, system, makedirs
 from csv import DictReader, DictWriter
 
 
+def _col(key):
+    return {
+        "r": "red",
+        "g": "green",
+        "y": "yellow",
+        "b": "blue",
+        "m": "magenta",
+        "c": "cyan",
+        "w": "white",
+    }.get(key, "grey")
+
+
+def _cprnt(**kwargs):
+    output = ""
+    for (c, string) in kwargs.items():
+        col = "".join(filter(str.isalpha, c))
+        index = col.find("o")
+        if index != -1:
+            txt, _, frgnd = col.partition("o")
+            output += colored(string, _col(txt), "on_" + _col(frgnd)) + " "
+        else:
+            output += colored(string, _col(col)) + " "
+    print(output)
+
+
 def get_platform():
     return {
         "linux1": "Linux",
@@ -17,10 +42,6 @@ def get_platform():
         "darwin": "MacOS",
         "win32": "Windows",
     }.get(sys.platform, sys.platform)
-
-
-def gprint(string):
-    print(colored(string, "green"))
 
 
 def start_tensorboard(model_dir, port=6006, debug=False, debug_port=6064):

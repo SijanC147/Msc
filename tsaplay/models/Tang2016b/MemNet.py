@@ -12,7 +12,7 @@ from tsaplay.models.Tang2016b.common import (
     get_location_vector_model,
     memnet_content_attn_unit,
 )
-from tsaplay.utils._tf import (
+from tsaplay.utils.tf import (
     sparse_sequences_to_dense,
     seq_lengths,
     variable_len_batch_mean,

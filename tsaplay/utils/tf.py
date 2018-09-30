@@ -12,8 +12,10 @@ def sparse_sequences_to_dense(sp_sequences):
     else:
         default = 0
     dense = tf.sparse_tensor_to_dense(sp_sequences, default_value=default)
-    if tf.equal(tf.size(sp_sequences.dense_shape), 3):
-        dense = tf.squeeze(dense, axis=1)
+    needs_squeezing = tf.equal(tf.size(sp_sequences.dense_shape), 3)
+    dense = tf.cond(
+        needs_squeezing, lambda: tf.squeeze(dense, axis=1), lambda: dense
+    )
 
     dense = tf.pad(dense, paddings=[[0, 0], [0, 1]], constant_values=default)
 

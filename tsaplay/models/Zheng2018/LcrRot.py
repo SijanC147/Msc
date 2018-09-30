@@ -12,7 +12,7 @@ from tsaplay.models.Zheng2018.common import (
     lcr_rot_input_fn,
     lcr_rot_serving_fn,
 )
-from tsaplay.utils._tf import (
+from tsaplay.utils.tf import (
     sparse_sequences_to_dense,
     seq_lengths,
     variable_len_batch_mean,

@@ -4,7 +4,7 @@ from tensorflow.estimator import (  # pylint: disable=E0401
     RunConfig,
     Estimator,
 )
-from tensorflow.saved_model.signature_constants import (
+from tensorflow.saved_model.signatureconstants import (
     DEFAULT_SERVING_SIGNATURE_DEF_KEY
 )
 from tensorflow.estimator.export import (  # pylint: disable=E0401
@@ -22,9 +22,9 @@ from abc import ABC, abstractmethod
 from os import makedirs, getcwd
 from functools import wraps
 from tsaplay.models._decorators import attach_embedding_params
-from tsaplay.utils._tf import sparse_sequences_to_dense
-from tsaplay.utils.SaveConfusionMatrixHook import SaveConfusionMatrixHook
-from tsaplay.utils.SaveAttentionWeightVectorHook import (
+from tsaplay.utils.tf import sparse_sequences_to_dense
+from tsaplay.hooks.SaveConfusionMatrix import SaveConfusionMatrixHook
+from tsaplay.hooks.SaveAttentionWeightVector import (
     SaveAttentionWeightVectorHook
 )
 
@@ -311,7 +311,9 @@ class Model(ABC):
             if mode == ModeKeys.EVAL:
                 all_eval_hooks = spec.evaluation_hooks or []
                 if self.params.get("n_attn_heatmaps", 0) > 0:
-                    targets = sparse_sequences_to_dense(features["target"])
+                    targets = tf.sparse_tensor_to_dense(
+                        features["target"], default_value=b""
+                    )
                     attn_hook = SaveAttentionWeightVectorHook(
                         labels=labels,
                         predictions=spec.predictions["class_ids"],

@@ -26,7 +26,7 @@ from tensorflow.train import (
 )
 
 from tsaplay.features.FeatureProvider import FeatureProvider
-from tsaplay.utils._nlp import tokenize_phrase
+from tsaplay.utils.nlp import tokenize_phrase
 
 
 def parse_args():
