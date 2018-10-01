@@ -4,7 +4,7 @@ from tensorflow.estimator import (  # pylint: disable=E0401
     RunConfig,
     Estimator,
 )
-from tensorflow.saved_model.signatureconstants import (
+from tensorflow.saved_model.signature_constants import (
     DEFAULT_SERVING_SIGNATURE_DEF_KEY
 )
 from tensorflow.estimator.export import (  # pylint: disable=E0401
@@ -21,12 +21,9 @@ from inspect import getsource, getfile
 from abc import ABC, abstractmethod
 from os import makedirs, getcwd
 from functools import wraps
-from tsaplay.models._decorators import attach_embedding_params
-from tsaplay.utils.tf import sparse_sequences_to_dense
-from tsaplay.hooks.SaveConfusionMatrix import SaveConfusionMatrixHook
-from tsaplay.hooks.SaveAttentionWeightVector import (
-    SaveAttentionWeightVectorHook
-)
+from tsaplay.utils.decorators import attach_embedding_params
+from tsaplay.hooks.SaveConfusionMatrix import SaveConfusionMatrix
+from tsaplay.hooks.SaveAttentionWeightVector import SaveAttentionWeightVector
 
 
 class Model(ABC):
@@ -314,10 +311,11 @@ class Model(ABC):
                     targets = tf.sparse_tensor_to_dense(
                         features["target"], default_value=b""
                     )
-                    attn_hook = SaveAttentionWeightVectorHook(
+                    attn_hook = SaveAttentionWeightVector(
                         labels=labels,
                         predictions=spec.predictions["class_ids"],
                         targets=tf.squeeze(targets, axis=1),
+                        classes=["Negative", "Neutral", "Positive"],
                         summary_writer=tf.summary.FileWriterCache.get(
                             join(self.run_config.model_dir, "eval")
                         ),
@@ -352,7 +350,7 @@ class Model(ABC):
         return wrapper
 
     def _attach_std_eval_hooks(self, eval_hooks):
-        confusion_matrix_save_hook = SaveConfusionMatrixHook(
+        confusion_matrix_save_hook = SaveConfusionMatrix(
             labels=["Negative", "Neutral", "Positive"],
             confusion_matrix_tensor_name="mean_iou/total_confusion_matrix",
             summary_writer=tf.summary.FileWriterCache.get(

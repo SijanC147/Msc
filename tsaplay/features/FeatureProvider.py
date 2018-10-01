@@ -101,37 +101,37 @@ class FeatureProvider:
         feature_lists = (feats[k] for k in [*feats])
         return feature_lists
 
-    def _build_tf_example(self, features, labels):
-        data_zip = zip(*(features[k] for k in [*features]), labels)
-        for (l, trg, r, l_ids, t_ids, r_ids, label) in data_zip:
-            feature = {
-                "left": Feature(bytes_list=BytesList(value=l)),
-                "target": Feature(bytes_list=BytesList(value=trg)),
-                "right": Feature(bytes_list=BytesList(value=r)),
-                "left_ids": Feature(int64_list=Int64List(value=l_ids)),
-                "target_ids": Feature(int64_list=Int64List(value=t_ids)),
-                "right_ids": Feature(int64_list=Int64List(value=r_ids)),
-                "labels": Feature(int64_list=Int64List(value=[label])),
-            }
-            return Example(features=Features(feature=feature))
+    def _make_tf_example(self, l, trg, r, l_ids, t_ids, r_ids, label):
+        feature = {
+            "left": Feature(bytes_list=BytesList(value=l)),
+            "target": Feature(bytes_list=BytesList(value=trg)),
+            "right": Feature(bytes_list=BytesList(value=r)),
+            "left_ids": Feature(int64_list=Int64List(value=l_ids)),
+            "target_ids": Feature(int64_list=Int64List(value=t_ids)),
+            "right_ids": Feature(int64_list=Int64List(value=r_ids)),
+            "labels": Feature(int64_list=Int64List(value=[label])),
+        }
+        tf_example = Example(features=Features(feature=feature))
+        return tf_example.SerializeToString()
 
-    @timeit("Generating any missing tfrecord files", "TFrecord files ready.")
+    @timeit("Generating any missing tfrecord files", "TFrecord files ready")
     def _generate_missing_tf_record_files(self):
         if len(self.__fetch_dict) > 0:
             values, metadata = self._run_fetches()
             self._write_run_metadata(metadata)
             for dataset in self._datasets:
                 for mode in values.get(dataset.name, []):
-                    tf_examples = []
                     if mode == "train":
                         labels = dataset.train_dict["labels"]
                     else:
                         labels = dataset.test_dict["labels"]
-                    labels = self.zero_norm_labels(labels)
                     feature_dict = values[dataset.name][mode]
+                    labels = self.zero_norm_labels(labels)
                     features = self._feature_lists_from_dict(feature_dict)
-                    tf_example = self._build_tf_example(features, labels)
-                    tf_examples.append(tf_example.SerializeToString())
+                    data_zip = zip(*features, labels)
+                    tf_examples = [
+                        self._make_tf_example(*sample) for sample in data_zip
+                    ]
                     self._write_tf_record_file(dataset, mode, tf_examples)
 
     @classmethod

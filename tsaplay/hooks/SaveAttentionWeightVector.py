@@ -13,7 +13,6 @@ from tsaplay.utils.nlp import (
     draw_attention_heatmap,
     draw_prediction_label,
     stack_images,
-    tokenize_phrase,
 )
 from tsaplay.utils.tf import image_to_summary
 
@@ -27,6 +26,7 @@ class SaveAttentionWeightVector(SessionRunHook):
         labels,
         predictions,
         targets,
+        classes,
         summary_writer,
         n_picks=3,
         n_hops=None,
@@ -34,6 +34,7 @@ class SaveAttentionWeightVector(SessionRunHook):
         self.labels = labels
         self.predictions = predictions
         self.targets = targets
+        self.classes = classes
         self.n_picks = n_picks
         self.n_hops = n_hops
         self._summary_writer = summary_writer
@@ -101,7 +102,10 @@ class SaveAttentionWeightVector(SessionRunHook):
             label = labels[i]
             prediction = preds[i]
             pred_label = draw_prediction_label(
-                target=target, label=label, prediction=prediction
+                target=target,
+                label=label,
+                prediction=prediction,
+                classes=self.classes,
             )
 
             images.append(stack_images([attn_heatmap, pred_label], h_space=10))

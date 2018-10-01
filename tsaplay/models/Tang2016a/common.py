@@ -1,25 +1,13 @@
 import tensorflow as tf
-from tensorflow.python.keras.preprocessing import (  # pylint: disable=E0611
-    sequence
-)
-from tsaplay.utils.data import (
-    parse_tf_example,
-    prep_dataset_and_get_iterator,
-    zip_list_join,
-    pad_for_dataset,
-    package_feature_dict,
-    make_labels_dataset_from_list,
-    tf_encoded_tokenisation,
-)
+from tsaplay.utils.data import parse_tf_example
 from tsaplay.utils.tf import sparse_reverse
 
 params = {
-    "batch_size": 25,
-    "max_seq_length": 140,
+    "batch_size": 100,
     "n_out_classes": 3,
     "learning_rate": 0.01,
     "keep_prob": 0.8,
-    "hidden_units": 200,
+    "hidden_units": 50,
     "initializer": tf.initializers.random_uniform(minval=-0.03, maxval=0.03),
 }
 

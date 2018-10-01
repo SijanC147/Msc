@@ -1,11 +1,5 @@
 import tensorflow as tf
-from itertools import chain
-from os import makedirs
-from os.path import join, exists
-from collections import defaultdict
-from tsaplay.datasets.Dataset import Dataset, DATASETS
-from tsaplay.utils.io import pickle_file
-from tsaplay.utils.nlp import tokenize_phrase
+from functools import wraps
 
 
 def parse_tf_example(example):
@@ -33,37 +27,53 @@ def parse_tf_example(example):
     return (features, labels)
 
 
-def concat_dicts_lists(first, second):
-    new_dict = defaultdict(list)
-    for k, v in chain(first.items(), second.items()):
-        new_dict[k] = new_dict[k] + v
+def prep_dataset(tfrecord, batch_size, processing_fn, mode):
+    shuffle_buffer = batch_size * 10
+    dataset = tf.data.TFRecordDataset(tfrecord)
+    dataset = dataset.map(parse_tf_example)
+    if processing_fn is not None:
+        dataset = dataset.map(processing_fn)
 
-    return dict(new_dict)
+    if mode == "EVAL":
+        dataset = dataset.shuffle(buffer_size=shuffle_buffer)
+    elif mode == "TRAIN":
+        dataset = dataset.apply(
+            tf.contrib.data.shuffle_and_repeat(buffer_size=shuffle_buffer)
+        )
+
+    dataset = dataset.batch(batch_size)
+
+    return dataset
 
 
-def bundle_datasets(*datasets, rebuild=False):
-    dataset_names = []
-    train_dict = {}
-    test_dict = {}
-    for dataset in datasets:
-        if isinstance(dataset, Dataset) and dataset.name not in dataset_names:
-            dataset_names.append(dataset.name)
-            train_dict = concat_dicts_lists(dataset.train_dict, train_dict)
-            test_dict = concat_dicts_lists(dataset.test_dict, test_dict)
+def make_input_fn(mode):
+    def decorator(func):
+        @wraps(func)
+        def input_fn(*args, **kwargs):
+            if mode == "TRAIN" or mode == "EVAL":
+                try:
+                    tfrecord = args[1]
+                except IndexError:
+                    tfrecord = kwargs.get("tfrecord")
+                try:
+                    batch_size = args[2]
+                except IndexError:
+                    batch_size = kwargs.get("batch_size")
 
-    dataset_name = "_".join(dataset_names)
-    gen_path = join(DATASETS.DATA_DIR, "_generated", dataset_name)
+                dataset = prep_dataset(
+                    tfrecord=tfrecord,
+                    batch_size=batch_size,
+                    processing_fn=args[0].processing_fn,
+                    mode=mode,
+                )
 
-    makedirs(gen_path, exist_ok=True)
+                return dataset.make_one_shot_iterator().get_next()
+            elif mode == "PREDICT":
+                try:
+                    features = args[1]
+                except IndexError:
+                    features = kwargs.get("features")
+                return args[0].processing_fn(features)
+            return input_fn
 
-    train_dict_path = join(gen_path, "train_dict.pkl")
-    test_dict_path = join(gen_path, "test_dict.pkl")
-
-    if not exists(train_dict_path) and not rebuild:
-        pickle_file(train_dict_path, train_dict)
-
-    if not exists(test_dict_path) and not rebuild:
-        pickle_file(test_dict_path, test_dict)
-
-    return Dataset(path=gen_path, parser=None)
-
+        return decorator

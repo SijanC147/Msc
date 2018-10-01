@@ -1,7 +1,7 @@
 import time
 from datetime import timedelta
 from functools import wraps
-from tsaplay.utils.io import _cprnt
+from tsaplay.utils.io import cprnt
 
 
 def attach_embedding_params(func):
@@ -22,12 +22,12 @@ def timeit(pre="", post=""):
         @wraps(func)
         def wrapper(*args, **kw):
             name = func.__qualname__ + "():"
-            _cprnt(r=name, g=pre)
+            cprnt(r=name, g=pre)
             ts = time.time()
             result = func(*args, **kw)
             te = time.time()
             time_taken = timedelta(seconds=(te - ts))
-            _cprnt(r=name, g=post + " in", row=str(time_taken))
+            cprnt(r=name, g=post + " in", row=str(time_taken))
             return result
 
         return wrapper

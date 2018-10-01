@@ -13,16 +13,6 @@ mpl.use("TkAgg")
 import matplotlib.pyplot as plt  # nopep8
 
 
-def tokenize_phrase(phrase, lower=True):
-    tokens_list = []
-    nlp = spacy.load("en", disable=["parser", "ner"])
-    tokens = nlp(str(phrase))
-    tokens_list = list(filter(token_filter, tokens))
-    return [
-        token.text.lower() if lower else token.text for token in tokens_list
-    ]
-
-
 def tokenize_phrases(phrases):
     token_lists = []
     nlp = spacy.load("en", disable=["parser", "ner"])
@@ -93,10 +83,6 @@ def cmap_int(value, cmap_name="Oranges", alpha=0.8):
     return tuple(rgba_int)
 
 
-def get_class_text(class_id):
-    return {0: "Negative", 1: "Neutral", 2: "Positive"}.get(class_id)
-
-
 def draw_attention_heatmap(phrases, attn_vecs):
     font = ImageFont.truetype(font="./tsaplay/Symbola.ttf", size=24)
 
@@ -134,12 +120,12 @@ def draw_attention_heatmap(phrases, attn_vecs):
     return new_image
 
 
-def draw_prediction_label(target, label, prediction):
+def draw_prediction_label(target, label, prediction, classes):
     h_space = 10
     v_space = 5
     font = ImageFont.truetype(font="./tsaplay/Symbola.ttf", size=16)
     text = "Target: {0} \t\t Predicted: {1} \t Correct: {2}".format(
-        target, get_class_text(prediction), get_class_text(label)
+        target, classes[prediction], classes[label]
     )
 
     _, max_height = font.getsize(text)
@@ -211,168 +197,3 @@ def join_images(images, v_space=5, border=None, padding=2):
             joined_image, border=border, fill="black"
         )
         return joined_image_with_border
-
-
-# def re_dist(features, labels, distribution):
-#     if type(distribution) == list:
-#         target_dists = distribution
-#     elif type(distribution) == dict:
-#         target_dists = [
-#             distribution["positive"],
-#             distribution["neutral"],
-#             distribution["negative"],
-#         ]
-
-#     counts = [
-#         len([l for l in labels if l == -1]),
-#         len([l for l in labels if l == 0]),
-#         len([l for l in labels if l == 1]),
-#     ]
-#     target_counts = [0, 0, 0]
-
-#     try:
-#         total_index = target_dists.index(1)
-#         target_counts[total_index] = counts[total_index]
-#         new_total = counts[total_index]
-#     except ValueError:
-#         smallest_count_indices = [
-#             i for i, x in enumerate(counts) if x == min(counts)
-#         ]
-#         if len(smallest_count_indices) != 1:
-#             smallest_count_index = target_dists.index(
-#                 max([target_dists[i] for i in smallest_count_indices])
-#             )
-#         else:
-#             smallest_count_index = smallest_count_indices[0]
-
-#         target_counts[smallest_count_index] = counts[smallest_count_index]
-#         new_total = floor(
-#             counts[smallest_count_index] / target_dists[smallest_count_index]
-#         )
-#         counts[smallest_count_index] = float("inf")
-#         target_dists[smallest_count_index] = float("inf")
-
-#         smallest_count_indices = [
-#             i for i, x in enumerate(counts) if x == min(counts)
-#         ]
-#         if len(smallest_count_indices) != 1:
-#             smallest_count_index = target_dists.index(
-#                 max([target_dists[i] for i in smallest_count_indices])
-#             )
-#         else:
-#             smallest_count_index = smallest_count_indices[0]
-#         smallest_count_index = counts.index(min(counts))
-#         target_count = int(new_total * target_dists[smallest_count_index])
-#         if target_count > counts[smallest_count_index]:
-#             old_total = new_total
-#             new_total = floor(
-#                 counts[smallest_count_index]
-#                 / target_dists[smallest_count_index]
-#             )
-#             target_counts = [
-#                 floor(t * (new_total / old_total)) for t in target_counts
-#             ]
-#             target_count = counts[smallest_count_index]
-#         target_counts[smallest_count_index] = target_count
-#         counts[smallest_count_index] = float("inf")
-#         target_dists[smallest_count_index] = float("inf")
-
-#         if new_total - sum(target_counts) > min(counts):
-#             old_total = new_total
-#             new_total = floor(min(counts) / min(target_dists))
-#             target_counts = [
-#                 floor(t * (new_total / old_total)) for t in target_counts
-#             ]
-#         target_counts[target_counts.index(0)] = new_total - sum(target_counts) # noqa
-#     finally:
-#         negative_sample_indices = [i for i, x in enumerate(labels) if x == -1] # noqa
-#         neutral_sample_indices = [i for i, x in enumerate(labels) if x == 0]
-#         positive_sample_indices = [i for i, x in enumerate(labels) if x == 1]
-#         new_features = {
-#             "sentence": [""] * new_total,
-#             "sentence_length": [0] * new_total,
-#             "target": [""] * new_total,
-#             "mappings": {
-#                 "left": [[]] * new_total,
-#                 "target": [[]] * new_total,
-#                 "right": [[]] * new_total,
-#             },
-#         }
-#         new_labels = [None] * new_total
-#         for _ in range(target_counts[0]):
-#             random_index = choice(negative_sample_indices)
-#             random_position = randrange(0, new_total)
-#             while new_labels[random_position] is not None:
-#                 random_position = randrange(0, new_total)
-#             new_features["sentence"][random_position] = features["sentence"][
-#                 random_index
-#             ]
-#             new_features["sentence_length"][random_position] = features[
-#                 "sentence_length"
-#             ][random_index]
-#             new_features["target"][random_position] = features["target"][
-#                 random_index
-#             ]
-#             new_features["mappings"]["left"][random_position] = features[
-#                 "mappings"
-#             ]["left"][random_index]
-#             new_features["mappings"]["target"][random_position] = features[
-#                 "mappings"
-#             ]["target"][random_index]
-#             new_features["mappings"]["right"][random_position] = features[
-#                 "mappings"
-#             ]["right"][random_index]
-#             new_labels[random_position] = labels[random_index]
-#             negative_sample_indices.remove(random_index)
-#         for _ in range(target_counts[1]):
-#             random_index = choice(neutral_sample_indices)
-#             random_position = randrange(0, new_total)
-#             while new_labels[random_position] is not None:
-#                 random_position = randrange(0, new_total)
-#             new_features["sentence"][random_position] = features["sentence"][
-#                 random_index
-#             ]
-#             new_features["sentence_length"][random_position] = features[
-#                 "sentence_length"
-#             ][random_index]
-#             new_features["target"][random_position] = features["target"][
-#                 random_index
-#             ]
-#             new_features["mappings"]["left"][random_position] = features[
-#                 "mappings"
-#             ]["left"][random_index]
-#             new_features["mappings"]["target"][random_position] = features[
-#                 "mappings"
-#             ]["target"][random_index]
-#             new_features["mappings"]["right"][random_position] = features[
-#                 "mappings"
-#             ]["right"][random_index]
-#             new_labels[random_position] = labels[random_index]
-#             neutral_sample_indices.remove(random_index)
-#         for _ in range(target_counts[2]):
-#             random_index = choice(positive_sample_indices)
-#             random_position = randrange(0, new_total)
-#             while new_labels[random_position] is not None:
-#                 random_position = randrange(0, new_total)
-#             new_features["sentence"][random_position] = features["sentence"][
-#                 random_index
-#             ]
-#             new_features["sentence_length"][random_position] = features[
-#                 "sentence_length"
-#             ][random_index]
-#             new_features["target"][random_position] = features["target"][
-#                 random_index
-#             ]
-#             new_features["mappings"]["left"][random_position] = features[
-#                 "mappings"
-#             ]["left"][random_index]
-#             new_features["mappings"]["target"][random_position] = features[
-#                 "mappings"
-#             ]["target"][random_index]
-#             new_features["mappings"]["right"][random_position] = features[
-#                 "mappings"
-#             ]["right"][random_index]
-#             new_labels[random_position] = labels[random_index]
-#             positive_sample_indices.remove(random_index)
-
-#     return new_features, new_labels
