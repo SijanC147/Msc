@@ -21,7 +21,10 @@ from inspect import getsource, getfile
 from abc import ABC, abstractmethod
 from os import makedirs, getcwd
 from functools import wraps
-from tsaplay.utils.decorators import attach_embedding_params
+from tsaplay.utils.decorators import (
+    attach_embedding_params,
+    initialize_estimator,
+)
 from tsaplay.hooks.SaveConfusionMatrix import SaveConfusionMatrix
 from tsaplay.hooks.SaveAttentionWeightVector import SaveAttentionWeightVector
 
@@ -48,6 +51,7 @@ class Model(ABC):
         self.serving_input_fn = serving_input_fn
         self.model_fn = model_fn
         self.run_config = run_config
+        self.estimator = None
 
     @property
     def name(self):
@@ -96,11 +100,11 @@ class Model(ABC):
     def run_config(self):
         return self.__run_conf
 
-    @property
-    def estimator(self):
-        return Estimator(
-            model_fn=self.model_fn, params=self.params, config=self.run_config
-        )
+    # @property
+    # def estimator(self):
+    #     return Estimator(
+    #         model_fn=self.model_fn, params=self.params, config=self.run_config
+    #     )
 
     @params.setter
     def params(self, params):
@@ -189,10 +193,11 @@ class Model(ABC):
                 tfrecord=feature_provider.test_tfrecords,
                 batch_size=self.params["batch_size"],
             ),
-            hooks=self._attach_std_eval_hooks(self.eval_hooks),
+            # hooks=self._attach_std_eval_hooks(self.eval_hooks),
         )
 
-    @attach_embedding_params
+    # @attach_embedding_params
+    @initialize_estimator
     def train_and_eval(self, feature_provider, steps):
         stop_early = self.params.get("early_stopping", False)
         train_spec = tf.estimator.TrainSpec(
@@ -201,7 +206,7 @@ class Model(ABC):
                 batch_size=self.params["batch_size"],
             ),
             max_steps=steps,
-            hooks=self._attach_std_train_hooks(self.train_hooks, stop_early),
+            # hooks=self._attach_std_train_hooks(self.train_hooks, stop_early),
         )
         eval_spec = tf.estimator.EvalSpec(
             input_fn=lambda: self.__eval_in_fn(
@@ -209,7 +214,7 @@ class Model(ABC):
                 batch_size=self.params["batch_size"],
             ),
             steps=None,
-            hooks=self._attach_std_eval_hooks(self.eval_hooks),
+            # hooks=self._attach_std_eval_hooks(self.eval_hooks),
         )
         tf.estimator.train_and_evaluate(
             estimator=self.estimator,
@@ -323,6 +328,14 @@ class Model(ABC):
                         n_hops=self.params.get("n_hops"),
                     )
                     all_eval_hooks += [attn_hook]
+                confusion_matrix_save_hook = SaveConfusionMatrix(
+                    labels=["Negative", "Neutral", "Positive"],
+                    confusion_matrix_tensor_name="mean_iou/total_confusion_matrix",
+                    summary_writer=tf.summary.FileWriterCache.get(
+                        join(self.run_config.model_dir, "eval")
+                    ),
+                )
+                all_eval_hooks += [confusion_matrix_save_hook]
                 all_metrics = spec.eval_metric_ops or {}
                 all_metrics.update(std_metrics)
                 return spec._replace(
@@ -343,38 +356,48 @@ class Model(ABC):
                     },
                     every_n_iter=100,
                 )
+                makedirs(self.estimator.eval_dir())
+                early_stopping_hook = stop_if_no_decrease_hook(
+                    estimator=self.estimator,
+                    metric_name="loss",
+                    max_steps_without_decrease=self.params.get(
+                        "max_steps", 1000
+                    ),
+                    min_steps=self.params.get("min_steps", 100),
+                )
                 all_training_hooks = spec.training_hooks or []
-                all_training_hooks += [logging_hook]
+                all_training_hooks += [logging_hook] + [early_stopping_hook]
                 return spec._replace(training_hooks=all_training_hooks)
 
         return wrapper
 
-    def _attach_std_eval_hooks(self, eval_hooks):
-        confusion_matrix_save_hook = SaveConfusionMatrix(
-            labels=["Negative", "Neutral", "Positive"],
-            confusion_matrix_tensor_name="mean_iou/total_confusion_matrix",
-            summary_writer=tf.summary.FileWriterCache.get(
-                join(self.run_config.model_dir, "eval")
-            ),
-        )
-        std_eval_hooks = [confusion_matrix_save_hook]
-        return eval_hooks + std_eval_hooks
+    # def _attach_std_eval_hooks(self, eval_hooks):
+    #     confusion_matrix_save_hook = SaveConfusionMatrix(
+    #         labels=["Negative", "Neutral", "Positive"],
+    #         confusion_matrix_tensor_name="mean_iou/total_confusion_matrix",
+    #         summary_writer=tf.summary.FileWriterCache.get(
+    #             join(self.run_config.model_dir, "eval")
+    #         ),
+    #     )
+    #     # std_eval_hooks = [confusion_matrix_save_hook]
+    #     std_eval_hooks = []
+    #     return eval_hooks + std_eval_hooks
 
-    def _attach_std_train_hooks(self, train_hooks, early_stopping=False):
-        std_train_hooks = []
-        if early_stopping:
-            makedirs(self.estimator.eval_dir())
-            std_train_hooks.append(
-                [
-                    stop_if_no_decrease_hook(
-                        estimator=self.estimator,
-                        metric_name="loss",
-                        max_steps_without_decrease=self.params.get(
-                            "max_steps", 1000
-                        ),
-                        min_steps=self.params.get("min_steps", 100),
-                    )
-                ]
-            )
+    # def _attach_std_train_hooks(self, train_hooks, early_stopping=False):
+    #     std_train_hooks = []
+    #     if early_stopping:
+    #         makedirs(self.estimator.eval_dir())
+    #         std_train_hooks.append(
+    #             [
+    #                 stop_if_no_decrease_hook(
+    #                     estimator=self.estimator,
+    #                     metric_name="loss",
+    #                     max_steps_without_decrease=self.params.get(
+    #                         "max_steps", 1000
+    #                     ),
+    #                     min_steps=self.params.get("min_steps", 100),
+    #                 )
+    #             ]
+    #         )
 
-        return train_hooks + std_train_hooks
+    #     return train_hooks + std_train_hooks

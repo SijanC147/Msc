@@ -108,3 +108,4 @@ data/glove.twitter.27B.100d.txt
 .idea/
 .DS_Store
 
+main2.py

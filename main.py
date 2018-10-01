@@ -19,13 +19,13 @@ from tsaplay.models.Zheng2018.LcrRot import LcrRot
 # )
 
 # xue = Dataset(*DATASETS.XUE)
-dong = Dataset(*DATASETS.DONG)
+dong = Dataset(*DATASETS.DEBUG)
 glv = Embedding("glove-twitter-25")
 model = Lstm(run_config=RunConfig(tf_random_seed=1234))
 
 feature_provider = FeatureProvider(datasets=[dong], embedding=glv)
 
-experiment = Experiment(feature_provider, model, contd_tag="old_model_lstm")
-experiment.run(job="train+eval", steps=1000)
+experiment = Experiment(feature_provider, model)
+experiment.run(job="train+eval", steps=1)
 experiment.launch_tensorboard()
 # experiment.export_model()

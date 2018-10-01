@@ -1,5 +1,6 @@
 import tensorflow as tf
 from functools import wraps
+from tsaplay.utils.io import cprnt
 
 
 def parse_tf_example(example):
@@ -44,36 +45,3 @@ def prep_dataset(tfrecord, batch_size, processing_fn, mode):
     dataset = dataset.batch(batch_size)
 
     return dataset
-
-
-def make_input_fn(mode):
-    def decorator(func):
-        @wraps(func)
-        def input_fn(*args, **kwargs):
-            if mode == "TRAIN" or mode == "EVAL":
-                try:
-                    tfrecord = args[1]
-                except IndexError:
-                    tfrecord = kwargs.get("tfrecord")
-                try:
-                    batch_size = args[2]
-                except IndexError:
-                    batch_size = kwargs.get("batch_size")
-
-                dataset = prep_dataset(
-                    tfrecord=tfrecord,
-                    batch_size=batch_size,
-                    processing_fn=args[0].processing_fn,
-                    mode=mode,
-                )
-
-                return dataset.make_one_shot_iterator().get_next()
-            elif mode == "PREDICT":
-                try:
-                    features = args[1]
-                except IndexError:
-                    features = kwargs.get("features")
-                return args[0].processing_fn(features)
-            return input_fn
-
-        return decorator

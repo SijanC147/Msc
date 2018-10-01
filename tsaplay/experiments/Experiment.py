@@ -65,17 +65,13 @@ class Experiment:
     def _initialize_experiment_dir(self):
         exp_dir_name = self.contd_tag or self.fp.name
 
-        experiment_dir = join(
-            DATA_PATH, self.model.relative_path, exp_dir_name
-        )
+        experiment_dir = join(DATA_PATH, self.model.name, exp_dir_name)
         if exists(experiment_dir) and self.contd_tag is None:
             i = 0
             while exists(experiment_dir):
                 i += 1
                 experiment_dir = join(
-                    DATA_PATH,
-                    self.model.relative_path,
-                    exp_dir_name + "_" + str(i),
+                    DATA_PATH, self.model.name, exp_dir_name + "_" + str(i)
                 )
         summary_dir = join(experiment_dir, "tb_summary")
         self.model.run_config = self.model.run_config.replace(

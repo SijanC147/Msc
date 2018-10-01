@@ -1,20 +1,25 @@
 import time
+import inspect
+import tensorflow as tf
 from datetime import timedelta
-from functools import wraps
+from functools import wraps, partial
 from tsaplay.utils.io import cprnt
-
-
-def attach_embedding_params(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        emb_params = (
-            kwargs.get("embedding_params")
-            or kwargs.get("feature_provider").embedding_params
-        )
-        args[0].params = {**args[0].params, **emb_params}
-        return func(*args, **kwargs)
-
-    return wrapper
+from tsaplay.utils.data import parse_tf_example, prep_dataset
+from tensorflow.estimator import RunConfig, Estimator  # pylint: disable=E0401
+from tensorflow.estimator import (  # pylint: disable=E0401
+    ModeKeys,
+    RunConfig,
+    Estimator,
+)
+from tensorflow.saved_model.signature_constants import (
+    DEFAULT_SERVING_SIGNATURE_DEF_KEY
+)
+from tensorflow.estimator.export import (  # pylint: disable=E0401
+    PredictOutput,
+    RegressionOutput,
+    ClassificationOutput,
+    ServingInputReceiver,
+)
 
 
 def timeit(pre="", post=""):
@@ -33,3 +38,74 @@ def timeit(pre="", post=""):
         return wrapper
 
     return inner_decorator
+
+
+def initialize_estimator(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        emb_params = (
+            kwargs.get("embedding_params")
+            or kwargs.get("feature_provider").embedding_params
+        )
+        args[0].params = {**args[0].params, **emb_params}
+        deets = args[0]._model_fn.__code__.co_varnames
+        cprnt(r=deets)
+        args[0]._estimator = Estimator(
+            model_fn=args[0]._model_fn,
+            params=args[0].params,
+            config=args[0].run_config,
+        )
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
+def attach(target_modes, addons):
+    def decorator(model_fn):
+        @wraps(model_fn)
+        def wrapper(self, features, labels, mode, params):
+            spec = model_fn(self, features, labels, mode, params)
+            if mode in target_modes:
+                for add_on in addons:
+                    spec = add_on(self, spec, features, labels, params)
+            return spec
+
+        return wrapper
+
+    return decorator
+
+
+def make_input_fn(mode):
+    def decorator(func):
+        @wraps(func)
+        def input_fn(*args, **kwargs):
+            if mode == "TRAIN" or mode == "EVAL":
+                try:
+                    tfrecord = args[1]
+                except IndexError:
+                    tfrecord = kwargs.get("tfrecord")
+                try:
+                    batch_size = args[2]
+                except IndexError:
+                    batch_size = kwargs.get("batch_size")
+
+                def process_dataset(features, labels):
+                    try:
+                        return (args[0].processing_fn(features), labels)
+                    except AttributeError:
+                        return (features, labels)
+
+                dataset = prep_dataset(
+                    tfrecord=tfrecord,
+                    batch_size=batch_size,
+                    processing_fn=process_dataset,
+                    mode=mode,
+                )
+
+                return dataset.make_one_shot_iterator().get_next()
+            else:
+                raise ValueError("Invalid mode: {0}".format(mode))
+
+        return input_fn
+
+    return decorator

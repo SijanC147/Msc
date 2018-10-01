@@ -1,37 +1,52 @@
 import tensorflow as tf
 from abc import ABC, abstractmethod
-from tsaplay.utils.data import make_input_fn
-from tsaplay.utils.decorators import attach_embedding_params
+from tensorflow.estimator import (  # pylint: disable=E0401
+    RunConfig,
+    Estimator,
+    ModeKeys,
+)
+from tensorflow.estimator.export import (  # pylint: disable=E0401
+    ServingInputReceiver
+)
+from tsaplay.features.FeatureProvider import FeatureProvider
+from tsaplay.utils.decorators import initialize_estimator, make_input_fn
+from tsaplay.models.addons import (
+    attach,
+    export_outputs,
+    conf_matrix,
+    attn_heatmaps,
+    logging,
+    histograms,
+    scalars,
+)
 
 
 class SlimModel(ABC):
-    def __init__(self, params, run_config=None):
-        self.params = params
-        self.run_config = run_config
+    def __init__(self, run_config=None):
+        self.class_labels = ["Negative", "Neutral", "Positive"]
+        self.run_config = run_config or RunConfig()
+        self.params = self.set_params()
+        self._estimator = None
 
     @property
     def name(self):
         return self.__class__.__name__
 
-    @classmethod
     @abstractmethod
-    def process_features(cls, features):
+    def set_params(self):
         pass
 
     @classmethod
-    @abstractmethod
-    def model_fn(cls, features, labels, mode, params):
-        pass
+    def processing_fn(cls, features):
+        return features
 
-    @property
-    def estimator(self):
-        return tf.estimator.Estimator(
-            model_fn=self.model_fn, params=self.params, config=self.run_config
-        )
+    # @abstractmethod
+    def model_fn(self, features, labels, mode, params):
+        pass
 
     @classmethod
     @make_input_fn("TRAIN")
-    def train_input_fn(cls, tfrecord, batch_size):
+    def train_input_fn(self, tfrecord, batch_size):
         pass
 
     @classmethod
@@ -39,42 +54,33 @@ class SlimModel(ABC):
     def eval_input_fn(cls, tfrecord, batch_size):
         pass
 
-    @classmethod
-    @make_input_fn("PREDICT")
-    def serving_input_fn(cls, features):
-        pass
-
-    @attach_embedding_params
+    @initialize_estimator
     def train(self, feature_provider, steps):
-        self.estimator.train(
+        self._estimator.train(
             input_fn=lambda: self.train_input_fn(
                 tfrecord=feature_provider.train_tfrecords,
                 batch_size=self.params["batch_size"],
             ),
             steps=steps,
-            # hooks=self._attach_std_train_hooks(self.train_hooks),
         )
 
-    @attach_embedding_params
+    @initialize_estimator
     def evaluate(self, feature_provider):
-        self.estimator.evaluate(
+        self._estimator.evaluate(
             input_fn=lambda: self.eval_input_fn(
                 tfrecord=feature_provider.test_tfrecords,
                 batch_size=self.params["batch_size"],
-            ),
-            # hooks=self._attach_std_eval_hooks(self.eval_hooks),
+            )
         )
 
-    @attach_embedding_params
+    @initialize_estimator
     def train_and_eval(self, feature_provider, steps):
-        # stop_early = self.params.get("early_stopping", False)
         train_spec = tf.estimator.TrainSpec(
             input_fn=lambda: self.train_input_fn(
                 tfrecord=feature_provider.train_tfrecords,
                 batch_size=self.params["batch_size"],
             ),
             max_steps=steps,
-            # hooks=self._attach_std_train_hooks(self.train_hooks, stop_early),
         )
         eval_spec = tf.estimator.EvalSpec(
             input_fn=lambda: self.eval_input_fn(
@@ -82,17 +88,51 @@ class SlimModel(ABC):
                 batch_size=self.params["batch_size"],
             ),
             steps=None,
-            # hooks=self._attach_std_eval_hooks(self.eval_hooks),
         )
         tf.estimator.train_and_evaluate(
-            estimator=self.estimator,
+            estimator=self._estimator,
             train_spec=train_spec,
             eval_spec=eval_spec,
         )
 
-    def _processing_fn(self, features, label=None):
-        processed_features = self.process_features(features)
-        if label is None:
-            return processed_features
-        else:
-            return (processed_features, label)
+    @initialize_estimator
+    def export(self, directory, embedding_params):
+        self._estimator.export_savedmodel(
+            export_dir_base=directory,
+            serving_input_receiver_fn=self._serving_input_receiver_fn,
+            strip_default_attrs=True,
+        )
+
+    def _serving_input_receiver_fn(self):
+        inputs_serialized = tf.placeholder(dtype=tf.string)
+        feature_spec = {
+            "left": tf.VarLenFeature(dtype=tf.string),
+            "target": tf.VarLenFeature(dtype=tf.string),
+            "right": tf.VarLenFeature(dtype=tf.string),
+        }
+        parsed_example = tf.parse_example(inputs_serialized, feature_spec)
+
+        ids_table = FeatureProvider.index_lookup_table(
+            self.params["vocab_file_path"]
+        )
+        features = {
+            "left": parsed_example["left"],
+            "target": parsed_example["target"],
+            "right": parsed_example["right"],
+            "left_ids": ids_table.lookup(parsed_example["left"]),
+            "target_ids": ids_table.lookup(parsed_example["target"]),
+            "right_ids": ids_table.lookup(parsed_example["right"]),
+        }
+
+        input_features = self.processing_fn(features)
+
+        inputs = {"instances": inputs_serialized}
+
+        return ServingInputReceiver(input_features, inputs)
+
+    @attach(ModeKeys.PREDICT, [export_outputs])
+    @attach(ModeKeys.EVAL, [conf_matrix])
+    @attach(ModeKeys.TRAIN, [logging, histograms])
+    @attach([ModeKeys.EVAL, ModeKeys.TRAIN], [scalars])
+    def _model_fn(self, features, labels, mode, params):
+        return self.model_fn(features, labels, mode, params)
