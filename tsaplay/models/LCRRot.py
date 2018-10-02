@@ -6,7 +6,7 @@ from tensorflow.estimator import (  # pylint: disable=E0401
 from tensorflow.contrib.rnn import (  # pylint: disable=E0611
     stack_bidirectional_dynamic_rnn
 )
-from tsaplay.models.SlimModel import SlimModel
+from tsaplay.models.TSAModel import TSAModel
 from tsaplay.utils.tf import (
     sparse_sequences_to_dense,
     seq_lengths,
@@ -21,7 +21,7 @@ from tsaplay.utils.tf import (
 from tsaplay.models.addons import attach, attn_heatmaps
 
 
-class SLcrRot(SlimModel):
+class LCRRot(TSAModel):
     def set_params(self):
         return {
             "batch_size": 25,
@@ -37,7 +37,7 @@ class SLcrRot(SlimModel):
             "n_attn_heatmaps": 5,
         }
 
-    @attach(ModeKeys.EVAL, [attn_heatmaps])
+    @attach(["EVAL"], [attn_heatmaps])
     def model_fn(self, features, labels, mode, params):
         left_ids = sparse_sequences_to_dense(features["left_ids"])
         target_ids = sparse_sequences_to_dense(features["target_ids"])

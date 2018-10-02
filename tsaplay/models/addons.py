@@ -151,8 +151,8 @@ def early_stopping(model, spec, features, labels, params):
         stop_if_no_decrease_hook(
             estimator=model.estimator,
             metric_name="loss",
-            max_steps_without_decrease=model.params.get("max_steps", 1000),
-            min_steps=model.params.get("min_steps", 100),
+            max_steps_without_decrease=params.get("max_steps", 1000),
+            min_steps=params.get("min_steps", 100),
         )
     ]
     return spec._replace(training_hooks=train_hooks)

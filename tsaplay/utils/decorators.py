@@ -48,8 +48,6 @@ def initialize_estimator(func):
             or kwargs.get("feature_provider").embedding_params
         )
         args[0].params = {**args[0].params, **emb_params}
-        deets = args[0]._model_fn.__code__.co_varnames
-        cprnt(r=deets)
         args[0]._estimator = Estimator(
             model_fn=args[0]._model_fn,
             params=args[0].params,
@@ -64,8 +62,16 @@ def attach(target_modes, addons):
     def decorator(model_fn):
         @wraps(model_fn)
         def wrapper(self, features, labels, mode, params):
+            targets = [
+                {
+                    "TRAIN": ModeKeys.TRAIN,
+                    "EVAL": ModeKeys.EVAL,
+                    "PREDICT": ModeKeys.PREDICT,
+                }.get(trg_mode)
+                for trg_mode in target_modes
+            ]
             spec = model_fn(self, features, labels, mode, params)
-            if mode in target_modes:
+            if mode in targets:
                 for add_on in addons:
                     spec = add_on(self, spec, features, labels, params)
             return spec

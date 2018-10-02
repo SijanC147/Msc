@@ -3,7 +3,7 @@ from tensorflow.estimator import (  # pylint: disable=E0401
     EstimatorSpec,
     ModeKeys,
 )
-from tsaplay.models.SlimModel import SlimModel
+from tsaplay.models.TSAModel import TSAModel
 from tsaplay.utils.tf import (
     dropout_lstm_cell,
     seq_lengths,
@@ -11,7 +11,7 @@ from tsaplay.utils.tf import (
 )
 
 
-class SLstm(SlimModel):
+class Lstm(TSAModel):
     def set_params(self):
         return {
             "batch_size": 100,

@@ -236,11 +236,12 @@ def zip_attn_snapshots_with_sp_literals(sp_literals, snapshots, num_layers):
     snapshots = tf.transpose(snapshots, perm=[1, 0, 2, 3])
     snapshots = tf.reshape(snapshots, shape=[-1, max_len, 1])
 
-    sp_literals = tf.sparse_tensor_to_dense(sp_literals, default_value=b"")
-    sp_literals = tf.tile(sp_literals, multiples=[1, num_layers, 1])
-    sp_literals = tf.reshape(sp_literals, shape=[-1, max_len])
+    literals = sparse_sequences_to_dense(sp_literals)
+    literals = tf.expand_dims(literals, axis=1)
+    literals = tf.tile(literals, multiples=[1, num_layers, 1])
+    literals = tf.reshape(literals, shape=[-1, max_len])
 
-    return sp_literals, snapshots
+    return literals, snapshots
 
 
 def bulk_add_to_collection(collection, *variables):

@@ -21,7 +21,7 @@ from tsaplay.models.addons import (
 )
 
 
-class SlimModel(ABC):
+class TSAModel(ABC):
     def __init__(self, run_config=None):
         self.class_labels = ["Negative", "Neutral", "Positive"]
         self.run_config = run_config or RunConfig()
@@ -40,7 +40,7 @@ class SlimModel(ABC):
     def processing_fn(cls, features):
         return features
 
-    # @abstractmethod
+    @abstractmethod
     def model_fn(self, features, labels, mode, params):
         pass
 
@@ -130,9 +130,9 @@ class SlimModel(ABC):
 
         return ServingInputReceiver(input_features, inputs)
 
-    @attach(ModeKeys.PREDICT, [export_outputs])
-    @attach(ModeKeys.EVAL, [conf_matrix])
-    @attach(ModeKeys.TRAIN, [logging, histograms])
-    @attach([ModeKeys.EVAL, ModeKeys.TRAIN], [scalars])
+    @attach(["PREDICT"], [export_outputs])
+    @attach(["EVAL"], [conf_matrix])
+    @attach(["TRAIN"], [logging, histograms])
+    @attach(["EVAL", "TRAIN"], [scalars])
     def _model_fn(self, features, labels, mode, params):
         return self.model_fn(features, labels, mode, params)

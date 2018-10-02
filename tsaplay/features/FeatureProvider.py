@@ -23,7 +23,8 @@ class FeatureProvider:
         self._embedding = embedding
         self._datasets = datasets
         self.__fetch_dict = self._build_fetch_dict()
-        self._generate_missing_tf_record_files()
+        if len(self.__fetch_dict) > 0:
+            self._generate_missing_tf_record_files()
 
     @property
     def name(self):
@@ -116,23 +117,20 @@ class FeatureProvider:
 
     @timeit("Generating any missing tfrecord files", "TFrecord files ready")
     def _generate_missing_tf_record_files(self):
-        if len(self.__fetch_dict) > 0:
-            values, metadata = self._run_fetches()
-            self._write_run_metadata(metadata)
-            for dataset in self._datasets:
-                for mode in values.get(dataset.name, []):
-                    if mode == "train":
-                        labels = dataset.train_dict["labels"]
-                    else:
-                        labels = dataset.test_dict["labels"]
-                    feature_dict = values[dataset.name][mode]
-                    labels = self.zero_norm_labels(labels)
-                    features = self._feature_lists_from_dict(feature_dict)
-                    data_zip = zip(*features, labels)
-                    tf_examples = [
-                        self._make_tf_example(*sample) for sample in data_zip
-                    ]
-                    self._write_tf_record_file(dataset, mode, tf_examples)
+        values, metadata = self._run_fetches()
+        self._write_run_metadata(metadata)
+        for dataset in self._datasets:
+            for mode in values.get(dataset.name, []):
+                if mode == "train":
+                    labels = dataset.train_dict["labels"]
+                else:
+                    labels = dataset.test_dict["labels"]
+                feature_dict = values[dataset.name][mode]
+                labels = self.zero_norm_labels(labels)
+                features = self._feature_lists_from_dict(feature_dict)
+                data_zip = zip(*features, labels)
+                tf_examples = [self._make_tf_example(*dz) for dz in data_zip]
+                self._write_tf_record_file(dataset, mode, tf_examples)
 
     @classmethod
     @timeit("Tokenizing dataset", "Tokenization complete")
