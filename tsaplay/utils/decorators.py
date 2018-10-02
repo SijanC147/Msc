@@ -1,6 +1,7 @@
 import time
 import inspect
 import tensorflow as tf
+from contextlib import suppress
 from datetime import timedelta
 from functools import wraps, partial
 from tsaplay.utils.io import cprnt
@@ -70,6 +71,16 @@ def attach(target_modes, addons):
                 }.get(trg_mode)
                 for trg_mode in target_modes
             ]
+            if self.comet_experiment is not None:
+                self.comet_experiment.context = mode
+                self.comet_experiment.log_multiple_params(params)
+                self.comet_experiment.set_step(tf.train.get_global_step())
+                self.comet_experiment.set_code(
+                    inspect.getsource(self.__class__)
+                )
+                self.comet_experiment.set_filename(
+                    inspect.getfile(self.__class__)
+                )
             spec = model_fn(self, features, labels, mode, params)
             if mode in targets:
                 for add_on in addons:

@@ -7,6 +7,9 @@ import io
 import itertools
 import matplotlib
 
+from os.path import join
+from tempfile import mkdtemp
+from shutil import rmtree
 from PIL import Image, ImageDraw
 from tensorflow.train import SessionRunHook, SessionRunArgs
 from tsaplay.utils.nlp import (
@@ -28,6 +31,7 @@ class SaveAttentionWeightVector(SessionRunHook):
         targets,
         classes,
         summary_writer,
+        comet=None,
         n_picks=3,
         n_hops=None,
     ):
@@ -38,6 +42,7 @@ class SaveAttentionWeightVector(SessionRunHook):
         self.n_picks = n_picks
         self.n_hops = n_hops
         self._summary_writer = summary_writer
+        self._comet = comet
 
     def before_run(self, run_context):
         return SessionRunArgs(
@@ -111,6 +116,13 @@ class SaveAttentionWeightVector(SessionRunHook):
             images.append(stack_images([attn_heatmap, pred_label], h_space=10))
 
         final_image = stack_images(images, h_space=40)
+
+        if self._comet is not None:
+            temp_dir = mkdtemp()
+            image_path = join(temp_dir, "attention_heatmap.png")
+            final_image.save(image_path)
+            self._comet.log_image(image_path)
+            rmtree(temp_dir)
 
         summary = image_to_summary(
             name="Attention Heatmaps", image=final_image

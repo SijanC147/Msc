@@ -201,19 +201,6 @@ class FeatureProvider:
             delimiter="\t",
         )
 
-    @classmethod
-    def debug_tf_record_iter(cls, tf_records, shuffle=0, batch_size=1):
-        dataset = tf.data.TFRecordDataset(tf_records)
-        dataset = dataset.map(parse_tf_example)
-        if shuffle > 0:
-            dataset = dataset.apply(shuffle_and_repeat(shuffle))
-        else:
-            dataset = dataset.repeat()
-        dataset = dataset.batch(batch_size)
-        iterator = dataset.make_one_shot_iterator()
-
-        return iterator
-
     @timeit("Generating sparse tensors of tokens", "Sparse tensors generated")
     def _sparse_tensors_from_tokens(self, l_tok, trg_tok, r_tok):
         l_sp = [self.get_tokens_sp_tensor(l) for l in l_tok]

@@ -12,6 +12,7 @@ docker = "*"
 tensorflow-serving-api = "*"
 gensim = "*"
 tqdm = "*"
+comet-ml = "*"
 
 [dev-packages]
 tox-pipenv = "*"

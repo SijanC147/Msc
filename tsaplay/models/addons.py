@@ -1,7 +1,7 @@
 import tensorflow as tf
 from functools import wraps
 from os.path import join
-from os import makedirs
+from os import makedirs, environ
 from tensorflow.estimator import (  # pylint: disable=E0401
     ModeKeys,
     RunConfig,
@@ -47,10 +47,11 @@ def attn_heatmaps(model, spec, features, labels, params):
             labels=labels,
             predictions=spec.predictions["class_ids"],
             targets=tf.squeeze(targets, axis=1),
-            classes=["Negative", "Neutral", "Positive"],
+            classes=model.class_labels,
             summary_writer=tf.summary.FileWriterCache.get(
                 join(model.run_config.model_dir, "eval")
             ),
+            comet=model.comet_experiment,
             n_picks=params.get("n_attn_heatmaps", 5),
             n_hops=params.get("n_hops"),
         ),
@@ -77,6 +78,7 @@ def conf_matrix(model, spec, features, labels, params):
             summary_writer=tf.summary.FileWriterCache.get(
                 join(model.run_config.model_dir, "eval")
             ),
+            comet=model.comet_experiment,
         ),
     )
     return spec._replace(
@@ -138,6 +140,10 @@ def scalars(model, spec, features, labels, params):
             name="auc_op",
         ),
     }
+    if spec.mode == ModeKeys.EVAL:
+        eval_metrics = spec.eval_metric_ops or {}
+        eval_metrics.update(std_metrics)
+        spec = spec._replace(eval_metric_ops=eval_metrics)
     tf.summary.scalar("loss", spec.loss)
     tf.summary.scalar("accuracy", std_metrics["accuracy"][1])
     tf.summary.scalar("auc", std_metrics["auc"][1])

@@ -7,6 +7,9 @@ import io
 import itertools
 import matplotlib
 
+from os.path import join
+from tempfile import mkdtemp
+from shutil import rmtree
 from tensorflow.train import SessionRunHook
 from tsaplay.utils.tf import figure_to_summary
 
@@ -20,7 +23,9 @@ class SaveConfusionMatrix(SessionRunHook):
     tensorboard
     """
 
-    def __init__(self, labels, confusion_matrix_tensor_name, summary_writer):
+    def __init__(
+        self, labels, confusion_matrix_tensor_name, summary_writer, comet=None
+    ):
         """Initializes a `SaveConfusionMatrixHook`.
 
         :param labels: Iterable of String containing the labels to print for
@@ -32,6 +37,7 @@ class SaveConfusionMatrix(SessionRunHook):
         self.confusion_matrix_tensor_name = confusion_matrix_tensor_name
         self.labels = labels
         self._summary_writer = summary_writer
+        self._comet = comet
 
     def end(self, session):
         cm = (
@@ -42,6 +48,12 @@ class SaveConfusionMatrix(SessionRunHook):
         )
         globalStep = tf.train.get_global_step().eval(session=session)
         figure = self._plot_confusion_matrix(cm)
+        if self._comet is not None:
+            temp_dir = mkdtemp()
+            figure_path = join(temp_dir, "confusion_matrix.png")
+            figure.savefig(figure_path)
+            self._comet.log_image(figure_path)
+            rmtree(temp_dir)
         summary = figure_to_summary(
             name=self.confusion_matrix_tensor_name, figure=figure
         )

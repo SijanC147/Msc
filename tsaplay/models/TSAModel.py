@@ -1,3 +1,4 @@
+import comet_ml
 import tensorflow as tf
 from abc import ABC, abstractmethod
 from tensorflow.estimator import (  # pylint: disable=E0401
@@ -22,15 +23,22 @@ from tsaplay.models.addons import (
 
 
 class TSAModel(ABC):
-    def __init__(self, run_config=None):
-        self.class_labels = ["Negative", "Neutral", "Positive"]
-        self.run_config = run_config or RunConfig()
-        self.params = self.set_params()
+    def __init__(self, params=None, config=None):
+        self._comet_experiment = None
         self._estimator = None
+        self.class_labels = ["Negative", "Neutral", "Positive"]
+        self.run_config = RunConfig(**(config or {}))
+        self.params = self.set_params()
+        if params is not None:
+            self.params.update(params)
 
     @property
     def name(self):
         return self.__class__.__name__
+
+    @property
+    def comet_experiment(self):
+        return self._comet_experiment
 
     @abstractmethod
     def set_params(self):
@@ -43,6 +51,11 @@ class TSAModel(ABC):
     @abstractmethod
     def model_fn(self, features, labels, mode, params):
         pass
+
+    def attach_comet_ml_experiment(self, api_key, exp_key):
+        self._comet_experiment = comet_ml.ExistingExperiment(
+            api_key=api_key, previous_experiment=exp_key
+        )
 
     @classmethod
     @make_input_fn("TRAIN")
