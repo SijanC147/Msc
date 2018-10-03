@@ -1,4 +1,4 @@
-import comet_ml
+# import comet_ml
 from tsaplay.datasets.Dataset import Dataset, DATASETS
 from tsaplay.embeddings.Embedding import Embedding
 from tsaplay.features.FeatureProvider import FeatureProvider
@@ -13,12 +13,13 @@ from tsaplay.models.MemNet import MemNet
 from tsaplay.models.Ram import Ram
 
 dataset = Dataset(*DATASETS.DONG)
-glv = Embedding("glove-cc42-300")
-model = LCRRot()
+# glv = Embedding("glove-wiki-gigaword-50")
+glv = Embedding("glove-cc840-300")
+model = LCRRot(params={"hidden_units": 5, "batch_size": 5})
 
 feature_provider = FeatureProvider(datasets=[dataset], embedding=glv)
 
-experiment = Experiment(feature_provider, model, contd_tag="common-crawl-42")
-experiment.run(job="train+eval", steps=500)
+experiment = Experiment(feature_provider, model)
+experiment.run(job="train+eval", steps=100)
 # experiment.launch_tensorboard()
 # experiment.export_model()

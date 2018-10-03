@@ -1,4 +1,4 @@
-import comet_ml
+# import comet_ml
 import tensorflow as tf
 from abc import ABC, abstractmethod
 from tensorflow.estimator import (  # pylint: disable=E0401
@@ -52,10 +52,10 @@ class TSAModel(ABC):
     def model_fn(self, features, labels, mode, params):
         pass
 
-    def attach_comet_ml_experiment(self, api_key, exp_key):
-        self._comet_experiment = comet_ml.ExistingExperiment(
-            api_key=api_key, previous_experiment=exp_key
-        )
+    # def attach_comet_ml_experiment(self, api_key, exp_key):
+    # self._comet_experiment = comet_ml.ExistingExperiment(
+    #     api_key=api_key, previous_experiment=exp_key
+    # )
 
     @classmethod
     @make_input_fn("TRAIN")
@@ -64,7 +64,7 @@ class TSAModel(ABC):
 
     @classmethod
     @make_input_fn("EVAL")
-    def eval_input_fn(cls, tfrecord, batch_size):
+    def eval_input_fn(self, tfrecord, batch_size):
         pass
 
     @initialize_estimator

@@ -1,4 +1,4 @@
-import comet_ml
+# import comet_ml
 import tensorflow as tf
 from shutil import rmtree
 from os import getcwd, listdir, environ, makedirs
@@ -19,8 +19,8 @@ class Experiment:
         self.contd_tag = contd_tag
         self._initialize_experiment_dir()
         self._initialize_model_run_config(conf or {})
-        if self.contd_tag is not None:
-            self._setup_comet_ml_experiment()
+        # if self.contd_tag is not None:
+        #     self._setup_comet_ml_experiment()
 
     def run(self, job, steps):
         if job == "train":
@@ -70,7 +70,7 @@ class Experiment:
             while exists(experiment_dir):
                 i += 1
                 experiment_dir = join(dir_parent, exp_dir_name + "_" + str(i))
-        makedirs(experiment_dir, exist_ok=True)
+        makedirs(experiment_dir)
         self._experiment_dir = experiment_dir
 
     def _update_export_models_config(self):
@@ -97,25 +97,29 @@ class Experiment:
 
     def _initialize_model_run_config(self, config_dict):
         config_dict.update(
-            {"model_dir": join(self._experiment_dir, "tb_summary")}
+            {
+                "model_dir": join(self._experiment_dir, "tb_summary"),
+                # "save_checkpoints_steps": 500,
+            }
         )
+        self.model.params.update(config_dict)
         self.model.run_config = tf.estimator.RunConfig(**config_dict)
 
-    def _setup_comet_ml_experiment(self):
-        api_key = environ.get("COMET_ML_API_KEY")
-        if api_key is not None:
-            comet_key_file = join(self._experiment_dir, "_cometml.key")
-            if exists(comet_key_file):
-                with open(comet_key_file, "r") as f:
-                    exp_key = f.readline().strip()
-            else:
-                comet_experiment = comet_ml.Experiment(
-                    api_key=api_key,
-                    project_name=self.model.name,
-                    workspace="msc",
-                )
-                comet_experiment.set_name(self.contd_tag)
-                exp_key = comet_experiment.get_key()
-                with open(comet_key_file, "w+") as f:
-                    f.write(exp_key)
-            self.model.attach_comet_ml_experiment(api_key, exp_key)
+    # def _setup_comet_ml_experiment(self):
+    #     api_key = environ.get("COMET_ML_API_KEY")
+    #     if api_key is not None:
+    #         comet_key_file = join(self._experiment_dir, "_cometml.key")
+    #         if exists(comet_key_file):
+    #             with open(comet_key_file, "r") as f:
+    #                 exp_key = f.readline().strip()
+    #         else:
+    #             comet_experiment = comet_ml.Experiment(
+    #                 api_key=api_key,
+    #                 project_name=self.model.name,
+    #                 workspace="msc",
+    #             )
+    #             comet_experiment.set_name(self.contd_tag)
+    #             exp_key = comet_experiment.get_key()
+    #             with open(comet_key_file, "w+") as f:
+    #                 f.write(exp_key)
+    #         self.model.attach_comet_ml_experiment(api_key, exp_key)

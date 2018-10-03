@@ -1,7 +1,7 @@
+import tensorflow as tf
 import numpy as np
 import gensim.downloader as gensim_data
 from gensim.models import KeyedVectors
-from tensorflow import float32 as tf_flt32
 from os import makedirs, getcwd
 from os.path import join, normpath, basename, splitext, dirname, exists
 
@@ -44,7 +44,7 @@ class Embedding:
 
     @property
     def vocab_size(self):
-        return len(self.vocab)
+        return len(self.vectors)
 
     @property
     def vocab_file_path(self):
@@ -52,27 +52,21 @@ class Embedding:
 
     @property
     def flags(self):
-        return {
-            "<PAD>": np.zeros(shape=self.dim_size),
-            "<OOV>": self.oov(size=self.dim_size),
-        }
+        return self._flags
 
     @property
     def vectors(self):
-        return np.concatenate(
-            [
-                [self.flags["<PAD>"]],
-                [self.flags["<OOV>"]],
-                self._gensim_model.vectors,
-            ]
-        )
+        return self._vectors
 
     @property
     def initializer(self):
+        partition_size = int(self.vocab_size / 6)
         shape = (self.vocab_size, self.dim_size)
 
-        def _init(shape=shape, dtype=tf_flt32, partition_info=None):
-            return self.vectors
+        def _init(shape=shape, dtype=tf.float32, partition_info=None):
+            part_offset = partition_info.single_offset(shape)
+            this_slice = part_offset + partition_size
+            return self.vectors[part_offset:this_slice]
 
         self.__initializer = _init
         return self.__initializer
@@ -83,6 +77,7 @@ class Embedding:
         try:
             self._source = new_source
             self._gensim_model = self._load_gensim_model(self._source)
+            self._set_vectors()
             self._export_vocabulary_files()
         except:
             raise ValueError("Invalid source {0}".format(new_source))
@@ -97,11 +92,16 @@ class Embedding:
     def _default_oov(self, size):
         return np.random.uniform(low=-0.03, high=0.03, size=size)
 
-    def _get_flags(self, dim_size):
-        return {
-            "<PAD>": np.zeros(shape=dim_size),
-            "<OOV>": self.oov(size=dim_size),
+    def _set_vectors(self):
+        flags = {
+            "<PAD>": np.zeros(shape=self.dim_size),
+            "<OOV>": self.oov(size=self.dim_size),
         }
+        vectors = np.concatenate(
+            [[flags["<PAD>"]], [flags["<OOV>"]], self._gensim_model.vectors]
+        )
+        self._flags = flags
+        self._vectors = vectors.astype(np.float32)
 
     def _export_vocabulary_files(self):
         makedirs(dirname(self.vocab_file_path), exist_ok=True)

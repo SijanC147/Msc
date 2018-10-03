@@ -298,13 +298,13 @@ def image_to_summary(name, image):
 
 
 def setup_embedding_layer(
-    vocab_size, dim_size, init, trainable=True, var_scope="embedding_layer"
+    vocab_size, dim_size, trainable=True, var_scope="embedding_layer"
 ):
     with tf.variable_scope(var_scope, reuse=tf.AUTO_REUSE):
         embeddings = tf.get_variable(
             "embeddings",
             shape=[vocab_size, dim_size],
-            initializer=init,
+            # initializer=init,
             trainable=trainable,
         )
 

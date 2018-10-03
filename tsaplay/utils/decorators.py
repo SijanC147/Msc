@@ -92,6 +92,38 @@ def attach(target_modes, addons):
     return decorator
 
 
+def scaffold_embeddings(trainable):
+    def decorator(model_fn):
+        @wraps(model_fn)
+        def wrapper(self, features, labels, mode, params):
+            spec = model_fn(self, features, labels, mode, params)
+            if mode == ModeKeys.TRAIN:
+                with tf.variable_scope("embedding_layer", reuse=tf.AUTO_REUSE):
+                    embeddings = tf.get_variable(
+                        "embeddings",
+                        shape=[params["vocab_size"], params["embedding_dim"]],
+                        trainable=trainable,
+                        dtype=tf.float32,
+                    )
+
+                initializer = params["embedding_initializer"]
+                value = initializer()
+
+                def init_fn(scaffold, sess):
+                    sess.run(
+                        embeddings.initializer,
+                        {embeddings.initial_value: value},
+                    )
+
+                scaffold = tf.train.Scaffold(init_fn=init_fn)
+                spec = spec._replace(scaffold=scaffold)
+            return spec
+
+        return wrapper
+
+    return decorator
+
+
 def make_input_fn(mode):
     def decorator(func):
         @wraps(func)

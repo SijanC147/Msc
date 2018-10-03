@@ -1,4 +1,6 @@
 import tensorflow as tf
+from os.path import join
+from tensorflow.contrib.layers import embed_sequence  # pylint: disable=E0611
 from tensorflow.estimator import (  # pylint: disable=E0401
     EstimatorSpec,
     ModeKeys,
@@ -18,6 +20,8 @@ from tsaplay.utils.tf import (
     setup_embedding_layer,
     get_embedded_seq,
 )
+from tsaplay.utils.io import cprnt
+from tsaplay.utils.decorators import scaffold_embeddings
 from tsaplay.models.addons import attach, attn_heatmaps
 
 
@@ -37,8 +41,10 @@ class LCRRot(TSAModel):
             "n_attn_heatmaps": 5,
         }
 
-    @attach(["EVAL"], [attn_heatmaps])
+    # @scaffold_embeddings(trainable=False)
+    # @attach(["EVAL"], [attn_heatmaps])
     def model_fn(self, features, labels, mode, params):
+        scaffold = tf.train.Scaffold(saver=tf.train.Saver(sharded=True))
         left_ids = sparse_sequences_to_dense(features["left_ids"])
         target_ids = sparse_sequences_to_dense(features["target_ids"])
         right_ids = sparse_sequences_to_dense(features["right_ids"])
@@ -46,16 +52,54 @@ class LCRRot(TSAModel):
         target_len = seq_lengths(target_ids)
         right_len = seq_lengths(right_ids)
 
-        embedding_matrix = setup_embedding_layer(
-            vocab_size=params["vocab_size"],
-            dim_size=params["embedding_dim"],
-            init=params["embedding_initializer"],
+        # with tf.variable_scope("embedding_layer", reuse=tf.AUTO_REUSE):
+        #     embedding_matrix = tf.get_variable(
+        #         "embeddings",
+        #         shape=[params["vocab_size"], params["embedding_dim"]],
+        #         trainable=False,
+        #         dtype=tf.float32,
+        #     )
+
+        with tf.variable_scope(
+            "embedding_layer",
+            reuse=tf.AUTO_REUSE,
+            partitioner=tf.fixed_size_partitioner(6),
+        ):
+            embeddings = tf.get_variable(
+                name="embeddings",
+                shape=[params["vocab_size"], params["embedding_dim"]],
+                initializer=params["embedding_initializer"],
+                trainable=False,
+                dtype=tf.float32,
+            )
+
+        # initializer = params["embedding_initializer"]
+        # value = initializer()
+        # # embeddings_saver = tf.train.Saver()
+
+        # def init_fn(scaffold, sess):
+        #     sess.run(embeddings.initializer, {embeddings.initial_value: value})
+        #     # path = embeddings_saver.save(
+        #     #     sess, join(params["model_dir"], "embeddings")
+        #     # )
+        #     # cprnt(row=path)
+
+        # # scaffold = tf.train.Scaffold(init_fn=init_fn, saver=embeddings_saver)
+        # scaffold = tf.train.Scaffold(init_fn=init_fn)
+
+        # left_embeddings = get_embedded_seq(left_ids, embedding_matrix)
+        # target_embeddings = get_embedded_seq(target_ids, embedding_matrix)
+        # right_embeddings = get_embedded_seq(right_ids, embedding_matrix)
+
+        left_embeddings = tf.nn.embedding_lookup(
+            params=embeddings, ids=left_ids
         )
-
-        left_embeddings = get_embedded_seq(left_ids, embedding_matrix)
-        target_embeddings = get_embedded_seq(target_ids, embedding_matrix)
-        right_embeddings = get_embedded_seq(right_ids, embedding_matrix)
-
+        target_embeddings = tf.nn.embedding_lookup(
+            params=embeddings, ids=target_ids
+        )
+        right_embeddings = tf.nn.embedding_lookup(
+            params=embeddings, ids=right_ids
+        )
         with tf.variable_scope("target_bi_lstm"):
             target_hidden_states, _, _ = stack_bidirectional_dynamic_rnn(
                 cells_fw=[
@@ -201,5 +245,10 @@ class LCRRot(TSAModel):
         )
 
         return EstimatorSpec(
-            mode, loss=loss, train_op=train_op, predictions=predictions
+            mode,
+            loss=loss,
+            train_op=train_op,
+            predictions=predictions,
+            scaffold=scaffold,
         )
+
