@@ -84,7 +84,8 @@ def attach(target_modes, addons):
             spec = model_fn(self, features, labels, mode, params)
             if mode in targets:
                 for add_on in addons:
-                    spec = add_on(self, spec, features, labels, params)
+                    if params.get(add_on.__name__, True):
+                        spec = add_on(self, spec, features, labels, params)
             return spec
 
         return wrapper
