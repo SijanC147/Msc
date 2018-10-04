@@ -48,14 +48,11 @@ class TDLstm(TSAModel):
         left_len = seq_lengths(left_ids)
         right_len = seq_lengths(right_ids)
 
-        embedding_matrix = setup_embedding_layer(
-            vocab_size=params["vocab_size"],
-            dim_size=params["embedding_dim"],
-            init=params["embedding_initializer"],
-        )
+        with tf.variable_scope("embedding_layer", reuse=True):
+            embeddings = tf.get_variable("embeddings")
 
-        left_inputs = get_embedded_seq(left_ids, embedding_matrix)
-        right_inputs = get_embedded_seq(right_ids, embedding_matrix)
+        left_embedded = tf.nn.embedding_lookup(embeddings, left_ids)
+        right_embedded = tf.nn.embedding_lookup(embeddings, right_ids)
 
         with tf.variable_scope("left_lstm"):
             _, final_states_left = tf.nn.dynamic_rnn(
@@ -64,7 +61,7 @@ class TDLstm(TSAModel):
                     initializer=params["initializer"],
                     keep_prob=params["keep_prob"],
                 ),
-                inputs=left_inputs,
+                inputs=left_embedded,
                 sequence_length=left_len,
                 dtype=tf.float32,
             )
@@ -76,7 +73,7 @@ class TDLstm(TSAModel):
                     initializer=params["initializer"],
                     keep_prob=params["keep_prob"],
                 ),
-                inputs=right_inputs,
+                inputs=right_embedded,
                 sequence_length=right_len,
                 dtype=tf.float32,
             )

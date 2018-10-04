@@ -21,8 +21,8 @@ from tsaplay.utils.tf import (
     get_embedded_seq,
 )
 from tsaplay.utils.io import cprnt
-from tsaplay.utils.decorators import load_embeddings
-from tsaplay.models.addons import addon, attn_heatmaps
+from tsaplay.utils.decorators import addon
+from tsaplay.models.addons import attn_heatmaps
 
 
 class LCRRot(TSAModel):
@@ -41,8 +41,7 @@ class LCRRot(TSAModel):
             "n_attn_heatmaps": 5,
         }
 
-    @load_embeddings(trainable=True)
-    @addon(["EVAL"], [attn_heatmaps])
+    @addon([attn_heatmaps])
     def model_fn(self, features, labels, mode, params):
         left_ids = sparse_sequences_to_dense(features["left_ids"])
         target_ids = sparse_sequences_to_dense(features["target_ids"])

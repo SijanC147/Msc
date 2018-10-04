@@ -39,14 +39,12 @@ class Lstm(TSAModel):
 
     def model_fn(self, features, labels, mode, params):
         sentence_ids = sparse_sequences_to_dense(features["sentence_ids"])
-        sentence_len = seq_lengths(sentence_ids)
 
-        inputs = tf.contrib.layers.embed_sequence(
-            ids=sentence_ids,
-            vocab_size=params["vocab_size"],
-            embed_dim=params["embedding_dim"],
-            initializer=params["embedding_initializer"],
-        )
+        with tf.variable_scope("embedding_layer", reuse=True):
+            embeddings = tf.get_variable("embeddings")
+
+        sentence_embedded = tf.nn.embedding_lookup(embeddings, sentence_ids)
+        sentence_len = seq_lengths(sentence_ids)
 
         _, final_states = tf.nn.dynamic_rnn(
             cell=dropout_lstm_cell(
@@ -54,7 +52,7 @@ class Lstm(TSAModel):
                 initializer=params["initializer"],
                 keep_prob=params["keep_prob"],
             ),
-            inputs=inputs,
+            inputs=sentence_embedded,
             sequence_length=sentence_len,
             dtype=tf.float32,
         )

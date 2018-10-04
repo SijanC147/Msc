@@ -7,9 +7,7 @@ from os import makedirs, getcwd
 from os.path import join, normpath, basename, splitext, dirname, exists
 
 from tsaplay.utils.decorators import timeit
-
-
-DATA_PATH = join(getcwd(), "tsaplay", "embeddings", "data")
+import tsaplay.embeddings.constants as EMBEDDINGS
 
 
 class Embedding:
@@ -31,7 +29,7 @@ class Embedding:
 
     @property
     def gen_dir(self):
-        gen_dir = join(DATA_PATH, self.name)
+        gen_dir = join(EMBEDDINGS.DATA_PATH, self.name)
         makedirs(gen_dir, exist_ok=True)
         return gen_dir
 

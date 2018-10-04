@@ -48,50 +48,46 @@ class TCLstm(TSAModel):
         left_ids = sparse_sequences_to_dense(features["left_ids"])
         target_ids = sparse_sequences_to_dense(features["target_ids"])
         right_ids = sparse_sequences_to_dense(features["right_ids"])
+
+        with tf.variable_scope("embedding_layer", reuse=True):
+            embeddings = tf.get_variable("embeddings")
+
+        left_embedded = tf.nn.embedding_lookup(embeddings, left_ids)
+        target_embedded = tf.nn.embedding_lookup(embeddings, target_ids)
+        right_embedded = tf.nn.embedding_lookup(embeddings, right_ids)
         left_len = seq_lengths(left_ids)
         target_len = seq_lengths(target_ids)
         right_len = seq_lengths(right_ids)
 
-        embedding_matrix = setup_embedding_layer(
-            vocab_size=params["vocab_size"],
-            dim_size=params["embedding_dim"],
-            init=params["embedding_initializer"],
-        )
-
-        left_embeddings = get_embedded_seq(left_ids, embedding_matrix)
-        target_embeddings = get_embedded_seq(target_ids, embedding_matrix)
-        right_embeddings = get_embedded_seq(right_ids, embedding_matrix)
-
-        max_left_len = tf.shape(left_embeddings)[1]
-        max_right_len = tf.shape(right_embeddings)[1]
+        max_left_len = tf.shape(left_embedded)[1]
+        max_right_len = tf.shape(right_embedded)[1]
 
         with tf.name_scope("target_connection"):
             mean_target_embedding = variable_len_batch_mean(
-                input_tensor=target_embeddings,
+                input_tensor=target_embedded,
                 seq_lengths=target_len,
                 op_name="target_embedding_avg",
             )
-            left_embeddings = tf.stack(
+            left_embedded = tf.stack(
                 values=[
-                    left_embeddings,
-                    tf.ones(tf.shape(left_embeddings)) * mean_target_embedding,
+                    left_embedded,
+                    tf.ones(tf.shape(left_embedded)) * mean_target_embedding,
                 ],
                 axis=2,
             )
-            left_embeddings = tf.reshape(
-                tensor=left_embeddings,
+            left_embedded = tf.reshape(
+                tensor=left_embedded,
                 shape=[-1, max_left_len, 2 * params["embedding_dim"]],
             )
-            right_embeddings = tf.stack(
+            right_embedded = tf.stack(
                 values=[
-                    right_embeddings,
-                    tf.ones(tf.shape(right_embeddings))
-                    * mean_target_embedding,
+                    right_embedded,
+                    tf.ones(tf.shape(right_embedded)) * mean_target_embedding,
                 ],
                 axis=2,
             )
-            right_embeddings = tf.reshape(
-                tensor=right_embeddings,
+            right_embedded = tf.reshape(
+                tensor=right_embedded,
                 shape=[-1, max_right_len, 2 * params["embedding_dim"]],
             )
 
@@ -102,7 +98,7 @@ class TCLstm(TSAModel):
                     initializer=params["initializer"],
                     keep_prob=params["keep_prob"],
                 ),
-                inputs=left_embeddings,
+                inputs=left_embedded,
                 sequence_length=left_len,
                 dtype=tf.float32,
             )
@@ -114,7 +110,7 @@ class TCLstm(TSAModel):
                     initializer=params["initializer"],
                     keep_prob=params["keep_prob"],
                 ),
-                inputs=right_embeddings,
+                inputs=right_embedded,
                 sequence_length=right_len,
                 dtype=tf.float32,
             )

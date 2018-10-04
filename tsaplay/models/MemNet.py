@@ -5,7 +5,8 @@ from tensorflow.estimator import (  # pylint: disable=E0401
     ModeKeys,
 )
 from tsaplay.models.TSAModel import TSAModel
-from tsaplay.models.addons import attach, attn_heatmaps
+from tsaplay.models.addons import attn_heatmaps
+from tsaplay.utils.decorators import addon
 from tsaplay.utils.tf import (
     masked_softmax,
     sparse_sequences_to_dense,
@@ -33,6 +34,7 @@ class MemNet(TSAModel):
             ),
             "n_hops": 8,
             "n_attn_heatmaps": 2,
+            "train_embeddings": False,
         }
 
     @classmethod
@@ -49,22 +51,19 @@ class MemNet(TSAModel):
             "target_offset": features["left"].dense_shape[1] + 1,
         }
 
-    @attach(["EVAL"], [attn_heatmaps])
+    @addon([attn_heatmaps])
     def model_fn(self, features, labels, mode, params):
         target_offset = tf.cast(features["target_offset"], tf.int32)
         context_ids = sparse_sequences_to_dense(features["context_ids"])
         target_ids = sparse_sequences_to_dense(features["target_ids"])
+
+        with tf.variable_scope("embedding_layer", reuse=True):
+            embeddings = tf.get_variable("embeddings")
+
+        memory = tf.nn.embedding_lookup(embeddings, context_ids)
+        target_embedded = tf.nn.embedding_lookup(embeddings, target_ids)
         context_len = seq_lengths(context_ids)
         target_len = seq_lengths(target_ids)
-
-        embedding_matrix = setup_embedding_layer(
-            vocab_size=params["vocab_size"],
-            dim_size=params["embedding_dim"],
-            init=params["embedding_initializer"],
-            trainable=False,
-        )
-        memory = get_embedded_seq(context_ids, embedding_matrix)
-        target_embeddings = get_embedded_seq(target_ids, embedding_matrix)
 
         max_ctxt_len = tf.shape(memory)[1]
 
@@ -75,7 +74,7 @@ class MemNet(TSAModel):
         )
 
         v_aspect = variable_len_batch_mean(
-            input_tensor=target_embeddings,
+            input_tensor=target_embedded,
             seq_lengths=target_len,
             op_name="target_embedding_avg",
         )

@@ -4,6 +4,7 @@ from tensorflow.estimator import (  # pylint: disable=E0401
     ModeKeys,
 )
 from tsaplay.models.TSAModel import TSAModel
+from tsaplay.utils.decorators import addon
 from tsaplay.utils.tf import (
     sparse_sequences_to_dense,
     seq_lengths,
@@ -15,7 +16,7 @@ from tsaplay.utils.tf import (
     setup_embedding_layer,
     get_embedded_seq,
 )
-from tsaplay.models.addons import attach, attn_heatmaps
+from tsaplay.models.addons import attn_heatmaps
 
 
 class Ian(TSAModel):
@@ -47,22 +48,19 @@ class Ian(TSAModel):
             "target_ids": features["target_ids"],
         }
 
-    @attach(["EVAL"], [attn_heatmaps])
+    @addon([attn_heatmaps])
     def model_fn(self, features, labels, mode, params):
         context_ids = sparse_sequences_to_dense(features["context_ids"])
         target_ids = sparse_sequences_to_dense(features["target_ids"])
+
+        with tf.variable_scope("embedding_layer", reuse=True):
+            embeddings = tf.get_variable("embeddings")
+
+        context_embedded = tf.nn.embedding_lookup(embeddings, context_ids)
+        target_embedded = tf.nn.embedding_lookup(embeddings, target_ids)
+
         context_len = seq_lengths(context_ids)
         target_len = seq_lengths(target_ids)
-
-        embedding_matrix = setup_embedding_layer(
-            vocab_size=params["vocab_size"],
-            dim_size=params["embedding_dim"],
-            init=params["embedding_initializer"],
-            trainable=False,
-        )
-
-        context_embeddings = get_embedded_seq(context_ids, embedding_matrix)
-        target_embeddings = get_embedded_seq(target_ids, embedding_matrix)
 
         with tf.variable_scope("context_lstm"):
             context_hidden_states, _ = tf.nn.dynamic_rnn(
@@ -71,7 +69,7 @@ class Ian(TSAModel):
                     initializer=params["initializer"],
                     keep_prob=params["keep_prob"],
                 ),
-                inputs=context_embeddings,
+                inputs=context_embedded,
                 sequence_length=context_len,
                 dtype=tf.float32,
             )
@@ -88,7 +86,7 @@ class Ian(TSAModel):
                     initializer=params["initializer"],
                     keep_prob=params["keep_prob"],
                 ),
-                inputs=target_embeddings,
+                inputs=target_embedded,
                 sequence_length=target_len,
                 dtype=tf.float32,
             )

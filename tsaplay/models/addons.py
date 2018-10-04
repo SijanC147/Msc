@@ -21,13 +21,27 @@ from tensorflow.estimator.export import (  # pylint: disable=E0401
     ServingInputReceiver,
 )
 from tsaplay.utils.io import cprnt
+from tsaplay.utils.decorators import only
 from tsaplay.hooks.SaveAttentionWeightVector import SaveAttentionWeightVector
 from tsaplay.hooks.SaveConfusionMatrix import SaveConfusionMatrix
-from tsaplay.utils.decorators import attach as addon
-
-prepare = partial(addon, order="PRE")
 
 
+def embeddings(model, features, labels, mode, params):
+    vocab_size = params["vocab_size"]
+    dim_size = params["embedding_dim"]
+    num_shards = params["num_shards"]
+    trainable = params.get("train_embeddings", True)
+    with tf.variable_scope("embedding_layer", reuse=tf.AUTO_REUSE):
+        tf.get_variable(
+            "embeddings",
+            shape=[vocab_size, dim_size],
+            partitioner=tf.fixed_size_partitioner(num_shards),
+            trainable=trainable,
+            dtype=tf.float32,
+        )
+
+
+@only(["TRAIN", "EVAL"])
 def cometml(model, features, labels, mode, params):
     if model.comet_experiment is not None:
         model.comet_experiment.context = mode
@@ -37,6 +51,7 @@ def cometml(model, features, labels, mode, params):
         model.comet_experiment.set_filename(inspect.getfile(model.__class__))
 
 
+@only(["PREDICT"])
 def export_outputs(model, features, labels, spec, params):
     probs = spec.predictions["probabilities"]
     classes = tf.constant([model.class_labels])
@@ -51,6 +66,7 @@ def export_outputs(model, features, labels, spec, params):
     return spec._replace(export_outputs=all_export_outputs)
 
 
+@only(["EVAL"])
 def attn_heatmaps(model, features, labels, spec, params):
     eval_hooks = spec.evaluation_hooks
     targets = tf.sparse_tensor_to_dense(features["target"], default_value=b"")
@@ -71,6 +87,7 @@ def attn_heatmaps(model, features, labels, spec, params):
     return spec._replace(evaluation_hooks=eval_hooks)
 
 
+@only(["EVAL"])
 def conf_matrix(model, features, labels, spec, params):
     eval_hooks = spec.evaluation_hooks
     eval_metrics = spec.eval_metric_ops or {}
@@ -98,6 +115,7 @@ def conf_matrix(model, features, labels, spec, params):
     )
 
 
+@only(["TRAIN"])
 def logging(model, features, labels, spec, params):
     std_metrics = {
         "accuracy": tf.metrics.accuracy(
@@ -125,6 +143,7 @@ def logging(model, features, labels, spec, params):
     return spec._replace(training_hooks=train_hooks)
 
 
+@only(["TRAIN"])
 def histograms(model, features, labels, spec, params):
     trainable = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
     for variable in trainable:
@@ -133,6 +152,7 @@ def histograms(model, features, labels, spec, params):
     return spec
 
 
+@only(["TRAIN", "EVAL"])
 def scalars(model, features, labels, spec, params):
     std_metrics = {
         "accuracy": tf.metrics.accuracy(

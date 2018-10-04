@@ -7,7 +7,8 @@ from tensorflow.contrib.rnn import (  # pylint: disable=E0611
     stack_bidirectional_dynamic_rnn
 )
 from tsaplay.models.TSAModel import TSAModel
-from tsaplay.models.addons import attach, attn_heatmaps
+from tsaplay.models.addons import attn_heatmaps
+from tsaplay.utils.decorators import addon
 from tsaplay.utils.tf import (
     masked_softmax,
     sparse_sequences_to_dense,
@@ -41,6 +42,7 @@ class Ram(TSAModel):
             "initializer": tf.initializers.random_uniform(
                 minval=-0.1, maxval=0.1
             ),
+            "train_embeddings": False,
         }
 
     @classmethod
@@ -67,26 +69,22 @@ class Ram(TSAModel):
             "target_offset": features["left"].dense_shape[1] + 1,
         }
 
-    @attach(["EVAL"], [attn_heatmaps])
+    @addon([attn_heatmaps])
     def model_fn(self, features, labels, mode, params):
         target_offset = tf.cast(features["target_offset"], tf.int32)
         sentence_ids = sparse_sequences_to_dense(features["sentence_ids"])
         target_ids = sparse_sequences_to_dense(features["target_ids"])
+
+        with tf.variable_scope("embedding_layer", reuse=True):
+            embeddings = tf.get_variable("embeddings")
+
+        sentence_embedded = tf.nn.embedding_lookup(embeddings, sentence_ids)
+        target_embedded = tf.nn.embedding_lookup(embeddings, target_ids)
         sentence_len = seq_lengths(sentence_ids)
         target_len = seq_lengths(target_ids)
 
-        embedding_matrix = setup_embedding_layer(
-            vocab_size=params["vocab_size"],
-            dim_size=params["embedding_dim"],
-            init=params["embedding_initializer"],
-            trainable=False,
-        )
-
-        sentence_embeddings = get_embedded_seq(sentence_ids, embedding_matrix)
-        target_embeddings = get_embedded_seq(target_ids, embedding_matrix)
-
-        batch_size = tf.shape(sentence_embeddings)[0]
-        max_seq_len = tf.shape(sentence_embeddings)[1]
+        batch_size = tf.shape(sentence_embedded)[0]
+        max_seq_len = tf.shape(sentence_embedded)[1]
 
         forward_cells = []
         backward_cells = []
@@ -110,7 +108,7 @@ class Ram(TSAModel):
             memory_star, _, _ = stack_bidirectional_dynamic_rnn(
                 cells_fw=forward_cells,
                 cells_bw=backward_cells,
-                inputs=sentence_embeddings,
+                inputs=sentence_embedded,
                 sequence_length=sentence_len,
                 dtype=tf.float32,
             )
@@ -129,7 +127,7 @@ class Ram(TSAModel):
         episode_0 = tf.zeros(shape=[batch_size, 1, params["gru_hidden_units"]])
 
         target_avg = variable_len_batch_mean(
-            input_tensor=target_embeddings,
+            input_tensor=target_embedded,
             seq_lengths=target_len,
             op_name="target_avg_pooling",
         )

@@ -59,22 +59,23 @@ def initialize_estimator(func):
     return wrapper
 
 
-def attach(target_modes, addons, order="POST"):
+def attach(addons, modes=None, order="POST"):
     def decorator(model_fn):
         @wraps(model_fn)
         def wrapper(self, features, labels, mode, params):
-            targets = [
+            targets = modes or ["train", "eval", "predict"]
+            target_modes = [
                 {
-                    "TRAIN": ModeKeys.TRAIN,
-                    "EVAL": ModeKeys.EVAL,
-                    "PREDICT": ModeKeys.PREDICT,
-                }.get(trg_mode)
-                for trg_mode in target_modes
+                    "train": ModeKeys.TRAIN,
+                    "eval": ModeKeys.EVAL,
+                    "predict": ModeKeys.PREDICT,
+                }.get(trg_mode.lower())
+                for trg_mode in targets
             ]
             applicable_addons = [
                 addon
                 for addon in addons
-                if mode in targets and params.get(addon.__name__, True)
+                if mode in target_modes and params.get(addon.__name__, True)
             ]
             if order == "PRE":
                 for add_on in applicable_addons:
@@ -91,24 +92,27 @@ def attach(target_modes, addons, order="POST"):
     return decorator
 
 
-def load_embeddings(trainable):
-    def decorator(model_fn):
-        @wraps(model_fn)
-        def wrapper(self, features, labels, mode, params):
-            vocab_size = params["vocab_size"]
-            dim_size = params["embedding_dim"]
-            num_shards = params["num_shards"]
-            with tf.variable_scope("embedding_layer", reuse=tf.AUTO_REUSE):
-                tf.get_variable(
-                    "embeddings",
-                    shape=[vocab_size, dim_size],
-                    partitioner=tf.fixed_size_partitioner(num_shards),
-                    trainable=trainable,
-                    dtype=tf.float32,
-                )
+addon = partial(attach, order="POST")
+prepare = partial(attach, order="PRE")
 
-            spec = model_fn(self, features, labels, mode, params)
-            return spec
+
+def only(modes):
+    def decorator(addon_fn):
+        @wraps(addon_fn)
+        def wrapper(*args, **kwargs):
+            try:
+                context_mode = args[3].mode
+            except AttributeError:
+                context_mode = args[3]
+            except IndexError:
+                context_spec = kwargs.get("spec")
+                if context_spec is not None:
+                    context_mode = context_spec.mode
+                else:
+                    context_mode = kwargs.get("mode")
+            if context_mode.lower() in [m.lower() for m in modes]:
+                return addon_fn(*args, **kwargs)
+            return
 
         return wrapper
 

@@ -22,8 +22,10 @@ def color(key):
     }.get(key, "grey")
 
 
-def cprnt(**kwargs):
+def cprnt(*args, **kwargs):
     output = ""
+    for arg in args:
+        kwargs.update({"row": arg})
     for (c, string) in kwargs.items():
         col = "".join(filter(str.isalpha, c))
         index = col.find("o")
