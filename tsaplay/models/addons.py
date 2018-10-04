@@ -1,5 +1,6 @@
 import tensorflow as tf
-from functools import wraps
+import inspect
+from functools import partial
 from os.path import join
 from os import makedirs, environ
 from tensorflow.estimator import (  # pylint: disable=E0401
@@ -22,10 +23,21 @@ from tensorflow.estimator.export import (  # pylint: disable=E0401
 from tsaplay.utils.io import cprnt
 from tsaplay.hooks.SaveAttentionWeightVector import SaveAttentionWeightVector
 from tsaplay.hooks.SaveConfusionMatrix import SaveConfusionMatrix
-from tsaplay.utils.decorators import attach
+from tsaplay.utils.decorators import attach as addon
+
+prepare = partial(addon, order="PRE")
 
 
-def export_outputs(model, spec, features, labels, params):
+def cometml(model, features, labels, mode, params):
+    if model.comet_experiment is not None:
+        model.comet_experiment.context = mode
+        model.comet_experiment.log_multiple_params(params)
+        model.comet_experiment.set_step(tf.train.get_global_step())
+        model.comet_experiment.set_code(inspect.getsource(model.__class__))
+        model.comet_experiment.set_filename(inspect.getfile(model.__class__))
+
+
+def export_outputs(model, features, labels, spec, params):
     probs = spec.predictions["probabilities"]
     classes = tf.constant([model.class_labels])
     classify_output = ClassificationOutput(classes=classes, scores=probs)
@@ -39,7 +51,7 @@ def export_outputs(model, spec, features, labels, params):
     return spec._replace(export_outputs=all_export_outputs)
 
 
-def attn_heatmaps(model, spec, features, labels, params):
+def attn_heatmaps(model, features, labels, spec, params):
     eval_hooks = spec.evaluation_hooks
     targets = tf.sparse_tensor_to_dense(features["target"], default_value=b"")
     eval_hooks += (
@@ -59,7 +71,7 @@ def attn_heatmaps(model, spec, features, labels, params):
     return spec._replace(evaluation_hooks=eval_hooks)
 
 
-def conf_matrix(model, spec, features, labels, params):
+def conf_matrix(model, features, labels, spec, params):
     eval_hooks = spec.evaluation_hooks
     eval_metrics = spec.eval_metric_ops or {}
     eval_metrics.update(
@@ -86,7 +98,7 @@ def conf_matrix(model, spec, features, labels, params):
     )
 
 
-def logging(model, spec, features, labels, params):
+def logging(model, features, labels, spec, params):
     std_metrics = {
         "accuracy": tf.metrics.accuracy(
             labels=labels,
@@ -113,7 +125,7 @@ def logging(model, spec, features, labels, params):
     return spec._replace(training_hooks=train_hooks)
 
 
-def histograms(model, spec, features, labels, params):
+def histograms(model, features, labels, spec, params):
     trainable = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
     for variable in trainable:
         histogram_name = variable.name.replace(":", "_")
@@ -121,7 +133,7 @@ def histograms(model, spec, features, labels, params):
     return spec
 
 
-def scalars(model, spec, features, labels, params):
+def scalars(model, features, labels, spec, params):
     std_metrics = {
         "accuracy": tf.metrics.accuracy(
             labels=labels,
@@ -150,7 +162,7 @@ def scalars(model, spec, features, labels, params):
     return spec
 
 
-def early_stopping(model, spec, features, labels, params):
+def early_stopping(model, features, labels, spec, params):
     makedirs(model.estimator.eval_dir())
     train_hooks = spec.training_hooks or []
     train_hooks += [

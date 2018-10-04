@@ -70,7 +70,7 @@ class Experiment:
             while exists(experiment_dir):
                 i += 1
                 experiment_dir = join(dir_parent, exp_dir_name + "_" + str(i))
-        makedirs(experiment_dir)
+        makedirs(experiment_dir, exist_ok=True)
         self._experiment_dir = experiment_dir
 
     def _update_export_models_config(self):

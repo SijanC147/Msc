@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import gensim.downloader as gensim_data
+from math import sqrt, floor
 from gensim.models import KeyedVectors
 from os import makedirs, getcwd
 from os.path import join, normpath, basename, splitext, dirname, exists
@@ -59,8 +60,16 @@ class Embedding:
         return self._vectors
 
     @property
+    def num_shards(self):
+        return self._num_shards
+
+    @property
     def initializer(self):
-        partition_size = int(self.vocab_size / 6)
+        return lambda: self.vectors
+
+    @property
+    def partitioned_initializer(self):
+        partition_size = int(self.vocab_size / self.num_shards)
         shape = (self.vocab_size, self.dim_size)
 
         def _init(shape=shape, dtype=tf.float32, partition_info=None):
@@ -102,6 +111,7 @@ class Embedding:
         )
         self._flags = flags
         self._vectors = vectors.astype(np.float32)
+        self._num_shards = self._get_smallest_divisor(self.vocab_size)
 
     def _export_vocabulary_files(self):
         makedirs(dirname(self.vocab_file_path), exist_ok=True)
@@ -122,3 +132,15 @@ class Embedding:
             gensim_model = gensim_data.load(source)
             gensim_model.save(save_model_path)
             return gensim_model
+
+    @classmethod
+    def _get_smallest_divisor(cls, number):
+        if number % 2 == 0:
+            return 2
+        else:
+            square_root = floor(sqrt(number))
+            for i in (3, square_root, 2):
+                if number % i == 0:
+                    return i
+            else:
+                return 1

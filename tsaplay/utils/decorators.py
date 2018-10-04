@@ -59,7 +59,7 @@ def initialize_estimator(func):
     return wrapper
 
 
-def attach(target_modes, addons):
+def attach(target_modes, addons, order="POST"):
     def decorator(model_fn):
         @wraps(model_fn)
         def wrapper(self, features, labels, mode, params):
@@ -71,21 +71,19 @@ def attach(target_modes, addons):
                 }.get(trg_mode)
                 for trg_mode in target_modes
             ]
-            if self.comet_experiment is not None:
-                self.comet_experiment.context = mode
-                self.comet_experiment.log_multiple_params(params)
-                self.comet_experiment.set_step(tf.train.get_global_step())
-                self.comet_experiment.set_code(
-                    inspect.getsource(self.__class__)
-                )
-                self.comet_experiment.set_filename(
-                    inspect.getfile(self.__class__)
-                )
-            spec = model_fn(self, features, labels, mode, params)
-            if mode in targets:
-                for add_on in addons:
-                    if params.get(add_on.__name__, True):
-                        spec = add_on(self, spec, features, labels, params)
+            applicable_addons = [
+                addon
+                for addon in addons
+                if mode in targets and params.get(addon.__name__, True)
+            ]
+            if order == "PRE":
+                for add_on in applicable_addons:
+                    add_on(self, features, labels, mode, params)
+                spec = model_fn(self, features, labels, mode, params)
+            elif order == "POST":
+                spec = model_fn(self, features, labels, mode, params)
+                for add_on in applicable_addons:
+                    spec = add_on(self, features, labels, spec, params)
             return spec
 
         return wrapper
@@ -93,31 +91,23 @@ def attach(target_modes, addons):
     return decorator
 
 
-def scaffold_embeddings(trainable):
+def load_embeddings(trainable):
     def decorator(model_fn):
         @wraps(model_fn)
         def wrapper(self, features, labels, mode, params):
+            vocab_size = params["vocab_size"]
+            dim_size = params["embedding_dim"]
+            num_shards = params["num_shards"]
+            with tf.variable_scope("embedding_layer", reuse=tf.AUTO_REUSE):
+                tf.get_variable(
+                    "embeddings",
+                    shape=[vocab_size, dim_size],
+                    partitioner=tf.fixed_size_partitioner(num_shards),
+                    trainable=trainable,
+                    dtype=tf.float32,
+                )
+
             spec = model_fn(self, features, labels, mode, params)
-            if mode == ModeKeys.TRAIN:
-                with tf.variable_scope("embedding_layer", reuse=tf.AUTO_REUSE):
-                    embeddings = tf.get_variable(
-                        "embeddings",
-                        shape=[params["vocab_size"], params["embedding_dim"]],
-                        trainable=trainable,
-                        dtype=tf.float32,
-                    )
-
-                initializer = params["embedding_initializer"]
-                value = initializer()
-
-                def init_fn(scaffold, sess):
-                    sess.run(
-                        embeddings.initializer,
-                        {embeddings.initial_value: value},
-                    )
-
-                scaffold = tf.train.Scaffold(init_fn=init_fn)
-                spec = spec._replace(scaffold=scaffold)
             return spec
 
         return wrapper

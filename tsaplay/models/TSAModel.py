@@ -12,7 +12,9 @@ from tensorflow.estimator.export import (  # pylint: disable=E0401
 from tsaplay.features.FeatureProvider import FeatureProvider
 from tsaplay.utils.decorators import initialize_estimator, make_input_fn
 from tsaplay.models.addons import (
-    attach,
+    addon,
+    prepare,
+    cometml,
     export_outputs,
     conf_matrix,
     attn_heatmaps,
@@ -143,9 +145,10 @@ class TSAModel(ABC):
 
         return ServingInputReceiver(input_features, inputs)
 
-    @attach(["PREDICT"], [export_outputs])
-    @attach(["EVAL"], [conf_matrix])
-    @attach(["TRAIN"], [logging, histograms])
-    @attach(["EVAL", "TRAIN"], [scalars])
+    @prepare(["TRAIN", "EVAL"], [cometml])
+    @addon(["TRAIN", "EVAL"], [scalars])
+    @addon(["TRAIN"], [logging, histograms])
+    @addon(["EVAL"], [conf_matrix])
+    @addon(["PREDICT"], [export_outputs])
     def _model_fn(self, features, labels, mode, params):
         return self.model_fn(features, labels, mode, params)
