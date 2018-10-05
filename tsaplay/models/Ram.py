@@ -8,18 +8,14 @@ from tensorflow.contrib.rnn import (  # pylint: disable=E0611
 )
 from tsaplay.models.TSAModel import TSAModel
 from tsaplay.models.addons import attn_heatmaps
-from tsaplay.utils.decorators import addon
+from tsaplay.utils.decorators import addon, prep_features
 from tsaplay.utils.tf import (
     masked_softmax,
-    sparse_sequences_to_dense,
-    seq_lengths,
     variable_len_batch_mean,
     dropout_lstm_cell,
     dropout_gru_cell,
     l2_regularized_loss,
     generate_attn_heatmap_summary,
-    setup_embedding_layer,
-    get_embedded_seq,
     create_snapshots_container,
     append_snapshot,
     zip_attn_snapshots_with_sp_literals,
@@ -70,21 +66,11 @@ class Ram(TSAModel):
         }
 
     @addon([attn_heatmaps])
+    @prep_features(["sentence", "target"])
     def model_fn(self, features, labels, mode, params):
         target_offset = tf.cast(features["target_offset"], tf.int32)
-        sentence_ids = sparse_sequences_to_dense(features["sentence_ids"])
-        target_ids = sparse_sequences_to_dense(features["target_ids"])
-
-        with tf.variable_scope("embedding_layer", reuse=True):
-            embeddings = tf.get_variable("embeddings")
-
-        sentence_embedded = tf.nn.embedding_lookup(embeddings, sentence_ids)
-        target_embedded = tf.nn.embedding_lookup(embeddings, target_ids)
-        sentence_len = seq_lengths(sentence_ids)
-        target_len = seq_lengths(target_ids)
-
-        batch_size = tf.shape(sentence_embedded)[0]
-        max_seq_len = tf.shape(sentence_embedded)[1]
+        batch_size = tf.shape(features["sentence_emb"])[0]
+        max_seq_len = tf.shape(features["sentence_emb"])[1]
 
         forward_cells = []
         backward_cells = []
@@ -108,32 +94,34 @@ class Ram(TSAModel):
             memory_star, _, _ = stack_bidirectional_dynamic_rnn(
                 cells_fw=forward_cells,
                 cells_bw=backward_cells,
-                inputs=sentence_embedded,
-                sequence_length=sentence_len,
+                inputs=features["sentence_emb"],
+                sequence_length=features["sentence_len"],
                 dtype=tf.float32,
             )
 
         distances = get_bounded_distance_vectors(
             left_bounds=target_offset,
-            right_bounds=target_offset + target_len,
-            seq_lens=sentence_len,
+            right_bounds=target_offset + features["target_len"],
+            seq_lens=features["sentence_len"],
             max_seq_len=max_seq_len,
         )
 
-        u_t, w_t = calculate_u_t_w_t(sentence_len, max_seq_len, distances)
+        u_t, w_t = calculate_u_t_w_t(
+            features["sentence_len"], max_seq_len, distances
+        )
 
         memory = get_location_weighted_memory(memory_star, w_t, u_t)
 
         episode_0 = tf.zeros(shape=[batch_size, 1, params["gru_hidden_units"]])
 
         target_avg = variable_len_batch_mean(
-            input_tensor=target_embedded,
-            seq_lengths=target_len,
+            input_tensor=features["target_emb"],
+            seq_lengths=features["target_len"],
             op_name="target_avg_pooling",
         )
 
         attn_snapshots = create_snapshots_container(
-            shape_like=sentence_ids, n_snaps=params["n_hops"]
+            shape_like=features["sentence_ids"], n_snaps=params["n_hops"]
         )
 
         attn_layer_num = tf.constant(1)
@@ -145,7 +133,7 @@ class Ram(TSAModel):
 
         def attn_layer_run(attn_layer_num, episode, attn_snapshots):
             mem_prev_ep_v_target = var_len_concatenate(
-                seq_lens=sentence_len,
+                seq_lens=features["sentence_len"],
                 memory=memory,
                 v_target=target_avg,
                 prev_episode=episode,
@@ -160,7 +148,7 @@ class Ram(TSAModel):
 
             with tf.variable_scope("attention_layer", reuse=tf.AUTO_REUSE):
                 attn_scores = ram_attn_unit(
-                    seq_lens=sentence_len,
+                    seq_lens=features["sentence_len"],
                     attn_focus=mem_prev_ep_v_target,
                     weight_dim=weight_dim,
                     init=params["initializer"],
@@ -178,7 +166,7 @@ class Ram(TSAModel):
                         keep_prob=params["keep_prob"],
                     ),
                     inputs=content_i_al,
-                    sequence_length=sentence_len,
+                    sequence_length=features["sentence_len"],
                     dtype=tf.float32,
                 )
 

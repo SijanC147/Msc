@@ -5,14 +5,11 @@ from tensorflow.estimator import (  # pylint: disable=E0401
 )
 from tsaplay.models.TSAModel import TSAModel
 from tsaplay.utils.tf import (
-    sparse_sequences_to_dense,
     sparse_reverse,
-    seq_lengths,
     variable_len_batch_mean,
     dropout_lstm_cell,
-    setup_embedding_layer,
-    get_embedded_seq,
 )
+from tsaplay.utils.decorators import prep_features
 
 
 class TCLstm(TSAModel):
@@ -44,50 +41,39 @@ class TCLstm(TSAModel):
             "target_ids": features["target_ids"],
         }
 
+    @prep_features(["left", "target", "right"])
     def model_fn(self, features, labels, mode, params):
-        left_ids = sparse_sequences_to_dense(features["left_ids"])
-        target_ids = sparse_sequences_to_dense(features["target_ids"])
-        right_ids = sparse_sequences_to_dense(features["right_ids"])
-
-        with tf.variable_scope("embedding_layer", reuse=True):
-            embeddings = tf.get_variable("embeddings")
-
-        left_embedded = tf.nn.embedding_lookup(embeddings, left_ids)
-        target_embedded = tf.nn.embedding_lookup(embeddings, target_ids)
-        right_embedded = tf.nn.embedding_lookup(embeddings, right_ids)
-        left_len = seq_lengths(left_ids)
-        target_len = seq_lengths(target_ids)
-        right_len = seq_lengths(right_ids)
-
-        max_left_len = tf.shape(left_embedded)[1]
-        max_right_len = tf.shape(right_embedded)[1]
+        max_left_len = tf.shape(features["left_emb"])[1]
+        max_right_len = tf.shape(features["right_emb"])[1]
 
         with tf.name_scope("target_connection"):
             mean_target_embedding = variable_len_batch_mean(
-                input_tensor=target_embedded,
-                seq_lengths=target_len,
+                input_tensor=features["target_emb"],
+                seq_lengths=features["target_len"],
                 op_name="target_embedding_avg",
             )
-            left_embedded = tf.stack(
+            features["left_emb"] = tf.stack(
                 values=[
-                    left_embedded,
-                    tf.ones(tf.shape(left_embedded)) * mean_target_embedding,
+                    features["left_emb"],
+                    tf.ones(tf.shape(features["left_emb"]))
+                    * mean_target_embedding,
                 ],
                 axis=2,
             )
-            left_embedded = tf.reshape(
-                tensor=left_embedded,
+            features["left_emb"] = tf.reshape(
+                tensor=features["left_emb"],
                 shape=[-1, max_left_len, 2 * params["embedding_dim"]],
             )
-            right_embedded = tf.stack(
+            features["right_emb"] = tf.stack(
                 values=[
-                    right_embedded,
-                    tf.ones(tf.shape(right_embedded)) * mean_target_embedding,
+                    features["right_emb"],
+                    tf.ones(tf.shape(features["right_emb"]))
+                    * mean_target_embedding,
                 ],
                 axis=2,
             )
-            right_embedded = tf.reshape(
-                tensor=right_embedded,
+            features["right_emb"] = tf.reshape(
+                tensor=features["right_emb"],
                 shape=[-1, max_right_len, 2 * params["embedding_dim"]],
             )
 
@@ -98,8 +84,8 @@ class TCLstm(TSAModel):
                     initializer=params["initializer"],
                     keep_prob=params["keep_prob"],
                 ),
-                inputs=left_embedded,
-                sequence_length=left_len,
+                inputs=features["left_emb"],
+                sequence_length=features["left_len"],
                 dtype=tf.float32,
             )
 
@@ -110,8 +96,8 @@ class TCLstm(TSAModel):
                     initializer=params["initializer"],
                     keep_prob=params["keep_prob"],
                 ),
-                inputs=right_embedded,
-                sequence_length=right_len,
+                inputs=features["right_emb"],
+                sequence_length=features["right_len"],
                 dtype=tf.float32,
             )
 

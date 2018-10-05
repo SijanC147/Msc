@@ -31,12 +31,12 @@ def sparse_reverse(sp_input):
     return tf.sparse_reorder(reversed_sp_input)
 
 
-def seq_lengths(batched_sequences):
+def get_seq_lengths(batched_sequences):
     lengths = tf.reduce_sum(tf.sign(batched_sequences), axis=1)
     return tf.cast(lengths, tf.int32)
 
 
-def concat_seq_sparse(sp_inputs, axis, reverse=False):
+def concat_batched_seq_sparse(sp_inputs, axis, reverse=False):
     concatenated = tf.sparse_concat(sp_inputs=sp_inputs, axis=axis)
     indices = concatenated.indices
 
@@ -255,32 +255,6 @@ def generate_attn_heatmap_summary(*attn_infos):
         tf.add_to_collection("ATTENTION", attn_info)
 
 
-def figure_to_summary(name, figure):
-    # attach a new canvas if not exists
-    if figure.canvas is None:
-        matplotlib.backends.backend_agg.FigureCanvasAgg(figure)
-
-    figure.canvas.draw()
-    w, h = figure.canvas.get_width_height()
-
-    # get PNG data from the figure
-    png_buffer = io.BytesIO()
-    figure.canvas.print_png(png_buffer)
-    png_encoded = png_buffer.getvalue()
-    png_buffer.close()
-
-    summary_image = tf.Summary.Image(
-        height=h,
-        width=w,
-        colorspace=4,  # RGB-A
-        encoded_image_string=png_encoded,
-    )
-    summary = tf.Summary(
-        value=[tf.Summary.Value(tag=name, image=summary_image)]
-    )
-    return summary
-
-
 def image_to_summary(name, image):
     with io.BytesIO() as output:
         image.save(output, "PNG")
@@ -296,28 +270,3 @@ def image_to_summary(name, image):
         value=[tf.Summary.Value(tag=name, image=summary_image)]
     )
     return summary
-
-
-def setup_embedding_layer(
-    vocab_size, dim_size, trainable=True, var_scope="embedding_layer"
-):
-    with tf.variable_scope(var_scope, reuse=tf.AUTO_REUSE):
-        embeddings = tf.get_variable(
-            "embeddings",
-            shape=[vocab_size, dim_size],
-            # initializer=init,
-            trainable=trainable,
-        )
-
-    return embeddings
-
-
-def get_embedded_seq(
-    ids, embedding_matrix, reuse=True, var_scope="embedding_layer"
-):
-    embedded_seq = embed_sequence(
-        ids=ids, initializer=embedding_matrix, scope=var_scope, reuse=True
-    )
-
-    return embedded_seq
-

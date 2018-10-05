@@ -1,20 +1,16 @@
-import tensorflow as tf
 from math import ceil
+import tensorflow as tf
 from tensorflow.estimator import (  # pylint: disable=E0401
     EstimatorSpec,
     ModeKeys,
 )
 from tsaplay.models.TSAModel import TSAModel
 from tsaplay.models.addons import attn_heatmaps
-from tsaplay.utils.decorators import addon
+from tsaplay.utils.decorators import addon, prep_features
 from tsaplay.utils.tf import (
     masked_softmax,
-    sparse_sequences_to_dense,
-    seq_lengths,
     variable_len_batch_mean,
     generate_attn_heatmap_summary,
-    setup_embedding_layer,
-    get_embedded_seq,
     append_snapshot,
     create_snapshots_container,
     zip_attn_snapshots_with_sp_literals,
@@ -52,35 +48,28 @@ class MemNet(TSAModel):
         }
 
     @addon([attn_heatmaps])
+    @prep_features(["context", "target"])
     def model_fn(self, features, labels, mode, params):
         target_offset = tf.cast(features["target_offset"], tf.int32)
-        context_ids = sparse_sequences_to_dense(features["context_ids"])
-        target_ids = sparse_sequences_to_dense(features["target_ids"])
 
-        with tf.variable_scope("embedding_layer", reuse=True):
-            embeddings = tf.get_variable("embeddings")
-
-        memory = tf.nn.embedding_lookup(embeddings, context_ids)
-        target_embedded = tf.nn.embedding_lookup(embeddings, target_ids)
-        context_len = seq_lengths(context_ids)
-        target_len = seq_lengths(target_ids)
+        memory = features["context_emb"]
 
         max_ctxt_len = tf.shape(memory)[1]
 
         context_locations = get_absolute_distance_vector(
             target_locs=target_offset,
-            seq_lens=context_len,
+            seq_lens=features["context_len"],
             max_seq_len=max_ctxt_len,
         )
 
         v_aspect = variable_len_batch_mean(
-            input_tensor=target_embedded,
-            seq_lengths=target_len,
+            input_tensor=features["target_emb"],
+            seq_lengths=features["target_len"],
             op_name="target_embedding_avg",
         )
 
         attn_snapshots = create_snapshots_container(
-            shape_like=context_ids, n_snaps=params["n_hops"]
+            shape_like=features["context_ids"], n_snaps=params["n_hops"]
         )
 
         hop_number = tf.constant(1)
@@ -97,7 +86,7 @@ class MemNet(TSAModel):
 
             v_loc = location_vector_model_fn(
                 locs=context_locations,
-                seq_lens=context_len,
+                seq_lens=features["context_len"],
                 emb_dim=params["embedding_dim"],
                 hop=hop_num,
                 init=params["initializer"],
@@ -119,7 +108,7 @@ class MemNet(TSAModel):
 
             with tf.variable_scope("attention_layer", reuse=tf.AUTO_REUSE):
                 attn_out, attn_snapshot = memnet_content_attn_unit(
-                    seq_lens=context_len,
+                    seq_lens=features["context_len"],
                     memory=ext_memory,
                     v_aspect=input_vec,
                     emb_dim=params["embedding_dim"],

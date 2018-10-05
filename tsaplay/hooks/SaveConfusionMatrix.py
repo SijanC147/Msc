@@ -66,11 +66,11 @@ class SaveConfusionMatrix(SessionRunHook):
                                         graphical representation of the cm
                                         array
         """
-        numClasses = len(self.labels)
+        num_classes = len(self.labels)
 
         fig = plt.figure(
-            figsize=(numClasses, numClasses),
-            dpi=100,
+            figsize=(num_classes, num_classes),
+            # dpi=100,
             facecolor="w",
             edgecolor="k",
         )
@@ -97,7 +97,7 @@ class SaveConfusionMatrix(SessionRunHook):
         ax.yaxis.set_label_position("left")
         ax.yaxis.tick_left()
 
-        for i, j in itertools.product(range(numClasses), range(numClasses)):
+        for i, j in itertools.product(range(num_classes), range(num_classes)):
             ax.text(
                 j,
                 i,

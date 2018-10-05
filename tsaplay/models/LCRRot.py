@@ -1,6 +1,5 @@
-import tensorflow as tf
 from os.path import join
-from tensorflow.contrib.layers import embed_sequence  # pylint: disable=E0611
+import tensorflow as tf
 from tensorflow.estimator import (  # pylint: disable=E0401
     EstimatorSpec,
     ModeKeys,
@@ -10,18 +9,14 @@ from tensorflow.contrib.rnn import (  # pylint: disable=E0611
 )
 from tsaplay.models.TSAModel import TSAModel
 from tsaplay.utils.tf import (
-    sparse_sequences_to_dense,
-    seq_lengths,
     variable_len_batch_mean,
     attention_unit,
     dropout_lstm_cell,
     l2_regularized_loss,
     generate_attn_heatmap_summary,
-    setup_embedding_layer,
-    get_embedded_seq,
 )
 from tsaplay.utils.io import cprnt
-from tsaplay.utils.decorators import addon, inputs
+from tsaplay.utils.decorators import addon, prep_features
 from tsaplay.models.addons import attn_heatmaps
 
 
@@ -42,31 +37,8 @@ class LCRRot(TSAModel):
         }
 
     @addon([attn_heatmaps])
-    @inputs(["left", "target", "right"])
+    @prep_features(["left", "target", "right"])
     def model_fn(self, features, labels, mode, params):
-        # left_ids = sparse_sequences_to_dense(features["left_ids"])
-        # target_ids = sparse_sequences_to_dense(features["target_ids"])
-        # right_ids = sparse_sequences_to_dense(features["right_ids"])
-
-        # with tf.variable_scope("embedding_layer", reuse=True):
-        #     embeddings = tf.get_variable("embeddings")
-
-        # left_embedded = tf.nn.embedding_lookup(embeddings, left_ids)
-        # target_embedded = tf.nn.embedding_lookup(embeddings, target_ids)
-        # right_embedded = tf.nn.embedding_lookup(embeddings, right_ids)
-
-        # left_len = seq_lengths(left_ids)
-        # target_len = seq_lengths(target_ids)
-        # right_len = seq_lengths(right_ids)
-
-        left_embedded = features["left_emb"]
-        target_embedded = features["target_emb"]
-        right_embedded = features["right_emb"]
-
-        left_len = features["left_len"]
-        target_len = features["target_len"]
-        right_len = features["right_len"]
-
         with tf.variable_scope("target_bi_lstm"):
             target_hidden_states, _, _ = stack_bidirectional_dynamic_rnn(
                 cells_fw=[
@@ -83,13 +55,13 @@ class LCRRot(TSAModel):
                         keep_prob=params["keep_prob"],
                     )
                 ],
-                inputs=target_embedded,
-                sequence_length=target_len,
+                inputs=features["target_emb"],
+                sequence_length=features["target_len"],
                 dtype=tf.float32,
             )
             r_t = variable_len_batch_mean(
                 input_tensor=target_hidden_states,
-                seq_lengths=target_len,
+                seq_lengths=features["target_len"],
                 op_name="target_avg_pooling",
             )
 
@@ -109,8 +81,8 @@ class LCRRot(TSAModel):
                         keep_prob=params["keep_prob"],
                     )
                 ],
-                inputs=left_embedded,
-                sequence_length=left_len,
+                inputs=features["left_emb"],
+                sequence_length=features["left_len"],
                 dtype=tf.float32,
             )
 
@@ -130,8 +102,8 @@ class LCRRot(TSAModel):
                         keep_prob=params["keep_prob"],
                     )
                 ],
-                inputs=right_embedded,
-                sequence_length=right_len,
+                inputs=features["right_emb"],
+                sequence_length=features["right_len"],
                 dtype=tf.float32,
             )
 
@@ -139,7 +111,7 @@ class LCRRot(TSAModel):
             r_l, left_attn_info = attention_unit(
                 h_states=left_hidden_states,
                 hidden_units=params["hidden_units"] * 2,
-                seq_lengths=left_len,
+                seq_lengths=features["left_len"],
                 attn_focus=r_t,
                 init=params["initializer"],
                 sp_literal=features["left"],
@@ -149,7 +121,7 @@ class LCRRot(TSAModel):
             r_r, right_attn_info = attention_unit(
                 h_states=right_hidden_states,
                 hidden_units=params["hidden_units"] * 2,
-                seq_lengths=right_len,
+                seq_lengths=features["right_len"],
                 attn_focus=r_t,
                 init=params["initializer"],
                 sp_literal=features["right"],
@@ -159,7 +131,7 @@ class LCRRot(TSAModel):
             r_t_l, left_target_attn_info = attention_unit(
                 h_states=target_hidden_states,
                 hidden_units=params["hidden_units"] * 2,
-                seq_lengths=target_len,
+                seq_lengths=features["target_len"],
                 attn_focus=tf.expand_dims(r_l, axis=1),
                 init=params["initializer"],
                 sp_literal=features["target"],
@@ -169,7 +141,7 @@ class LCRRot(TSAModel):
             r_t_r, right_target_attn_info = attention_unit(
                 h_states=target_hidden_states,
                 hidden_units=params["hidden_units"] * 2,
-                seq_lengths=target_len,
+                seq_lengths=features["target_len"],
                 attn_focus=tf.expand_dims(r_r, axis=1),
                 init=params["initializer"],
                 sp_literal=features["target"],

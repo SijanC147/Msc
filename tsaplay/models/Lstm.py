@@ -4,11 +4,8 @@ from tensorflow.estimator import (  # pylint: disable=E0401
     ModeKeys,
 )
 from tsaplay.models.TSAModel import TSAModel
-from tsaplay.utils.tf import (
-    dropout_lstm_cell,
-    seq_lengths,
-    sparse_sequences_to_dense,
-)
+from tsaplay.utils.tf import dropout_lstm_cell
+from tsaplay.utils.decorators import prep_features
 
 
 class Lstm(TSAModel):
@@ -37,23 +34,16 @@ class Lstm(TSAModel):
             )
         }
 
+    @prep_features(["sentence"])
     def model_fn(self, features, labels, mode, params):
-        sentence_ids = sparse_sequences_to_dense(features["sentence_ids"])
-
-        with tf.variable_scope("embedding_layer", reuse=True):
-            embeddings = tf.get_variable("embeddings")
-
-        sentence_embedded = tf.nn.embedding_lookup(embeddings, sentence_ids)
-        sentence_len = seq_lengths(sentence_ids)
-
         _, final_states = tf.nn.dynamic_rnn(
             cell=dropout_lstm_cell(
                 hidden_units=params["hidden_units"],
                 initializer=params["initializer"],
                 keep_prob=params["keep_prob"],
             ),
-            inputs=sentence_embedded,
-            sequence_length=sentence_len,
+            inputs=features["sentence_emb"],
+            sequence_length=features["sentence_len"],
             dtype=tf.float32,
         )
 

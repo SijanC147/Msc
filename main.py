@@ -1,4 +1,4 @@
-# import comet_ml
+import comet_ml
 from tsaplay.datasets.Dataset import Dataset, DATASETS
 from tsaplay.embeddings.Embedding import Embedding, EMBEDDINGS
 from tsaplay.features.FeatureProvider import FeatureProvider
@@ -28,5 +28,5 @@ experiment = Experiment(
     feature_provider, model, config={"tf_random_seed": 1234}
 )
 experiment.run(job="train+eval", steps=1)
-experiment.launch_tensorboard()
+# experiment.launch_tensorboard()
 # experiment.export_model()

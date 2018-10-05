@@ -11,7 +11,7 @@ from random import choice, randrange
 from math import floor
 from matplotlib.font_manager import FontProperties
 from spacy.attrs import ORTH  # pylint: disable=E0611
-from tsaplay.utils.io import cprnt
+from tsaplay.utils.io import cprnt, get_image_from_plt
 
 
 mpl.use("TkAgg")
@@ -89,7 +89,7 @@ def cmap_int(value, cmap_name="Oranges", alpha=0.8):
 
 
 def draw_attention_heatmap(phrases, attn_vecs):
-    font = ImageFont.truetype(font="./tsaplay/Symbola.ttf", size=24)
+    font = ImageFont.truetype(font="./tsaplay/Symbola.ttf", size=16)
 
     phrases = [[str(t, "utf-8") for t in p if t != b""] for p in phrases]
     attn_vecs = [a[: len(p)] for a, p in zip(attn_vecs, phrases)]
@@ -138,7 +138,7 @@ def tabulate_attention_value(phrases, attn_vecs):
                 [attn_vecs[h][index][w_index] for h in range(len(attn_vecs))]
             )
         images.append(render_mpl_table(df))
-    return join_images(images, v_space=0)
+    return join_images(images, v_space=0, padding=0)
 
 
 def draw_prediction_label(target, label, prediction, classes):
@@ -198,7 +198,7 @@ def render_mpl_table(
         fig, ax = plt.subplots(figsize=size)
         ax.axis("off")
 
-    def pretty_print_decimal(value, precision=6):
+    def pretty_print_decimal(value, precision=4):
         str_value = ("{:." + str(precision) + "f}").format(value)
         decimal = Decimal(str_value).normalize()
         return str(decimal)
@@ -218,7 +218,6 @@ def render_mpl_table(
 
     font = FontProperties(fname="./tsaplay/Symbola.ttf", size=12)
     mpl_table.auto_set_font_size(False)
-    mpl_table.set
 
     cmap = plt.get_cmap("Oranges")
     for k, cell in six.iteritems(mpl_table._cells):
@@ -244,12 +243,7 @@ def render_mpl_table(
         else:
             cell.set_facecolor(cmap(data_arr[k[0] - 1, k[1]], alpha=0.8))
 
-    with BytesIO() as output:
-        plt.savefig(output, format="png")
-        png_enc = output.getvalue()
-
-    image = Image.open(BytesIO(png_enc))
-    plt.close()
+    image = get_image_from_plt(plt)
 
     return image
 

@@ -4,14 +4,8 @@ from tensorflow.estimator import (  # pylint: disable=E0401
     ModeKeys,
 )
 from tsaplay.models.TSAModel import TSAModel
-from tsaplay.utils.tf import (
-    sparse_sequences_to_dense,
-    sparse_reverse,
-    seq_lengths,
-    dropout_lstm_cell,
-    setup_embedding_layer,
-    get_embedded_seq,
-)
+from tsaplay.utils.tf import sparse_reverse, dropout_lstm_cell
+from tsaplay.utils.decorators import prep_features
 
 
 class TDLstm(TSAModel):
@@ -42,18 +36,8 @@ class TDLstm(TSAModel):
             ),
         }
 
+    @prep_features(["left", "right"])
     def model_fn(self, features, labels, mode, params):
-        left_ids = sparse_sequences_to_dense(features["left_ids"])
-        right_ids = sparse_sequences_to_dense(features["right_ids"])
-        left_len = seq_lengths(left_ids)
-        right_len = seq_lengths(right_ids)
-
-        with tf.variable_scope("embedding_layer", reuse=True):
-            embeddings = tf.get_variable("embeddings")
-
-        left_embedded = tf.nn.embedding_lookup(embeddings, left_ids)
-        right_embedded = tf.nn.embedding_lookup(embeddings, right_ids)
-
         with tf.variable_scope("left_lstm"):
             _, final_states_left = tf.nn.dynamic_rnn(
                 cell=dropout_lstm_cell(
@@ -61,8 +45,8 @@ class TDLstm(TSAModel):
                     initializer=params["initializer"],
                     keep_prob=params["keep_prob"],
                 ),
-                inputs=left_embedded,
-                sequence_length=left_len,
+                inputs=features["left_emb"],
+                sequence_length=features["left_len"],
                 dtype=tf.float32,
             )
 
@@ -73,8 +57,8 @@ class TDLstm(TSAModel):
                     initializer=params["initializer"],
                     keep_prob=params["keep_prob"],
                 ),
-                inputs=right_embedded,
-                sequence_length=right_len,
+                inputs=features["right_emb"],
+                sequence_length=features["right_len"],
                 dtype=tf.float32,
             )
 

@@ -4,17 +4,13 @@ from tensorflow.estimator import (  # pylint: disable=E0401
     ModeKeys,
 )
 from tsaplay.models.TSAModel import TSAModel
-from tsaplay.utils.decorators import addon
+from tsaplay.utils.decorators import addon, prep_features
 from tsaplay.utils.tf import (
-    sparse_sequences_to_dense,
-    seq_lengths,
     variable_len_batch_mean,
     dropout_lstm_cell,
     l2_regularized_loss,
     attention_unit,
     generate_attn_heatmap_summary,
-    setup_embedding_layer,
-    get_embedded_seq,
 )
 from tsaplay.models.addons import attn_heatmaps
 
@@ -49,19 +45,8 @@ class Ian(TSAModel):
         }
 
     @addon([attn_heatmaps])
+    @prep_features(["context", "target"])
     def model_fn(self, features, labels, mode, params):
-        context_ids = sparse_sequences_to_dense(features["context_ids"])
-        target_ids = sparse_sequences_to_dense(features["target_ids"])
-
-        with tf.variable_scope("embedding_layer", reuse=True):
-            embeddings = tf.get_variable("embeddings")
-
-        context_embedded = tf.nn.embedding_lookup(embeddings, context_ids)
-        target_embedded = tf.nn.embedding_lookup(embeddings, target_ids)
-
-        context_len = seq_lengths(context_ids)
-        target_len = seq_lengths(target_ids)
-
         with tf.variable_scope("context_lstm"):
             context_hidden_states, _ = tf.nn.dynamic_rnn(
                 cell=dropout_lstm_cell(
@@ -69,13 +54,13 @@ class Ian(TSAModel):
                     initializer=params["initializer"],
                     keep_prob=params["keep_prob"],
                 ),
-                inputs=context_embedded,
-                sequence_length=context_len,
+                inputs=features["context_emb"],
+                sequence_length=features["context_len"],
                 dtype=tf.float32,
             )
             c_avg = variable_len_batch_mean(
                 input_tensor=context_hidden_states,
-                seq_lengths=context_len,
+                seq_lengths=features["context_len"],
                 op_name="context_avg_pooling",
             )
 
@@ -86,13 +71,13 @@ class Ian(TSAModel):
                     initializer=params["initializer"],
                     keep_prob=params["keep_prob"],
                 ),
-                inputs=target_embedded,
-                sequence_length=target_len,
+                inputs=features["target_emb"],
+                sequence_length=features["target_len"],
                 dtype=tf.float32,
             )
             t_avg = variable_len_batch_mean(
                 input_tensor=target_hidden_states,
-                seq_lengths=target_len,
+                seq_lengths=features["target_len"],
                 op_name="target_avg_pooling",
             )
 
@@ -100,7 +85,7 @@ class Ian(TSAModel):
             c_r, ctxt_attn_info = attention_unit(
                 h_states=context_hidden_states,
                 hidden_units=params["hidden_units"],
-                seq_lengths=context_len,
+                seq_lengths=features["context_len"],
                 attn_focus=t_avg,
                 init=params["initializer"],
                 sp_literal=features["context"],
@@ -108,7 +93,7 @@ class Ian(TSAModel):
             t_r, trg_attn_info = attention_unit(
                 h_states=target_hidden_states,
                 hidden_units=params["hidden_units"],
-                seq_lengths=target_len,
+                seq_lengths=features["target_len"],
                 attn_focus=c_avg,
                 init=params["initializer"],
                 sp_literal=features["target"],

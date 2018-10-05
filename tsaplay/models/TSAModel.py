@@ -1,27 +1,17 @@
-# import comet_ml
-import tensorflow as tf
 from abc import ABC, abstractmethod
-from tensorflow.estimator import (  # pylint: disable=E0401
-    RunConfig,
-    Estimator,
-    ModeKeys,
-)
+import comet_ml
+import tensorflow as tf
+from tensorflow.estimator import RunConfig, Estimator  # pylint: disable=E0401
 from tensorflow.estimator.export import (  # pylint: disable=E0401
     ServingInputReceiver
 )
 from tsaplay.features.FeatureProvider import FeatureProvider
-from tsaplay.utils.decorators import (
-    initialize_estimator,
-    make_input_fn,
-    addon,
-    prepare,
-)
+from tsaplay.utils.decorators import make_input_fn, addon, prepare
 from tsaplay.models.addons import (
     embeddings,
     cometml,
     export_outputs,
     conf_matrix,
-    attn_heatmaps,
     logging,
     histograms,
     scalars,
@@ -58,23 +48,23 @@ class TSAModel(ABC):
     def model_fn(self, features, labels, mode, params):
         pass
 
-    # def attach_comet_ml_experiment(self, api_key, exp_key):
-    # self._comet_experiment = comet_ml.ExistingExperiment(
-    #     api_key=api_key, previous_experiment=exp_key
-    # )
+    def attach_comet_ml_experiment(self, api_key, exp_key):
+        self._comet_experiment = comet_ml.ExistingExperiment(
+            api_key=api_key, previous_experiment=exp_key
+        )
 
     @classmethod
     @make_input_fn("TRAIN")
-    def train_input_fn(self, tfrecord, batch_size):
+    def train_input_fn(cls, tfrecord, batch_size):
         pass
 
     @classmethod
     @make_input_fn("EVAL")
-    def eval_input_fn(self, tfrecord, batch_size):
+    def eval_input_fn(cls, tfrecord, batch_size):
         pass
 
-    @initialize_estimator
     def train(self, feature_provider, steps):
+        self._initialize_estimator(feature_provider.embedding_params)
         self._estimator.train(
             input_fn=lambda: self.train_input_fn(
                 tfrecord=feature_provider.train_tfrecords,
@@ -83,8 +73,8 @@ class TSAModel(ABC):
             steps=steps,
         )
 
-    @initialize_estimator
     def evaluate(self, feature_provider):
+        self._initialize_estimator(feature_provider.embedding_params)
         self._estimator.evaluate(
             input_fn=lambda: self.eval_input_fn(
                 tfrecord=feature_provider.test_tfrecords,
@@ -92,8 +82,8 @@ class TSAModel(ABC):
             )
         )
 
-    @initialize_estimator
     def train_and_eval(self, feature_provider, steps):
+        self._initialize_estimator(feature_provider.embedding_params)
         train_spec = tf.estimator.TrainSpec(
             input_fn=lambda: self.train_input_fn(
                 tfrecord=feature_provider.train_tfrecords,
@@ -114,8 +104,8 @@ class TSAModel(ABC):
             eval_spec=eval_spec,
         )
 
-    @initialize_estimator
     def export(self, directory, embedding_params):
+        self._initialize_estimator(embedding_params)
         self._estimator.export_savedmodel(
             export_dir_base=directory,
             serving_input_receiver_fn=self._serving_input_receiver_fn,
@@ -154,3 +144,9 @@ class TSAModel(ABC):
     @addon([export_outputs])
     def _model_fn(self, features, labels, mode, params):
         return self.model_fn(features, labels, mode, params)
+
+    def _initialize_estimator(self, embedding_params):
+        self.params.update(embedding_params)
+        self._estimator = Estimator(
+            model_fn=self._model_fn, params=self.params, config=self.run_config
+        )

@@ -1,27 +1,11 @@
 import time
-import inspect
-import tensorflow as tf
-from contextlib import suppress
 from datetime import timedelta
 from functools import wraps, partial
+import tensorflow as tf
+from tensorflow.estimator import ModeKeys, Estimator  # pylint: disable=E0401
 from tsaplay.utils.io import cprnt
-from tsaplay.utils.data import parse_tf_example, prep_dataset
-from tsaplay.utils.tf import sparse_sequences_to_dense, seq_lengths
-from tensorflow.estimator import RunConfig, Estimator  # pylint: disable=E0401
-from tensorflow.estimator import (  # pylint: disable=E0401
-    ModeKeys,
-    RunConfig,
-    Estimator,
-)
-from tensorflow.saved_model.signature_constants import (
-    DEFAULT_SERVING_SIGNATURE_DEF_KEY
-)
-from tensorflow.estimator.export import (  # pylint: disable=E0401
-    PredictOutput,
-    RegressionOutput,
-    ClassificationOutput,
-    ServingInputReceiver,
-)
+from tsaplay.utils.data import prep_dataset
+from tsaplay.utils.tf import sparse_sequences_to_dense, get_seq_lengths
 
 
 def timeit(pre="", post=""):
@@ -42,36 +26,18 @@ def timeit(pre="", post=""):
     return inner_decorator
 
 
-def initialize_estimator(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        emb_params = (
-            kwargs.get("embedding_params")
-            or kwargs.get("feature_provider").embedding_params
-        )
-        args[0].params = {**args[0].params, **emb_params}
-        args[0]._estimator = Estimator(
-            model_fn=args[0]._model_fn,
-            params=args[0].params,
-            config=args[0].run_config,
-        )
-        return func(*args, **kwargs)
-
-    return wrapper
-
-
-def inputs(input_components):
+def prep_features(feature_components):
     def decorator(model_fn):
         @wraps(model_fn)
         def wrapper(self, features, labels, mode, params):
             with tf.variable_scope("embedding_layer", reuse=True):
                 embeddings = tf.get_variable("embeddings")
-            for component in input_components:
+            for component in feature_components:
                 ids = component + "_ids"
                 lens = component + "_len"
                 embdd = component + "_emb"
                 dense_ids = sparse_sequences_to_dense(features[ids])
-                lengths = seq_lengths(dense_ids)
+                lengths = get_seq_lengths(dense_ids)
                 embedded = tf.nn.embedding_lookup(embeddings, dense_ids)
                 features.update(
                     {ids: dense_ids, lens: lengths, embdd: embedded}
