@@ -13,12 +13,12 @@ EXPORT_PATH = join(getcwd(), "export")
 
 
 class Experiment:
-    def __init__(self, feature_provider, model, contd_tag=None, conf=None):
+    def __init__(self, feature_provider, model, contd_tag=None, config=None):
         self.fp = feature_provider
         self.model = model
         self.contd_tag = contd_tag
         self._initialize_experiment_dir()
-        self._initialize_model_run_config(conf or {})
+        self._initialize_model_run_config(config or {})
         # if self.contd_tag is not None:
         #     self._setup_comet_ml_experiment()
 

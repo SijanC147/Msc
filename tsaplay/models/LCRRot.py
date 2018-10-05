@@ -21,7 +21,7 @@ from tsaplay.utils.tf import (
     get_embedded_seq,
 )
 from tsaplay.utils.io import cprnt
-from tsaplay.utils.decorators import addon
+from tsaplay.utils.decorators import addon, inputs
 from tsaplay.models.addons import attn_heatmaps
 
 
@@ -42,21 +42,30 @@ class LCRRot(TSAModel):
         }
 
     @addon([attn_heatmaps])
+    @inputs(["left", "target", "right"])
     def model_fn(self, features, labels, mode, params):
-        left_ids = sparse_sequences_to_dense(features["left_ids"])
-        target_ids = sparse_sequences_to_dense(features["target_ids"])
-        right_ids = sparse_sequences_to_dense(features["right_ids"])
+        # left_ids = sparse_sequences_to_dense(features["left_ids"])
+        # target_ids = sparse_sequences_to_dense(features["target_ids"])
+        # right_ids = sparse_sequences_to_dense(features["right_ids"])
 
-        with tf.variable_scope("embedding_layer", reuse=True):
-            embeddings = tf.get_variable("embeddings")
+        # with tf.variable_scope("embedding_layer", reuse=True):
+        #     embeddings = tf.get_variable("embeddings")
 
-        left_embedded = tf.nn.embedding_lookup(embeddings, left_ids)
-        target_embedded = tf.nn.embedding_lookup(embeddings, target_ids)
-        right_embedded = tf.nn.embedding_lookup(embeddings, right_ids)
+        # left_embedded = tf.nn.embedding_lookup(embeddings, left_ids)
+        # target_embedded = tf.nn.embedding_lookup(embeddings, target_ids)
+        # right_embedded = tf.nn.embedding_lookup(embeddings, right_ids)
 
-        left_len = seq_lengths(left_ids)
-        target_len = seq_lengths(target_ids)
-        right_len = seq_lengths(right_ids)
+        # left_len = seq_lengths(left_ids)
+        # target_len = seq_lengths(target_ids)
+        # right_len = seq_lengths(right_ids)
+
+        left_embedded = features["left_emb"]
+        target_embedded = features["target_emb"]
+        right_embedded = features["right_emb"]
+
+        left_len = features["left_len"]
+        target_len = features["target_len"]
+        right_len = features["right_len"]
 
         with tf.variable_scope("target_bi_lstm"):
             target_hidden_states, _, _ = stack_bidirectional_dynamic_rnn(

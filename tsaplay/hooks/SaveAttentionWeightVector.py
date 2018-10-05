@@ -16,8 +16,10 @@ from tsaplay.utils.nlp import (
     draw_attention_heatmap,
     draw_prediction_label,
     stack_images,
+    tabulate_attention_value,
 )
 from tsaplay.utils.tf import image_to_summary
+from tsaplay.utils.io import cprnt, temp_pngs
 
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt  # nopep8
@@ -74,6 +76,7 @@ class SaveAttentionWeightVector(SessionRunHook):
         )
 
         images = []
+        tables = []
         for i in indices:
             if self.n_hops is None:
                 phrases = [
@@ -85,9 +88,11 @@ class SaveAttentionWeightVector(SessionRunHook):
                 attn_heatmap = draw_attention_heatmap(
                     phrases=phrases, attn_vecs=attn_vecs
                 )
+                attn_table = tabulate_attention_value(phrases, [attn_vecs])
             else:
                 i_hop = i * self.n_hops
                 hop_images = []
+                hop_attns = []
                 for ih in range(i_hop, i_hop + self.n_hops):
                     phrases = [
                         attn_mech[0][ih].tolist() for attn_mech in attn_mechs
@@ -99,6 +104,8 @@ class SaveAttentionWeightVector(SessionRunHook):
                         phrases=phrases, attn_vecs=attn_vecs
                     )
                     hop_images.append(attn_heatmap_hop)
+                    hop_attns.append(attn_vecs)
+                attn_table = tabulate_attention_value(phrases, hop_attns)
                 attn_heatmap = stack_images(hop_images, h_space=10)
 
             target = " ".join(
@@ -114,21 +121,26 @@ class SaveAttentionWeightVector(SessionRunHook):
             )
 
             images.append(stack_images([attn_heatmap, pred_label], h_space=10))
+            tables.append(stack_images([attn_table, pred_label], h_space=0))
 
-        final_image = stack_images(images, h_space=40)
+        final_heatmaps = stack_images(images, h_space=40)
+        final_tables = stack_images(tables, h_space=40)
 
         if self._comet is not None:
-            temp_dir = mkdtemp()
-            image_path = join(temp_dir, "attention_heatmap.png")
-            final_image.save(image_path)
-            self._comet.log_image(image_path)
-            rmtree(temp_dir)
+            image_names = ["attention_heatmap", "attention_tables"]
+            images = [final_heatmaps, final_tables]
+            for temp_png in temp_pngs(images, image_names):
+                self._comet.log_image(temp_png)
 
-        summary = image_to_summary(
-            name="Attention Heatmaps", image=final_image
+        heatmap_summary = image_to_summary(
+            name="Attention Heatmaps", image=final_heatmaps
         )
+        self._summary_writer.add_summary(heatmap_summary, global_step)
 
-        self._summary_writer.add_summary(summary, global_step)
+        table_summary = image_to_summary(
+            name="Attention Tables", image=final_tables
+        )
+        self._summary_writer.add_summary(table_summary, global_step)
 
     def _tile_over_hops(self, value, n_hops):
         value = np.expand_dims(value, axis=1)

@@ -10,19 +10,23 @@ from tsaplay.experiments.Experiment import Experiment
 from tsaplay.models.LCRRot import LCRRot
 
 # from tsaplay.models.Ian import Ian
-# from tsaplay.models.MemNet import MemNet
-# from tsaplay.models.Ram import Ram
+from tsaplay.models.MemNet import MemNet
 
-dataset = Dataset(*DATASETS.DONG)
+from tsaplay.models.Ram import Ram
+
+dataset = Dataset(*DATASETS.DEBUG)
 glv = Embedding(EMBEDDINGS.GLOVE_WIKI_GIGA_50)
-model = LCRRot(
-    params={"hidden_units": 5, "batch_size": 5, "attn_heatmaps": False},
-    config={"tf_random_seed": 1234},
+# model = LCRRot(
+#     params={"n_attn_heatmaps": 2, "hidden_units": 5, "batch_size": 5}
+# )
+model = MemNet(
+    params={"n_attn_heatmaps": 2, "hidden_units": 5, "batch_size": 5}
 )
-
 feature_provider = FeatureProvider(datasets=[dataset], embedding=glv)
 
-experiment = Experiment(feature_provider, model)
-experiment.run(job="train+eval", steps=100)
-# experiment.launch_tensorboard()
+experiment = Experiment(
+    feature_provider, model, config={"tf_random_seed": 1234}
+)
+experiment.run(job="train+eval", steps=1)
+experiment.launch_tensorboard()
 # experiment.export_model()

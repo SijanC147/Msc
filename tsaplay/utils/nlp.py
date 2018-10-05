@@ -1,12 +1,17 @@
 import spacy
+import six
+import pandas as pd
 import numpy as np
 import matplotlib as mpl
+from decimal import Decimal
+from io import BytesIO
 from tqdm import tqdm
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from random import choice, randrange
 from math import floor
 from matplotlib.font_manager import FontProperties
 from spacy.attrs import ORTH  # pylint: disable=E0611
+from tsaplay.utils.io import cprnt
 
 
 mpl.use("TkAgg")
@@ -120,6 +125,22 @@ def draw_attention_heatmap(phrases, attn_vecs):
     return new_image
 
 
+def tabulate_attention_value(phrases, attn_vecs):
+    images = []
+    phrases = [[str(t, "utf-8") for t in p if t != b""] for p in phrases]
+    n_hops = len(attn_vecs)
+    for index, phrase in enumerate(phrases):
+        df = pd.DataFrame()
+        if n_hops > 1:
+            df["Hop"] = [h + 1 for h in range(n_hops)]
+        for w_index, word in enumerate(phrase):
+            df[word] = np.concatenate(
+                [attn_vecs[h][index][w_index] for h in range(len(attn_vecs))]
+            )
+        images.append(render_mpl_table(df))
+    return join_images(images, v_space=0)
+
+
 def draw_prediction_label(target, label, prediction, classes):
     h_space = 10
     v_space = 5
@@ -159,7 +180,83 @@ def draw_prediction_label(target, label, prediction, classes):
     return final_image
 
 
+def render_mpl_table(
+    data,
+    col_width=1,
+    row_height=0.3,
+    header_color="#40466e",
+    row_colors=["#f1f1f2", "w"],
+    edge_color="w",
+    bbox=[0, 0, 1, 1],
+    ax=None,
+    **kwargs,
+):
+    if ax is None:
+        size = (np.array(data.shape[::-1]) + np.array([0, 1])) * np.array(
+            [col_width, row_height]
+        )
+        fig, ax = plt.subplots(figsize=size)
+        ax.axis("off")
+
+    def pretty_print_decimal(value, precision=6):
+        str_value = ("{:." + str(precision) + "f}").format(value)
+        decimal = Decimal(str_value).normalize()
+        return str(decimal)
+
+    data_arr = np.asarray(data)
+    n_hops = len(data_arr)
+    alpha_inc = 1 / n_hops
+    cell_text = [[pretty_print_decimal(i) for i in j] for j in data.values]
+
+    mpl_table = ax.table(
+        cellText=cell_text,
+        bbox=bbox,
+        colLabels=data.columns,
+        cellLoc="center",
+        **kwargs,
+    )
+
+    font = FontProperties(fname="./tsaplay/Symbola.ttf", size=12)
+    mpl_table.auto_set_font_size(False)
+    mpl_table.set
+
+    cmap = plt.get_cmap("Oranges")
+    for k, cell in six.iteritems(mpl_table._cells):
+        cell.set_edgecolor(edge_color)
+        cell.set_text_props(fontproperties=font)
+        if k[0] == 0:
+            if k[1] == 0 and n_hops > 1:
+                cell.set_text_props(weight="bold", color="w")
+                cell.set_facecolor(header_color)
+            else:
+                cell.set_text_props(color="w")
+                col = mpl.colors.to_rgba(header_color, alpha=0.7)
+                cell.set_facecolor(col)
+        elif k[1] == 0 and n_hops > 1:
+            cell.set_text_props(weight="bold", color="w")
+            if k[0] == 0:
+                cell.set_facecolor(header_color)
+            else:
+                col = mpl.colors.to_rgba(
+                    header_color, alpha=(0 + alpha_inc * k[0])
+                )
+                cell.set_facecolor(col)
+        else:
+            cell.set_facecolor(cmap(data_arr[k[0] - 1, k[1]], alpha=0.8))
+
+    with BytesIO() as output:
+        plt.savefig(output, format="png")
+        png_enc = output.getvalue()
+
+    image = Image.open(BytesIO(png_enc))
+    plt.close()
+
+    return image
+
+
 def stack_images(images, h_space=10):
+    if len(images) == 0:
+        return
     widths, heights = zip(*(im.size for im in images))
 
     total_height = sum(heights) + h_space * len(images)
@@ -177,6 +274,8 @@ def stack_images(images, h_space=10):
 
 
 def join_images(images, v_space=5, border=None, padding=2):
+    if len(images) == 0:
+        return
     widths, heights = zip(*(im.size for im in images))
 
     total_width = sum(widths) + v_space * (len(images) - 1) + 2 * padding

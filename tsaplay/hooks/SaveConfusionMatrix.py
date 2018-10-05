@@ -11,7 +11,8 @@ from os.path import join
 from tempfile import mkdtemp
 from shutil import rmtree
 from tensorflow.train import SessionRunHook
-from tsaplay.utils.tf import figure_to_summary
+from tsaplay.utils.tf import image_to_summary
+from tsaplay.utils.io import get_image_from_plt, temp_pngs
 
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt  # nopep8
@@ -47,15 +48,13 @@ class SaveConfusionMatrix(SessionRunHook):
             .astype(int)
         )
         globalStep = tf.train.get_global_step().eval(session=session)
-        figure = self._plot_confusion_matrix(cm)
+        image = self._plot_confusion_matrix(cm)
         if self._comet is not None:
-            temp_dir = mkdtemp()
-            figure_path = join(temp_dir, "confusion_matrix.png")
-            figure.savefig(figure_path)
-            self._comet.log_image(figure_path)
-            rmtree(temp_dir)
-        summary = figure_to_summary(
-            name=self.confusion_matrix_tensor_name, figure=figure
+            for temp_png in temp_pngs(image, ["confusion_matrix"]):
+                self._comet.log_image(temp_png)
+
+        summary = image_to_summary(
+            name=self.confusion_matrix_tensor_name, image=image
         )
         self._summary_writer.add_summary(summary, globalStep)
 
@@ -108,4 +107,7 @@ class SaveConfusionMatrix(SessionRunHook):
                 color="black",
             )
         fig.set_tight_layout(True)
-        return fig
+
+        image = get_image_from_plt(plt)
+        return image
+        # return fig

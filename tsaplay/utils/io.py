@@ -1,5 +1,6 @@
 import sys
 import docker
+import pprint
 from inspect import getsource, getfile
 from termcolor import colored
 from datetime import datetime, timedelta
@@ -7,6 +8,10 @@ from pickle import load, dump, HIGHEST_PROTOCOL
 from os.path import isfile, join, dirname, exists
 from json import dumps
 from os import listdir, system, makedirs
+from tempfile import mkdtemp
+from shutil import rmtree
+from io import BytesIO
+from PIL import Image
 from csv import DictReader, DictWriter
 
 
@@ -27,6 +32,7 @@ def cprnt(*args, **kwargs):
     for arg in args:
         kwargs.update({"row": arg})
     for (c, string) in kwargs.items():
+        string = pprint.pformat(string)
         col = "".join(filter(str.isalpha, c))
         index = col.find("o")
         if index != -1:
@@ -114,3 +120,25 @@ def search_dir(dir, query, first=False, files_only=False):
     else:
         results = [join(dir, f) for f in listdir(dir) if query in f]
     return results[0] if first else results
+
+
+def temp_pngs(images, names):
+    temp_dir = mkdtemp()
+    try:
+        i = 0
+        while i < len(names):
+            path = join(temp_dir, names[i] + ".png")
+            images[i].save(path)
+            i += 1
+            yield path
+    finally:
+        rmtree(temp_dir)
+
+
+def get_image_from_plt(plt):
+    with BytesIO() as output:
+        plt.savefig(output, format="png")
+        image_bytes = output.getvalue()
+
+    plt.close()
+    return Image.open(BytesIO(image_bytes))

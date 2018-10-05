@@ -37,7 +37,7 @@ class Ram(TSAModel):
             "lstm_hidden_units": 100,
             "gru_hidden_units": 50,
             "n_lstm_layers": 2,
-            "n_hops": 3,
+            "n_hops": 9,
             "n_attn_heatmaps": 2,
             "initializer": tf.initializers.random_uniform(
                 minval=-0.1, maxval=0.1

@@ -1,5 +1,6 @@
 import tensorflow as tf
 from tensorflow.estimator import ModeKeys  # pylint: disable=E0401
+from PIL import Image
 import numpy as np
 import matplotlib
 import io
