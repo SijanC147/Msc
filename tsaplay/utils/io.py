@@ -13,6 +13,7 @@ from shutil import rmtree
 from io import BytesIO
 from PIL import Image
 from csv import DictReader, DictWriter
+from contextlib import contextmanager
 
 
 def color(key):
@@ -128,7 +129,7 @@ def temp_pngs(images, names):
         i = 0
         while i < len(names):
             path = join(temp_dir, names[i] + ".png")
-            images[i].save(path)
+            images[i].save(path, optimize=True)
             i += 1
             yield path
     finally:
@@ -137,8 +138,8 @@ def temp_pngs(images, names):
 
 def get_image_from_plt(plt):
     with BytesIO() as output:
-        plt.savefig(output, format="png", bbox_inches="tight", pad_inches=0)
+        plt.savefig(output, format="png", bbox_inches="tight")
+        plt.close()
         image_bytes = output.getvalue()
 
-    plt.close()
     return Image.open(BytesIO(image_bytes))

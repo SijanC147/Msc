@@ -1,18 +1,15 @@
-import tensorflow as tf
-from os.path import join, exists, isfile
-from os import getcwd, makedirs, listdir
-from json import dumps
+from os.path import join, exists
+from os import getcwd, makedirs
 from csv import DictWriter
 from datetime import datetime
+import tensorflow as tf
 from tensorflow.train import BytesList, Feature, Features, Example, Int64List
 from tensorflow.python.client.timeline import Timeline  # pylint: disable=E0611
 from tensorflow.python_io import TFRecordWriter
-from tensorflow.contrib.data import shuffle_and_repeat  # pylint: disable=E0611
 
 from tsaplay.utils.decorators import timeit
 from tsaplay.utils.nlp import tokenize_phrases
 from tsaplay.utils.data import parse_tf_example
-from tsaplay.embeddings.Embedding import Embedding
 
 
 DATA_PATH = join(getcwd(), "tsaplay", "features", "data")
@@ -137,7 +134,7 @@ class FeatureProvider:
     @timeit("Tokenizing dataset", "Tokenization complete")
     def tokens_from_dict(cls, dictionary):
         offsets = dictionary.get("offsets", [])
-        if len(offsets) == 0:
+        if not offsets:
             offsets = cls.get_target_offset_array(dictionary)
         dictionary = {**dictionary, "offsets": offsets}
         l_ctxts, trgs, r_ctxts = cls.partition_sentences(

@@ -7,6 +7,7 @@ import io
 import itertools
 import matplotlib
 
+from os import getcwd
 from os.path import join
 from tempfile import mkdtemp
 from shutil import rmtree
@@ -19,7 +20,7 @@ from tsaplay.utils.nlp import (
     tabulate_attention_value,
 )
 from tsaplay.utils.tf import image_to_summary
-from tsaplay.utils.io import cprnt, temp_pngs
+from tsaplay.utils.io import cprnt, temp_pngs, get_image_from_plt
 
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt  # nopep8
@@ -127,6 +128,7 @@ class SaveAttentionWeightVector(SessionRunHook):
         final_tables = stack_images(tables, h_space=40)
 
         if self._comet is not None:
+            self._comet.set_step(global_step)
             image_names = ["attention_heatmap", "attention_tables"]
             images = [final_heatmaps, final_tables]
             for temp_png in temp_pngs(images, image_names):

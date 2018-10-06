@@ -17,26 +17,26 @@ from tsaplay.utils.tf import (
 )
 from tsaplay.utils.io import cprnt
 from tsaplay.utils.decorators import addon, prep_features
-from tsaplay.models.addons import attn_heatmaps
+from tsaplay.models.addons import attn_heatmaps, export_graph
 
 
 class LCRRot(TSAModel):
     def set_params(self):
         return {
-            "batch_size": 50,
+            "batch_size": 25,
             "n_out_classes": 3,
             "learning_rate": 0.1,
             "l2_weight": 1e-5,
             "momentum": 0.9,
             "keep_prob": 0.5,
-            "hidden_units": 300,
+            "hidden_units": 200,
             "initializer": tf.initializers.random_uniform(
                 minval=-0.1, maxval=0.1
             ),
             "n_attn_heatmaps": 5,
         }
 
-    @addon([attn_heatmaps])
+    @addon([attn_heatmaps, export_graph])
     @prep_features(["left", "target", "right"])
     def model_fn(self, features, labels, mode, params):
         with tf.variable_scope("target_bi_lstm"):

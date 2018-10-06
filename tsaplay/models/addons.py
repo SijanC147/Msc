@@ -46,9 +46,54 @@ def cometml(model, features, labels, mode, params):
     if model.comet_experiment is not None:
         model.comet_experiment.context = mode
         model.comet_experiment.log_multiple_params(params)
-        model.comet_experiment.set_step(tf.train.get_global_step())
         model.comet_experiment.set_code(inspect.getsource(model.__class__))
         model.comet_experiment.set_filename(inspect.getfile(model.__class__))
+        if mode == ModeKeys.TRAIN:
+            model.comet_experiment.set_step(tf.train.get_global_step())
+
+
+@only(["TRAIN"])
+def export_graph(model, features, labels, spec, params):
+    if model.comet_experiment is not None:
+
+        def init_fn(scaffold, sess):
+            model.comet_experiment.set_model_graph(sess.graph)
+
+        scaffold = tf.train.Scaffold(init_fn=init_fn)
+        return spec._replace(scaffold=scaffold)
+    return spec
+
+
+# def scaffold_embeddings(trainable):
+#     def decorator(model_fn):
+#         @wraps(model_fn)
+#         def wrapper(self, features, labels, mode, params):
+#             spec = model_fn(self, features, labels, mode, params)
+#             if mode == ModeKeys.TRAIN:
+#                 with tf.variable_scope("embedding_layer", reuse=tf.AUTO_REUSE):
+#                     embeddings = tf.get_variable(
+#                         "embeddings",
+#                         shape=[params["vocab_size"], params["embedding_dim"]],
+#                         trainable=trainable,
+#                         dtype=tf.float32,
+#                     )
+
+#                 initializer = params["embedding_initializer"]
+#                 value = initializer()
+
+#                 def init_fn(scaffold, sess):
+#                     sess.run(
+#                         embeddings.initializer,
+#                         {embeddings.initial_value: value},
+#                     )
+
+#                 scaffold = tf.train.Scaffold(init_fn=init_fn)
+#                 spec = spec._replace(scaffold=scaffold)
+#             return spec
+
+#         return wrapper
+
+#     return decorator
 
 
 @only(["PREDICT"])

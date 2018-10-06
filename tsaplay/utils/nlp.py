@@ -130,6 +130,8 @@ def tabulate_attention_value(phrases, attn_vecs):
     phrases = [[str(t, "utf-8") for t in p if t != b""] for p in phrases]
     n_hops = len(attn_vecs)
     for index, phrase in enumerate(phrases):
+        if not phrase:
+            continue
         df = pd.DataFrame()
         if n_hops > 1:
             df["Hop"] = [h + 1 for h in range(n_hops)]
@@ -249,12 +251,12 @@ def render_mpl_table(
 
 
 def stack_images(images, h_space=10):
-    if len(images) == 0:
+    if not images:
         return
     widths, heights = zip(*(im.size for im in images))
 
     total_height = sum(heights) + h_space * len(images)
-    max_width = sum(widths)
+    max_width = max(widths)
 
     stacked_image = Image.new(mode="RGBA", size=(max_width, total_height))
 
@@ -268,7 +270,7 @@ def stack_images(images, h_space=10):
 
 
 def join_images(images, v_space=5, border=None, padding=2):
-    if len(images) == 0:
+    if not images:
         return
     widths, heights = zip(*(im.size for im in images))
 

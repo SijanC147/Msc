@@ -38,7 +38,9 @@ def prep_features(feature_components):
                 embdd = component + "_emb"
                 dense_ids = sparse_sequences_to_dense(features[ids])
                 lengths = get_seq_lengths(dense_ids)
-                embedded = tf.nn.embedding_lookup(embeddings, dense_ids)
+                embedded = tf.nn.embedding_lookup(
+                    embeddings, dense_ids, partition_strategy="div"
+                )
                 features.update(
                     {ids: dense_ids, lens: lengths, embdd: embedded}
                 )

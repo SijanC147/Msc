@@ -14,19 +14,23 @@ from tsaplay.models.MemNet import MemNet
 
 from tsaplay.models.Ram import Ram
 
-dataset = Dataset(*DATASETS.DEBUG)
-glv = Embedding(EMBEDDINGS.GLOVE_WIKI_GIGA_50)
-# model = LCRRot(
-#     params={"n_attn_heatmaps": 2, "hidden_units": 5, "batch_size": 5}
-# )
-model = MemNet(
-    params={"n_attn_heatmaps": 2, "hidden_units": 5, "batch_size": 5}
-)
-feature_provider = FeatureProvider(datasets=[dataset], embedding=glv)
 
-experiment = Experiment(
-    feature_provider, model, config={"tf_random_seed": 1234}
-)
-experiment.run(job="train+eval", steps=1)
-# experiment.launch_tensorboard()
-# experiment.export_model()
+def main():
+    datasets = [Dataset(*DATASETS.DONG)]
+    embedding = Embedding(EMBEDDINGS.GLOVE_TWITTER_200)
+
+    feature_provider = FeatureProvider(datasets, embedding)
+
+    model = LCRRot()
+
+    experiment = Experiment(
+        feature_provider, model, contd_tag="dong-twitter-200-200hu-div"
+    )
+
+    experiment.run(job="train+eval", steps=600)
+    # experiment.launch_tensorboard()
+    # experiment.export_model()
+
+
+if __name__ == "__main__":
+    main()

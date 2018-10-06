@@ -21,14 +21,13 @@ class MemNet(TSAModel):
     def set_params(self):
         return {
             "batch_size": 25,
-            "max_seq_length": 85,
             "n_out_classes": 3,
             "learning_rate": 0.01,
             "location_model": 2,
             "initializer": tf.initializers.random_uniform(
                 minval=-0.01, maxval=0.01
             ),
-            "n_hops": 8,
+            "n_hops": 5,
             "n_attn_heatmaps": 2,
             "train_embeddings": False,
         }
