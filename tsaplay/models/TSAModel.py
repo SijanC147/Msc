@@ -1,16 +1,15 @@
 from abc import ABC, abstractmethod
-import comet_ml
+
+# import comet_ml
 import tensorflow as tf
 from tensorflow.estimator import RunConfig, Estimator  # pylint: disable=E0401
 from tensorflow.estimator.export import (  # pylint: disable=E0401
     ServingInputReceiver
 )
 from tsaplay.features.FeatureProvider import FeatureProvider
-from tsaplay.utils.decorators import make_input_fn, addon, prepare
+from tsaplay.utils.decorators import make_input_fn, addon, cometml
 from tsaplay.models.addons import (
-    embeddings,
-    cometml,
-    export_outputs,
+    prediction_outputs,
     conf_matrix,
     logging,
     histograms,
@@ -49,9 +48,10 @@ class TSAModel(ABC):
         pass
 
     def attach_comet_ml_experiment(self, api_key, exp_key):
-        self._comet_experiment = comet_ml.ExistingExperiment(
-            api_key=api_key, previous_experiment=exp_key
-        )
+        self._comet_experiment = None
+        # self._comet_experiment = comet_ml.ExistingExperiment(
+        #     api_key=api_key, previous_experiment=exp_key
+        # )
 
     @classmethod
     @make_input_fn("TRAIN")
@@ -138,10 +138,10 @@ class TSAModel(ABC):
         inputs = {"instances": inputs_serialized}
 
         return ServingInputReceiver(input_features, inputs)
-
-    @prepare([cometml, embeddings])
+        
+    @cometml
     @addon([scalars, logging, histograms, conf_matrix])
-    @addon([export_outputs])
+    @addon([prediction_outputs])
     def _model_fn(self, features, labels, mode, params):
         return self.model_fn(features, labels, mode, params)
 

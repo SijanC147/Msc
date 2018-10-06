@@ -33,7 +33,8 @@ def cprnt(*args, **kwargs):
     for arg in args:
         kwargs.update({"row": arg})
     for (c, string) in kwargs.items():
-        string = pprint.pformat(string)
+        if not isinstance(string, str):
+            string = pprint.pformat(string)
         col = "".join(filter(str.isalpha, c))
         index = col.find("o")
         if index != -1:

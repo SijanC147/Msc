@@ -70,10 +70,13 @@ class Embedding:
         partition_size = int(self.vocab_size / self.num_shards)
         shape = (self.vocab_size, self.dim_size)
 
+        # def _init(shape=shape, dtype=tf.float32, partition_info=None):
+        #     part_offset = partition_info.single_offset(shape)
+        #     this_slice = part_offset + partition_size
+        #     return self.vectors[part_offset:this_slice]
+
         def _init(shape=shape, dtype=tf.float32, partition_info=None):
-            part_offset = partition_info.single_offset(shape)
-            this_slice = part_offset + partition_size
-            return self.vectors[part_offset:this_slice]
+            return self.vectors
 
         self.__initializer = _init
         return self.__initializer

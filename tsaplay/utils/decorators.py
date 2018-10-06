@@ -1,11 +1,16 @@
 import time
+import inspect
 from datetime import timedelta
 from functools import wraps, partial
 import tensorflow as tf
 from tensorflow.estimator import ModeKeys, Estimator  # pylint: disable=E0401
 from tsaplay.utils.io import cprnt
 from tsaplay.utils.data import prep_dataset
-from tsaplay.utils.tf import sparse_sequences_to_dense, get_seq_lengths
+from tsaplay.utils.tf import (
+    sparse_sequences_to_dense,
+    get_seq_lengths,
+    scaffold_init_fn_on_spec,
+)
 
 
 def timeit(pre="", post=""):
@@ -30,16 +35,27 @@ def prep_features(feature_components):
     def decorator(model_fn):
         @wraps(model_fn)
         def wrapper(self, features, labels, mode, params):
-            with tf.variable_scope("embedding_layer", reuse=True):
-                embeddings = tf.get_variable("embeddings")
+            vocab_size = params["vocab_size"]
+            dim_size = params["embedding_dim"]
+            trainable = params.get("train_embeddings", True)
+            with tf.variable_scope("embedding_layer", reuse=tf.AUTO_REUSE):
+                embeddings = tf.get_variable(
+                    "embeddings",
+                    shape=[vocab_size, dim_size],
+                    trainable=trainable,
+                    dtype=tf.float32,
+                )
             for component in feature_components:
                 ids = component + "_ids"
                 lens = component + "_len"
                 embdd = component + "_emb"
                 dense_ids = sparse_sequences_to_dense(features[ids])
                 lengths = get_seq_lengths(dense_ids)
-                embedded = tf.nn.embedding_lookup(
-                    embeddings, dense_ids, partition_strategy="div"
+                embedded = tf.contrib.layers.embed_sequence(
+                    ids=dense_ids,
+                    initializer=embeddings,
+                    scope="embedding_layer",
+                    reuse=True,
                 )
                 features.update(
                     {ids: dense_ids, lens: lengths, embdd: embedded}
@@ -49,6 +65,39 @@ def prep_features(feature_components):
         return wrapper
 
     return decorator
+
+
+def cometml(model_fn):
+    @wraps(model_fn)
+    def wrapper(self, features, labels, mode, params):
+        if self.comet_experiment is None or mode == ModeKeys.PREDICT:
+            return model_fn(self, features, labels, mode, params)
+        if mode in [ModeKeys.TRAIN, ModeKeys.EVAL]:
+            self.comet_experiment.context = mode
+            self.comet_experiment.log_multiple_params(params)
+            self.comet_experiment.set_code(inspect.getsource(self.__class__))
+            self.comet_experiment.set_filename(inspect.getfile(self.__class__))
+            self.comet_experiment.log_dataset_hash((features, labels))
+            self.comet_experiment.set_git_metadata()
+            if mode == ModeKeys.TRAIN:
+                global_step = tf.train.get_global_step()
+                self.comet_experiment.set_step(global_step)
+                self.comet_experiment.log_current_epoch(global_step)
+
+            spec = model_fn(self, features, labels, mode, params)
+
+            if mode == ModeKeys.TRAIN:
+
+                def export_graph_to_comet(scaffold, sess):
+                    self.comet_experiment.set_model_graph(sess.graph)
+
+                spec = scaffold_init_fn_on_spec(spec, export_graph_to_comet)
+
+                self.comet_experiment.log_epoch_end(global_step)
+            
+            return spec
+
+    return wrapper
 
 
 def attach(addons, modes=None, order="POST"):

@@ -1,8 +1,8 @@
-import tensorflow as tf
 import inspect
 from functools import partial
 from os.path import join
 from os import makedirs, environ
+import tensorflow as tf
 from tensorflow.estimator import (  # pylint: disable=E0401
     ModeKeys,
     RunConfig,
@@ -16,9 +16,7 @@ from tensorflow.contrib.estimator import (  # pylint: disable=E0611
 )
 from tensorflow.estimator.export import (  # pylint: disable=E0401
     PredictOutput,
-    RegressionOutput,
     ClassificationOutput,
-    ServingInputReceiver,
 )
 from tsaplay.utils.io import cprnt
 from tsaplay.utils.decorators import only
@@ -26,78 +24,9 @@ from tsaplay.hooks.SaveAttentionWeightVector import SaveAttentionWeightVector
 from tsaplay.hooks.SaveConfusionMatrix import SaveConfusionMatrix
 
 
-def embeddings(model, features, labels, mode, params):
-    vocab_size = params["vocab_size"]
-    dim_size = params["embedding_dim"]
-    num_shards = params["num_shards"]
-    trainable = params.get("train_embeddings", True)
-    with tf.variable_scope("embedding_layer", reuse=tf.AUTO_REUSE):
-        tf.get_variable(
-            "embeddings",
-            shape=[vocab_size, dim_size],
-            partitioner=tf.fixed_size_partitioner(num_shards),
-            trainable=trainable,
-            dtype=tf.float32,
-        )
-
-
-@only(["TRAIN", "EVAL"])
-def cometml(model, features, labels, mode, params):
-    if model.comet_experiment is not None:
-        model.comet_experiment.context = mode
-        model.comet_experiment.log_multiple_params(params)
-        model.comet_experiment.set_code(inspect.getsource(model.__class__))
-        model.comet_experiment.set_filename(inspect.getfile(model.__class__))
-        if mode == ModeKeys.TRAIN:
-            model.comet_experiment.set_step(tf.train.get_global_step())
-
-
-@only(["TRAIN"])
-def export_graph(model, features, labels, spec, params):
-    if model.comet_experiment is not None:
-
-        def init_fn(scaffold, sess):
-            model.comet_experiment.set_model_graph(sess.graph)
-
-        scaffold = tf.train.Scaffold(init_fn=init_fn)
-        return spec._replace(scaffold=scaffold)
-    return spec
-
-
-# def scaffold_embeddings(trainable):
-#     def decorator(model_fn):
-#         @wraps(model_fn)
-#         def wrapper(self, features, labels, mode, params):
-#             spec = model_fn(self, features, labels, mode, params)
-#             if mode == ModeKeys.TRAIN:
-#                 with tf.variable_scope("embedding_layer", reuse=tf.AUTO_REUSE):
-#                     embeddings = tf.get_variable(
-#                         "embeddings",
-#                         shape=[params["vocab_size"], params["embedding_dim"]],
-#                         trainable=trainable,
-#                         dtype=tf.float32,
-#                     )
-
-#                 initializer = params["embedding_initializer"]
-#                 value = initializer()
-
-#                 def init_fn(scaffold, sess):
-#                     sess.run(
-#                         embeddings.initializer,
-#                         {embeddings.initial_value: value},
-#                     )
-
-#                 scaffold = tf.train.Scaffold(init_fn=init_fn)
-#                 spec = spec._replace(scaffold=scaffold)
-#             return spec
-
-#         return wrapper
-
-#     return decorator
-
 
 @only(["PREDICT"])
-def export_outputs(model, features, labels, spec, params):
+def prediction_outputs(model, features, labels, spec, params):
     probs = spec.predictions["probabilities"]
     classes = tf.constant([model.class_labels])
     classify_output = ClassificationOutput(classes=classes, scores=probs)
@@ -182,7 +111,7 @@ def logging(model, features, labels, spec, params):
                 "accuracy": std_metrics["accuracy"][1],
                 "auc": std_metrics["auc"][1],
             },
-            every_n_iter=100,
+            every_n_iter=10,
         )
     ]
     return spec._replace(training_hooks=train_hooks)

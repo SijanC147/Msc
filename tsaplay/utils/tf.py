@@ -7,6 +7,21 @@ import io
 from tensorflow.contrib.layers import embed_sequence  # pylint: disable=E0611
 
 
+def scaffold_init_fn_on_spec(spec, new_fn):
+    if spec.mode != ModeKeys.TRAIN:
+        return spec
+    scaffold = spec.scaffold
+    prev_init = scaffold.init_fn
+
+    def new_init_fn(scaffold, sess):
+        if prev_init is not None:
+            prev_init(sess)
+        new_fn(scaffold, sess)
+
+    scaffold._init_fn = lambda sess: new_init_fn(scaffold, sess)
+    return spec._replace(scaffold=scaffold)
+
+
 def sparse_sequences_to_dense(sp_sequences):
     if sp_sequences.dtype == tf.string:
         default = b""
