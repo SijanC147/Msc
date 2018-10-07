@@ -25,7 +25,7 @@ from tsaplay.utils.tf import (
 class Ram(TSAModel):
     def set_params(self):
         return {
-            "batch_size": 25,
+            "batch-size": 25,
             "n_out_classes": 3,
             "learning_rate": 0.1,
             "l2_weight": 1e-5,
@@ -143,7 +143,7 @@ class Ram(TSAModel):
                 (params["lstm_hidden_units"] * 2)
                 + 1
                 + params["gru_hidden_units"]
-                + params["embedding_dim"]
+                + params["embedding-dim"]
             )
 
             with tf.variable_scope("attention_layer", reuse=tf.AUTO_REUSE):

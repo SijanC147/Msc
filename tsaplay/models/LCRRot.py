@@ -23,7 +23,7 @@ from tsaplay.models.addons import attn_heatmaps
 class LCRRot(TSAModel):
     def set_params(self):
         return {
-            "batch_size": 100,
+            "batch-size": 100,
             "n_out_classes": 3,
             "learning_rate": 0.1,
             "l2_weight": 1e-5,
@@ -107,7 +107,7 @@ class LCRRot(TSAModel):
                 dtype=tf.float32,
             )
 
-        with tf.variable_scope("left_t2c_attn", reuse=tf.AUTO_REUSE):
+        with tf.variable_scope("left_t2c_attn"):
             r_l, left_attn_info = attention_unit(
                 h_states=left_hidden_states,
                 hidden_units=params["hidden_units"] * 2,
@@ -117,7 +117,7 @@ class LCRRot(TSAModel):
                 sp_literal=features["left"],
             )
 
-        with tf.variable_scope("right_t2c_attn", reuse=tf.AUTO_REUSE):
+        with tf.variable_scope("right_t2c_attn"):
             r_r, right_attn_info = attention_unit(
                 h_states=right_hidden_states,
                 hidden_units=params["hidden_units"] * 2,
@@ -127,7 +127,7 @@ class LCRRot(TSAModel):
                 sp_literal=features["right"],
             )
 
-        with tf.variable_scope("left_c2t_attn", reuse=tf.AUTO_REUSE):
+        with tf.variable_scope("left_c2t_attn"):
             r_t_l, left_target_attn_info = attention_unit(
                 h_states=target_hidden_states,
                 hidden_units=params["hidden_units"] * 2,
@@ -137,7 +137,7 @@ class LCRRot(TSAModel):
                 sp_literal=features["target"],
             )
 
-        with tf.variable_scope("right_c2t_attn", reuse=tf.AUTO_REUSE):
+        with tf.variable_scope("right_c2t_attn"):
             r_t_r, right_target_attn_info = attention_unit(
                 h_states=target_hidden_states,
                 hidden_units=params["hidden_units"] * 2,

@@ -11,7 +11,7 @@ from tsaplay.utils.decorators import prep_features
 class TDLstm(TSAModel):
     def set_params(self):
         return {
-            "batch_size": 100,
+            "batch-size": 100,
             "n_out_classes": 3,
             "learning_rate": 0.01,
             "keep_prob": 0.8,

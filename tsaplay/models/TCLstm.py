@@ -15,11 +15,11 @@ from tsaplay.utils.decorators import prep_features
 class TCLstm(TSAModel):
     def set_params(self):
         return {
-            "batch_size": 100,
+            "batch-size": 100,
             "n_out_classes": 3,
             "learning_rate": 0.01,
             "keep_prob": 0.8,
-            "hidden_units": 50,
+            "hidden_units": 200,
             "initializer": tf.initializers.random_uniform(
                 minval=-0.03, maxval=0.03
             ),
@@ -62,7 +62,7 @@ class TCLstm(TSAModel):
             )
             features["left_emb"] = tf.reshape(
                 tensor=features["left_emb"],
-                shape=[-1, max_left_len, 2 * params["embedding_dim"]],
+                shape=[-1, max_left_len, 2 * params["embedding-dim"]],
             )
             features["right_emb"] = tf.stack(
                 values=[
@@ -74,7 +74,7 @@ class TCLstm(TSAModel):
             )
             features["right_emb"] = tf.reshape(
                 tensor=features["right_emb"],
-                shape=[-1, max_right_len, 2 * params["embedding_dim"]],
+                shape=[-1, max_right_len, 2 * params["embedding-dim"]],
             )
 
         with tf.variable_scope("left_lstm"):

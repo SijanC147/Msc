@@ -20,7 +20,7 @@ from tsaplay.utils.tf import (
 class MemNet(TSAModel):
     def set_params(self):
         return {
-            "batch_size": 25,
+            "batch-size": 25,
             "n_out_classes": 3,
             "learning_rate": 0.01,
             "location_model": 2,
@@ -86,7 +86,7 @@ class MemNet(TSAModel):
             v_loc = location_vector_model_fn(
                 locs=context_locations,
                 seq_lens=features["context_len"],
-                emb_dim=params["embedding_dim"],
+                emb_dim=params["embedding-dim"],
                 hop=hop_num,
                 init=params["initializer"],
             )
@@ -99,7 +99,7 @@ class MemNet(TSAModel):
             with tf.variable_scope("linear_layer", reuse=tf.AUTO_REUSE):
                 linear_out = tf.layers.dense(
                     inputs=tf.squeeze(input_vec, axis=1),
-                    units=params["embedding_dim"],
+                    units=params["embedding-dim"],
                     activation=None,
                     kernel_initializer=params["initializer"],
                     bias_initializer=params["initializer"],
@@ -110,7 +110,7 @@ class MemNet(TSAModel):
                     seq_lens=features["context_len"],
                     memory=ext_memory,
                     v_aspect=input_vec,
-                    emb_dim=params["embedding_dim"],
+                    emb_dim=params["embedding-dim"],
                     init=params["initializer"],
                 )
 

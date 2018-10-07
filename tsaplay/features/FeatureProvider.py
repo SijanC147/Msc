@@ -31,11 +31,10 @@ class FeatureProvider:
     @property
     def embedding_params(self):
         return {
-            "vocab_size": self._embedding.vocab_size,
-            "embedding_dim": self._embedding.dim_size,
-            "vocab_file_path": self._embedding.vocab_file_path,
-            "embedding_initializer": self._embedding.partitioned_initializer,
-            "num_shards": self._embedding.num_shards,
+            "vocab-size": self._embedding.vocab_size,
+            "embedding-dim": self._embedding.dim_size,
+            "vocab-file": self._embedding.vocab_file_path,
+            "embedding-init": self._embedding.partitioned_initializer,
         }
 
     @property

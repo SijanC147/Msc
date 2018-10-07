@@ -1,6 +1,7 @@
 import tensorflow as tf
 from functools import wraps
 from tsaplay.utils.io import cprnt
+from tsaplay.utils.tf import sparse_sequences_to_dense, get_seq_lengths
 
 
 def parse_tf_example(example):
@@ -45,3 +46,23 @@ def prep_dataset(tfrecord, batch_size, processing_fn, mode):
     dataset = dataset.batch(batch_size)
 
     return dataset
+
+
+def make_dense_features(features):
+    dense_features = {}
+    cprnt(features)
+    for key in features:
+        if "_ids" in key:
+            name, _, _ = key.partition("_")
+            name_str = sparse_sequences_to_dense(features[name])
+            name_ids = sparse_sequences_to_dense(features[key])
+            name_lens = get_seq_lengths(name_ids)
+            dense_features.update(
+                {
+                    name: name_str,
+                    name + "_ids_dense": name_ids,
+                    name + "_len": name_lens,
+                }
+            )
+    features.update(dense_features)
+    return features

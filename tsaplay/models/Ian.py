@@ -18,7 +18,7 @@ from tsaplay.models.addons import attn_heatmaps
 class Ian(TSAModel):
     def set_params(self):
         return {
-            "batch_size": 25,
+            "batch-size": 25,
             "max_seq_length": 85,
             "n_out_classes": 3,
             "learning_rate": 0.1,

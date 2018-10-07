@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-# import comet_ml
+import comet_ml
 import tensorflow as tf
 from tensorflow.estimator import RunConfig, Estimator  # pylint: disable=E0401
 from tensorflow.estimator.export import (  # pylint: disable=E0401
@@ -48,27 +48,25 @@ class TSAModel(ABC):
         pass
 
     def attach_comet_ml_experiment(self, api_key, exp_key):
-        self._comet_experiment = None
-        # self._comet_experiment = comet_ml.ExistingExperiment(
-        #     api_key=api_key, previous_experiment=exp_key
-        # )
+        self._comet_experiment = comet_ml.ExistingExperiment(
+            api_key=api_key, previous_experiment=exp_key
+        )
 
     @classmethod
     @make_input_fn("TRAIN")
-    def train_input_fn(cls, tfrecord, batch_size):
+    def train_input_fn(cls, tfrecord, params):
         pass
 
     @classmethod
     @make_input_fn("EVAL")
-    def eval_input_fn(cls, tfrecord, batch_size):
+    def eval_input_fn(cls, tfrecord, params):
         pass
 
     def train(self, feature_provider, steps):
         self._initialize_estimator(feature_provider.embedding_params)
         self._estimator.train(
             input_fn=lambda: self.train_input_fn(
-                tfrecord=feature_provider.train_tfrecords,
-                batch_size=self.params["batch_size"],
+                tfrecord=feature_provider.train_tfrecords, params=self.params
             ),
             steps=steps,
         )
@@ -77,8 +75,7 @@ class TSAModel(ABC):
         self._initialize_estimator(feature_provider.embedding_params)
         self._estimator.evaluate(
             input_fn=lambda: self.eval_input_fn(
-                tfrecord=feature_provider.test_tfrecords,
-                batch_size=self.params["batch_size"],
+                tfrecord=feature_provider.test_tfrecords, params=self.params
             )
         )
 
@@ -86,15 +83,13 @@ class TSAModel(ABC):
         self._initialize_estimator(feature_provider.embedding_params)
         train_spec = tf.estimator.TrainSpec(
             input_fn=lambda: self.train_input_fn(
-                tfrecord=feature_provider.train_tfrecords,
-                batch_size=self.params["batch_size"],
+                tfrecord=feature_provider.train_tfrecords, params=self.params
             ),
             max_steps=steps,
         )
         eval_spec = tf.estimator.EvalSpec(
             input_fn=lambda: self.eval_input_fn(
-                tfrecord=feature_provider.test_tfrecords,
-                batch_size=self.params["batch_size"],
+                tfrecord=feature_provider.test_tfrecords, params=self.params
             ),
             steps=None,
         )
@@ -122,7 +117,7 @@ class TSAModel(ABC):
         parsed_example = tf.parse_example(inputs_serialized, feature_spec)
 
         ids_table = FeatureProvider.index_lookup_table(
-            self.params["vocab_file_path"]
+            self.params["vocab-file"]
         )
         features = {
             "left": parsed_example["left"],
@@ -138,7 +133,7 @@ class TSAModel(ABC):
         inputs = {"instances": inputs_serialized}
 
         return ServingInputReceiver(input_features, inputs)
-        
+
     @cometml
     @addon([scalars, logging, histograms, conf_matrix])
     @addon([prediction_outputs])

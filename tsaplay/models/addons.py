@@ -24,7 +24,6 @@ from tsaplay.hooks.SaveAttentionWeightVector import SaveAttentionWeightVector
 from tsaplay.hooks.SaveConfusionMatrix import SaveConfusionMatrix
 
 
-
 @only(["PREDICT"])
 def prediction_outputs(model, features, labels, spec, params):
     probs = spec.predictions["probabilities"]
