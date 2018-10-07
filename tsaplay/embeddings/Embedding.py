@@ -63,23 +63,24 @@ class Embedding:
 
     @property
     def initializer(self):
-        return lambda: self.vectors
+        shape = (self.vocab_size, self.dim_size)
+
+        def _init(shape=shape, dtype=tf.float32, partition_info=None):
+            return self.vectors
+
+        return _init
 
     @property
     def partitioned_initializer(self):
         partition_size = int(self.vocab_size / self.num_shards)
         shape = (self.vocab_size, self.dim_size)
 
-        # def _init(shape=shape, dtype=tf.float32, partition_info=None):
-        #     part_offset = partition_info.single_offset(shape)
-        #     this_slice = part_offset + partition_size
-        #     return self.vectors[part_offset:this_slice]
+        def _init_part(shape=shape, dtype=tf.float32, partition_info=None):
+            part_offset = partition_info.single_offset(shape)
+            this_slice = part_offset + partition_size
+            return self.vectors[part_offset:this_slice]
 
-        def _init(shape=shape, dtype=tf.float32, partition_info=None):
-            return self.vectors
-
-        self.__initializer = _init
-        return self.__initializer
+        return _init_part
 
     @source.setter
     @timeit("Loading embedding model", "Embedding model loaded")

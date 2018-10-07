@@ -154,31 +154,16 @@ class MemNet(TSAModel):
             bias_initializer=params["initializer"],
         )
 
-        predictions = {
-            "class_ids": tf.argmax(logits, 1),
-            "probabilities": tf.nn.softmax(logits),
-            "logits": logits,
-        }
-
-        if mode == ModeKeys.PREDICT:
-            return EstimatorSpec(mode, predictions=predictions)
-
         loss = tf.losses.sparse_softmax_cross_entropy(
             labels=labels, logits=logits
         )
 
-        if mode == ModeKeys.EVAL:
-            return EstimatorSpec(mode, predictions=predictions, loss=loss)
-
         optimizer = tf.train.GradientDescentOptimizer(
             learning_rate=params["learning_rate"]
         )
-        train_op = optimizer.minimize(
-            loss, global_step=tf.train.get_global_step()
-        )
 
-        return EstimatorSpec(
-            mode, loss=loss, train_op=train_op, predictions=predictions
+        return self.make_estimator_spec(
+            mode=mode, logits=logits, optimizer=optimizer, loss=loss
         )
 
 

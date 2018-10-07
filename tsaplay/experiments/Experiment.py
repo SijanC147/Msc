@@ -84,7 +84,7 @@ class Experiment:
         self._experiment_dir = experiment_dir
 
     def _update_export_models_config(self):
-        config_file = join(EXPORT_PATH, "tfserve.conf")
+        config_file_path = join(EXPORT_PATH, "tfserve.conf")
         config_file_str = "model_config_list: {\n"
         for model in self.get_exported_models():
             config_file_str += (
@@ -96,20 +96,19 @@ class Experiment:
             )
         config_file_str += "}"
 
-        with open(config_file, "w") as f:
-            f.write(config_file_str)
+        with open(config_file_path, "w") as config_file:
+            config_file.write(config_file_str)
 
     def _initialize_model_run_config(self, config_dict):
-        config_dict.update(
-            {
-                "model_dir": join(self._experiment_dir, "tb_summary"),
-                "save_checkpoints_steps": 500,
-                "save_summary_steps": 10,
-                "log_step_count_steps": 10,
-            }
-        )
-        self.model.params.update(config_dict)
-        self.model.run_config = tf.estimator.RunConfig(**config_dict)
+        default_config = {
+            "model_dir": join(self._experiment_dir, "tb_summary"),
+            "save_checkpoints_steps": 500,
+            "save_summary_steps": 25,
+            "log_step_count_steps": 25,
+        }
+        default_config.update(config_dict)
+        self.model.params.update({"model_dir": default_config["model_dir"]})
+        self.model.run_config = tf.estimator.RunConfig(**default_config)
 
     def _setup_comet_ml_experiment(self):
         api_key = environ.get("COMET_ML_API_KEY")

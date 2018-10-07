@@ -2,7 +2,12 @@ from abc import ABC, abstractmethod
 
 import comet_ml
 import tensorflow as tf
-from tensorflow.estimator import RunConfig, Estimator  # pylint: disable=E0401
+from tensorflow.estimator import (
+    RunConfig,
+    Estimator,
+    ModeKeys,
+    EstimatorSpec,
+)  # pylint: disable=E0401
 from tensorflow.estimator.export import (  # pylint: disable=E0401
     ServingInputReceiver
 )
@@ -61,6 +66,27 @@ class TSAModel(ABC):
     @make_input_fn("EVAL")
     def eval_input_fn(cls, tfrecord, params):
         pass
+
+    @classmethod
+    def make_estimator_spec(cls, mode, logits, optimizer, loss):
+        predictions = {
+            "class_ids": tf.argmax(logits, 1),
+            "probabilities": tf.nn.softmax(logits),
+            "logits": logits,
+        }
+        if mode == ModeKeys.PREDICT:
+            return EstimatorSpec(mode, predictions=predictions)
+
+        if mode == ModeKeys.EVAL:
+            return EstimatorSpec(mode, predictions=predictions, loss=loss)
+
+        train_op = optimizer.minimize(
+            loss, global_step=tf.train.get_global_step()
+        )
+
+        return EstimatorSpec(
+            mode, loss=loss, train_op=train_op, predictions=predictions
+        )
 
     def train(self, feature_provider, steps):
         self._initialize_estimator(feature_provider.embedding_params)

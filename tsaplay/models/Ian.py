@@ -111,29 +111,14 @@ class Ian(TSAModel):
             bias_initializer=params["initializer"],
         )
 
-        predictions = {
-            "class_ids": tf.argmax(logits, 1),
-            "probabilities": tf.nn.softmax(logits),
-            "logits": logits,
-        }
-
-        if mode == ModeKeys.PREDICT:
-            return EstimatorSpec(mode, predictions=predictions)
-
         loss = l2_regularized_loss(
             labels=labels, logits=logits, l2_weight=params["l2_weight"]
         )
 
-        if mode == ModeKeys.EVAL:
-            return EstimatorSpec(mode, loss=loss, predictions=predictions)
-
         optimizer = tf.train.MomentumOptimizer(
             learning_rate=params["learning_rate"], momentum=params["momentum"]
         )
-        train_op = optimizer.minimize(
-            loss, global_step=tf.train.get_global_step()
-        )
 
-        return EstimatorSpec(
-            mode, loss=loss, train_op=train_op, predictions=predictions
+        return self.make_estimator_spec(
+            mode=mode, logits=logits, optimizer=optimizer, loss=loss
         )

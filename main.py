@@ -17,21 +17,22 @@ from tsaplay.models.TCLstm import TCLstm
 
 def main():
     datasets = [Dataset(*DATASETS.DONG)]
-    embedding = Embedding(EMBEDDINGS.GLOVE_TWITTER_100)
+    # embedding = Embedding(EMBEDDINGS.GLOVE_TWITTER_200)
+    embedding = Embedding(EMBEDDINGS.GLOVE_WIKI_GIGA_50)
 
     feature_provider = FeatureProvider(datasets, embedding)
 
-    model = TCLstm()
+    model = Lstm()
 
     experiment = Experiment(
         feature_provider,
         model,
-        config={"tf_random_seed": 1234},
-        contd_tag="dong_100_emb",
+        config={"tf_random_seed": 1234, "save_checkpoints_steps": 100},
+        # contd_tag="training_longer",
     )
 
-    experiment.run(job="train+eval", steps=1000)
-    experiment.launch_tensorboard()
+    experiment.run(job="train+eval", steps=100)
+    # experiment.launch_tensorboard()
     # experiment.export_model()
 
 

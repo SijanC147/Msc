@@ -72,10 +72,16 @@ def prep_features(feature_components):
 def cometml(model_fn):
     @wraps(model_fn)
     def wrapper(self, features, labels, mode, params):
-        cprnt(mode)
         if self.comet_experiment is None or mode == ModeKeys.PREDICT:
             return model_fn(self, features, labels, mode, params)
         if mode in [ModeKeys.TRAIN, ModeKeys.EVAL]:
+            self.comet_experiment.log_other(
+                "Feature Provider", params["feature-provider"]
+            )
+            self.comet_experiment.log_other(
+                "Hidden Units", params["hidden_units"]
+            )
+            self.comet_experiment.log_other("Batch Size", params["batch-size"])
             self.comet_experiment.context = mode
             self.comet_experiment.log_multiple_params(params, prefix="HParams")
             self.comet_experiment.log_multiple_params(
@@ -99,7 +105,6 @@ def cometml(model_fn):
                 spec = scaffold_init_fn_on_spec(spec, export_graph_to_comet)
 
                 self.comet_experiment.log_epoch_end(global_step)
-
             return spec
 
     return wrapper

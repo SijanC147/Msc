@@ -15,13 +15,13 @@ from tsaplay.utils.decorators import prep_features
 class TCLstm(TSAModel):
     def set_params(self):
         return {
-            "batch-size": 100,
+            "batch-size": 50,
             "n_out_classes": 3,
-            "learning_rate": 0.01,
-            "keep_prob": 0.8,
+            "learning_rate": 0.1,
+            "keep_prob": 0.5,
             "hidden_units": 200,
             "initializer": tf.initializers.random_uniform(
-                minval=-0.03, maxval=0.03
+                minval=-0.1, maxval=0.1
             ),
         }
 
@@ -109,29 +109,14 @@ class TCLstm(TSAModel):
             inputs=concatenated_final_states, units=params["n_out_classes"]
         )
 
-        predictions = {
-            "class_ids": tf.argmax(logits, 1),
-            "probabilities": tf.nn.softmax(logits),
-            "logits": logits,
-        }
-
-        if mode == ModeKeys.PREDICT:
-            return EstimatorSpec(mode, predictions=predictions)
-
         loss = tf.losses.sparse_softmax_cross_entropy(
             labels=labels, logits=logits
         )
 
-        if mode == ModeKeys.EVAL:
-            return EstimatorSpec(mode, predictions=predictions, loss=loss)
-
         optimizer = tf.train.AdagradOptimizer(
             learning_rate=params["learning_rate"]
         )
-        train_op = optimizer.minimize(
-            loss, global_step=tf.train.get_global_step()
-        )
 
-        return EstimatorSpec(
-            mode, loss=loss, train_op=train_op, predictions=predictions
+        return self.make_estimator_spec(
+            mode=mode, logits=logits, optimizer=optimizer, loss=loss
         )
