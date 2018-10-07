@@ -6,6 +6,7 @@ import tensorflow as tf
 from tensorflow.estimator import ModeKeys, Estimator  # pylint: disable=E0401
 from tsaplay.utils.io import cprnt
 from tsaplay.utils.data import prep_dataset, make_dense_features
+from tsaplay.hooks.CometContextSwitch import CometContextSwitch
 from tsaplay.utils.tf import (
     sparse_sequences_to_dense,
     get_seq_lengths,
@@ -82,7 +83,6 @@ def cometml(model_fn):
                 "Hidden Units", params["hidden_units"]
             )
             self.comet_experiment.log_other("Batch Size", params["batch-size"])
-            self.comet_experiment.context = mode
             self.comet_experiment.log_multiple_params(params, prefix="HParams")
             self.comet_experiment.log_multiple_params(
                 self.run_config.__dict__, prefix="RunConfig"
@@ -95,6 +95,7 @@ def cometml(model_fn):
                 self.comet_experiment.set_step(global_step)
                 self.comet_experiment.log_current_epoch(global_step)
 
+            context_hook = CometContextSwitch(self.comet_experiment, mode)
             spec = model_fn(self, features, labels, mode, params)
 
             if mode == ModeKeys.TRAIN:
@@ -104,7 +105,19 @@ def cometml(model_fn):
 
                 spec = scaffold_init_fn_on_spec(spec, export_graph_to_comet)
 
+                current_training_hooks = list(spec.training_hooks) or []
+                spec = spec._replace(
+                    training_hooks=[context_hook] + current_training_hooks
+                )
+
                 self.comet_experiment.log_epoch_end(global_step)
+            elif mode == ModeKeys.EVAL:
+                current_evaluation_hooks = list(spec.evaluation_hooks) or []
+
+                spec = spec._replace(
+                    evaluation_hooks=current_evaluation_hooks + [context_hook]
+                )
+
             return spec
 
     return wrapper

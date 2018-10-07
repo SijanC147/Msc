@@ -37,6 +37,7 @@ class SaveAttentionWeightVector(SessionRunHook):
         comet=None,
         n_picks=3,
         n_hops=None,
+        mode=None,
     ):
         self.labels = labels
         self.predictions = predictions
@@ -46,6 +47,7 @@ class SaveAttentionWeightVector(SessionRunHook):
         self.n_hops = n_hops
         self._summary_writer = summary_writer
         self._comet = comet
+        self.mode = mode
 
     def before_run(self, run_context):
         return SessionRunArgs(
@@ -143,6 +145,18 @@ class SaveAttentionWeightVector(SessionRunHook):
             name="Attention Tables", image=final_tables
         )
         self._summary_writer.add_summary(table_summary, global_step)
+
+    # def end(self, session):
+    #     cprnt(
+    #         "This is excuting with context: {0} and mode: {1}".format(
+    #             self._comet.context, self.mode
+    #         )
+    #     )
+    #     if (
+    #         self._comet is not None
+    #         and self._comet.context == tf.estimator.ModeKeys.EVAL
+    #     ):
+    #         self._comet.context = tf.estimator.ModeKeys.TRAIN
 
     def _tile_over_hops(self, value, n_hops):
         value = np.expand_dims(value, axis=1)

@@ -2,12 +2,12 @@ from abc import ABC, abstractmethod
 
 import comet_ml
 import tensorflow as tf
-from tensorflow.estimator import (
+from tensorflow.estimator import (  # pylint: disable=E0401
     RunConfig,
     Estimator,
     ModeKeys,
     EstimatorSpec,
-)  # pylint: disable=E0401
+)
 from tensorflow.estimator.export import (  # pylint: disable=E0401
     ServingInputReceiver
 )
@@ -118,6 +118,7 @@ class TSAModel(ABC):
                 tfrecord=feature_provider.test_tfrecords, params=self.params
             ),
             steps=None,
+            throttle_secs=0,
         )
         tf.estimator.train_and_evaluate(
             estimator=self._estimator,

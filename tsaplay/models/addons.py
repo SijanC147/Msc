@@ -23,6 +23,8 @@ from tsaplay.utils.decorators import only
 from tsaplay.hooks.SaveAttentionWeightVector import SaveAttentionWeightVector
 from tsaplay.hooks.SaveConfusionMatrix import SaveConfusionMatrix
 
+# from tsaplay.hooks.CometContextSwitch import CometContextSwitch
+
 
 @only(["PREDICT"])
 def prediction_outputs(model, features, labels, spec, params):
@@ -55,6 +57,7 @@ def attn_heatmaps(model, features, labels, spec, params):
             comet=model.comet_experiment,
             n_picks=params.get("n_attn_heatmaps", 5),
             n_hops=params.get("n_hops"),
+            mode=spec.mode,
         ),
     )
     return spec._replace(evaluation_hooks=eval_hooks)
@@ -110,7 +113,7 @@ def logging(model, features, labels, spec, params):
                 "accuracy": std_metrics["accuracy"][1],
                 "auc": std_metrics["auc"][1],
             },
-            every_n_iter=10,
+            every_n_iter=1,
         )
     ]
     return spec._replace(training_hooks=train_hooks)
@@ -149,9 +152,10 @@ def scalars(model, features, labels, spec, params):
         eval_metrics = spec.eval_metric_ops or {}
         eval_metrics.update(std_metrics)
         spec = spec._replace(eval_metric_ops=eval_metrics)
-    tf.summary.scalar("loss", spec.loss)
-    tf.summary.scalar("accuracy", std_metrics["accuracy"][1])
-    tf.summary.scalar("auc", std_metrics["auc"][1])
+    else:
+        tf.summary.scalar("loss", spec.loss)
+        tf.summary.scalar("accuracy", std_metrics["accuracy"][1])
+        tf.summary.scalar("auc", std_metrics["auc"][1])
     return spec
 
 

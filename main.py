@@ -16,22 +16,27 @@ from tsaplay.models.TCLstm import TCLstm
 
 
 def main():
-    datasets = [Dataset(*DATASETS.DONG)]
+    # datasets = [Dataset(*DATASETS.DONG)]
     # embedding = Embedding(EMBEDDINGS.GLOVE_TWITTER_200)
+    datasets = [Dataset(*DATASETS.DEBUG)]
     embedding = Embedding(EMBEDDINGS.GLOVE_WIKI_GIGA_50)
 
     feature_provider = FeatureProvider(datasets, embedding)
 
-    model = Lstm()
+    model = LCRRot({"batch-size": 5, "hidden_units": 5})
 
     experiment = Experiment(
         feature_provider,
         model,
-        config={"tf_random_seed": 1234, "save_checkpoints_steps": 100},
-        # contd_tag="training_longer",
+        config={
+            "tf_random_seed": 1234,
+            "save_checkpoints_steps": 5,
+            "save_summary_steps": 1,
+        },
+        contd_tag="testing-context-switch-23",
     )
 
-    experiment.run(job="train+eval", steps=100)
+    experiment.run(job="train+eval", steps=15)
     # experiment.launch_tensorboard()
     # experiment.export_model()
 
