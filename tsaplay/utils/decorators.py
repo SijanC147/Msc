@@ -50,19 +50,26 @@ def prep_features(feature_components):
                 )
             for component in feature_components:
                 ids = component + "_ids"
-                lens = component + "_len"
+                # lens = component + "_len"
                 embdd = component + "_emb"
-                dense_ids = sparse_sequences_to_dense(features[ids])
-                lengths = get_seq_lengths(dense_ids)
+                # dense_ids = sparse_sequences_to_dense(features[ids])
+                # lengths = get_seq_lengths(dense_ids)
                 embedded = tf.contrib.layers.embed_sequence(
-                    ids=dense_ids,
+                    ids=features[ids],
                     initializer=embeddings,
                     scope="embedding_layer",
                     reuse=True,
                 )
-                features.update(
-                    {ids: dense_ids, lens: lengths, embdd: embedded}
-                )
+                features.update({embdd: embedded})
+                # embedded = tf.contrib.layers.embed_sequence(
+                #     ids=dense_ids,
+                #     initializer=embeddings,
+                #     scope="embedding_layer",
+                #     reuse=True,
+                # )
+                # features.update(
+                #     {ids: dense_ids, lens: lengths, embdd: embedded}
+                # )
             return model_fn(self, features, labels, mode, params)
 
         return wrapper

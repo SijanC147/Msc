@@ -170,8 +170,9 @@ def attention_unit(
 
     attn_vec = masked_softmax(logits=f_score, mask=mask)
 
-    literal_tensor = sparse_sequences_to_dense(sp_literal)
-    attn_summary_info = tf.tuple([literal_tensor, attn_vec])
+    # literal_tensor = sparse_sequences_to_dense(sp_literal)
+    # attn_summary_info = tf.tuple([literal_tensor, attn_vec])
+    attn_summary_info = tf.tuple([sp_literal, attn_vec])
 
     attn_vec = tf.expand_dims(attn_vec, axis=3)
 

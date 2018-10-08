@@ -29,6 +29,25 @@ def parse_tf_example(example):
     return (features, labels)
 
 
+def make_dense_features(features):
+    dense_features = {}
+    for key in features:
+        if "_ids" in key:
+            name, _, _ = key.partition("_")
+            name_str = sparse_sequences_to_dense(features[name])
+            name_ids = sparse_sequences_to_dense(features[key])
+            name_lens = get_seq_lengths(name_ids)
+            dense_features.update(
+                {
+                    name: name_str,
+                    name + "_ids": name_ids,
+                    name + "_len": name_lens,
+                }
+            )
+    features.update(dense_features)
+    return features
+
+
 def prep_dataset(tfrecords, params, processing_fn, mode):
     shuffle_buffer = params.get("shuffle-bufer", 100000)
     dataset = tf.data.Dataset.list_files(file_pattern=tfrecords)
@@ -47,25 +66,8 @@ def prep_dataset(tfrecords, params, processing_fn, mode):
         dataset = dataset.map(processing_fn)
 
     dataset = dataset.batch(params["batch-size"])
-    dataset = dataset.map(make_dense_features)
+    dataset = dataset.map(
+        lambda features, labels: (make_dense_features(features), labels)
+    )
 
     return dataset
-
-
-def make_dense_features(features, labels):
-    dense_features = {}
-    for key in features:
-        if "_ids" in key:
-            name, _, _ = key.partition("_")
-            name_str = sparse_sequences_to_dense(features[name])
-            name_ids = sparse_sequences_to_dense(features[key])
-            name_lens = get_seq_lengths(name_ids)
-            dense_features.update(
-                {
-                    name: name_str,
-                    name + "_ids": name_ids,
-                    name + "_len": name_lens,
-                }
-            )
-    features.update(dense_features)
-    return (features, labels)

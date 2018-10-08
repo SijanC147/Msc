@@ -1,5 +1,7 @@
 from os.path import normpath, basename, join, exists
 from functools import wraps
+import json
+from numpy import unique
 from tsaplay.utils.nlp import corpus_from_docs
 from tsaplay.utils.io import (
     search_dir,
@@ -17,6 +19,7 @@ class Dataset:
         self.__parser = self._wrap_parser(parser)
         self.__path = path
         self._initialize_all_internals()
+        self._write_stats_file()
 
     @property
     def name(self):
@@ -53,6 +56,25 @@ class Dataset:
     @property
     def all_docs(self):
         return self.__all_docs
+
+    @classmethod
+    def get_stats_dict(cls, **data_dicts):
+        stats = {}
+        for key, value in data_dicts.items():
+            stats[key] = stats.get(key, {})
+            labels = value["labels"]
+            for (lab, cnt) in zip(*unique(labels, return_counts=True)):
+                stats[key].update(
+                    {
+                        str(lab): {
+                            "count": str(cnt),
+                            "percent": str(
+                                round((cnt / len(labels)) * 100, 2)
+                            ),
+                        }
+                    }
+                )
+        return stats
 
     @timeit("Generating corpus for dataset", "Corpus generated")
     def _generate_corpus(self):
@@ -94,6 +116,15 @@ class Dataset:
             _pickle(path=dict_file, data=dictionary)
         return dictionary
 
+    @timeit("Exporting dataset stats", "Dataset stats exported")
+    def _write_stats_file(self):
+        stats = self.get_stats_dict(
+            train=self.__train_dict, test=self.__test_dict
+        )
+        stats_file_path = join(self.path, "_stats.json")
+        with open(stats_file_path, "w+") as stats_file:
+            json.dump(stats, stats_file)
+
     def _wrap_parser(self, _parser):
         @wraps(_parser)
         def wrapper(path):
@@ -105,7 +136,7 @@ class Dataset:
                     "offsets": offsets,
                     "labels": labels,
                 }
-            except:
+            except ValueError:
                 sentences, targets, labels = _parser(path)
                 offsets = [
                     sentence.lower().find(target.lower())
