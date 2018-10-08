@@ -208,9 +208,9 @@ def make_input_fn(mode):
         def input_fn(*args, **kwargs):
             if mode == "TRAIN" or mode == "EVAL":
                 try:
-                    tfrecord = args[1]
+                    tfrecords = args[1]
                 except IndexError:
-                    tfrecord = kwargs.get("tfrecord")
+                    tfrecords = kwargs.get("tfrecords")
                 try:
                     params = args[2]
                 except IndexError:
@@ -222,7 +222,7 @@ def make_input_fn(mode):
                     # return (make_dense_features(processed_features), labels)
 
                 dataset = prep_dataset(
-                    tfrecord=tfrecord,
+                    tfrecords=tfrecords,
                     params=params,
                     processing_fn=process_dataset,
                     mode=mode,

@@ -51,37 +51,6 @@ def get_seq_lengths(batched_sequences):
     return tf.cast(lengths, tf.int32)
 
 
-def concat_batched_seq_sparse(sp_inputs, axis, reverse=False):
-    concatenated = tf.sparse_concat(sp_inputs=sp_inputs, axis=axis)
-    indices = concatenated.indices
-
-    unstacked_indices = tf.unstack(indices, axis=1)
-    batch_group = unstacked_indices[0]
-    _, _, counts = tf.unique_with_counts(batch_group)
-
-    cumulutive = tf.cumsum(counts, exclusive=True, reverse=reverse)
-    offsets = tf.gather(cumulutive, batch_group)
-
-    num_values = tf.shape(batch_group)[0]
-    if reverse:
-        new_value_pos = tf.reverse(tf.range(num_values), axis=[0]) - offsets
-    else:
-        new_value_pos = tf.range(num_values) - offsets
-
-    new_value_pos = tf.cast(new_value_pos, tf.int64)
-    new_indices = tf.transpose(
-        tf.stack([batch_group, new_value_pos]), perm=[1, 0]
-    )
-
-    new_sparse = tf.SparseTensor(
-        new_indices, concatenated.values, concatenated.dense_shape
-    )
-
-    if reverse:
-        return tf.sparse_reorder(new_sparse)
-    return new_sparse
-
-
 def variable_len_batch_mean(input_tensor, seq_lengths, op_name):
     with tf.name_scope(name=op_name):
         input_sum = tf.reduce_sum(

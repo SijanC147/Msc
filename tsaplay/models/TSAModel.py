@@ -59,12 +59,12 @@ class TSAModel(ABC):
 
     @classmethod
     @make_input_fn("TRAIN")
-    def train_input_fn(cls, tfrecord, params):
+    def train_input_fn(cls, tfrecords, params):
         pass
 
     @classmethod
     @make_input_fn("EVAL")
-    def eval_input_fn(cls, tfrecord, params):
+    def eval_input_fn(cls, tfrecords, params):
         pass
 
     @classmethod
@@ -92,7 +92,7 @@ class TSAModel(ABC):
         self._initialize_estimator(feature_provider.embedding_params)
         self._estimator.train(
             input_fn=lambda: self.train_input_fn(
-                tfrecord=feature_provider.train_tfrecords, params=self.params
+                tfrecords=feature_provider.train_tfrecords, params=self.params
             ),
             steps=steps,
         )
@@ -101,7 +101,7 @@ class TSAModel(ABC):
         self._initialize_estimator(feature_provider.embedding_params)
         self._estimator.evaluate(
             input_fn=lambda: self.eval_input_fn(
-                tfrecord=feature_provider.test_tfrecords, params=self.params
+                tfrecords=feature_provider.test_tfrecords, params=self.params
             )
         )
 
@@ -109,13 +109,13 @@ class TSAModel(ABC):
         self._initialize_estimator(feature_provider.embedding_params)
         train_spec = tf.estimator.TrainSpec(
             input_fn=lambda: self.train_input_fn(
-                tfrecord=feature_provider.train_tfrecords, params=self.params
+                tfrecords=feature_provider.train_tfrecords, params=self.params
             ),
             max_steps=steps,
         )
         eval_spec = tf.estimator.EvalSpec(
             input_fn=lambda: self.eval_input_fn(
-                tfrecord=feature_provider.test_tfrecords, params=self.params
+                tfrecords=feature_provider.test_tfrecords, params=self.params
             ),
             steps=None,
             throttle_secs=0,

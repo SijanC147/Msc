@@ -29,15 +29,9 @@ def parse_tf_example(example):
     return (features, labels)
 
 
-def prep_dataset(tfrecord, params, processing_fn, mode):
-    # shuffle_buffer = batch_size * 10
-    # shuffle_buffer = 100000
+def prep_dataset(tfrecords, params, processing_fn, mode):
     shuffle_buffer = params.get("shuffle-bufer", 100000)
-    dataset = tf.data.TFRecordDataset(tfrecord)
-    dataset = dataset.map(parse_tf_example)
-    if processing_fn is not None:
-        dataset = dataset.map(processing_fn)
-
+    dataset = tf.data.Dataset.list_files(file_pattern=tfrecords)
     if mode == "EVAL":
         dataset = dataset.shuffle(buffer_size=shuffle_buffer)
     elif mode == "TRAIN":
@@ -45,14 +39,21 @@ def prep_dataset(tfrecord, params, processing_fn, mode):
             tf.contrib.data.shuffle_and_repeat(buffer_size=shuffle_buffer)
         )
 
+    dataset = dataset.interleave(
+        tf.data.TFRecordDataset, cycle_length=5, block_length=1
+    )
+    dataset = dataset.map(parse_tf_example, num_parallel_calls=5)
+    if processing_fn is not None:
+        dataset = dataset.map(processing_fn)
+
     dataset = dataset.batch(params["batch-size"])
+    dataset = dataset.map(make_dense_features)
 
     return dataset
 
 
-def make_dense_features(features):
+def make_dense_features(features, labels):
     dense_features = {}
-    cprnt(features)
     for key in features:
         if "_ids" in key:
             name, _, _ = key.partition("_")
@@ -62,9 +63,9 @@ def make_dense_features(features):
             dense_features.update(
                 {
                     name: name_str,
-                    name + "_ids_dense": name_ids,
+                    name + "_ids": name_ids,
                     name + "_len": name_lens,
                 }
             )
     features.update(dense_features)
-    return features
+    return (features, labels)

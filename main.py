@@ -21,16 +21,16 @@ def main():
 
     feature_provider = FeatureProvider(datasets, embedding)
 
-    model = LCRRot(params={"shuffle-buffer": 100000, "attn_heatmaps": False})
+    # model = LCRRot(params={"shuffle-buffer": 100000, "attn_heatmaps": False})
 
-    experiment = Experiment(
-        feature_provider,
-        model,
-        config={"tf_random_seed": 1234},
-        contd_tag="larger shuffle buffer",
-    )
+    # experiment = Experiment(
+    #     feature_provider,
+    #     model,
+    #     config={"tf_random_seed": 1234},
+    #     contd_tag="larger shuffle buffer",
+    # )
 
-    experiment.run(job="train+eval", steps=2500)
+    # experiment.run(job="train+eval", steps=2500)
     # experiment.launch_tensorboard()
     # experiment.export_model()
 

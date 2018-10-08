@@ -75,21 +75,25 @@ class FeatureProvider:
             return self._write_filtered_vocab_file(dataset)
 
     def _write_tf_record_files(self, dataset, mode, tf_examples):
-        tf_examples = shuffle(tf_examples).tolist()
+        shuffle(tf_examples)
         num_per_shard = int(
             math.ceil(len(tf_examples) / float(self._num_shards))
         )
+        total_shards = int(math.ceil(len(tf_examples) / float(num_per_shard)))
         folder_path = self._get_tf_record_folder_name(dataset, mode)
-        for shard_no in range(self._num_shards):
+        makedirs(folder_path, exist_ok=True)
+        for shard_no in range(total_shards):
             start = shard_no * num_per_shard
             end = min((shard_no + 1) * num_per_shard, len(tf_examples))
             file_name = "{0}_of_{1}.tfrecord".format(
-                shard_no, self._num_shards
+                shard_no + 1, total_shards
             )
             file_path = join(folder_path, file_name)
             with TFRecordWriter(file_path) as tf_writer:
                 for serialized_example in tf_examples[start:end]:
                     tf_writer.write(serialized_example)
+            if end == len(tf_examples):
+                break
 
         return folder_path
 

@@ -8,6 +8,7 @@ from tsaplay.utils.io import (
     unpickle_file as _unpickle,
     pickle_file as _pickle,
 )
+from tsaplay.utils.decorators import timeit
 import tsaplay.datasets.constants as DATASETS
 
 
@@ -53,6 +54,7 @@ class Dataset:
     def all_docs(self):
         return self.__all_docs
 
+    @timeit("Generating corpus for dataset", "Corpus generated")
     def _generate_corpus(self):
         corpus_file = join(self.path, "_corpus.csv")
         if exists(corpus_file):
@@ -62,6 +64,7 @@ class Dataset:
             corpus_to_csv(corpus_file, corpus)
         return corpus
 
+    @timeit("Initializing dataset internals", "Dataset internals initialized")
     def _initialize_all_internals(self):
         self.__train_file = search_dir(
             dir=self.__path, query="train", first=True, files_only=True
@@ -76,6 +79,7 @@ class Dataset:
         )
         self.__corpus = self._generate_corpus()
 
+    @timeit("Loading dataset dictionary", "Dataset dictionary loaded")
     def _load_dataset_dictionary(self, dict_type):
         if dict_type == "train":
             dict_file = join(self.path, "_train_dict.pkl")
