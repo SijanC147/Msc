@@ -2,7 +2,9 @@ from os.path import join, exists
 from os import getcwd, makedirs
 from csv import DictWriter
 from datetime import datetime
+import math
 import tensorflow as tf
+from numpy.random import shuffle
 from tensorflow.train import BytesList, Feature, Features, Example, Int64List
 from tensorflow.python.client.timeline import Timeline  # pylint: disable=E0611
 from tensorflow.python_io import TFRecordWriter
@@ -16,9 +18,10 @@ DATA_PATH = join(getcwd(), "tsaplay", "features", "data")
 
 
 class FeatureProvider:
-    def __init__(self, datasets, embedding):
+    def __init__(self, datasets, embedding, num_shards=None):
         self._embedding = embedding
         self._datasets = datasets
+        self._num_shards = num_shards or 10
         self.__fetch_dict = self._build_fetch_dict()
         if len(self.__fetch_dict) > 0:
             self._generate_missing_tf_record_files()
@@ -41,14 +44,14 @@ class FeatureProvider:
     @property
     def train_tfrecords(self):
         return [
-            self._get_tf_record_file_name(dataset, "train")
+            self._get_tf_record_folder_pattern(dataset, "train")
             for dataset in self._datasets
         ]
 
     @property
     def test_tfrecords(self):
         return [
-            self._get_tf_record_file_name(dataset, "test")
+            self._get_tf_record_folder_pattern(dataset, "test")
             for dataset in self._datasets
         ]
 
@@ -57,8 +60,12 @@ class FeatureProvider:
         makedirs(gen_dir, exist_ok=True)
         return gen_dir
 
-    def _get_tf_record_file_name(self, dataset, mode):
-        return join(self._get_gen_dir(dataset), "_" + mode + ".tfrecord")
+    def _get_tf_record_folder_pattern(self, dataset, mode):
+        folder = self._get_tf_record_folder_name(dataset, mode)
+        return join(folder, "*.tfrecord")
+
+    def _get_tf_record_folder_name(self, dataset, mode):
+        return join(self._get_gen_dir(dataset), "_" + mode)
 
     def _get_filtered_vocab_file(self, dataset):
         vocab_file = join(self._get_gen_dir(dataset), "_vocab_file.txt")
@@ -67,22 +74,31 @@ class FeatureProvider:
         else:
             return self._write_filtered_vocab_file(dataset)
 
-    def _write_tf_record_file(self, dataset, mode, serialized_examples):
-        file_name = "_" + mode + ".tfrecord"
-        file_path = join(self._get_gen_dir(dataset), file_name)
+    def _write_tf_record_files(self, dataset, mode, tf_examples):
+        tf_examples = shuffle(tf_examples).tolist()
+        num_per_shard = int(
+            math.ceil(len(tf_examples) / float(self._num_shards))
+        )
+        folder_path = self._get_tf_record_folder_name(dataset, mode)
+        for shard_no in range(self._num_shards):
+            start = shard_no * num_per_shard
+            end = min((shard_no + 1) * num_per_shard, len(tf_examples))
+            file_name = "{0}_of_{1}.tfrecord".format(
+                shard_no, self._num_shards
+            )
+            file_path = join(folder_path, file_name)
+            with TFRecordWriter(file_path) as tf_writer:
+                for serialized_example in tf_examples[start:end]:
+                    tf_writer.write(serialized_example)
 
-        with TFRecordWriter(file_path) as tf_writer:
-            for serialized_example in serialized_examples:
-                tf_writer.write(serialized_example)
-
-        return file_path
+        return folder_path
 
     def _build_fetch_dict(self):
         fetch_dict = {}
         for dataset in self._datasets:
             name = dataset.name
             for mode in ["train", "test"]:
-                tf_record_file = self._get_tf_record_file_name(dataset, mode)
+                tf_record_file = self._get_tf_record_folder_name(dataset, mode)
                 if not exists(tf_record_file):
                     fetch_dict[name] = fetch_dict.get(name, {})
                     fetch_dict[name][mode] = self._append_fetches(
@@ -128,7 +144,7 @@ class FeatureProvider:
                 features = self._feature_lists_from_dict(feature_dict)
                 data_zip = zip(*features, labels)
                 tf_examples = [self._make_tf_example(*dz) for dz in data_zip]
-                self._write_tf_record_file(dataset, mode, tf_examples)
+                self._write_tf_record_files(dataset, mode, tf_examples)
 
     @classmethod
     @timeit("Tokenizing dataset", "Tokenization complete")
