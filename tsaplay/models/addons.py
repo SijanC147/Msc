@@ -113,7 +113,7 @@ def logging(model, features, labels, spec, params):
                 "accuracy": std_metrics["accuracy"][1],
                 "auc": std_metrics["auc"][1],
             },
-            every_n_iter=1,
+            every_n_iter=model.run_config.log_step_count_steps or 100,
         )
     ]
     return spec._replace(training_hooks=train_hooks)

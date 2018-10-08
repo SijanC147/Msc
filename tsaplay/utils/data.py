@@ -29,8 +29,10 @@ def parse_tf_example(example):
     return (features, labels)
 
 
-def prep_dataset(tfrecord, batch_size, processing_fn, mode):
-    shuffle_buffer = batch_size * 10
+def prep_dataset(tfrecord, params, processing_fn, mode):
+    # shuffle_buffer = batch_size * 10
+    # shuffle_buffer = 100000
+    shuffle_buffer = params.get("shuffle-bufer", 100000)
     dataset = tf.data.TFRecordDataset(tfrecord)
     dataset = dataset.map(parse_tf_example)
     if processing_fn is not None:
@@ -43,7 +45,7 @@ def prep_dataset(tfrecord, batch_size, processing_fn, mode):
             tf.contrib.data.shuffle_and_repeat(buffer_size=shuffle_buffer)
         )
 
-    dataset = dataset.batch(batch_size)
+    dataset = dataset.batch(params["batch-size"])
 
     return dataset
 

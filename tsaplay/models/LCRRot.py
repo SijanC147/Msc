@@ -23,13 +23,13 @@ from tsaplay.models.addons import attn_heatmaps
 class LCRRot(TSAModel):
     def set_params(self):
         return {
-            "batch-size": 50,
+            "batch-size": 25,
             "n_out_classes": 3,
             "learning_rate": 0.1,
             "l2_weight": 1e-5,
             "momentum": 0.9,
             "keep_prob": 0.5,
-            "hidden_units": 200,
+            "hidden_units": 300,
             "initializer": tf.initializers.random_uniform(
                 minval=-0.1, maxval=0.1
             ),

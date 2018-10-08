@@ -1,4 +1,5 @@
 import time
+import json
 import inspect
 from datetime import timedelta
 from functools import wraps, partial
@@ -82,10 +83,30 @@ def cometml(model_fn):
                 "Hidden Units", params["hidden_units"]
             )
             self.comet_experiment.log_other("Batch Size", params["batch-size"])
-            self.comet_experiment.log_multiple_params(params, prefix="HParams")
-            self.comet_experiment.log_multiple_params(
-                self.run_config.__dict__, prefix="RunConfig"
-            )
+            run_config = self.run_config.__dict__
+            for key, value in run_config.items():
+                try:
+                    json.dumps(value)
+                except TypeError:
+                    value = str(value)
+                self.comet_experiment.log_other(key, value)
+            params_log_other = [
+                "model_dir",
+                "n_out_classes",
+                "vocab-file",
+                "embedding-dim",
+                "embedding-init",
+                "n_attn_heatmaps",
+            ]
+            for key, value in params.items():
+                try:
+                    json.dumps(value)
+                except TypeError:
+                    value = str(value)
+                if key in params_log_other:
+                    self.comet_experiment.log_other(key, value)
+                else:
+                    self.comet_experiment.log_parameter(key, value)
             self.comet_experiment.set_code(inspect.getsource(self.__class__))
             self.comet_experiment.set_filename(inspect.getfile(self.__class__))
             self.comet_experiment.log_dataset_hash((features, labels))
@@ -202,7 +223,7 @@ def make_input_fn(mode):
 
                 dataset = prep_dataset(
                     tfrecord=tfrecord,
-                    batch_size=params["batch-size"],
+                    params=params,
                     processing_fn=process_dataset,
                     mode=mode,
                 )
