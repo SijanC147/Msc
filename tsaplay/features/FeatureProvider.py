@@ -2,6 +2,7 @@ from os.path import join, exists
 from os import getcwd, makedirs
 from csv import DictWriter
 from datetime import datetime
+from zipfile import ZipFile, ZIP_DEFLATED
 import math
 import tensorflow as tf
 from numpy.random import shuffle
@@ -54,6 +55,75 @@ class FeatureProvider:
             self._get_tf_record_folder_pattern(dataset, "test")
             for dataset in self._datasets
         ]
+
+    @classmethod
+    @timeit("Tokenizing dataset", "Tokenization complete")
+    def tokens_from_dict(cls, dictionary):
+        offsets = dictionary.get("offsets", [])
+        if not offsets:
+            offsets = cls.get_target_offset_array(dictionary)
+        dictionary = {**dictionary, "offsets": offsets}
+        l_ctxts, trgs, r_ctxts = cls.partition_sentences(
+            sentences=dictionary["sentences"],
+            targets=dictionary["targets"],
+            offsets=dictionary["offsets"],
+        )
+        l_tok = tokenize_phrases(l_ctxts)
+        trg_tok = tokenize_phrases(trgs)
+        r_tok = tokenize_phrases(r_ctxts)
+
+        return (l_tok, trg_tok, r_tok)
+
+    @classmethod
+    def get_target_offset_array(cls, dictionary):
+        offsets = []
+        for (s, t) in zip(dictionary["sentences"], dictionary["targets"]):
+            offsets.append(s.lower().find(t.lower()))
+        return offsets
+
+    @classmethod
+    def tf_encode_tokens(cls, tokens):
+        return "<SEP>".join(tokens).encode()
+
+    @classmethod
+    def get_tokens_sp_tensor(cls, tokens, delimiter="<SEP>"):
+        tf_encoded_tokens = cls.tf_encode_tokens(tokens)
+        string_tensor = tf.constant([tf_encoded_tokens], dtype=tf.string)
+        tokens_sp_tensor = tf.string_split(string_tensor, delimiter)
+        return tokens_sp_tensor
+
+    @classmethod
+    def tf_lookup_string_sp(cls, table, tokens_sp_tensor):
+        ids_sp_tensor = table.lookup(tokens_sp_tensor)
+        ids_tensor = tf.sparse_tensor_to_dense(ids_sp_tensor)
+        return ids_tensor
+
+    @classmethod
+    def partition_sentences(cls, sentences, targets, offsets):
+        left_ctxts, _targets, right_ctxts = [], [], []
+
+        for (sen, trg, off) in zip(sentences, targets, offsets):
+            left_ctxts.append(sen[:off].strip())
+            target = trg.strip()
+            r_off = off + len(target)
+            _targets.append(target)
+            right_ctxts.append(sen[r_off:].strip())
+        return left_ctxts, _targets, right_ctxts
+
+    @classmethod
+    def zero_norm_labels(cls, labels):
+        minimum = abs(min(labels))
+        return [l + minimum for l in labels]
+
+    @classmethod
+    def index_lookup_table(cls, vocab_file):
+        return tf.contrib.lookup.index_table_from_file(
+            vocabulary_file=vocab_file,
+            key_column_index=0,
+            value_column_index=1,
+            default_value=1,
+            delimiter="\t",
+        )
 
     def _get_gen_dir(self, dataset):
         gen_dir = join(DATA_PATH, self._embedding.name, dataset.name)
@@ -150,75 +220,6 @@ class FeatureProvider:
                 tf_examples = [self._make_tf_example(*dz) for dz in data_zip]
                 self._write_tf_record_files(dataset, mode, tf_examples)
 
-    @classmethod
-    @timeit("Tokenizing dataset", "Tokenization complete")
-    def tokens_from_dict(cls, dictionary):
-        offsets = dictionary.get("offsets", [])
-        if not offsets:
-            offsets = cls.get_target_offset_array(dictionary)
-        dictionary = {**dictionary, "offsets": offsets}
-        l_ctxts, trgs, r_ctxts = cls.partition_sentences(
-            sentences=dictionary["sentences"],
-            targets=dictionary["targets"],
-            offsets=dictionary["offsets"],
-        )
-        l_tok = tokenize_phrases(l_ctxts)
-        trg_tok = tokenize_phrases(trgs)
-        r_tok = tokenize_phrases(r_ctxts)
-
-        return (l_tok, trg_tok, r_tok)
-
-    @classmethod
-    def get_target_offset_array(cls, dictionary):
-        offsets = []
-        for (s, t) in zip(dictionary["sentences"], dictionary["targets"]):
-            offsets.append(s.lower().find(t.lower()))
-        return offsets
-
-    @classmethod
-    def tf_encode_tokens(cls, tokens):
-        return "<SEP>".join(tokens).encode()
-
-    @classmethod
-    def get_tokens_sp_tensor(cls, tokens, delimiter="<SEP>"):
-        tf_encoded_tokens = cls.tf_encode_tokens(tokens)
-        string_tensor = tf.constant([tf_encoded_tokens], dtype=tf.string)
-        tokens_sp_tensor = tf.string_split(string_tensor, delimiter)
-        return tokens_sp_tensor
-
-    @classmethod
-    def tf_lookup_string_sp(cls, table, tokens_sp_tensor):
-        ids_sp_tensor = table.lookup(tokens_sp_tensor)
-        ids_tensor = tf.sparse_tensor_to_dense(ids_sp_tensor)
-        return ids_tensor
-
-    @classmethod
-    def partition_sentences(cls, sentences, targets, offsets):
-        left_ctxts, _targets, right_ctxts = [], [], []
-
-        for (sen, trg, off) in zip(sentences, targets, offsets):
-            left_ctxts.append(sen[:off].strip())
-            target = trg.strip()
-            r_off = off + len(target)
-            _targets.append(target)
-            right_ctxts.append(sen[r_off:].strip())
-        return left_ctxts, _targets, right_ctxts
-
-    @classmethod
-    def zero_norm_labels(cls, labels):
-        minimum = abs(min(labels))
-        return [l + minimum for l in labels]
-
-    @classmethod
-    def index_lookup_table(cls, vocab_file):
-        return tf.contrib.lookup.index_table_from_file(
-            vocabulary_file=vocab_file,
-            key_column_index=0,
-            value_column_index=1,
-            default_value=1,
-            delimiter="\t",
-        )
-
     @timeit("Generating sparse tensors of tokens", "Sparse tensors generated")
     def _sparse_tensors_from_tokens(self, l_tok, trg_tok, r_tok):
         l_sp = [self.get_tokens_sp_tensor(l) for l in l_tok]
@@ -301,11 +302,12 @@ class FeatureProvider:
         file_dir = join(DATA_PATH, "_meta")
         makedirs(file_dir, exist_ok=True)
         file_name = datetime.now().strftime("%Y%m%d-%H%M%S") + ".json"
-        file_path = join(file_dir, file_name)
-        tl = Timeline(run_metadata.step_stats)  # pylint: disable=E1101
-        ctf = tl.generate_chrome_trace_format()
-        with open(file_path, "w") as f:
-            f.write(ctf)
+        time_line = Timeline(run_metadata.step_stats)  # pylint: disable=E1101
+        ctf = time_line.generate_chrome_trace_format()
+        zip_name = file_name.replace(".json", ".zip")
+        zip_path = join(file_dir, zip_name)
+        with ZipFile(zip_path, "w", ZIP_DEFLATED) as zipf:
+            zipf.writestr(file_name, data=ctf)
 
     @timeit("Exporting tokens to csv file", "Tokens csv exported")
     def _write_tokens_file(self, dataset, mode, tokens):

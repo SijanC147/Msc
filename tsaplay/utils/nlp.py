@@ -330,4 +330,3 @@ def re_dist(labels, target_dist):
             floor(t * (new_total / old_total)) for t in target_counts
         ]
     target_counts[target_counts.index(0)] = new_total - sum(target_counts)
-
