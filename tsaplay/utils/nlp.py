@@ -55,31 +55,6 @@ def corpus_from_docs(docs):
     return corpus
 
 
-def inspect_dist(left, target, right, labels):
-    positive = [label for label in labels if label == 1]
-    neutral = [label for label in labels if label == 0]
-    negative = [label for label in labels if label == -1]
-    lengths = [
-        len(np.concatenate([l, t, r])) for l, t, r in zip(left, target, right)
-    ]
-    return {
-        "num_samples": len(labels),
-        "positive": {
-            "count": len(positive),
-            "percent": round((len(positive) / len(labels)) * 100, 2),
-        },
-        "neutral": {
-            "count": len(neutral),
-            "percent": round((len(neutral) / len(labels)) * 100, 2),
-        },
-        "negative": {
-            "count": len(negative),
-            "percent": round((len(negative) / len(labels)) * 100, 2),
-        },
-        "mean_sen_length": round(np.mean(lengths), 2),
-    }
-
-
 def cmap_int(value, cmap_name="Oranges", alpha=0.8):
     cmap = plt.get_cmap(cmap_name)
     rgba_flt = cmap(value, alpha=alpha)
@@ -292,3 +267,67 @@ def join_images(images, v_space=5, border=None, padding=2):
             joined_image, border=border, fill="black"
         )
         return joined_image_with_border
+
+
+def re_dist(labels, target_dist):
+    counts = [
+        len([l for l in labels if l == -1]),
+        len([l for l in labels if l == 0]),
+        len([l for l in labels if l == 1]),
+    ]
+    target_counts = [0, 0, 0]
+
+    if 1 in target_dist:
+        total_index = target_dist.index(1)
+        target_counts[total_index] = counts[total_index]
+        return target_counts
+
+    smallest_count_indices = [
+        i for i, x in enumerate(counts) if x == min(counts)
+    ]
+    if len(smallest_count_indices) != 1:
+        smallest_count_index = target_dist.index(
+            max([target_dist[i] for i in smallest_count_indices])
+        )
+    else:
+        smallest_count_index = smallest_count_indices[0]
+
+    target_counts[smallest_count_index] = counts[smallest_count_index]
+    new_total = floor(
+        counts[smallest_count_index] / target_dist[smallest_count_index]
+    )
+    counts[smallest_count_index] = float("inf")
+    target_dist[smallest_count_index] = float("inf")
+
+    smallest_count_indices = [
+        i for i, x in enumerate(counts) if x == min(counts)
+    ]
+    if len(smallest_count_indices) != 1:
+        smallest_count_index = target_dist.index(
+            max([target_dist[i] for i in smallest_count_indices])
+        )
+    else:
+        smallest_count_index = smallest_count_indices[0]
+    smallest_count_index = counts.index(min(counts))
+    target_count = int(new_total * target_dist[smallest_count_index])
+    if target_count > counts[smallest_count_index]:
+        old_total = new_total
+        new_total = floor(
+            counts[smallest_count_index] / target_dist[smallest_count_index]
+        )
+        target_counts = [
+            floor(t * (new_total / old_total)) for t in target_counts
+        ]
+        target_count = counts[smallest_count_index]
+    target_counts[smallest_count_index] = target_count
+    counts[smallest_count_index] = float("inf")
+    target_dist[smallest_count_index] = float("inf")
+
+    if new_total - sum(target_counts) > min(counts):
+        old_total = new_total
+        new_total = floor(min(counts) / min(target_dist))
+        target_counts = [
+            floor(t * (new_total / old_total)) for t in target_counts
+        ]
+    target_counts[target_counts.index(0)] = new_total - sum(target_counts)
+

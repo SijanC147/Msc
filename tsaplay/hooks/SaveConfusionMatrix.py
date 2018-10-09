@@ -51,11 +51,10 @@ class SaveConfusionMatrix(SessionRunHook):
         image = self._plot_confusion_matrix(cm)
         if self._comet is not None:
             for temp_png in temp_pngs([image], ["confusion_matrix"]):
+                self._comet.set_step(global_step)
                 self._comet.log_image(temp_png)
 
-        summary = image_to_summary(
-            name=self.confusion_matrix_tensor_name, image=image
-        )
+        summary = image_to_summary(name="Confusion Matrix", image=image)
         self._summary_writer.add_summary(summary, global_step)
 
     def _plot_confusion_matrix(self, cm):
@@ -69,10 +68,7 @@ class SaveConfusionMatrix(SessionRunHook):
         num_classes = len(self.labels)
 
         fig = plt.figure(
-            figsize=(num_classes, num_classes),
-            # dpi=100,
-            facecolor="w",
-            edgecolor="k",
+            figsize=(num_classes, num_classes), facecolor="w", edgecolor="k"
         )
         ax = fig.add_subplot(1, 1, 1)
         ax.imshow(cm, cmap="Oranges")
@@ -110,4 +106,3 @@ class SaveConfusionMatrix(SessionRunHook):
 
         image = get_image_from_plt(plt)
         return image
-        # return fig

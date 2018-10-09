@@ -7,6 +7,23 @@ import io
 from tensorflow.contrib.layers import embed_sequence  # pylint: disable=E0611
 
 
+def get_class_distribution(labels):
+    with tf.name_scope("debug_distribution_monitor"):
+        ones = tf.ones_like(labels)
+        zeros = tf.zeros_like(labels)
+
+        negative = tf.reduce_sum(tf.where(tf.equal(labels, 0), ones, zeros))
+        neutral = tf.reduce_sum(tf.where(tf.equal(labels, 1), ones, zeros))
+        positive = tf.reduce_sum(tf.where(tf.equal(labels, 2), ones, zeros))
+
+        distribution = tf.stack([negative, neutral, positive])
+        totals = tf.reduce_sum(ones) * tf.ones_like(distribution)
+
+        percentages = tf.divide(distribution, totals) * 100
+
+    return tf.cast(percentages, tf.int32)
+
+
 def scaffold_init_fn_on_spec(spec, new_fn):
     if spec.mode != ModeKeys.TRAIN:
         return spec

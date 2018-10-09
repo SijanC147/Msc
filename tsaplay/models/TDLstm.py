@@ -5,7 +5,6 @@ from tensorflow.estimator import (  # pylint: disable=E0401
 )
 from tsaplay.models.TSAModel import TSAModel
 from tsaplay.utils.tf import sparse_reverse, dropout_lstm_cell
-from tsaplay.utils.decorators import prep_features
 
 
 class TDLstm(TSAModel):
@@ -36,7 +35,6 @@ class TDLstm(TSAModel):
             ),
         }
 
-    @prep_features(["left", "right"])
     def model_fn(self, features, labels, mode, params):
         with tf.variable_scope("left_lstm"):
             _, final_states_left = tf.nn.dynamic_rnn(

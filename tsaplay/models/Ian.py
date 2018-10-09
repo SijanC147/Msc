@@ -4,7 +4,7 @@ from tensorflow.estimator import (  # pylint: disable=E0401
     ModeKeys,
 )
 from tsaplay.models.TSAModel import TSAModel
-from tsaplay.utils.decorators import addon, prep_features
+from tsaplay.utils.decorators import addon
 from tsaplay.utils.tf import (
     variable_len_batch_mean,
     dropout_lstm_cell,
@@ -45,7 +45,6 @@ class Ian(TSAModel):
         }
 
     @addon([attn_heatmaps])
-    @prep_features(["context", "target"])
     def model_fn(self, features, labels, mode, params):
         with tf.variable_scope("context_lstm"):
             context_hidden_states, _ = tf.nn.dynamic_rnn(

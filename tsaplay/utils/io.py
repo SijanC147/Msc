@@ -139,7 +139,10 @@ def temp_pngs(images, names):
 
 def get_image_from_plt(plt):
     with BytesIO() as output:
-        plt.savefig(output, format="png", bbox_inches="tight")
+        try:
+            plt.savefig(output, format="png", bbox_inches="tight")
+        except ValueError:
+            plt.savefig(output, format="png")
         plt.close()
         image_bytes = output.getvalue()
 

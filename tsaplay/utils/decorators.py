@@ -32,49 +32,37 @@ def timeit(pre="", post=""):
     return inner_decorator
 
 
-def prep_features(feature_components):
-    def decorator(model_fn):
-        @wraps(model_fn)
-        def wrapper(self, features, labels, mode, params):
-            vocab_size = params["vocab-size"]
-            dim_size = params["embedding-dim"]
-            embedding_init = params["embedding-init"]
-            trainable = params.get("train_embeddings", True)
-            with tf.variable_scope("embedding_layer", reuse=tf.AUTO_REUSE):
-                embeddings = tf.get_variable(
-                    "embeddings",
-                    shape=[vocab_size, dim_size],
-                    initializer=embedding_init,
-                    trainable=trainable,
-                    dtype=tf.float32,
-                )
-            for component in feature_components:
-                ids = component + "_ids"
-                # lens = component + "_len"
-                embdd = component + "_emb"
-                # dense_ids = sparse_sequences_to_dense(features[ids])
-                # lengths = get_seq_lengths(dense_ids)
-                embedded = tf.contrib.layers.embed_sequence(
-                    ids=features[ids],
+def embed_sequences(model_fn):
+    @wraps(model_fn)
+    def wrapper(self, features, labels, mode, params):
+        vocab_size = params["vocab-size"]
+        dim_size = params["embedding-dim"]
+        embedding_init = params["embedding-init"]
+        trainable = params.get("train_embeddings", True)
+        with tf.variable_scope("embedding_layer", reuse=tf.AUTO_REUSE):
+            embeddings = tf.get_variable(
+                "embeddings",
+                shape=[vocab_size, dim_size],
+                initializer=embedding_init,
+                trainable=trainable,
+                dtype=tf.float32,
+            )
+        embedded_sequences = {}
+        for key, value in features.items():
+            if "_ids" in key:
+                component = key.replace("_ids", "")
+                embdd_key = component + "_emb"
+                embedded_sequence = tf.contrib.layers.embed_sequence(
+                    ids=value,
                     initializer=embeddings,
                     scope="embedding_layer",
                     reuse=True,
                 )
-                features.update({embdd: embedded})
-                # embedded = tf.contrib.layers.embed_sequence(
-                #     ids=dense_ids,
-                #     initializer=embeddings,
-                #     scope="embedding_layer",
-                #     reuse=True,
-                # )
-                # features.update(
-                #     {ids: dense_ids, lens: lengths, embdd: embedded}
-                # )
-            return model_fn(self, features, labels, mode, params)
+                embedded_sequences[embdd_key] = embedded_sequence
+        features.update(embedded_sequences)
+        return model_fn(self, features, labels, mode, params)
 
-        return wrapper
-
-    return decorator
+    return wrapper
 
 
 def cometml(model_fn):

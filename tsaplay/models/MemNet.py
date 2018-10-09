@@ -6,7 +6,7 @@ from tensorflow.estimator import (  # pylint: disable=E0401
 )
 from tsaplay.models.TSAModel import TSAModel
 from tsaplay.models.addons import attn_heatmaps
-from tsaplay.utils.decorators import addon, prep_features
+from tsaplay.utils.decorators import addon
 from tsaplay.utils.tf import (
     masked_softmax,
     variable_len_batch_mean,
@@ -47,7 +47,6 @@ class MemNet(TSAModel):
         }
 
     @addon([attn_heatmaps])
-    @prep_features(["context", "target"])
     def model_fn(self, features, labels, mode, params):
         target_offset = tf.cast(features["target_offset"], tf.int32)
 

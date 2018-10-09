@@ -9,7 +9,6 @@ from tsaplay.utils.tf import (
     variable_len_batch_mean,
     dropout_lstm_cell,
 )
-from tsaplay.utils.decorators import prep_features
 
 
 class TCLstm(TSAModel):
@@ -41,7 +40,6 @@ class TCLstm(TSAModel):
             "target_ids": features["target_ids"],
         }
 
-    @prep_features(["left", "target", "right"])
     def model_fn(self, features, labels, mode, params):
         max_left_len = tf.shape(features["left_emb"])[1]
         max_right_len = tf.shape(features["right_emb"])[1]

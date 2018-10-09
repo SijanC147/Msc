@@ -16,7 +16,7 @@ from tsaplay.utils.tf import (
     generate_attn_heatmap_summary,
 )
 from tsaplay.utils.io import cprnt
-from tsaplay.utils.decorators import addon, prep_features
+from tsaplay.utils.decorators import addon
 from tsaplay.models.addons import attn_heatmaps
 
 
@@ -37,7 +37,6 @@ class LCRRot(TSAModel):
         }
 
     @addon([attn_heatmaps])
-    @prep_features(["left", "target", "right"])
     def model_fn(self, features, labels, mode, params):
         with tf.variable_scope("target_bi_lstm"):
             target_hidden_states, _, _ = stack_bidirectional_dynamic_rnn(

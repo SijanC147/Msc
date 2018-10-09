@@ -8,7 +8,7 @@ from tensorflow.contrib.rnn import (  # pylint: disable=E0611
 )
 from tsaplay.models.TSAModel import TSAModel
 from tsaplay.models.addons import attn_heatmaps
-from tsaplay.utils.decorators import addon, prep_features
+from tsaplay.utils.decorators import addon
 from tsaplay.utils.tf import (
     masked_softmax,
     variable_len_batch_mean,
@@ -66,7 +66,6 @@ class Ram(TSAModel):
         }
 
     @addon([attn_heatmaps])
-    @prep_features(["sentence", "target"])
     def model_fn(self, features, labels, mode, params):
         target_offset = tf.cast(features["target_offset"], tf.int32)
         batch_size = tf.shape(features["sentence_emb"])[0]

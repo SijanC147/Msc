@@ -5,9 +5,9 @@ from tsaplay.features.FeatureProvider import FeatureProvider
 from tsaplay.experiments.Experiment import Experiment
 from tsaplay.models.LCRRot import LCRRot
 
-from tsaplay.models.Lstm import Lstm
+# from tsaplay.models.Lstm import Lstm
 
-from tsaplay.models.TCLstm import TCLstm
+# from tsaplay.models.TCLstm import TCLstm
 
 # from tsaplay.models.TDLstm import TDLstm
 # from tsaplay.models.Ian import Ian
@@ -33,7 +33,7 @@ def main():
     )
 
     experiment.run(job="train+eval", steps=100)
-    # experiment.launch_tensorboard()
+    experiment.launch_tensorboard()
     # experiment.export_model()
 
 

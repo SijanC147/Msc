@@ -96,12 +96,12 @@ class SaveAttentionWeightVector(SessionRunHook):
                 i_hop = i * self.n_hops
                 hop_images = []
                 hop_attns = []
-                for ih in range(i_hop, i_hop + self.n_hops):
+                for hop_index in range(i_hop, i_hop + self.n_hops):
                     phrases = [
-                        attn_mech[0][ih].tolist() for attn_mech in attn_mechs
+                        attn_mech[0][hop_index].tolist() for attn_mech in attn_mechs
                     ]
                     attn_vecs = [
-                        attn_mech[1][ih].tolist() for attn_mech in attn_mechs
+                        attn_mech[1][hop_index].tolist() for attn_mech in attn_mechs
                     ]
                     attn_heatmap_hop = draw_attention_heatmap(
                         phrases=phrases, attn_vecs=attn_vecs
@@ -145,18 +145,6 @@ class SaveAttentionWeightVector(SessionRunHook):
             name="Attention Tables", image=final_tables
         )
         self._summary_writer.add_summary(table_summary, global_step)
-
-    # def end(self, session):
-    #     cprnt(
-    #         "This is excuting with context: {0} and mode: {1}".format(
-    #             self._comet.context, self.mode
-    #         )
-    #     )
-    #     if (
-    #         self._comet is not None
-    #         and self._comet.context == tf.estimator.ModeKeys.EVAL
-    #     ):
-    #         self._comet.context = tf.estimator.ModeKeys.TRAIN
 
     def _tile_over_hops(self, value, n_hops):
         value = np.expand_dims(value, axis=1)

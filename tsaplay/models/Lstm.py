@@ -5,7 +5,6 @@ from tensorflow.estimator import (  # pylint: disable=E0401
 )
 from tsaplay.models.TSAModel import TSAModel
 from tsaplay.utils.tf import dropout_lstm_cell
-from tsaplay.utils.decorators import prep_features
 
 
 class Lstm(TSAModel):
@@ -34,7 +33,6 @@ class Lstm(TSAModel):
             )
         }
 
-    @prep_features(["sentence"])
     def model_fn(self, features, labels, mode, params):
         _, final_states = tf.nn.dynamic_rnn(
             cell=dropout_lstm_cell(
