@@ -126,12 +126,13 @@ class FeatureProvider:
         )
 
     def _get_gen_dir(self, dataset, mode=None):
-        embedding_dir = join(DATA_PATH, self._embedding.name)
+        dataset_dir = join(DATA_PATH, self._embedding.name, dataset.name)
         dist_key = dataset.get_dist_key(mode)
-        if dist_key is not None:
-            gen_dir = join(embedding_dir, dataset.name, "_dists", dist_key)
-        else:
-            gen_dir = join(embedding_dir, dataset.name)
+        try:
+            dist_key.index("-")
+            gen_dir = join(dataset_dir, "_composites", dist_key)
+        except ValueError:
+            gen_dir = join(dataset_dir, dist_key)
         makedirs(gen_dir, exist_ok=True)
         return gen_dir
 
@@ -174,7 +175,7 @@ class FeatureProvider:
     def _build_fetch_dict(self):
         fetch_dict = {}
         for dataset in self._datasets:
-            name = dataset.name
+            name = dataset.name + dataset.get_dist_key()
             for mode in ["train", "test"]:
                 tf_record_file = self._get_tf_record_folder_name(dataset, mode)
                 if not exists(tf_record_file):
@@ -212,12 +213,13 @@ class FeatureProvider:
         values, metadata = self._run_fetches()
         self._write_run_metadata(metadata)
         for dataset in self._datasets:
-            for mode in values.get(dataset.name, []):
+            name = dataset.name + dataset.get_dist_key()
+            for mode in values.get(name, []):
                 if mode == "train":
                     labels = dataset.train_dict["labels"]
                 else:
                     labels = dataset.test_dict["labels"]
-                feature_dict = values[dataset.name][mode]
+                feature_dict = values[name][mode]
                 labels = self.zero_norm_labels(labels)
                 features = self._feature_lists_from_dict(feature_dict)
                 data_zip = zip(*features, labels)
