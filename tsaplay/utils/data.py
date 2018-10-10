@@ -1,5 +1,5 @@
 import tensorflow as tf
-from functools import wraps
+import numpy as np
 from tsaplay.utils.io import cprnt
 from tsaplay.utils.tf import sparse_sequences_to_dense, get_seq_lengths
 
@@ -71,3 +71,74 @@ def prep_dataset(tfrecords, params, processing_fn, mode):
     )
 
     return dataset
+
+
+def re_distribute_counts(labels, target_dists):
+    target_dists = np.array(target_dists)
+    unique, counts = np.unique(labels, return_counts=True)
+
+    if np.sum(target_dists) != 1 or len(counts) != len(target_dists):
+        raise ValueError
+
+    if 1 in target_dists:
+        return np.where(target_dists == 1, counts, 0)
+
+    valid_counts = counts * target_dists
+    counts = np.where(valid_counts != 0, counts, np.inf)
+
+    while not np.isinf(min(counts)):
+        lowest_valid_count = np.where(counts == min(counts), counts, 0)
+        totals = np.where(
+            lowest_valid_count != 0,
+            np.floor_divide(lowest_valid_count, target_dists),
+            np.inf,
+        )
+        total = np.min(totals)
+        candidate_counts = np.floor(total * target_dists)
+        counts = np.where(candidate_counts > counts, counts, np.Inf)
+
+    target_counts = candidate_counts.astype(int)
+    return unique, target_counts
+
+
+def resample_data_dict(data_dict, target_dists, class_func=None):
+    def default_class_func(sample):
+        return sample[4]
+
+    class_fn = class_func or default_class_func
+    labels = [label for label in data_dict["labels"]]
+    classes, target_counts = re_distribute_counts(labels, target_dists)
+    numpy_dtype = np.dtype(
+        [
+            (key, (type(value[0]), max([len(v) for v in value])))
+            if isinstance(value[0], str)
+            else (key, type(value[0]))
+            for key, value in data_dict.items()
+        ]
+    )
+
+    samples = list(zip(*data_dict.values()))
+    samples_by_class = {}
+    for _class in classes:
+        samples_by_class[str(_class)] = np.asarray(
+            [s for s in samples if class_fn(s) == _class], numpy_dtype
+        )
+
+    resampled = np.concatenate(
+        [
+            np.random.choice(
+                samples_by_class[str(_class)], count, replace=False
+            )
+            for _class, count in zip(classes, target_counts)
+        ],
+        axis=0,
+    )
+    np.random.shuffle(resampled)
+
+    resampled = resampled.tolist()
+
+    resampled_data_dict = {}
+    for index, value in enumerate(data_dict):
+        resampled_data_dict[value] = [sample[index] for sample in resampled]
+
+    return resampled_data_dict

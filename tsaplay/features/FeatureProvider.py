@@ -125,8 +125,13 @@ class FeatureProvider:
             delimiter="\t",
         )
 
-    def _get_gen_dir(self, dataset):
-        gen_dir = join(DATA_PATH, self._embedding.name, dataset.name)
+    def _get_gen_dir(self, dataset, mode=None):
+        embedding_dir = join(DATA_PATH, self._embedding.name)
+        dist_key = dataset.get_dist_key(mode)
+        if dist_key is not None:
+            gen_dir = join(embedding_dir, dataset.name, "_dists", dist_key)
+        else:
+            gen_dir = join(embedding_dir, dataset.name)
         makedirs(gen_dir, exist_ok=True)
         return gen_dir
 
@@ -135,14 +140,13 @@ class FeatureProvider:
         return join(folder, "*.tfrecord")
 
     def _get_tf_record_folder_name(self, dataset, mode):
-        return join(self._get_gen_dir(dataset), "_" + mode)
+        return join(self._get_gen_dir(dataset, mode), "_" + mode)
 
     def _get_filtered_vocab_file(self, dataset):
         vocab_file = join(self._get_gen_dir(dataset), "_vocab_file.txt")
         if exists(vocab_file):
             return vocab_file
-        else:
-            return self._write_filtered_vocab_file(dataset)
+        return self._write_filtered_vocab_file(dataset)
 
     def _write_tf_record_files(self, dataset, mode, tf_examples):
         shuffle(tf_examples)
@@ -284,18 +288,18 @@ class FeatureProvider:
         vocab = self._embedding.vocab
         vocab_set = set(vocab)
         corpus = ["<PAD>", "<OOV>"] + dataset.corpus
-        corpus_set = set([c.lower() for c in corpus])
+        corpus_set = set(c.lower() for c in corpus)
 
         not_oov_set = set.intersection(vocab_set, corpus_set)
 
         filtered = [(w, vocab.index(w)) for w in not_oov_set]
 
-        vocab_file = join(self._get_gen_dir(dataset), "_vocab_file.txt")
-        with open(vocab_file, "w") as f:
+        vocab_file_path = join(self._get_gen_dir(dataset), "_vocab_file.txt")
+        with open(vocab_file_path, "w") as vocab_file:
             for (word, index) in filtered:
-                f.write("{0}\t{1}\n".format(word, index))
+                vocab_file.write("{0}\t{1}\n".format(word, index))
 
-        return vocab_file
+        return vocab_file_path
 
     @timeit("Exporting graph run metadata", "Metadata exported")
     def _write_run_metadata(self, run_metadata):
@@ -312,17 +316,17 @@ class FeatureProvider:
     @timeit("Exporting tokens to csv file", "Tokens csv exported")
     def _write_tokens_file(self, dataset, mode, tokens):
         file_name = "_" + mode + "_tokens.csv"
-        file_path = join(self._get_gen_dir(dataset), file_name)
+        file_path = join(self._get_gen_dir(dataset, mode), file_name)
         with open(file_path, "w", encoding="utf-8") as csvfile:
             fieldnames = ["Left", "Target", "Right"]
             writer = DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()
-            for (l, t, r) in zip(*tokens):
+            for (left, target, right) in zip(*tokens):
                 writer.writerow(
                     {
-                        "Left": " ".join(l),
-                        "Target": " ".join(t),
-                        "Right": " ".join(r),
+                        "Left": " ".join(left),
+                        "Target": " ".join(target),
+                        "Right": " ".join(right),
                     }
                 )
         return file_path

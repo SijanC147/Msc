@@ -1,9 +1,7 @@
+import io
+import numpy as np
 import tensorflow as tf
 from tensorflow.estimator import ModeKeys  # pylint: disable=E0401
-from PIL import Image
-import numpy as np
-import matplotlib
-import io
 from tensorflow.contrib.layers import embed_sequence  # pylint: disable=E0611
 
 

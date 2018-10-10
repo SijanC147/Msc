@@ -1,16 +1,16 @@
+from random import choice, randrange
+from math import floor
+from decimal import Decimal
+from io import BytesIO
 import spacy
+from spacy.attrs import ORTH  # pylint: disable=E0611
 import six
 import pandas as pd
 import numpy as np
-import matplotlib as mpl
-from decimal import Decimal
-from io import BytesIO
 from tqdm import tqdm
 from PIL import Image, ImageDraw, ImageFont, ImageOps
-from random import choice, randrange
-from math import floor
+import matplotlib as mpl
 from matplotlib.font_manager import FontProperties
-from spacy.attrs import ORTH  # pylint: disable=E0611
 from tsaplay.utils.io import cprnt, get_image_from_plt
 
 
@@ -267,66 +267,3 @@ def join_images(images, v_space=5, border=None, padding=2):
             joined_image, border=border, fill="black"
         )
         return joined_image_with_border
-
-
-def re_dist(labels, target_dist):
-    counts = [
-        len([l for l in labels if l == -1]),
-        len([l for l in labels if l == 0]),
-        len([l for l in labels if l == 1]),
-    ]
-    target_counts = [0, 0, 0]
-
-    if 1 in target_dist:
-        total_index = target_dist.index(1)
-        target_counts[total_index] = counts[total_index]
-        return target_counts
-
-    smallest_count_indices = [
-        i for i, x in enumerate(counts) if x == min(counts)
-    ]
-    if len(smallest_count_indices) != 1:
-        smallest_count_index = target_dist.index(
-            max([target_dist[i] for i in smallest_count_indices])
-        )
-    else:
-        smallest_count_index = smallest_count_indices[0]
-
-    target_counts[smallest_count_index] = counts[smallest_count_index]
-    new_total = floor(
-        counts[smallest_count_index] / target_dist[smallest_count_index]
-    )
-    counts[smallest_count_index] = float("inf")
-    target_dist[smallest_count_index] = float("inf")
-
-    smallest_count_indices = [
-        i for i, x in enumerate(counts) if x == min(counts)
-    ]
-    if len(smallest_count_indices) != 1:
-        smallest_count_index = target_dist.index(
-            max([target_dist[i] for i in smallest_count_indices])
-        )
-    else:
-        smallest_count_index = smallest_count_indices[0]
-    smallest_count_index = counts.index(min(counts))
-    target_count = int(new_total * target_dist[smallest_count_index])
-    if target_count > counts[smallest_count_index]:
-        old_total = new_total
-        new_total = floor(
-            counts[smallest_count_index] / target_dist[smallest_count_index]
-        )
-        target_counts = [
-            floor(t * (new_total / old_total)) for t in target_counts
-        ]
-        target_count = counts[smallest_count_index]
-    target_counts[smallest_count_index] = target_count
-    counts[smallest_count_index] = float("inf")
-    target_dist[smallest_count_index] = float("inf")
-
-    if new_total - sum(target_counts) > min(counts):
-        old_total = new_total
-        new_total = floor(min(counts) / min(target_dist))
-        target_counts = [
-            floor(t * (new_total / old_total)) for t in target_counts
-        ]
-    target_counts[target_counts.index(0)] = new_total - sum(target_counts)
