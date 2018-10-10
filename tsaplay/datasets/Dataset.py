@@ -4,7 +4,7 @@ from functools import wraps
 import json
 import numpy as np
 from tsaplay.utils.nlp import corpus_from_docs
-from tsaplay.utils.data import resample_data_dict
+from tsaplay.utils.data import resample_data_dict, get_class_distribution
 from tsaplay.utils.io import (
     search_dir,
     corpus_from_csv,
@@ -24,8 +24,10 @@ class Dataset:
         if distribution is not None:
             self._redistribute_data(distribution)
         else:
-            self.__train_dist_key = self._set_dist_key(self.train_dict)
-            self.__test_dist_key = self._set_dist_key(self.test_dict)
+            _, _, train_dist = get_class_distribution(self.train_dict)
+            _, _, test_dist = get_class_distribution(self.train_dict)
+            self.__train_dist_key = "_".join(map(str, train_dist))
+            self.__test_dist_key = "_".join(map(str, test_dist))
 
     @property
     def name(self):
@@ -71,12 +73,11 @@ class Dataset:
     def all_docs(self):
         return self.__all_docs
 
+    @property
+    def default_classes(self):
+        return self.__default_classes
+
     def get_dist_key(self, mode=None):
-        # if self.__train_dist_key is None and self.__test_dist_key is None:
-        #     return None
-        # default_dist_key = "-DEFAULT-"
-        # train_dist_key = self.__train_dist_key or default_dist_key
-        # test_dist_key = self.__test_dist_key or default_dist_key
         train_dist_key = self.__train_dist_key
         test_dist_key = self.__test_dist_key
         if mode == "train":
@@ -89,21 +90,14 @@ class Dataset:
             return "-".join([train_dist_key, test_dist_key])
 
     @classmethod
-    def get_stats_dict(cls, **data_dicts):
+    def get_stats_dict(cls, classes=None, **data_dicts):
         stats = {}
         for key, value in data_dicts.items():
             stats[key] = stats.get(key, {})
-            labels = value["labels"]
-            for (lab, cnt) in zip(*np.unique(labels, return_counts=True)):
+            dist_data = get_class_distribution(value, all_classes=classes)
+            for (_class, count, dist) in zip(*dist_data):
                 stats[key].update(
-                    {
-                        str(lab): {
-                            "count": str(cnt),
-                            "percent": str(
-                                round((cnt / len(labels)) * 100, 2)
-                            ),
-                        }
-                    }
+                    {str(_class): {"count": str(count), "percent": str(dist)}}
                 )
         return stats
 
@@ -128,21 +122,19 @@ class Dataset:
         )
         self.__train_dict = self._load_dataset_dictionary(dict_type="train")
         self.__test_dict = self._load_dataset_dictionary(dict_type="test")
+        self.__default_classes = np.unique(
+            [label for label in self.__train_dict["labels"]]
+        ).tolist()
         self.write_stats_json(
-            self.path, train=self.__train_dict, test=self.__test_dict
+            self.path,
+            classes=self.__default_classes,
+            train=self.__train_dict,
+            test=self.__test_dict,
         )
         self.__all_docs = set(
             self.__train_dict["sentences"] + self.__test_dict["sentences"]
         )
         self.__corpus = self.generate_corpus(self.__all_docs, self.path)
-
-    def _set_dist_key(self, data):
-        labels = [label for label in data["labels"]]
-        _, counts = np.unique(labels, return_counts=True)
-        total = np.sum(counts)
-        dist_values = np.round(np.divide(counts, total) * 100).astype(np.int32)
-        dist_key = "_".join([str(int(v * 100)) for v in dist_values])
-        return dist_key
 
     @timeit("Loading dataset dictionary", "Dataset dictionary loaded")
     def _load_dataset_dictionary(self, dict_type):
@@ -161,8 +153,8 @@ class Dataset:
 
     @classmethod
     @timeit("Exporting dataset stats", "Dataset stats exported")
-    def write_stats_json(cls, path, **data_dicts):
-        stats = cls.get_stats_dict(**data_dicts)
+    def write_stats_json(cls, path, classes=None, **data_dicts):
+        stats = cls.get_stats_dict(classes=classes, **data_dicts)
         stats_file_path = join(path, "_stats.json")
         if not (exists(stats_file_path)):
             with open(stats_file_path, "w+") as stats_file:
@@ -194,6 +186,7 @@ class Dataset:
 
         return wrapper
 
+    @timeit("Redistributing dataset", "Dataset redistributed")
     def _redistribute_data(self, distribution):
         self.__train_dist_key = None
         self.__test_dist_key = None
@@ -232,15 +225,17 @@ class Dataset:
                     data_dicts[mode] = resampled_dict
                     all_docs += resampled_dict["sentences"]
 
-                    if key == "train":
-                        self.__train_dict = resampled_dict
-                        self.__train_dist_key = dist_folder
-                    else:
-                        self.__test_dict = resampled_dict
-                        self.__test_dist_key = dist_folder
+                self.write_stats_json(
+                    dist_path, classes=self.default_classes, **data_dicts
+                )
+                self.generate_corpus(set(all_docs), dist_path)
 
-                Dataset.write_stats_json(dist_path, **data_dicts)
-                Dataset.generate_corpus(set(all_docs), dist_path)
+                if key == "train":
+                    self.__train_dict = data_dicts[key]
+                    self.__train_dist_key = dist_folder
+                elif key == "test":
+                    self.__test_dict = data_dicts[key]
+                    self.__test_dist_key = dist_folder
 
         self.__all_docs = set(
             self.__train_dict["sentences"] + self.__test_dict["sentences"]

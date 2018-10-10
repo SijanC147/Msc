@@ -1,0 +1,30 @@
+{
+    "train": {
+        "-1": {
+            "count": "48",
+            "percent": "36"
+        },
+        "0": {
+            "count": "2",
+            "percent": "2"
+        },
+        "1": {
+            "count": "82",
+            "percent": "62"
+        }
+    },
+    "test": {
+        "-1": {
+            "count": "12",
+            "percent": "38"
+        },
+        "0": {
+            "count": "0",
+            "percent": "0"
+        },
+        "1": {
+            "count": "20",
+            "percent": "62"
+        }
+    }
+}

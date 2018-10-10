@@ -1,6 +1,7 @@
 import time
 import json
 import inspect
+from os import environ
 from datetime import timedelta
 from functools import wraps, partial
 import tensorflow as tf
@@ -18,14 +19,16 @@ def timeit(pre="", post=""):
     def inner_decorator(func):
         @wraps(func)
         def wrapper(*args, **kw):
-            name = func.__qualname__ + "():"
-            cprnt(r=name, g=pre)
-            ts = time.time()
-            result = func(*args, **kw)
-            te = time.time()
-            time_taken = timedelta(seconds=(te - ts))
-            cprnt(r=name, g=post + " in", row=str(time_taken))
-            return result
+            if environ.get("TIMEIT", "ON") == "ON":
+                name = func.__qualname__ + "():"
+                cprnt(r=name, g=pre)
+                ts = time.time()
+                result = func(*args, **kw)
+                te = time.time()
+                time_taken = timedelta(seconds=(te - ts))
+                cprnt(r=name, g=post + " in", row=str(time_taken))
+                return result
+            return func(*args, **kw)
 
         return wrapper
 

@@ -73,12 +73,41 @@ def prep_dataset(tfrecords, params, processing_fn, mode):
     return dataset
 
 
+def default_class_func(sample):
+    return sample[3]
+
+
+def get_class_distribution(data_dict, all_classes=None, class_func=None):
+    class_fn = class_func or default_class_func
+    samples = list(zip(*data_dict.values()))
+    labels = [class_fn(sample) for sample in samples]
+    classes, counts = np.unique(labels, return_counts=True)
+    if all_classes is not None and len(classes) != len(all_classes):
+        all_counts = []
+        counts_list = counts.tolist()
+        classes_list = classes.tolist()
+        for _class in all_classes:
+            try:
+                all_counts.append(counts_list[classes_list.index(_class)])
+            except ValueError:
+                all_counts.append(0)
+        classes = np.array(all_classes)
+        counts = np.array(all_counts)
+    total = np.sum(counts)
+    dists = np.round(np.divide(counts, total) * 100).astype(np.int32)
+    return classes, counts, dists
+
+
 def re_distribute_counts(labels, target_dists):
     target_dists = np.array(target_dists)
     unique, counts = np.unique(labels, return_counts=True)
 
-    if np.sum(target_dists) != 1 or len(counts) != len(target_dists):
-        raise ValueError
+    if len(counts) != len(target_dists):
+        raise ValueError(
+            "Expected {0} distribution values, got {1}".format(
+                len(unique), len(target_dists)
+            )
+        )
 
     if 1 in target_dists:
         return np.where(target_dists == 1, counts, 0)
@@ -102,9 +131,6 @@ def re_distribute_counts(labels, target_dists):
 
 
 def resample_data_dict(data_dict, target_dists, class_func=None):
-    def default_class_func(sample):
-        return sample[4]
-
     class_fn = class_func or default_class_func
     labels = [label for label in data_dict["labels"]]
     classes, target_counts = re_distribute_counts(labels, target_dists)

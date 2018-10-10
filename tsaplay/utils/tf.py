@@ -2,10 +2,9 @@ import io
 import numpy as np
 import tensorflow as tf
 from tensorflow.estimator import ModeKeys  # pylint: disable=E0401
-from tensorflow.contrib.layers import embed_sequence  # pylint: disable=E0611
 
 
-def get_class_distribution(labels):
+def tf_class_distribution(labels):
     with tf.name_scope("debug_distribution_monitor"):
         ones = tf.ones_like(labels)
         zeros = tf.zeros_like(labels)
@@ -25,7 +24,7 @@ def get_class_distribution(labels):
 def scaffold_init_fn_on_spec(spec, new_fn):
     if spec.mode != ModeKeys.TRAIN:
         return spec
-    scaffold = spec.scaffold
+    scaffold = spec.scaffold or tf.train.Scaffold()
     prev_init = scaffold.init_fn
 
     def new_init_fn(scaffold, sess):

@@ -12,7 +12,7 @@ from tensorflow.estimator.export import (  # pylint: disable=E0401
     ServingInputReceiver
 )
 from tsaplay.features.FeatureProvider import FeatureProvider
-from tsaplay.utils.tf import get_class_distribution
+from tsaplay.utils.tf import tf_class_distribution
 from tsaplay.utils.decorators import (
     make_input_fn,
     addon,
@@ -174,7 +174,7 @@ class TSAModel(ABC):
     @addon([prediction_outputs])
     @embed_sequences
     def _model_fn(self, features, labels, mode, params):
-        labels = tf.Print(input_=labels, data=[get_class_distribution(labels)])
+        labels = tf.Print(input_=labels, data=[tf_class_distribution(labels)])
         return self.model_fn(features, labels, mode, params)
 
     def _initialize_estimator(self, embedding_params):
