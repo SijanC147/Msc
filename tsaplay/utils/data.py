@@ -49,7 +49,7 @@ def make_dense_features(features):
 
 
 def prep_dataset(tfrecords, params, processing_fn, mode):
-    shuffle_buffer = params.get("shuffle-bufer", 100000)
+    shuffle_buffer = params.get("shuffle-bufer", 50)
     dataset = tf.data.Dataset.list_files(file_pattern=tfrecords)
     if mode == "EVAL":
         dataset = dataset.shuffle(buffer_size=shuffle_buffer)

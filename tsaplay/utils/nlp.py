@@ -225,6 +225,72 @@ def render_mpl_table(
     return image
 
 
+def plot_distributions(stats, mode):
+    outer_labels = np.array([[*stats]]).flatten()
+    vals = np.array(
+        [
+            [float(_cls["count"]) for kc, _cls in ds[mode].items()]
+            for k, ds in stats.items()
+        ]
+    )
+
+    _, ax = plt.subplots(figsize=(18, 12))
+
+    outer_cmap = plt.get_cmap("tab20c")
+    outer_colors = outer_cmap((np.arange(len(stats)) * 4 + 1) % 16)
+    inner_cmap = plt.get_cmap("tab20")
+    inner_colors = inner_cmap([6, 0, 4])
+
+    ax.pie(
+        vals.sum(axis=1),
+        radius=1,
+        colors=outer_colors,
+        labels=outer_labels,
+        wedgeprops=dict(width=0.2, edgecolor="w"),
+    )
+
+    def func(pct, allvals):
+        if np.ndim(allvals) > 1:
+            return "{:.1f}%".format(pct)
+        absolute = int(pct / 100. * np.sum(allvals))
+        return "{:.1f}%\n({:d})".format(pct, absolute)
+
+    wedges, _, autotexts = ax.pie(
+        vals.flatten(),
+        radius=0.8,
+        colors=inner_colors,
+        autopct=lambda pct: func(pct, vals),
+        wedgeprops={"width": 0.45, "edgecolor": "w"},
+        textprops={"color": "w"},
+    )
+
+    ax.legend(
+        wedges,
+        ["-1", "0", "1"],
+        title="Classes",
+        loc="center left",
+        bbox_to_anchor=(1, 0, 0.5, 1),
+    )
+
+    plt.setp(autotexts, size=12, weight="bold")
+
+    totals = np.sum(vals, axis=0)
+    wedges, _, autotexts = ax.pie(
+        totals,
+        radius=0.35,
+        colors=inner_colors,
+        autopct=lambda pct: func(pct, totals),
+        wedgeprops={"width": 0.35, "edgecolor": "w"},
+        textprops={"color": "w"},
+    )
+
+    plt.setp(autotexts, size=12, weight="bold")
+
+    ax.set_title(mode.capitalize() + " Data Distribution")
+
+    return get_image_from_plt(plt)
+
+
 def stack_images(images, h_space=10):
     if not images:
         return

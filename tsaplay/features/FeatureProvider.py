@@ -4,15 +4,14 @@ from csv import DictWriter
 from datetime import datetime
 from zipfile import ZipFile, ZIP_DEFLATED
 import math
-import tensorflow as tf
 from numpy.random import shuffle
+import tensorflow as tf
 from tensorflow.train import BytesList, Feature, Features, Example, Int64List
 from tensorflow.python.client.timeline import Timeline  # pylint: disable=E0611
 from tensorflow.python_io import TFRecordWriter
 
-from tsaplay.utils.decorators import timeit
 from tsaplay.utils.nlp import tokenize_phrases
-from tsaplay.utils.data import parse_tf_example
+from tsaplay.utils.decorators import timeit
 
 
 DATA_PATH = join(getcwd(), "tsaplay", "features", "data")
@@ -29,8 +28,10 @@ class FeatureProvider:
 
     @property
     def name(self):
-        dataset_names = [dataset.name for dataset in self._datasets]
-        return "_".join([self._embedding.name] + dataset_names)
+        dataset_names = [
+            dataset.name + dataset.get_dist_key() for dataset in self._datasets
+        ]
+        return "--".join([self._embedding.name] + dataset_names)
 
     @property
     def embedding_params(self):
@@ -124,6 +125,19 @@ class FeatureProvider:
             default_value=1,
             delimiter="\t",
         )
+
+    def get_datasets_stats(self):
+        stats = {}
+        for dataset in self._datasets:
+            stats[dataset.name] = stats.get(dataset.name, {})
+            stats[dataset.name].update(
+                dataset.get_stats_dict(
+                    dataset.default_classes,
+                    train=dataset.train_dict,
+                    test=dataset.test_dict,
+                )
+            )
+        return stats
 
     def _get_gen_dir(self, dataset, mode=None):
         dataset_dir = join(DATA_PATH, self._embedding.name, dataset.name)

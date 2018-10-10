@@ -12,7 +12,8 @@ from tensorflow.estimator.export import (  # pylint: disable=E0401
     ServingInputReceiver
 )
 from tsaplay.features.FeatureProvider import FeatureProvider
-from tsaplay.utils.tf import tf_class_distribution
+from tsaplay.utils.nlp import plot_distributions
+from tsaplay.utils.io import temp_pngs
 from tsaplay.utils.decorators import (
     make_input_fn,
     addon,
@@ -96,6 +97,7 @@ class TSAModel(ABC):
         )
 
     def train(self, feature_provider, steps):
+        self._send_dist_data_to_comet(feature_provider, ["train"])
         self._initialize_estimator(feature_provider.embedding_params)
         self._estimator.train(
             input_fn=lambda: self.train_input_fn(
@@ -105,6 +107,7 @@ class TSAModel(ABC):
         )
 
     def evaluate(self, feature_provider):
+        self._send_dist_data_to_comet(feature_provider, ["test"])
         self._initialize_estimator(feature_provider.embedding_params)
         self._estimator.evaluate(
             input_fn=lambda: self.eval_input_fn(
@@ -113,6 +116,7 @@ class TSAModel(ABC):
         )
 
     def train_and_eval(self, feature_provider, steps):
+        self._send_dist_data_to_comet(feature_provider, ["train", "test"])
         self._initialize_estimator(feature_provider.embedding_params)
         train_spec = tf.estimator.TrainSpec(
             input_fn=lambda: self.train_input_fn(
@@ -174,7 +178,6 @@ class TSAModel(ABC):
     @addon([prediction_outputs])
     @embed_sequences
     def _model_fn(self, features, labels, mode, params):
-        labels = tf.Print(input_=labels, data=[tf_class_distribution(labels)])
         return self.model_fn(features, labels, mode, params)
 
     def _initialize_estimator(self, embedding_params):
@@ -182,3 +185,12 @@ class TSAModel(ABC):
         self._estimator = Estimator(
             model_fn=self._model_fn, params=self.params, config=self.run_config
         )
+
+    def _send_dist_data_to_comet(self, feature_provider, modes):
+        if self.comet_experiment is None:
+            return
+        stats = feature_provider.get_datasets_stats()
+        dist_images = [plot_distributions(stats, mode) for mode in modes]
+        dist_image_names = [mode + "_distribution" for mode in modes]
+        for temp_png in temp_pngs(dist_images, dist_image_names):
+            self.comet_experiment.log_image(temp_png)

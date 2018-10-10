@@ -5,14 +5,10 @@ from os import environ
 from datetime import timedelta
 from functools import wraps, partial
 import tensorflow as tf
-from tensorflow.estimator import ModeKeys, Estimator  # pylint: disable=E0401
+from tensorflow.estimator import ModeKeys  # pylint: disable=E0401
 from tsaplay.utils.io import cprnt
-from tsaplay.utils.data import prep_dataset, make_dense_features
-from tsaplay.utils.tf import (
-    sparse_sequences_to_dense,
-    get_seq_lengths,
-    scaffold_init_fn_on_spec,
-)
+from tsaplay.utils.data import prep_dataset
+from tsaplay.utils.tf import scaffold_init_fn_on_spec
 
 
 def timeit(pre="", post=""):
@@ -216,8 +212,6 @@ def make_input_fn(mode):
 
                 def process_dataset(features, labels):
                     return (args[0].processing_fn(features), labels)
-                    # processed_features = args[0].processing_fn(features)
-                    # return (make_dense_features(processed_features), labels)
 
                 dataset = prep_dataset(
                     tfrecords=tfrecords,

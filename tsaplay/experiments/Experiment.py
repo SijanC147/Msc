@@ -74,6 +74,7 @@ class Experiment:
     def _initialize_experiment_dir(self):
         dir_parent = join(DATA_PATH, self.model.name)
         exp_dir_name = self.contd_tag or self.feature_provider.name
+        exp_dir_name = exp_dir_name.replace(" ", "_")
         experiment_dir = join(dir_parent, exp_dir_name)
         if exists(experiment_dir) and self.contd_tag is None:
             i = 0
