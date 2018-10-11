@@ -1,13 +1,7 @@
-from random import choice, randrange
-from math import floor
 from decimal import Decimal
-from io import BytesIO
-import spacy
-from spacy.attrs import ORTH  # pylint: disable=E0611
 import six
 import pandas as pd
 import numpy as np
-from tqdm import tqdm
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 import matplotlib as mpl
 from matplotlib.font_manager import FontProperties
@@ -18,49 +12,56 @@ mpl.use("TkAgg")
 import matplotlib.pyplot as plt  # nopep8
 
 
-def tokenize_phrases(phrases):
-    token_lists = []
-    nlp = spacy.load("en", disable=["parser", "ner"])
-    for doc in tqdm(nlp.pipe(phrases, batch_size=100, n_threads=-1)):
-        tokens = list(filter(token_filter, doc))
-        token_lists.append([t.text.lower() for t in tokens])
-    return token_lists
-
-
-def token_filter(token):
-    if token.like_url:
-        return False
-    if token.like_email:
-        return False
-    if token.text in ["\uFE0F"]:
-        return False
-    return True
-
-
-def corpus_from_docs(docs):
-    corpus = {}
-
-    nlp = spacy.load("en", disable=["parser", "ner"])
-    docs_joined = " ".join(map(lambda document: document.strip(), docs))
-    if len(docs_joined) > 1000000:
-        nlp.max_length = len(docs_joined) + 1
-    tokens = nlp(docs_joined)
-    tokens = list(filter(token_filter, tokens))
-    doc = nlp(" ".join(map(lambda token: token.text, tokens)))
-    counts = doc.count_by(ORTH)
-    words = counts.items()
-    for word_id, cnt in sorted(words, reverse=True, key=lambda item: item[1]):
-        corpus[nlp.vocab.strings[word_id]] = cnt
-
-    return corpus
-
-
 def cmap_int(value, cmap_name="Oranges", alpha=0.8):
     cmap = plt.get_cmap(cmap_name)
     rgba_flt = cmap(value, alpha=alpha)
     rgba_arr = mpl.colors.to_rgba_array(rgba_flt)[0]
     rgba_int = np.int32(rgba_arr * 255)
     return tuple(rgba_int)
+
+
+def stack_images(images, h_space=10):
+    if not images:
+        return
+    widths, heights = zip(*(im.size for im in images))
+
+    total_height = sum(heights) + h_space * len(images)
+    max_width = max(widths)
+
+    stacked_image = Image.new(mode="RGBA", size=(max_width, total_height))
+
+    y_offset = 0
+
+    for im in images:
+        stacked_image.paste(im, (0, y_offset))
+        y_offset += im.size[1] + h_space
+
+    return stacked_image
+
+
+def join_images(images, v_space=5, border=None, padding=2):
+    if not images:
+        return
+    widths, heights = zip(*(im.size for im in images))
+
+    total_width = sum(widths) + v_space * (len(images) - 1) + 2 * padding
+    max_height = max(heights) + 2 * padding
+
+    joined_image = Image.new(mode="RGBA", size=(total_width, max_height))
+
+    x_offset = padding
+
+    for im in images:
+        joined_image.paste(im, (x_offset, padding))
+        x_offset += im.size[0] + v_space
+
+    if border is None:
+        return joined_image
+    else:
+        joined_image_with_border = ImageOps.expand(
+            joined_image, border=border, fill="black"
+        )
+        return joined_image_with_border
 
 
 def draw_attention_heatmap(phrases, attn_vecs):
@@ -289,47 +290,3 @@ def plot_distributions(stats, mode):
     ax.set_title(mode.capitalize() + " Data Distribution")
 
     return get_image_from_plt(plt)
-
-
-def stack_images(images, h_space=10):
-    if not images:
-        return
-    widths, heights = zip(*(im.size for im in images))
-
-    total_height = sum(heights) + h_space * len(images)
-    max_width = max(widths)
-
-    stacked_image = Image.new(mode="RGBA", size=(max_width, total_height))
-
-    y_offset = 0
-
-    for im in images:
-        stacked_image.paste(im, (0, y_offset))
-        y_offset += im.size[1] + h_space
-
-    return stacked_image
-
-
-def join_images(images, v_space=5, border=None, padding=2):
-    if not images:
-        return
-    widths, heights = zip(*(im.size for im in images))
-
-    total_width = sum(widths) + v_space * (len(images) - 1) + 2 * padding
-    max_height = max(heights) + 2 * padding
-
-    joined_image = Image.new(mode="RGBA", size=(total_width, max_height))
-
-    x_offset = padding
-
-    for im in images:
-        joined_image.paste(im, (x_offset, padding))
-        x_offset += im.size[0] + v_space
-
-    if border is None:
-        return joined_image
-    else:
-        joined_image_with_border = ImageOps.expand(
-            joined_image, border=border, fill="black"
-        )
-        return joined_image_with_border

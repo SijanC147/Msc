@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from datetime import datetime
 
 import comet_ml
 import tensorflow as tf
@@ -12,7 +13,7 @@ from tensorflow.estimator.export import (  # pylint: disable=E0401
     ServingInputReceiver
 )
 from tsaplay.features.FeatureProvider import FeatureProvider
-from tsaplay.utils.nlp import plot_distributions
+from tsaplay.utils.draw import plot_distributions
 from tsaplay.utils.io import temp_pngs
 from tsaplay.utils.decorators import (
     make_input_fn,
@@ -191,6 +192,9 @@ class TSAModel(ABC):
             return
         stats = feature_provider.get_datasets_stats()
         dist_images = [plot_distributions(stats, mode) for mode in modes]
-        dist_image_names = [mode + "_distribution" for mode in modes]
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        dist_image_names = [
+            mode + "_distribution_" + timestamp for mode in modes
+        ]
         for temp_png in temp_pngs(dist_images, dist_image_names):
             self.comet_experiment.log_image(temp_png)

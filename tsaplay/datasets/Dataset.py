@@ -3,7 +3,9 @@ from os.path import normpath, basename, join, exists
 from functools import wraps
 import json
 import numpy as np
-from tsaplay.utils.nlp import corpus_from_docs
+import spacy
+from spacy.attrs import ORTH  # pylint: disable=E0611
+from tsaplay.features.FeatureProvider import FeatureProvider
 from tsaplay.utils.data import resample_data_dict, get_class_distribution
 from tsaplay.utils.io import (
     search_dir,
@@ -108,8 +110,28 @@ class Dataset:
         if exists(corpus_file):
             corpus = corpus_from_csv(path=corpus_file)
         else:
-            corpus = corpus_from_docs(docs)
+            corpus = cls.corpus_from_docs(docs)
             corpus_to_csv(corpus_file, corpus)
+        return corpus
+
+    @classmethod
+    def corpus_from_docs(cls, docs):
+        corpus = {}
+
+        nlp = spacy.load("en", disable=["parser", "ner"])
+        docs_joined = " ".join(map(lambda document: document.strip(), docs))
+        if len(docs_joined) > 1000000:
+            nlp.max_length = len(docs_joined) + 1
+        tokens = nlp(docs_joined)
+        tokens = list(filter(FeatureProvider.token_filter, tokens))
+        doc = nlp(" ".join(map(lambda token: token.text, tokens)))
+        counts = doc.count_by(ORTH)
+        words = counts.items()
+        for word_id, cnt in sorted(
+            words, reverse=True, key=lambda item: item[1]
+        ):
+            corpus[nlp.vocab.strings[word_id]] = cnt
+
         return corpus
 
     @timeit("Initializing dataset internals", "Dataset internals initialized")

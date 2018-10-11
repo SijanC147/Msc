@@ -26,7 +26,6 @@ from tensorflow.train import (
 )
 
 from tsaplay.features.FeatureProvider import FeatureProvider
-from tsaplay.utils.nlp import tokenize_phrases
 
 
 def parse_args():
@@ -115,15 +114,15 @@ def main():
     )
     l_enc = [
         FeatureProvider.tf_encode_tokens(tokens)
-        for tokens in tokenize_phrases(l_ctxts)
+        for tokens in FeatureProvider.tokenize_phrases(l_ctxts)
     ]
     trg_enc = [
         FeatureProvider.tf_encode_tokens(tokens)
-        for tokens in tokenize_phrases(trgs)
+        for tokens in FeatureProvider.tokenize_phrases(trgs)
     ]
     r_enc = [
         FeatureProvider.tf_encode_tokens(tokens)
-        for tokens in tokenize_phrases(r_ctxts)
+        for tokens in FeatureProvider.tokenize_phrases(r_ctxts)
     ]
 
     tf_examples = []

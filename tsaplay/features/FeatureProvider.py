@@ -5,12 +5,13 @@ from datetime import datetime
 from zipfile import ZipFile, ZIP_DEFLATED
 import math
 from numpy.random import shuffle
+import spacy
+from tqdm import tqdm
 import tensorflow as tf
 from tensorflow.train import BytesList, Feature, Features, Example, Int64List
 from tensorflow.python.client.timeline import Timeline  # pylint: disable=E0611
 from tensorflow.python_io import TFRecordWriter
 
-from tsaplay.utils.nlp import tokenize_phrases
 from tsaplay.utils.decorators import timeit
 
 
@@ -23,7 +24,7 @@ class FeatureProvider:
         self._datasets = datasets
         self._num_shards = num_shards or 10
         self.__fetch_dict = self._build_fetch_dict()
-        if len(self.__fetch_dict) > 0:
+        if self.__fetch_dict:
             self._generate_missing_tf_record_files()
 
     @property
@@ -69,9 +70,9 @@ class FeatureProvider:
             targets=dictionary["targets"],
             offsets=dictionary["offsets"],
         )
-        l_tok = tokenize_phrases(l_ctxts)
-        trg_tok = tokenize_phrases(trgs)
-        r_tok = tokenize_phrases(r_ctxts)
+        l_tok = cls.tokenize_phrases(l_ctxts)
+        trg_tok = cls.tokenize_phrases(trgs)
+        r_tok = cls.tokenize_phrases(r_ctxts)
 
         return (l_tok, trg_tok, r_tok)
 
@@ -125,6 +126,25 @@ class FeatureProvider:
             default_value=1,
             delimiter="\t",
         )
+
+    @classmethod
+    def token_filter(cls, token):
+        if token.like_url:
+            return False
+        if token.like_email:
+            return False
+        if token.text in ["\uFE0F"]:
+            return False
+        return True
+
+    @classmethod
+    def tokenize_phrases(cls, phrases):
+        token_lists = []
+        nlp = spacy.load("en", disable=["parser", "ner"])
+        for doc in tqdm(nlp.pipe(phrases, batch_size=100, n_threads=-1)):
+            tokens = list(filter(cls.token_filter, doc))
+            token_lists.append([t.text.lower() for t in tokens])
+        return token_lists
 
     def get_datasets_stats(self):
         stats = {}

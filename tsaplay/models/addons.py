@@ -1,7 +1,6 @@
 import inspect
-from functools import partial
 from os.path import join
-from os import makedirs, environ
+from os import makedirs
 import tensorflow as tf
 from tensorflow.estimator import (  # pylint: disable=E0401
     ModeKeys,
@@ -23,8 +22,6 @@ from tsaplay.utils.decorators import only
 from tsaplay.hooks.SaveAttentionWeightVector import SaveAttentionWeightVector
 from tsaplay.hooks.SaveConfusionMatrix import SaveConfusionMatrix
 
-# from tsaplay.hooks.CometContextSwitch import CometContextSwitch
-
 
 @only(["PREDICT"])
 def prediction_outputs(model, features, labels, spec, params):
@@ -44,12 +41,11 @@ def prediction_outputs(model, features, labels, spec, params):
 @only(["EVAL"])
 def attn_heatmaps(model, features, labels, spec, params):
     eval_hooks = spec.evaluation_hooks
-    targets = tf.sparse_tensor_to_dense(features["target"], default_value=b"")
     eval_hooks += (
         SaveAttentionWeightVector(
             labels=labels,
             predictions=spec.predictions["class_ids"],
-            targets=tf.squeeze(targets, axis=1),
+            targets=features["target"],
             classes=model.class_labels,
             summary_writer=tf.summary.FileWriterCache.get(
                 join(model.run_config.model_dir, "eval")

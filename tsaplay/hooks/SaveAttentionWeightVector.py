@@ -1,29 +1,15 @@
-import tensorflow as tf
 import numpy as np
 
-import textwrap
-import re
-import io
-import itertools
-import matplotlib
-
-from os import getcwd
-from os.path import join
-from tempfile import mkdtemp
-from shutil import rmtree
-from PIL import Image, ImageDraw
+import tensorflow as tf
 from tensorflow.train import SessionRunHook, SessionRunArgs
-from tsaplay.utils.nlp import (
+from tsaplay.utils.draw import (
     draw_attention_heatmap,
     draw_prediction_label,
     stack_images,
     tabulate_attention_value,
 )
 from tsaplay.utils.tf import image_to_summary
-from tsaplay.utils.io import cprnt, temp_pngs, get_image_from_plt
-
-matplotlib.use("TkAgg")
-import matplotlib.pyplot as plt  # nopep8
+from tsaplay.utils.io import cprnt, temp_pngs
 
 
 class SaveAttentionWeightVector(SessionRunHook):
@@ -38,6 +24,7 @@ class SaveAttentionWeightVector(SessionRunHook):
         n_picks=3,
         n_hops=None,
         mode=None,
+        freq=0.2,
     ):
         self.labels = labels
         self.predictions = predictions
@@ -48,6 +35,7 @@ class SaveAttentionWeightVector(SessionRunHook):
         self._summary_writer = summary_writer
         self._comet = comet
         self.mode = mode
+        self.freq = freq
 
     def before_run(self, run_context):
         return SessionRunArgs(
@@ -61,7 +49,7 @@ class SaveAttentionWeightVector(SessionRunHook):
         )
 
     def after_run(self, run_context, run_values):
-        if self.n_picks is None:
+        if self.n_picks is None or np.random.random() > self.freq:
             return
         results = run_values.results
         global_step = results["global_step"][0]
@@ -98,10 +86,12 @@ class SaveAttentionWeightVector(SessionRunHook):
                 hop_attns = []
                 for hop_index in range(i_hop, i_hop + self.n_hops):
                     phrases = [
-                        attn_mech[0][hop_index].tolist() for attn_mech in attn_mechs
+                        attn_mech[0][hop_index].tolist()
+                        for attn_mech in attn_mechs
                     ]
                     attn_vecs = [
-                        attn_mech[1][hop_index].tolist() for attn_mech in attn_mechs
+                        attn_mech[1][hop_index].tolist()
+                        for attn_mech in attn_mechs
                     ]
                     attn_heatmap_hop = draw_attention_heatmap(
                         phrases=phrases, attn_vecs=attn_vecs

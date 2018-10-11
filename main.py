@@ -16,27 +16,25 @@ from tsaplay.models.LCRRot import LCRRot
 
 
 def main():
-    dong = Dataset(*DATASETS.DONG, distribution=[0.33, 0.33, 0.34])
+    # dong = Dataset(*DATASETS.DONG, distribution=[0.33, 0.33, 0.34])
     restaurants = Dataset(
         *DATASETS.RESTAURANTS, distribution=[0.33, 0.33, 0.34]
     )
-    laptops = Dataset(*DATASETS.LAPTOPS, distribution=[0.33, 0.33, 0.34])
-    embedding = Embedding(EMBEDDINGS.GLOVE_WIKI_GIGA_50)
+    # laptops = Dataset(*DATASETS.LAPTOPS, distribution=[0.33, 0.33, 0.34])
+    embedding = Embedding(EMBEDDINGS.GLOVE_WIKI_GIGA_300)
 
-    feature_provider = FeatureProvider([dong, restaurants, laptops], embedding)
+    feature_provider = FeatureProvider([restaurants], embedding)
 
-    model = LCRRot(
-        params={"hidden_units": 5, "batch_size": 5, "attn_heatmaps": False}
-    )
+    model = LCRRot(params={"batch-size": 25})
 
     experiment = Experiment(
         feature_provider,
         model,
         config={"tf_random_seed": 1234},
-        contd_tag="testing concatenated redist datasets",
+        contd_tag="testing restaurants dataset",
     )
 
-    experiment.run(job="train+eval", steps=300)
+    experiment.run(job="train+eval", steps=1000)
     # experiment.launch_tensorboard()
     # experiment.export_model()
 
