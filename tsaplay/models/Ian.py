@@ -19,16 +19,12 @@ class Ian(TSAModel):
     def set_params(self):
         return {
             "batch-size": 25,
-            "max_seq_length": 85,
-            "n_out_classes": 3,
             "learning_rate": 0.1,
             "l2_weight": 1e-5,
             "momentum": 0.9,
             "keep_prob": 0.5,
             "hidden_units": 50,
-            "initializer": tf.initializers.random_uniform(
-                minval=-0.1, maxval=0.1
-            ),
+            "initializer": tf.initializers.random_uniform(-0.1, 0.1),
         }
 
     @classmethod
@@ -104,7 +100,7 @@ class Ian(TSAModel):
 
         logits = tf.layers.dense(
             inputs=final_sentence_rep,
-            units=params["n_out_classes"],
+            units=params["_n_out_classes"],
             activation=tf.nn.tanh,
             kernel_initializer=params["initializer"],
             bias_initializer=params["initializer"],

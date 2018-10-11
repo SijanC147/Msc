@@ -54,7 +54,7 @@ class Experiment:
             prev_exported_models = self.get_exported_models()
             self.model.export(
                 directory=model_export_dir,
-                embedding_params=self.feature_provider.embedding_params,
+                feature_provider=self.feature_provider,
             )
 
             if prev_exported_models != self.get_exported_models():
@@ -108,7 +108,6 @@ class Experiment:
             "log_step_count_steps": 25,
         }
         default_config.update(config_dict)
-        self.model.params.update({"model_dir": default_config["model_dir"]})
         self.model.run_config = tf.estimator.RunConfig(**default_config)
 
     def _setup_comet_ml_experiment(self):

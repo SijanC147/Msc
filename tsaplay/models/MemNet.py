@@ -21,14 +21,10 @@ class MemNet(TSAModel):
     def set_params(self):
         return {
             "batch-size": 25,
-            "n_out_classes": 3,
             "learning_rate": 0.01,
             "location_model": 2,
-            "initializer": tf.initializers.random_uniform(
-                minval=-0.01, maxval=0.01
-            ),
             "n_hops": 5,
-            "n_attn_heatmaps": 2,
+            "initializer": tf.initializers.random_uniform(-0.01, 0.01),
             "train_embeddings": False,
         }
 
@@ -85,7 +81,7 @@ class MemNet(TSAModel):
             v_loc = location_vector_model_fn(
                 locs=context_locations,
                 seq_lens=features["context_len"],
-                emb_dim=params["embedding-dim"],
+                emb_dim=params["_embedding_dim"],
                 hop=hop_num,
                 init=params["initializer"],
             )
@@ -98,7 +94,7 @@ class MemNet(TSAModel):
             with tf.variable_scope("linear_layer", reuse=tf.AUTO_REUSE):
                 linear_out = tf.layers.dense(
                     inputs=tf.squeeze(input_vec, axis=1),
-                    units=params["embedding-dim"],
+                    units=params["_embedding_dim"],
                     activation=None,
                     kernel_initializer=params["initializer"],
                     bias_initializer=params["initializer"],
@@ -109,7 +105,7 @@ class MemNet(TSAModel):
                     seq_lens=features["context_len"],
                     memory=ext_memory,
                     v_aspect=input_vec,
-                    emb_dim=params["embedding-dim"],
+                    emb_dim=params["_embedding_dim"],
                     init=params["initializer"],
                 )
 
@@ -148,7 +144,7 @@ class MemNet(TSAModel):
 
         logits = tf.layers.dense(
             inputs=final_sentence_rep,
-            units=params["n_out_classes"],
+            units=params["_n_out_classes"],
             kernel_initializer=params["initializer"],
             bias_initializer=params["initializer"],
         )

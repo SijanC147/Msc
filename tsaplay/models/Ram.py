@@ -26,7 +26,6 @@ class Ram(TSAModel):
     def set_params(self):
         return {
             "batch-size": 25,
-            "n_out_classes": 3,
             "learning_rate": 0.1,
             "l2_weight": 1e-5,
             "keep_prob": 0.5,
@@ -34,10 +33,7 @@ class Ram(TSAModel):
             "gru_hidden_units": 50,
             "n_lstm_layers": 2,
             "n_hops": 9,
-            "n_attn_heatmaps": 2,
-            "initializer": tf.initializers.random_uniform(
-                minval=-0.1, maxval=0.1
-            ),
+            "initializer": tf.initializers.random_uniform(-0.1, 0.1),
             "train_embeddings": False,
         }
 
@@ -142,7 +138,7 @@ class Ram(TSAModel):
                 (params["lstm_hidden_units"] * 2)
                 + 1
                 + params["gru_hidden_units"]
-                + params["embedding-dim"]
+                + params["_embedding_dim"]
             )
 
             with tf.variable_scope("attention_layer", reuse=tf.AUTO_REUSE):
@@ -196,7 +192,7 @@ class Ram(TSAModel):
         final_sentence_rep = tf.squeeze(final_episode, axis=1)
 
         logits = tf.layers.dense(
-            inputs=final_sentence_rep, units=params["n_out_classes"]
+            inputs=final_sentence_rep, units=params["_n_out_classes"]
         )
 
         loss = l2_regularized_loss(

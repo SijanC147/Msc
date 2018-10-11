@@ -15,13 +15,10 @@ class TCLstm(TSAModel):
     def set_params(self):
         return {
             "batch-size": 50,
-            "n_out_classes": 3,
             "learning_rate": 0.1,
             "keep_prob": 0.5,
             "hidden_units": 200,
-            "initializer": tf.initializers.random_uniform(
-                minval=-0.1, maxval=0.1
-            ),
+            "initializer": tf.initializers.random_uniform(-0.1, 0.1),
         }
 
     @classmethod
@@ -60,7 +57,7 @@ class TCLstm(TSAModel):
             )
             features["left_emb"] = tf.reshape(
                 tensor=features["left_emb"],
-                shape=[-1, max_left_len, 2 * params["embedding-dim"]],
+                shape=[-1, max_left_len, 2 * params["_embedding_dim"]],
             )
             features["right_emb"] = tf.stack(
                 values=[
@@ -72,7 +69,7 @@ class TCLstm(TSAModel):
             )
             features["right_emb"] = tf.reshape(
                 tensor=features["right_emb"],
-                shape=[-1, max_right_len, 2 * params["embedding-dim"]],
+                shape=[-1, max_right_len, 2 * params["_embedding_dim"]],
             )
 
         with tf.variable_scope("left_lstm"):
@@ -104,7 +101,7 @@ class TCLstm(TSAModel):
         )
 
         logits = tf.layers.dense(
-            inputs=concatenated_final_states, units=params["n_out_classes"]
+            inputs=concatenated_final_states, units=params["_n_out_classes"]
         )
 
         loss = tf.losses.sparse_softmax_cross_entropy(

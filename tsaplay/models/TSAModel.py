@@ -32,11 +32,11 @@ from tsaplay.models.addons import (
 
 
 class TSAModel(ABC):
-    def __init__(self, params=None, config=None):
+    def __init__(self, params=None, run_config=None, aux_config=None):
         self._comet_experiment = None
         self._estimator = None
-        self.class_labels = ["Negative", "Neutral", "Positive"]
-        self.run_config = RunConfig(**(config or {}))
+        self.aux_config = aux_config or {}
+        self.run_config = RunConfig(**(run_config or {}))
         self.params = self.set_params()
         if params is not None:
             self.params.update(params)
@@ -99,7 +99,7 @@ class TSAModel(ABC):
 
     def train(self, feature_provider, steps):
         self._send_dist_data_to_comet(feature_provider, ["train"])
-        self._initialize_estimator(feature_provider.embedding_params)
+        self._initialize_estimator(feature_provider)
         self._estimator.train(
             input_fn=lambda: self.train_input_fn(
                 tfrecords=feature_provider.train_tfrecords, params=self.params
@@ -109,7 +109,7 @@ class TSAModel(ABC):
 
     def evaluate(self, feature_provider):
         self._send_dist_data_to_comet(feature_provider, ["test"])
-        self._initialize_estimator(feature_provider.embedding_params)
+        self._initialize_estimator(feature_provider)
         self._estimator.evaluate(
             input_fn=lambda: self.eval_input_fn(
                 tfrecords=feature_provider.test_tfrecords, params=self.params
@@ -118,7 +118,7 @@ class TSAModel(ABC):
 
     def train_and_eval(self, feature_provider, steps):
         self._send_dist_data_to_comet(feature_provider, ["train", "test"])
-        self._initialize_estimator(feature_provider.embedding_params)
+        self._initialize_estimator(feature_provider)
         train_spec = tf.estimator.TrainSpec(
             input_fn=lambda: self.train_input_fn(
                 tfrecords=feature_provider.train_tfrecords, params=self.params
@@ -138,8 +138,8 @@ class TSAModel(ABC):
             eval_spec=eval_spec,
         )
 
-    def export(self, directory, embedding_params):
-        self._initialize_estimator(embedding_params)
+    def export(self, directory, feature_provider):
+        self._initialize_estimator(feature_provider)
         self._estimator.export_savedmodel(
             export_dir_base=directory,
             serving_input_receiver_fn=self._serving_input_receiver_fn,
@@ -156,7 +156,7 @@ class TSAModel(ABC):
         parsed_example = tf.parse_example(inputs_serialized, feature_spec)
 
         ids_table = FeatureProvider.index_lookup_table(
-            self.params["vocab-file"]
+            self.params["_vocab_file"]
         )
         features = {
             "left": parsed_example["left"],
@@ -181,8 +181,14 @@ class TSAModel(ABC):
     def _model_fn(self, features, labels, mode, params):
         return self.model_fn(features, labels, mode, params)
 
-    def _initialize_estimator(self, embedding_params):
-        self.params.update(embedding_params)
+    def _initialize_estimator(self, feature_provider):
+        self.aux_config["_feature_provider"] = feature_provider.name
+        if not self.aux_config.get("class_labels"):
+            self.aux_config[
+                "class_labels"
+            ] = feature_provider.get_unique_classes()
+        self.params["_n_out_classes"] = len(self.aux_config["class_labels"])
+        self.params.update(feature_provider.embedding_params)
         self._estimator = Estimator(
             model_fn=self._model_fn, params=self.params, config=self.run_config
         )

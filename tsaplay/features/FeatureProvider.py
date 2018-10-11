@@ -4,7 +4,7 @@ from csv import DictWriter
 from datetime import datetime
 from zipfile import ZipFile, ZIP_DEFLATED
 import math
-from numpy.random import shuffle
+import numpy as np
 import spacy
 from tqdm import tqdm
 import tensorflow as tf
@@ -13,6 +13,7 @@ from tensorflow.python.client.timeline import Timeline  # pylint: disable=E0611
 from tensorflow.python_io import TFRecordWriter
 
 from tsaplay.utils.decorators import timeit
+from tsaplay.utils.data import get_class_distribution
 
 
 DATA_PATH = join(getcwd(), "tsaplay", "features", "data")
@@ -37,11 +38,10 @@ class FeatureProvider:
     @property
     def embedding_params(self):
         return {
-            "feature-provider": self.name,
-            "vocab-size": self._embedding.vocab_size,
-            "embedding-dim": self._embedding.dim_size,
-            "vocab-file": self._embedding.vocab_file_path,
-            "embedding-init": self._embedding.initializer,
+            "_vocab_size": self._embedding.vocab_size,
+            "_vocab_file": self._embedding.vocab_file_path,
+            "_embedding_dim": self._embedding.dim_size,
+            "_embedding_init": self._embedding.initializer,
         }
 
     @property
@@ -159,6 +159,21 @@ class FeatureProvider:
             )
         return stats
 
+    def get_unique_classes(self):
+        train_classes = np.array(
+            [get_class_distribution(ds.train_dict)[0] for ds in self._datasets]
+        ).flatten()
+        test_classes = np.array(
+            [get_class_distribution(ds.test_dict)[0] for ds in self._datasets]
+        ).flatten()
+
+        classes = np.unique(
+            np.concatenate([train_classes, test_classes], axis=0)
+        )
+        classes = classes.astype(np.str).tolist()
+
+        return classes
+
     def _get_gen_dir(self, dataset, mode=None):
         dataset_dir = join(DATA_PATH, self._embedding.name, dataset.name)
         dist_key = dataset.get_dist_key(mode)
@@ -184,7 +199,7 @@ class FeatureProvider:
         return self._write_filtered_vocab_file(dataset)
 
     def _write_tf_record_files(self, dataset, mode, tf_examples):
-        shuffle(tf_examples)
+        np.random.shuffle(tf_examples)
         num_per_shard = int(
             math.ceil(len(tf_examples) / float(self._num_shards))
         )

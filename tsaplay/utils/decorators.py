@@ -1,12 +1,11 @@
 import time
-import json
 import inspect
 from os import environ
 from datetime import timedelta
 from functools import wraps, partial
 import tensorflow as tf
 from tensorflow.estimator import ModeKeys  # pylint: disable=E0401
-from tsaplay.utils.io import cprnt
+from tsaplay.utils.io import cprnt, comet_pretty_log
 from tsaplay.utils.data import prep_dataset
 from tsaplay.utils.tf import scaffold_init_fn_on_spec
 
@@ -34,9 +33,9 @@ def timeit(pre="", post=""):
 def embed_sequences(model_fn):
     @wraps(model_fn)
     def wrapper(self, features, labels, mode, params):
-        vocab_size = params["vocab-size"]
-        dim_size = params["embedding-dim"]
-        embedding_init = params["embedding-init"]
+        vocab_size = params["_vocab_size"]
+        dim_size = params["_embedding_dim"]
+        embedding_init = params["_embedding_init"]
         trainable = params.get("train_embeddings", True)
         with tf.variable_scope("embedding_layer", reuse=tf.AUTO_REUSE):
             embeddings = tf.get_variable(
@@ -67,58 +66,31 @@ def embed_sequences(model_fn):
 def cometml(model_fn):
     @wraps(model_fn)
     def wrapper(self, features, labels, mode, params):
-        if self.comet_experiment is None or mode == ModeKeys.PREDICT:
+        comet = self.comet_experiment
+        if comet is None or mode == ModeKeys.PREDICT:
             return model_fn(self, features, labels, mode, params)
         if mode in [ModeKeys.TRAIN, ModeKeys.EVAL]:
-            self.comet_experiment.log_other(
-                "Feature Provider", params["feature-provider"]
-            )
-            self.comet_experiment.log_other(
-                "Hidden Units", params["hidden_units"]
-            )
-            self.comet_experiment.log_other("Batch Size", params["batch-size"])
             run_config = self.run_config.__dict__
-            for key, value in run_config.items():
-                try:
-                    json.dumps(value)
-                except TypeError:
-                    value = str(value)
-                self.comet_experiment.log_other(key, value)
-            params_log_other = [
-                "model_dir",
-                "n_out_classes",
-                "vocab-file",
-                "embedding-dim",
-                "embedding-init",
-                "n_attn_heatmaps",
-            ]
-            for key, value in params.items():
-                try:
-                    json.dumps(value)
-                except TypeError:
-                    value = str(value)
-                if key in params_log_other:
-                    self.comet_experiment.log_other(key, value)
-                else:
-                    self.comet_experiment.log_parameter(key, value)
-            self.comet_experiment.set_code(inspect.getsource(self.__class__))
-            self.comet_experiment.set_filename(inspect.getfile(self.__class__))
-            self.comet_experiment.log_dataset_hash((features, labels))
+            comet_pretty_log(comet, self.aux_config, prefix="AUX")
+            comet_pretty_log(comet, run_config, prefix="RUNCONFIG")
+            comet_pretty_log(comet, params, hparams=True)
+            comet.set_code(inspect.getsource(self.__class__))
+            comet.set_filename(inspect.getfile(self.__class__))
             if mode == ModeKeys.TRAIN:
                 global_step = tf.train.get_global_step()
-                self.comet_experiment.set_step(global_step)
-                self.comet_experiment.log_current_epoch(global_step)
+                comet.set_step(global_step)
+                comet.log_current_epoch(global_step)
 
             spec = model_fn(self, features, labels, mode, params)
 
             if mode == ModeKeys.TRAIN:
 
-                def export_graph_to_comet(scaffold, sess):
-                    self.comet_experiment.set_model_graph(sess.graph)
+                def export_graph_to_comet(sess):
+                    comet.set_model_graph(sess.graph)
 
                 spec = scaffold_init_fn_on_spec(spec, export_graph_to_comet)
 
-                self.comet_experiment.log_epoch_end(global_step)
+                comet.log_epoch_end(global_step)
             return spec
 
     return wrapper
@@ -128,6 +100,7 @@ def attach(addons, modes=None, order="POST"):
     def decorator(model_fn):
         @wraps(model_fn)
         def wrapper(self, features, labels, mode, params):
+            aux = self.aux_config
             targets = modes or ["train", "eval", "predict"]
             target_modes = [
                 {
@@ -140,7 +113,7 @@ def attach(addons, modes=None, order="POST"):
             applicable_addons = [
                 addon
                 for addon in addons
-                if mode in target_modes and params.get(addon.__name__, True)
+                if mode in target_modes and aux.get(addon.__name__, True)
             ]
             if order == "PRE":
                 for add_on in applicable_addons:
@@ -184,9 +157,8 @@ def only(modes):
                 if pre:
                     cprnt(wog=addon_fn.__name__)
                     return addon_fn(*args, **kwargs)
-                else:
-                    cprnt(wog=addon_fn.__name__)
-                    return addon_fn(*args, **kwargs)
+                cprnt(wog=addon_fn.__name__)
+                return addon_fn(*args, **kwargs)
             cprnt(wor=addon_fn.__name__)
             if post:
                 return args[3]
@@ -200,7 +172,7 @@ def make_input_fn(mode):
     def decorator(func):
         @wraps(func)
         def input_fn(*args, **kwargs):
-            if mode == "TRAIN" or mode == "EVAL":
+            if mode in ["TRAIN", "EVAL"]:
                 try:
                     tfrecords = args[1]
                 except IndexError:
@@ -221,8 +193,7 @@ def make_input_fn(mode):
                 )
 
                 return dataset.make_one_shot_iterator().get_next()
-            else:
-                raise ValueError("Invalid mode: {0}".format(mode))
+            raise ValueError("Invalid mode: {0}".format(mode))
 
         return input_fn
 

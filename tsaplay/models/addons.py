@@ -26,7 +26,10 @@ from tsaplay.hooks.SaveConfusionMatrix import SaveConfusionMatrix
 @only(["PREDICT"])
 def prediction_outputs(model, features, labels, spec, params):
     probs = spec.predictions["probabilities"]
-    classes = tf.constant([model.class_labels])
+    class_labels = model.aux_config.get(
+        "class_labels", ["Negative", "Neutral", "Positive"]
+    )
+    classes = tf.constant([class_labels])
     classify_output = ClassificationOutput(classes=classes, scores=probs)
     predict_output = PredictOutput(spec.predictions)
     export_outputs = {
@@ -46,12 +49,12 @@ def attn_heatmaps(model, features, labels, spec, params):
             labels=labels,
             predictions=spec.predictions["class_ids"],
             targets=features["target"],
-            classes=model.class_labels,
+            classes=model.aux_config["class_labels"],
             summary_writer=tf.summary.FileWriterCache.get(
                 join(model.run_config.model_dir, "eval")
             ),
             comet=model.comet_experiment,
-            n_picks=params.get("n_attn_heatmaps", 5),
+            n_picks=model.aux_config.get("n_attn_heatmaps", 5),
             n_hops=params.get("n_hops"),
             mode=spec.mode,
         ),
@@ -68,13 +71,13 @@ def conf_matrix(model, features, labels, spec, params):
             "mean_iou": tf.metrics.mean_iou(
                 labels=labels,
                 predictions=spec.predictions["class_ids"],
-                num_classes=params["n_out_classes"],
+                num_classes=params["_n_out_classes"],
             )
         }
     )
     eval_hooks += (
         SaveConfusionMatrix(
-            labels=model.class_labels,
+            class_labels=model.aux_config["class_labels"],
             confusion_matrix_tensor_name="mean_iou/total_confusion_matrix",
             summary_writer=tf.summary.FileWriterCache.get(
                 join(model.run_config.model_dir, "eval")
@@ -96,7 +99,7 @@ def logging(model, features, labels, spec, params):
             name="acc_op",
         ),
         "auc": tf.metrics.auc(
-            labels=tf.one_hot(indices=labels, depth=params["n_out_classes"]),
+            labels=tf.one_hot(indices=labels, depth=params["_n_out_classes"]),
             predictions=spec.predictions["probabilities"],
             name="auc_op",
         ),
@@ -135,11 +138,11 @@ def scalars(model, features, labels, spec, params):
         "mpc_accuracy": tf.metrics.mean_per_class_accuracy(
             labels=labels,
             predictions=spec.predictions["class_ids"],
-            num_classes=params["n_out_classes"],
+            num_classes=params["_n_out_classes"],
             name="mpc_acc_op",
         ),
         "auc": tf.metrics.auc(
-            labels=tf.one_hot(indices=labels, depth=params["n_out_classes"]),
+            labels=tf.one_hot(indices=labels, depth=params["_n_out_classes"]),
             predictions=spec.predictions["probabilities"],
             name="auc_op",
         ),

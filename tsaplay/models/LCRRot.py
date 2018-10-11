@@ -24,16 +24,12 @@ class LCRRot(TSAModel):
     def set_params(self):
         return {
             "batch-size": 25,
-            "n_out_classes": 3,
             "learning_rate": 0.1,
-            "l2_weight": 1e-5,
-            "momentum": 0.9,
             "keep_prob": 0.5,
             "hidden_units": 300,
-            "initializer": tf.initializers.random_uniform(
-                minval=-0.1, maxval=0.1
-            ),
-            "n_attn_heatmaps": 5,
+            "l2_weight": 1e-5,
+            "momentum": 0.9,
+            "initializer": tf.initializers.random_uniform(-0.1, 0.1),
         }
 
     @addon([attn_heatmaps])
@@ -156,7 +152,7 @@ class LCRRot(TSAModel):
         final_sentence_rep = tf.concat([r_l, r_t_l, r_t_r, r_r], axis=1)
 
         logits = tf.layers.dense(
-            inputs=final_sentence_rep, units=params["n_out_classes"]
+            inputs=final_sentence_rep, units=params["_n_out_classes"]
         )
 
         loss = l2_regularized_loss(

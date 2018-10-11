@@ -11,13 +11,10 @@ class Lstm(TSAModel):
     def set_params(self):
         return {
             "batch-size": 100,
-            "n_out_classes": 3,
             "learning_rate": 0.01,
             "keep_prob": 0.8,
             "hidden_units": 100,
-            "initializer": tf.initializers.random_uniform(
-                minval=-0.03, maxval=0.03
-            ),
+            "initializer": tf.initializers.random_uniform(-0.03, 0.03),
         }
 
     @classmethod
@@ -46,7 +43,7 @@ class Lstm(TSAModel):
         )
 
         logits = tf.layers.dense(
-            inputs=final_states.h, units=params["n_out_classes"]
+            inputs=final_states.h, units=params["_n_out_classes"]
         )
 
         loss = tf.losses.sparse_softmax_cross_entropy(

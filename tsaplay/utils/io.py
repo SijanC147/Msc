@@ -147,3 +147,23 @@ def get_image_from_plt(plt):
         image_bytes = output.getvalue()
 
     return Image.open(BytesIO(image_bytes))
+
+
+def comet_pretty_log(comet, data_dict, prefix=None, hparams=False):
+    for key, value in data_dict.items():
+        if hparams and key[0] == "_" and prefix is None:
+            prefix = "autoparam"
+        log_as_param = hparams and key[0] != "_"
+        key = key.replace("-", "_")
+        key = key.split("_")
+        key = " ".join(map(str.capitalize, key)).strip()
+        if prefix:
+            key = prefix.upper() + ": " + key
+        try:
+            dumps(value)
+        except TypeError:
+            value = str(value)
+        if log_as_param:
+            comet.log_parameter(key, value)
+        else:
+            comet.log_other(key, value)

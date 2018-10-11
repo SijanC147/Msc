@@ -30,7 +30,7 @@ def scaffold_init_fn_on_spec(spec, new_fn):
     def new_init_fn(scaffold, sess):
         if prev_init is not None:
             prev_init(sess)
-        new_fn(scaffold, sess)
+        new_fn(sess)
 
     scaffold._init_fn = lambda sess: new_init_fn(scaffold, sess)
     return spec._replace(scaffold=scaffold)
