@@ -5,11 +5,9 @@ from shutil import rmtree
 import comet_ml
 import tensorflow as tf
 from tsaplay.utils.io import start_tensorboard, restart_tf_serve_container
+from tsaplay.constants import EXPERIMENT_DATA_PATH, EXPORT_MODEL_PATH
 
 tf.logging.set_verbosity(tf.logging.INFO)
-
-DATA_PATH = join(getcwd(), "tsaplay", "experiments", "data")
-EXPORT_PATH = join(getcwd(), "export")
 
 
 class Experiment:
@@ -47,7 +45,7 @@ class Experiment:
             print("No continue tag defined, nothing to export!")
         else:
             export_model_name = self.model.name.lower() + "_" + self.contd_tag
-            model_export_dir = join(EXPORT_PATH, export_model_name)
+            model_export_dir = join(EXPORT_MODEL_PATH, export_model_name)
             if exists(model_export_dir) and overwrite:
                 rmtree(model_export_dir)
 
@@ -68,11 +66,13 @@ class Experiment:
     @classmethod
     def get_exported_models(cls):
         return [
-            m for m in listdir(EXPORT_PATH) if not isfile(join(EXPORT_PATH, m))
+            m
+            for m in listdir(EXPORT_MODEL_PATH)
+            if not isfile(join(EXPORT_MODEL_PATH, m))
         ]
 
     def _initialize_experiment_dir(self):
-        dir_parent = join(DATA_PATH, self.model.name)
+        dir_parent = join(EXPERIMENT_DATA_PATH, self.model.name)
         exp_dir_name = self.contd_tag or self.feature_provider.name
         exp_dir_name = exp_dir_name.replace(" ", "_")
         experiment_dir = join(dir_parent, exp_dir_name)
@@ -85,7 +85,7 @@ class Experiment:
         self._experiment_dir = experiment_dir
 
     def _update_export_models_config(self):
-        config_file_path = join(EXPORT_PATH, "tfserve.conf")
+        config_file_path = join(EXPORT_MODEL_PATH, "tfserve.conf")
         config_file_str = "model_config_list: {\n"
         for model in self.get_exported_models():
             config_file_str += (

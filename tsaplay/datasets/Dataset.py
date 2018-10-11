@@ -15,7 +15,6 @@ from tsaplay.utils.io import (
     pickle_file as _pickle,
 )
 from tsaplay.utils.decorators import timeit
-import tsaplay.datasets.constants as DATASETS
 
 
 class Dataset:

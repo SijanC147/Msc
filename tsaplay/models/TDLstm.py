@@ -1,8 +1,4 @@
 import tensorflow as tf
-from tensorflow.estimator import (  # pylint: disable=E0401
-    EstimatorSpec,
-    ModeKeys,
-)
 from tsaplay.models.TSAModel import TSAModel
 from tsaplay.utils.tf import sparse_reverse, dropout_lstm_cell
 

@@ -1,12 +1,7 @@
-import inspect
 from os.path import join
 from os import makedirs
 import tensorflow as tf
-from tensorflow.estimator import (  # pylint: disable=E0401
-    ModeKeys,
-    RunConfig,
-    Estimator,
-)
+from tensorflow.estimator import ModeKeys  # pylint: disable=E0401
 from tensorflow.saved_model.signature_constants import (
     DEFAULT_SERVING_SIGNATURE_DEF_KEY
 )

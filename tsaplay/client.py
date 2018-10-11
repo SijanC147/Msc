@@ -1,29 +1,14 @@
-import tensorflow as tf
-
 from argparse import ArgumentParser
-
+from csv import DictReader
 from grpc import insecure_channel
 
+from tensorflow import string as tf_string
+from tensorflow.contrib.util import make_tensor_proto  # pylint: disable=E0611
+from tensorflow.train import Example, Features, Feature, BytesList
 from tensorflow_serving.apis.input_pb2 import Input, ExampleList
 from tensorflow_serving.apis.predict_pb2 import PredictRequest
 from tensorflow_serving.apis.classification_pb2 import ClassificationRequest
 from tensorflow_serving.apis import prediction_service_pb2_grpc
-from tensorflow.contrib.util import make_tensor_proto  # pylint: disable=E0611
-
-from os import getcwd, listdir
-from os.path import join, isfile, splitext
-from csv import DictReader
-
-from tensorflow.train import (
-    Example,
-    SequenceExample,
-    FeatureLists,
-    FeatureList,
-    Features,
-    Feature,
-    BytesList,
-    Int64List,
-)
 
 from tsaplay.features.FeatureProvider import FeatureProvider
 
@@ -139,19 +124,19 @@ def main():
         tf_examples.append(tf_example.SerializeToString())
 
     tensor_proto = make_tensor_proto(
-        tf_examples, dtype=tf.string, shape=[len(tf_examples)]
+        tf_examples, dtype=tf_string, shape=[len(tf_examples)]
     )
 
     channel = insecure_channel("127.0.0.1:8500")
     stub = prediction_service_pb2_grpc.PredictionServiceStub(channel)
 
     # CLASSIFICATION
-    # classification_req = ClassificationRequest()
-    # inputs = Input(example_list=ExampleList(examples=[tf_example]))
-    # classification_req.input.CopyFrom(inputs)  # pylint: disable=E1101
-    # classification_req.model_spec.name = "lg"  # pylint: disable=E1101
-    # classification = stub.Classify(classification_req, 60.0)
-    # print(classification)
+    classification_req = ClassificationRequest()
+    inputs = Input(example_list=ExampleList(examples=[tf_example]))
+    classification_req.input.CopyFrom(inputs)  # pylint: disable=E1101
+    classification_req.model_spec.name = "lg"  # pylint: disable=E1101
+    classification = stub.Classify(classification_req, 60.0)
+    print(classification)
 
     # PREDICTION
     prediction_req = PredictRequest()

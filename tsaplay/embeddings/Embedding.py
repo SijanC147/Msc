@@ -1,13 +1,13 @@
+from os import makedirs
+from os.path import join, dirname, exists
+from math import sqrt, floor
 import tensorflow as tf
 import numpy as np
 import gensim.downloader as gensim_data
-from math import sqrt, floor
 from gensim.models import KeyedVectors
-from os import makedirs, getcwd
-from os.path import join, normpath, basename, splitext, dirname, exists
 
 from tsaplay.utils.decorators import timeit
-import tsaplay.embeddings.constants as EMBEDDINGS
+from tsaplay.constants import EMBEDDING_DATA_PATH
 
 
 class Embedding:
@@ -29,7 +29,7 @@ class Embedding:
 
     @property
     def gen_dir(self):
-        gen_dir = join(EMBEDDINGS.DATA_PATH, self.name)
+        gen_dir = join(EMBEDDING_DATA_PATH, self.name)
         makedirs(gen_dir, exist_ok=True)
         return gen_dir
 
@@ -96,11 +96,12 @@ class Embedding:
     @oov.setter
     def oov(self, oov):
         if oov is None:
-            self._oov = lambda size: self._default_oov(size)
+            self._oov = lambda size: self.default_oov(size)
         else:
             self._oov = lambda size: oov(size)
 
-    def _default_oov(self, size):
+    @classmethod
+    def default_oov(cls, size):
         return np.random.uniform(low=-0.03, high=0.03, size=size)
 
     def _set_vectors(self):

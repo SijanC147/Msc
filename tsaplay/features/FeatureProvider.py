@@ -1,5 +1,5 @@
 from os.path import join, exists
-from os import getcwd, makedirs
+from os import makedirs
 from csv import DictWriter
 from datetime import datetime
 from zipfile import ZipFile, ZIP_DEFLATED
@@ -14,9 +14,7 @@ from tensorflow.python_io import TFRecordWriter
 
 from tsaplay.utils.decorators import timeit
 from tsaplay.utils.data import get_class_distribution
-
-
-DATA_PATH = join(getcwd(), "tsaplay", "features", "data")
+from tsaplay.constants import FEATURES_DATA_PATH
 
 
 class FeatureProvider:
@@ -175,7 +173,9 @@ class FeatureProvider:
         return classes
 
     def _get_gen_dir(self, dataset, mode=None):
-        dataset_dir = join(DATA_PATH, self._embedding.name, dataset.name)
+        dataset_dir = join(
+            FEATURES_DATA_PATH, self._embedding.name, dataset.name
+        )
         dist_key = dataset.get_dist_key(mode)
         try:
             dist_key.index("-")
@@ -354,7 +354,7 @@ class FeatureProvider:
 
     @timeit("Exporting graph run metadata", "Metadata exported")
     def _write_run_metadata(self, run_metadata):
-        file_dir = join(DATA_PATH, "_meta")
+        file_dir = join(FEATURES_DATA_PATH, "_meta")
         makedirs(file_dir, exist_ok=True)
         file_name = datetime.now().strftime("%Y%m%d-%H%M%S") + ".json"
         time_line = Timeline(run_metadata.step_stats)  # pylint: disable=E1101

@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt  # nopep8
 
 class SaveConfusionMatrix(SessionRunHook):
     """
-    Saves a confusion matrix as a Summary so that it can be shown in 
+    Saves a confusion matrix as a Summary so that it can be shown in
     tensorboard
     """
 

@@ -1,8 +1,4 @@
 import tensorflow as tf
-from tensorflow.estimator import (  # pylint: disable=E0401
-    EstimatorSpec,
-    ModeKeys,
-)
 from tensorflow.contrib.rnn import (  # pylint: disable=E0611
     stack_bidirectional_dynamic_rnn
 )

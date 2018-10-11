@@ -1,9 +1,5 @@
 from os.path import join
 import tensorflow as tf
-from tensorflow.estimator import (  # pylint: disable=E0401
-    EstimatorSpec,
-    ModeKeys,
-)
 from tensorflow.contrib.rnn import (  # pylint: disable=E0611
     stack_bidirectional_dynamic_rnn
 )
@@ -15,9 +11,9 @@ from tsaplay.utils.tf import (
     l2_regularized_loss,
     generate_attn_heatmap_summary,
 )
-from tsaplay.utils.io import cprnt
 from tsaplay.utils.decorators import addon
 from tsaplay.models.addons import attn_heatmaps
+from tsaplay.utils.io import cprnt
 
 
 class LCRRot(TSAModel):

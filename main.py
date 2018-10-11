@@ -1,25 +1,17 @@
 import comet_ml
-from tsaplay.datasets.Dataset import Dataset, DATASETS
-from tsaplay.embeddings.Embedding import Embedding, EMBEDDINGS
+from tsaplay.constants import GLOVE_WIKI_GIGA_50, DONG
+from tsaplay.datasets.Dataset import Dataset
+from tsaplay.embeddings.Embedding import Embedding
 from tsaplay.features.FeatureProvider import FeatureProvider
 from tsaplay.experiments.Experiment import Experiment
-from tsaplay.models.LCRRot import LCRRot
-
-# from tsaplay.models.Lstm import Lstm
-
-# from tsaplay.models.TCLstm import TCLstm
-
-# from tsaplay.models.TDLstm import TDLstm
-# from tsaplay.models.Ian import Ian
-# from tsaplay.models.MemNet import MemNet
-# from tsaplay.models.Ram import Ram
+from tsaplay.models import LCRRot
 
 
 def main():
 
-    embedding = Embedding(EMBEDDINGS.GLOVE_WIKI_GIGA_50)
+    embedding = Embedding(GLOVE_WIKI_GIGA_50)
 
-    dong = Dataset(*DATASETS.DONG, distribution=[0.33, 0.33, 0.34])
+    dong = Dataset(*DONG, distribution=[0.33, 0.33, 0.34])
 
     feature_provider = FeatureProvider([dong], embedding)
 

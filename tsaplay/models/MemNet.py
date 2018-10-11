@@ -1,9 +1,5 @@
 from math import ceil
 import tensorflow as tf
-from tensorflow.estimator import (  # pylint: disable=E0401
-    EstimatorSpec,
-    ModeKeys,
-)
 from tsaplay.models.TSAModel import TSAModel
 from tsaplay.models.addons import attn_heatmaps
 from tsaplay.utils.decorators import addon
