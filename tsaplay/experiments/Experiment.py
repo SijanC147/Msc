@@ -1,4 +1,4 @@
-from os import getcwd, listdir, environ, makedirs
+from os import listdir, environ, makedirs
 from os.path import join, isfile, exists
 from shutil import rmtree
 

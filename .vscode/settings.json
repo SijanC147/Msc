@@ -9,6 +9,7 @@
     "**/.vscode": true,
     "**/__pycache__": true,
     "**/.ipynb_checkpoints": true,
+    "**/*.pyc": true,
     "**/*.ipynb": true,
     "**/_ipynbs": true,
     ".python-version": true

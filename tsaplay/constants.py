@@ -6,11 +6,13 @@ import tsaplay.datasets.parsers as dataset_parsers
 
 DatasetKey = namedtuple("DatasetKey", ["path", "parser"])
 
-DATASET_DATA_PATH = join(getcwd(), "tsaplay", "datasets", "data")
-EMBEDDING_DATA_PATH = join(getcwd(), "tsaplay", "embeddings", "data")
-EXPERIMENT_DATA_PATH = join(getcwd(), "tsaplay", "experiments", "data")
-FEATURES_DATA_PATH = join(getcwd(), "tsaplay", "features", "data")
-EXPORT_MODEL_PATH = join(getcwd(), "export")
+HOME_PATH = getcwd()
+
+DATASET_DATA_PATH = join(HOME_PATH, "tsaplay", "datasets", "data")
+EMBEDDING_DATA_PATH = join(HOME_PATH, "tsaplay", "embeddings", "data")
+EXPERIMENT_DATA_PATH = join(HOME_PATH, "tsaplay", "experiments", "data")
+FEATURES_DATA_PATH = join(HOME_PATH, "tsaplay", "features", "data")
+EXPORT_MODEL_PATH = join(HOME_PATH, "export")
 
 FASTTEXT_WIKI_300 = "fasttext-wiki-news-subwords-300"
 GLOVE_TWITTER_25 = "glove-twitter-25"

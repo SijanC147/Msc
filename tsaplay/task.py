@@ -49,6 +49,7 @@ MODELS = {
 
 
 def run_experiment(args):
+    print(args)
     tf.logging.set_verbosity(args.verbosity)
 
     embedding = Embedding(EMBEDDINGS.get(args.embedding))
@@ -82,7 +83,7 @@ if __name__ == "__main__":
         type=str,
         choices=[*DATASETS],
         help="One or more datasets to use for training and evaluation.",
-        default="dong",
+        default=["dong"],
         nargs="+",
     )
 
