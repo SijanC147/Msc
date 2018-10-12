@@ -6,7 +6,7 @@ import json
 import numpy as np
 import spacy
 from spacy.attrs import ORTH  # pylint: disable=E0611
-from tsaplay.constants import ASSETS_PATH
+from tsaplay.constants import ASSETS_PATH, DATASET_DATA_PATH
 from tsaplay.features import FeatureProvider
 from tsaplay.utils.data import resample_data_dict, get_class_distribution
 from tsaplay.utils.io import (
@@ -21,9 +21,9 @@ import tsaplay.utils.parsers as dataset_parsers
 
 
 class Dataset:
-    def __init__(self, path, parser, distribution=None):
+    def __init__(self, src_path, parser, distribution=None):
         self.__parser = self._wrap_parser(parser)
-        self.__path = path
+        self.__src_path = src_path
         self._initialize_all_internals()
         if distribution is not None:
             self._redistribute_data(distribution)
@@ -35,11 +35,17 @@ class Dataset:
 
     @property
     def name(self):
-        return basename(normpath(self.path))
+        return basename(normpath(self.src_path))
 
     @property
-    def path(self):
-        return self.__path
+    def src_path(self):
+        return self.__src_path
+
+    @property
+    def gen_path(self):
+        gen_path = join(DATASET_DATA_PATH, self.name)
+        makedirs(gen_path, exist_ok=True)
+        return gen_path
 
     @property
     def parser(self):
@@ -139,10 +145,10 @@ class Dataset:
     @timeit("Initializing dataset internals", "Dataset internals initialized")
     def _initialize_all_internals(self):
         self.__train_file = search_dir(
-            dir=self.__path, query="train", first=True, files_only=True
+            dir=self.__src_path, query="train", first=True, files_only=True
         )
         self.__test_file = search_dir(
-            dir=self.__path, query="test", first=True, files_only=True
+            dir=self.__src_path, query="test", first=True, files_only=True
         )
         self.__train_dict = self._load_dataset_dictionary(dict_type="train")
         self.__test_dict = self._load_dataset_dictionary(dict_type="test")
@@ -150,7 +156,7 @@ class Dataset:
             [label for label in self.__train_dict["labels"]]
         ).tolist()
         self.write_stats_json(
-            self.path,
+            self.gen_path,
             classes=self.__default_classes,
             train=self.__train_dict,
             test=self.__test_dict,
@@ -158,15 +164,15 @@ class Dataset:
         self.__all_docs = set(
             self.__train_dict["sentences"] + self.__test_dict["sentences"]
         )
-        self.__corpus = self.generate_corpus(self.__all_docs, self.path)
+        self.__corpus = self.generate_corpus(self.__all_docs, self.gen_path)
 
     @timeit("Loading dataset dictionary", "Dataset dictionary loaded")
     def _load_dataset_dictionary(self, dict_type):
         if dict_type == "train":
-            dict_file = join(self.path, "_train_dict.pkl")
+            dict_file = join(self.gen_path, "_train_dict.pkl")
             data_file = self.__train_file
         else:
-            dict_file = join(self.path, "_test_dict.pkl")
+            dict_file = join(self.gen_path, "_test_dict.pkl")
             data_file = self.__test_file
         if exists(dict_file):
             dictionary = _unpickle(path=dict_file)
@@ -214,7 +220,7 @@ class Dataset:
     def _redistribute_data(self, distribution):
         self.__train_dist_key = None
         self.__test_dist_key = None
-        dists_dir = join(self.path, "_dists")
+        dists_dir = join(self.gen_path, "_dists")
         makedirs(dists_dir, exist_ok=True)
         if isinstance(distribution, list):
             dist_list = distribution

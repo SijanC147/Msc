@@ -1,40 +1,69 @@
 import argparse
 import comet_ml
 import tensorflow as tf
-import tsaplay.constants as CONSTANTS
 from tsaplay.datasets import Dataset
 from tsaplay.embeddings import Embedding
 from tsaplay.features import FeatureProvider
 from tsaplay.experiments import Experiment
 import tsaplay.models as tsa_models
 
+from tsaplay.datasets import (
+    DEBUG,
+    DEBUGV2,
+    RESTAURANTS,
+    LAPTOPS,
+    DONG,
+    NAKOV,
+    ROSENTHAL,
+    SAEIDI,
+    WANG,
+    XUE,
+)
+
+from tsaplay.embeddings import (
+    FASTTEXT_WIKI_300,
+    GLOVE_TWITTER_25,
+    GLOVE_TWITTER_50,
+    GLOVE_TWITTER_100,
+    GLOVE_TWITTER_200,
+    GLOVE_WIKI_GIGA_50,
+    GLOVE_WIKI_GIGA_100,
+    GLOVE_WIKI_GIGA_200,
+    GLOVE_WIKI_GIGA_300,
+    GLOVE_COMMON42_300,
+    GLOVE_COMMON840_300,
+    W2V_GOOGLE_300,
+    W2V_RUS_300,
+)
+
+
 DATASETS = {
-    "debug": CONSTANTS.DEBUG,
-    "debugv2": CONSTANTS.DEBUGV2,
-    "restaurants": CONSTANTS.RESTAURANTS,
-    "laptops": CONSTANTS.LAPTOPS,
-    "dong": CONSTANTS.DONG,
-    "nakov": CONSTANTS.NAKOV,
-    "rosenthal": CONSTANTS.ROSENTHAL,
-    "saeidi": CONSTANTS.SAEIDI,
-    "wang": CONSTANTS.WANG,
-    "xue": CONSTANTS.XUE,
+    "debug": DEBUG,
+    "debugv2": DEBUGV2,
+    "restaurants": RESTAURANTS,
+    "laptops": LAPTOPS,
+    "dong": DONG,
+    "nakov": NAKOV,
+    "rosenthal": ROSENTHAL,
+    "saeidi": SAEIDI,
+    "wang": WANG,
+    "xue": XUE,
 }
 
 EMBEDDINGS = {
-    "fasttext": CONSTANTS.FASTTEXT_WIKI_300,
-    "twitter-25": CONSTANTS.GLOVE_TWITTER_25,
-    "twitter-50": CONSTANTS.GLOVE_TWITTER_50,
-    "twitter-100": CONSTANTS.GLOVE_TWITTER_100,
-    "twitter-200": CONSTANTS.GLOVE_TWITTER_200,
-    "wiki-50": CONSTANTS.GLOVE_WIKI_GIGA_50,
-    "wiki-100": CONSTANTS.GLOVE_WIKI_GIGA_100,
-    "wiki-200": CONSTANTS.GLOVE_WIKI_GIGA_200,
-    "wiki-300": CONSTANTS.GLOVE_WIKI_GIGA_300,
-    "commoncrawl-42": CONSTANTS.GLOVE_COMMON42_300,
-    "commoncrawl-840": CONSTANTS.GLOVE_COMMON840_300,
-    "w2v-google-300": CONSTANTS.W2V_GOOGLE_300,
-    "w2v-rus-300": CONSTANTS.W2V_RUS_300,
+    "fasttext": FASTTEXT_WIKI_300,
+    "twitter-25": GLOVE_TWITTER_25,
+    "twitter-50": GLOVE_TWITTER_50,
+    "twitter-100": GLOVE_TWITTER_100,
+    "twitter-200": GLOVE_TWITTER_200,
+    "wiki-50": GLOVE_WIKI_GIGA_50,
+    "wiki-100": GLOVE_WIKI_GIGA_100,
+    "wiki-200": GLOVE_WIKI_GIGA_200,
+    "wiki-300": GLOVE_WIKI_GIGA_300,
+    "commoncrawl-42": GLOVE_COMMON42_300,
+    "commoncrawl-840": GLOVE_COMMON840_300,
+    "w2v-google-300": W2V_GOOGLE_300,
+    "w2v-rus-300": W2V_RUS_300,
 }
 
 MODELS = {
@@ -60,7 +89,9 @@ def run_experiment(args):
 
     model = MODELS.get(args.model)(params={"batch-size": args.batch_size})
 
-    experiment = Experiment(feature_provider, model, contd_tag=args.contd_tag)
+    experiment = Experiment(
+        feature_provider, model, contd_tag=args.contd_tag, job_dir=args.job_dir
+    )
 
     experiment.run(job="train+eval", steps=args.steps)
 
@@ -94,6 +125,12 @@ if __name__ == "__main__":
         choices=[*MODELS],
         help="Choose model to train",
         default="lcrrot",
+    )
+
+    parser.add_argument(
+        "--job-dir",
+        help="GCS location to write checkpoints and export models",
+        # required=True,
     )
 
     parser.add_argument(
