@@ -5,6 +5,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 import matplotlib as mpl
 from matplotlib.font_manager import FontProperties
+from tsaplay.constants import DEFAULT_FONT_PATH
 from tsaplay.utils.io import cprnt, get_image_from_plt
 
 
@@ -65,7 +66,7 @@ def join_images(images, v_space=5, border=None, padding=2):
 
 
 def draw_attention_heatmap(phrases, attn_vecs):
-    font = ImageFont.truetype(font="./tsaplay/Symbola.ttf", size=16)
+    font = ImageFont.truetype(font=DEFAULT_FONT_PATH, size=16)
 
     phrases = [[str(t, "utf-8") for t in p if t != b""] for p in phrases]
     attn_vecs = [a[: len(p)] for a, p in zip(attn_vecs, phrases)]
@@ -122,7 +123,7 @@ def tabulate_attention_value(phrases, attn_vecs):
 def draw_prediction_label(target, label, prediction, classes):
     h_space = 10
     v_space = 5
-    font = ImageFont.truetype(font="./tsaplay/Symbola.ttf", size=16)
+    font = ImageFont.truetype(font=DEFAULT_FONT_PATH, size=16)
     text = "Target: {0} \t\t Predicted: {1} \t Correct: {2}".format(
         target, classes[prediction], classes[label]
     )
@@ -194,7 +195,7 @@ def render_mpl_table(
         **kwargs,
     )
 
-    font = FontProperties(fname="./tsaplay/Symbola.ttf", size=12)
+    font = FontProperties(fname=DEFAULT_FONT_PATH, size=12)
     mpl_table.auto_set_font_size(False)
 
     cmap = plt.get_cmap("Oranges")

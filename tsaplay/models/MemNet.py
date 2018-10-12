@@ -1,7 +1,7 @@
 from math import ceil
 import tensorflow as tf
 from tsaplay.models.TSAModel import TSAModel
-from tsaplay.models.addons import attn_heatmaps
+from tsaplay.utils.addons import attn_heatmaps
 from tsaplay.utils.decorators import addon
 from tsaplay.utils.tf import (
     masked_softmax,

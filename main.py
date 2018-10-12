@@ -1,9 +1,9 @@
 import comet_ml
 import tsaplay.constants as CONSTANTS
-from tsaplay.datasets.Dataset import Dataset
-from tsaplay.embeddings.Embedding import Embedding
-from tsaplay.features.FeatureProvider import FeatureProvider
-from tsaplay.experiments.Experiment import Experiment
+from tsaplay.datasets import Dataset
+from tsaplay.embeddings import Embedding
+from tsaplay.features import FeatureProvider
+from tsaplay.experiments import Experiment
 from tsaplay.models import LCRRot
 
 

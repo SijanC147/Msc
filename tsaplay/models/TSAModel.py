@@ -12,7 +12,7 @@ from tensorflow.estimator import (  # pylint: disable=E0401
 from tensorflow.estimator.export import (  # pylint: disable=E0401
     ServingInputReceiver
 )
-from tsaplay.features.FeatureProvider import FeatureProvider
+from tsaplay.features import FeatureProvider
 from tsaplay.utils.draw import plot_distributions
 from tsaplay.utils.io import temp_pngs
 from tsaplay.utils.decorators import (
@@ -22,7 +22,7 @@ from tsaplay.utils.decorators import (
     embed_sequences,
 )
 from tsaplay.utils.data import make_dense_features
-from tsaplay.models.addons import (
+from tsaplay.utils.addons import (
     prediction_outputs,
     conf_matrix,
     logging,

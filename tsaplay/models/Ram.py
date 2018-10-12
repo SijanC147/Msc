@@ -3,7 +3,7 @@ from tensorflow.contrib.rnn import (  # pylint: disable=E0611
     stack_bidirectional_dynamic_rnn
 )
 from tsaplay.models.TSAModel import TSAModel
-from tsaplay.models.addons import attn_heatmaps
+from tsaplay.utils.addons import attn_heatmaps
 from tsaplay.utils.decorators import addon
 from tsaplay.utils.tf import (
     masked_softmax,

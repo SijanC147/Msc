@@ -12,7 +12,7 @@ from tsaplay.utils.tf import (
     attention_unit,
     generate_attn_heatmap_summary,
 )
-from tsaplay.models.addons import attn_heatmaps
+from tsaplay.utils.addons import attn_heatmaps
 
 
 class Ian(TSAModel):

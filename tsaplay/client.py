@@ -10,7 +10,7 @@ from tensorflow_serving.apis.predict_pb2 import PredictRequest
 from tensorflow_serving.apis.classification_pb2 import ClassificationRequest
 from tensorflow_serving.apis import prediction_service_pb2_grpc
 
-from tsaplay.features.FeatureProvider import FeatureProvider
+from tsaplay.features import FeatureProvider
 
 
 def parse_args():

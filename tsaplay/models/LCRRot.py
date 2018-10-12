@@ -12,7 +12,7 @@ from tsaplay.utils.tf import (
     generate_attn_heatmap_summary,
 )
 from tsaplay.utils.decorators import addon
-from tsaplay.models.addons import attn_heatmaps
+from tsaplay.utils.addons import attn_heatmaps
 from tsaplay.utils.io import cprnt
 
 
