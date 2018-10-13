@@ -34,9 +34,9 @@ from tsaplay.constants import (
 
 
 class Dataset:
-    def __init__(self, src_path, parser, distribution=None):
-        self.__parser = self._wrap_parser(parser)
+    def __init__(self, src_path, parser=None, distribution=None):
         self.__src_path = src_path
+        self.__parser = self._wrap_parser(parser)
         self._initialize_all_internals()
         if distribution is not None:
             self._redistribute_data(distribution)
@@ -55,10 +55,8 @@ class Dataset:
         return self.__src_path
 
     @property
-    def gen_path(self):
-        gen_path = join(DATASET_DATA_PATH, self.name)
-        makedirs(gen_path, exist_ok=True)
-        return gen_path
+    def gen_dir(self):
+        return self._gen_dir
 
     @property
     def parser(self):
@@ -163,13 +161,18 @@ class Dataset:
         self.__test_file = search_dir(
             dir=self.__src_path, query="test", first=True, files_only=True
         )
+        if not self.__parser(self.__src_path):
+            self._gen_dir = self.__src_path
+        else:
+            self._gen_dir = join(DATASET_DATA_PATH, self.name)
+            makedirs(self._gen_dir, exist_ok=True)
         self.__train_dict = self._load_dataset_dictionary(dict_type="train")
         self.__test_dict = self._load_dataset_dictionary(dict_type="test")
         self.__default_classes = np.unique(
             [label for label in self.__train_dict["labels"]]
         ).tolist()
         self.write_stats_json(
-            self.gen_path,
+            self.gen_dir,
             classes=self.__default_classes,
             train=self.__train_dict,
             test=self.__test_dict,
@@ -177,15 +180,15 @@ class Dataset:
         self.__all_docs = set(
             self.__train_dict["sentences"] + self.__test_dict["sentences"]
         )
-        self.__corpus = self.generate_corpus(self.__all_docs, self.gen_path)
+        self.__corpus = self.generate_corpus(self.__all_docs, self.gen_dir)
 
     @timeit("Loading dataset dictionary", "Dataset dictionary loaded")
     def _load_dataset_dictionary(self, dict_type):
         if dict_type == "train":
-            dict_file = join(self.gen_path, "_train_dict.pkl")
+            dict_file = join(self.gen_dir, "_train_dict.pkl")
             data_file = self.__train_file
         else:
-            dict_file = join(self.gen_path, "_test_dict.pkl")
+            dict_file = join(self.gen_dir, "_test_dict.pkl")
             data_file = self.__test_file
         if exists(dict_file):
             dictionary = _unpickle(path=dict_file)
@@ -226,6 +229,8 @@ class Dataset:
                     "offsets": offsets,
                     "labels": labels,
                 }
+            except TypeError:
+                return False
 
         return wrapper
 
@@ -233,7 +238,7 @@ class Dataset:
     def _redistribute_data(self, distribution):
         self.__train_dist_key = None
         self.__test_dist_key = None
-        dists_dir = join(self.gen_path, "_dists")
+        dists_dir = join(self.gen_dir, "_dists")
         makedirs(dists_dir, exist_ok=True)
         if isinstance(distribution, list):
             dist_list = distribution

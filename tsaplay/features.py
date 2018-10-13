@@ -18,7 +18,8 @@ from tsaplay.constants import FEATURES_DATA_PATH, SPACY_MODEL
 
 
 class FeatureProvider:
-    def __init__(self, datasets, embedding, num_shards=None):
+    def __init__(self, datasets, embedding, num_shards=None, data_root=None):
+        self._data_root = data_root or FEATURES_DATA_PATH
         self._embedding = embedding
         self._datasets = datasets
         self._num_shards = num_shards or 10
@@ -173,9 +174,7 @@ class FeatureProvider:
         return classes
 
     def _get_gen_dir(self, dataset, mode=None):
-        dataset_dir = join(
-            FEATURES_DATA_PATH, self._embedding.name, dataset.name
-        )
+        dataset_dir = join(self._data_root, self._embedding.name, dataset.name)
         dist_key = dataset.get_dist_key(mode)
         try:
             dist_key.index("-")
@@ -354,7 +353,7 @@ class FeatureProvider:
 
     @timeit("Exporting graph run metadata", "Metadata exported")
     def _write_run_metadata(self, run_metadata):
-        file_dir = join(FEATURES_DATA_PATH, "_meta")
+        file_dir = join(self._data_root, "_meta")
         makedirs(file_dir, exist_ok=True)
         file_name = datetime.now().strftime("%Y%m%d-%H%M%S") + ".json"
         time_line = Timeline(run_metadata.step_stats)  # pylint: disable=E1101

@@ -1,14 +1,12 @@
 import argparse
-import comet_ml
-import tensorflow as tf
+from os import makedirs, rename, listdir
+from os.path import join, dirname, exists
+from datetime import datetime
+from shutil import copytree, rmtree
+import tsaplay.models as tsa_models
 from tsaplay.datasets import Dataset
 from tsaplay.embeddings import Embedding
 from tsaplay.features import FeatureProvider
-from tsaplay.experiments import Experiment
-import tsaplay.models as tsa_models
-import tsaplay.constants as CNSTS
-from tsaplay.utils.io import cprnt
-import pkg_resources as pkg
 
 from tsaplay.datasets import (
     DEBUG,
@@ -38,7 +36,6 @@ from tsaplay.embeddings import (
     W2V_GOOGLE_300,
     W2V_RUS_300,
 )
-
 
 DATASETS = {
     "debug": DEBUG,
@@ -79,28 +76,13 @@ MODELS = {
     "ram": tsa_models.Ram,
 }
 
-
-def run_experiment(args):
-    tf.logging.set_verbosity(args.verbosity)
-
-    embedding = Embedding(EMBEDDINGS.get(args.embedding))
-
-    datasets = [Dataset(*DATASETS.get(dataset)) for dataset in args.datasets]
-
-    feature_provider = FeatureProvider(datasets, embedding)
-
-    model = MODELS.get(args.model)(params={"batch-size": args.batch_size})
-
-    experiment = Experiment(
-        feature_provider, model, contd_tag=args.contd_tag, job_dir=args.job_dir
-    )
-
-    experiment.run(job="train+eval", steps=args.steps)
-
-    pkg.cleanup_resources()
+TEMP_PATH = "temp"
+TEMP_INPUTDATA_PATH = join("tsaplay", "assets", "_inputdata")
+TEMP_EMBEDDING_PATH = join("tsaplay", "assets", "_embedding")
+TEMP_DATASET_PATH = join("tsaplay", "assets", "_datasets")
 
 
-if __name__ == "__main__":
+def get_arguments():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -166,4 +148,71 @@ if __name__ == "__main__":
         help="Set logging verbosity",
     )
 
-    run_experiment(parser.parse_args())
+    return parser.parse_args()
+
+
+def create_temp_folder():
+    temp_folder_name = datetime.now().strftime("%Y%m%d-%H%M%S")
+    temp_folder = join(TEMP_PATH, temp_folder_name)
+    makedirs(temp_folder)
+    return temp_folder
+
+
+def copy_over_dataset_data(datasets, target_temp_path):
+    for dataset in datasets:
+        name_index = dataset.gen_dir.index(dataset.name)
+        path_wrt_name = dataset.gen_dir[name_index:]
+        target_path = join(target_temp_path, path_wrt_name)
+        copytree(dataset.gen_dir, target_path)
+
+
+def copy_over_tf_records(feature_provider, embedding_name, target_temp_path):
+    train_records = feature_provider.train_tfrecords
+    test_records = feature_provider.test_tfrecords
+    for (tf_train, tf_test) in zip(train_records, test_records):
+        parent_train, parent_test = dirname(tf_train), dirname(tf_test)
+        index_train = parent_train.index(embedding_name)
+        index_test = parent_test.index(embedding_name)
+        target_train = join(target_temp_path + parent_train[index_train:])
+        target_test = join(target_temp_path + parent_test[index_test:])
+        copytree(parent_train, target_train)
+        copytree(parent_test, target_test)
+
+
+def setup_temp_data(embedding, datasets):
+    embedding = Embedding(EMBEDDINGS.get(embedding))
+    datasets = [Dataset(*DATASETS.get(dataset)) for dataset in datasets]
+    feature_provider = FeatureProvider(datasets, embedding)
+
+    temp_folder = create_temp_folder()
+    inputdata_temp_path = join(temp_folder, "inputdata")
+    embedding_temp_path = join(temp_folder, "embedding", embedding.name)
+    datasets_temp_path = join(temp_folder, "datasets")
+
+    copy_over_dataset_data(datasets, datasets_temp_path)
+    copy_over_tf_records(feature_provider, embedding.name, inputdata_temp_path)
+    copytree(embedding.gen_dir, embedding_temp_path)
+
+    return temp_folder
+
+
+def copy_to_assets(temp_folder):
+    copytree(join(temp_folder, "datasets"), TEMP_DATASET_PATH)
+    copytree(join(temp_folder, "inputdata"), TEMP_INPUTDATA_PATH)
+    copytree(join(temp_folder, "embedding"), TEMP_EMBEDDING_PATH)
+
+
+def clean_prev_input_data():
+    if exists(TEMP_INPUTDATA_PATH):
+        rmtree(TEMP_INPUTDATA_PATH)
+
+
+def prepare_assets():
+    args = get_arguments()
+    temp_folder = setup_temp_data(args.embedding, args.datasets)
+    clean_prev_input_data()
+    copy_to_assets(temp_folder)
+
+
+if __name__ == "__main__":
+    prepare_assets()
