@@ -1,10 +1,10 @@
 from setuptools import find_packages, setup
 
 with open("requirements.txt") as requirements_file:
-    REQUIREMENTS = requirements_file.read().splitlines()
+    REQUIREMENTS = requirements_file.read().splitlines()[1:]
 
 setup(
-    name="TSAPlay",
+    name="tsaplay",
     version="0.1dev",
     author="Sean Bugeja",
     author_email="seanbugeja23@gmail.com",

@@ -6,7 +6,7 @@ import json
 import numpy as np
 import spacy
 from spacy.attrs import ORTH  # pylint: disable=E0611
-from tsaplay.constants import ASSETS_PATH, DATASET_DATA_PATH
+from tsaplay.constants import ASSETS_PATH, DATASET_DATA_PATH, SPACY_MODEL_PATH
 from tsaplay.features import FeatureProvider
 from tsaplay.utils.data import resample_data_dict, get_class_distribution
 from tsaplay.utils.io import (
@@ -126,7 +126,7 @@ class Dataset:
     def corpus_from_docs(cls, docs):
         corpus = {}
 
-        nlp = spacy.load("en", disable=["parser", "ner"])
+        nlp = spacy.load(SPACY_MODEL_PATH, disable=["parser", "ner"])
         docs_joined = " ".join(map(lambda document: document.strip(), docs))
         if len(docs_joined) > 1000000:
             nlp.max_length = len(docs_joined) + 1

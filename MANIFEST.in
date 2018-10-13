@@ -1,2 +1,2 @@
 include requirements.txt
-include tsaplay/assets/*
+include tsaplay/assets/**/*

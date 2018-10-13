@@ -5,7 +5,7 @@ from datetime import datetime
 from zipfile import ZipFile, ZIP_DEFLATED
 import math
 import numpy as np
-import en_core_web_sm
+import spacy
 from tqdm import tqdm
 import tensorflow as tf
 from tensorflow.train import BytesList, Feature, Features, Example, Int64List
@@ -14,7 +14,7 @@ from tensorflow.python_io import TFRecordWriter
 
 from tsaplay.utils.decorators import timeit
 from tsaplay.utils.data import get_class_distribution
-from tsaplay.constants import FEATURES_DATA_PATH
+from tsaplay.constants import FEATURES_DATA_PATH, SPACY_MODEL_PATH
 
 
 class FeatureProvider:
@@ -138,7 +138,7 @@ class FeatureProvider:
     @classmethod
     def tokenize_phrases(cls, phrases):
         token_lists = []
-        nlp = en_core_web_sm.load(disable=["parser", "ner"])
+        nlp = spacy.load(SPACY_MODEL_PATH, disable=["parser", "ner"])
         for doc in tqdm(nlp.pipe(phrases, batch_size=100, n_threads=-1)):
             tokens = list(filter(cls.token_filter, doc))
             token_lists.append([t.text.lower() for t in tokens])

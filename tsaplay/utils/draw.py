@@ -164,11 +164,10 @@ def render_mpl_table(
     col_width=1,
     row_height=0.3,
     header_color="#40466e",
-    row_colors=["#f1f1f2", "w"],
     edge_color="w",
     bbox=[0, 0, 1, 1],
     ax=None,
-    **kwargs,
+    **kwargs
 ):
     if ax is None:
         size = (np.array(data.shape[::-1]) + np.array([0, 1])) * np.array(
@@ -192,7 +191,7 @@ def render_mpl_table(
         bbox=bbox,
         colLabels=data.columns,
         cellLoc="center",
-        **kwargs,
+        **kwargs
     )
 
     font = FontProperties(fname=DEFAULT_FONT_PATH, size=12)

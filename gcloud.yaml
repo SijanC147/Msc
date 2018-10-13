@@ -1,2 +1,11 @@
 trainingInput:
     pythonVersion: "3.5"
+    runtimeVersion: "1.10"
+    region: europe-west1
+    scaleTier: STANDARD_1
+    args: 
+    - --embedding=wiki-100
+    - --datasets=debug
+    - --model=lcrrot
+    - --batch-size=25
+    - --steps=10

@@ -6,6 +6,8 @@ from tsaplay.embeddings import Embedding
 from tsaplay.features import FeatureProvider
 from tsaplay.experiments import Experiment
 import tsaplay.models as tsa_models
+import tsaplay.constants as CNSTS
+from tsaplay.utils.io import cprnt
 
 from tsaplay.datasets import (
     DEBUG,
@@ -78,25 +80,38 @@ MODELS = {
 
 
 def run_experiment(args):
-    print(args)
     tf.logging.set_verbosity(args.verbosity)
 
-    embedding = Embedding(EMBEDDINGS.get(args.embedding))
+    cprnt(bow="JOB DIR: {0}".format(args.job_dir))
+    # embedding = Embedding(EMBEDDINGS.get(args.embedding))
 
-    datasets = [Dataset(*DATASETS.get(dataset)) for dataset in args.datasets]
+    # datasets = [Dataset(*DATASETS.get(dataset)) for dataset in args.datasets]
 
-    feature_provider = FeatureProvider(datasets, embedding)
+    # feature_provider = FeatureProvider(datasets, embedding)
 
-    model = MODELS.get(args.model)(params={"batch-size": args.batch_size})
+    # model = MODELS.get(args.model)(params={"batch-size": args.batch_size})
 
-    experiment = Experiment(
-        feature_provider, model, contd_tag=args.contd_tag, job_dir=args.job_dir
-    )
+    # experiment = Experiment(
+    #     feature_provider, model, contd_tag=args.contd_tag, job_dir=args.job_dir
+    # )
 
-    experiment.run(job="train+eval", steps=args.steps)
+    # experiment.run(job="train+eval", steps=args.steps)
 
 
 if __name__ == "__main__":
+
+    cprnt("PACKAGE PATH: {0}".format(CNSTS.PACKAGE_PATH))
+    cprnt("HOME PATH: {0}".format(CNSTS.HOME_PATH))
+    cprnt("DATA PATH: {0}".format(CNSTS.DATA_PATH))
+    cprnt("ASSETS PATH: {0}".format(CNSTS.ASSETS_PATH))
+    cprnt("DEFAULT FONT PATH: {0}".format(CNSTS.DEFAULT_FONT_PATH))
+    cprnt("SPACY MODEL PATH: {0}".format(CNSTS.SPACY_MODEL_PATH))
+    cprnt("DATASET PATH: {0}".format(CNSTS.DATASET_DATA_PATH))
+    cprnt("EMBEDDING PATH: {0}".format(CNSTS.EMBEDDING_DATA_PATH))
+    cprnt("FEATURES PATH: {0}".format(CNSTS.FEATURES_DATA_PATH))
+    cprnt("EXPERIMENT PATH: {0}".format(CNSTS.EXPERIMENT_DATA_PATH))
+    cprnt("EXPORTS PATH: {0}".format(CNSTS.EXPORTS_DATA_PATH))
+
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
