@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tsaplay.models.TSAModel import TSAModel
+from tsaplay.models.tsa_model import TsaModel
 from tsaplay.utils.tf import (
     sparse_reverse,
     variable_len_batch_mean,
@@ -7,7 +7,7 @@ from tsaplay.utils.tf import (
 )
 
 
-class TCLstm(TSAModel):
+class TcLstm(TsaModel):
     def set_params(self):
         return {
             "batch-size": 50,

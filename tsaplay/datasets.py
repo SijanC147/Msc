@@ -6,7 +6,6 @@ import json
 import numpy as np
 import spacy
 from spacy.attrs import ORTH  # pylint: disable=E0611
-from tsaplay.constants import ASSETS_PATH, DATASET_DATA_PATH, SPACY_MODEL_PATH
 from tsaplay.features import FeatureProvider
 from tsaplay.utils.data import resample_data_dict, get_class_distribution
 from tsaplay.utils.io import (
@@ -18,6 +17,20 @@ from tsaplay.utils.io import (
 )
 from tsaplay.utils.decorators import timeit
 import tsaplay.utils.parsers as dataset_parsers
+from tsaplay.constants import (
+    DATASET_DATA_PATH,
+    SPACY_MODEL,
+    DEBUG_ASSETS,
+    DEBUGV2_ASSETS,
+    DONG_ASSETS,
+    LAPTOPS_ASSETS,
+    NAKOV_ASSETS,
+    RESTAURANTS_ASSETS,
+    ROSENTHAL_ASSETS,
+    SAEIDI_ASSETS,
+    WANG_ASSETS,
+    XUE_ASSETS,
+)
 
 
 class Dataset:
@@ -126,7 +139,7 @@ class Dataset:
     def corpus_from_docs(cls, docs):
         corpus = {}
 
-        nlp = spacy.load(SPACY_MODEL_PATH, disable=["parser", "ner"])
+        nlp = spacy.load(SPACY_MODEL, disable=["parser", "ner"])
         docs_joined = " ".join(map(lambda document: document.strip(), docs))
         if len(docs_joined) > 1000000:
             nlp.max_length = len(docs_joined) + 1
@@ -275,26 +288,13 @@ class Dataset:
 
 DatasetKey = namedtuple("DatasetKey", ["path", "parser"])
 
-DEBUG = DatasetKey(
-    join(ASSETS_PATH, "DebugDataset"), dataset_parsers.dong_parser
-)
-DEBUGV2 = DatasetKey(
-    join(ASSETS_PATH, "DebugDatasetV2"), dataset_parsers.dong_parser
-)
-DONG = DatasetKey(join(ASSETS_PATH, "Dong2014"), dataset_parsers.dong_parser)
-NAKOV = DatasetKey(
-    join(ASSETS_PATH, "Nakov2016"), dataset_parsers.nakov_parser
-)
-SAEIDI = DatasetKey(
-    join(ASSETS_PATH, "Saeidi2016"), dataset_parsers.saeidi_parser
-)
-WANG = DatasetKey(join(ASSETS_PATH, "Wang2017"), dataset_parsers.wang_parser)
-XUE = DatasetKey(join(ASSETS_PATH, "Xue2018"), dataset_parsers.xue_parser)
-RESTAURANTS = DatasetKey(
-    join(ASSETS_PATH, "Restaurants"), dataset_parsers.xue_parser
-)
-LAPTOPS = DatasetKey(join(ASSETS_PATH, "Laptops"), dataset_parsers.xue_parser)
-ROSENTHAL = DatasetKey(
-    join(ASSETS_PATH, "Rosenthal2015"), dataset_parsers.rosenthal_parser
-)
-
+DEBUG = DatasetKey(DEBUG_ASSETS, dataset_parsers.dong_parser)
+DEBUGV2 = DatasetKey(DEBUGV2_ASSETS, dataset_parsers.dong_parser)
+DONG = DatasetKey(DONG_ASSETS, dataset_parsers.dong_parser)
+NAKOV = DatasetKey(NAKOV_ASSETS, dataset_parsers.nakov_parser)
+SAEIDI = DatasetKey(SAEIDI_ASSETS, dataset_parsers.saeidi_parser)
+WANG = DatasetKey(WANG_ASSETS, dataset_parsers.wang_parser)
+XUE = DatasetKey(XUE_ASSETS, dataset_parsers.xue_parser)
+RESTAURANTS = DatasetKey(RESTAURANTS_ASSETS, dataset_parsers.xue_parser)
+LAPTOPS = DatasetKey(LAPTOPS_ASSETS, dataset_parsers.xue_parser)
+ROSENTHAL = DatasetKey(ROSENTHAL_ASSETS, dataset_parsers.rosenthal_parser)

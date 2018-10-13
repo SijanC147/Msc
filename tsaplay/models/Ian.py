@@ -3,7 +3,7 @@ from tensorflow.estimator import (  # pylint: disable=E0401
     EstimatorSpec,
     ModeKeys,
 )
-from tsaplay.models.TSAModel import TSAModel
+from tsaplay.models.tsa_model import TsaModel
 from tsaplay.utils.decorators import addon
 from tsaplay.utils.tf import (
     variable_len_batch_mean,
@@ -15,7 +15,7 @@ from tsaplay.utils.tf import (
 from tsaplay.utils.addons import attn_heatmaps
 
 
-class Ian(TSAModel):
+class Ian(TsaModel):
     def set_params(self):
         return {
             "batch-size": 25,

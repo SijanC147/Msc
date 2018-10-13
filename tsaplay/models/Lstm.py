@@ -1,9 +1,9 @@
 import tensorflow as tf
-from tsaplay.models.TSAModel import TSAModel
+from tsaplay.models.tsa_model import TsaModel
 from tsaplay.utils.tf import dropout_lstm_cell
 
 
-class Lstm(TSAModel):
+class Lstm(TsaModel):
     def set_params(self):
         return {
             "batch-size": 100,

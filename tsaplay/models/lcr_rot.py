@@ -3,7 +3,7 @@ import tensorflow as tf
 from tensorflow.contrib.rnn import (  # pylint: disable=E0611
     stack_bidirectional_dynamic_rnn
 )
-from tsaplay.models.TSAModel import TSAModel
+from tsaplay.models.tsa_model import TsaModel
 from tsaplay.utils.tf import (
     variable_len_batch_mean,
     attention_unit,
@@ -16,7 +16,7 @@ from tsaplay.utils.addons import attn_heatmaps
 from tsaplay.utils.io import cprnt
 
 
-class LCRRot(TSAModel):
+class LcrRot(TsaModel):
     def set_params(self):
         return {
             "batch-size": 25,

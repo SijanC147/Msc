@@ -31,7 +31,7 @@ from tsaplay.utils.addons import (
 )
 
 
-class TSAModel(ABC):
+class TsaModel(ABC):
     def __init__(self, params=None, run_config=None, aux_config=None):
         self._comet_experiment = None
         self._estimator = None

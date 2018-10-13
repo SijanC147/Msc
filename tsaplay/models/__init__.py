@@ -1,8 +1,8 @@
 import comet_ml
-from tsaplay.models.LCRRot import LCRRot
-from tsaplay.models.Lstm import Lstm
-from tsaplay.models.TCLstm import TCLstm
-from tsaplay.models.TDLstm import TDLstm
-from tsaplay.models.Ian import Ian
-from tsaplay.models.MemNet import MemNet
-from tsaplay.models.Ram import Ram
+from tsaplay.models.lstm import Lstm
+from tsaplay.models.tc_lstm import TcLstm
+from tsaplay.models.td_lstm import TdLstm
+from tsaplay.models.lcr_rot import LcrRot
+from tsaplay.models.ian import Ian
+from tsaplay.models.mem_net import MemNet
+from tsaplay.models.ram import Ram

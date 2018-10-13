@@ -14,7 +14,7 @@ from tensorflow.python_io import TFRecordWriter
 
 from tsaplay.utils.decorators import timeit
 from tsaplay.utils.data import get_class_distribution
-from tsaplay.constants import FEATURES_DATA_PATH, SPACY_MODEL_PATH
+from tsaplay.constants import FEATURES_DATA_PATH, SPACY_MODEL
 
 
 class FeatureProvider:
@@ -138,7 +138,7 @@ class FeatureProvider:
     @classmethod
     def tokenize_phrases(cls, phrases):
         token_lists = []
-        nlp = spacy.load(SPACY_MODEL_PATH, disable=["parser", "ner"])
+        nlp = spacy.load(SPACY_MODEL, disable=["parser", "ner"])
         for doc in tqdm(nlp.pipe(phrases, batch_size=100, n_threads=-1)):
             tokens = list(filter(cls.token_filter, doc))
             token_lists.append([t.text.lower() for t in tokens])

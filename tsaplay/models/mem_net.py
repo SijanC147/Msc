@@ -1,6 +1,6 @@
 from math import ceil
 import tensorflow as tf
-from tsaplay.models.TSAModel import TSAModel
+from tsaplay.models.tsa_model import TsaModel
 from tsaplay.utils.addons import attn_heatmaps
 from tsaplay.utils.decorators import addon
 from tsaplay.utils.tf import (
@@ -13,7 +13,7 @@ from tsaplay.utils.tf import (
 )
 
 
-class MemNet(TSAModel):
+class MemNet(TsaModel):
     def set_params(self):
         return {
             "batch-size": 25,

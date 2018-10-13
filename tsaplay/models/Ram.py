@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow.contrib.rnn import (  # pylint: disable=E0611
     stack_bidirectional_dynamic_rnn
 )
-from tsaplay.models.TSAModel import TSAModel
+from tsaplay.models.tsa_model import TsaModel
 from tsaplay.utils.addons import attn_heatmaps
 from tsaplay.utils.decorators import addon
 from tsaplay.utils.tf import (
@@ -18,7 +18,7 @@ from tsaplay.utils.tf import (
 )
 
 
-class Ram(TSAModel):
+class Ram(TsaModel):
     def set_params(self):
         return {
             "batch-size": 25,

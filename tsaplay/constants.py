@@ -1,17 +1,23 @@
-from os import getcwd, makedirs, environ
-from os.path import join, abspath, dirname
+from os import getcwd, makedirs
+from os.path import join
 from pathlib import Path
+import pkg_resources as pkg
 
-PACKAGE_PATH = dirname(abspath(__file__))
+DEFAULT_FONT = pkg.resource_filename(__name__, "assets/Symbola.ttf")
+SPACY_MODEL = pkg.resource_filename(__name__, "assets/en_core_web_sm")
 
-# HOME_PATH = environ.get("TSAPLAY_DATA_PARENT", Path.home())
-HOME_PATH = "gs://tsaplay-bucket/tsaplay-data/"
-DATA_PATH = join(HOME_PATH, "tsaplay-data")
+DEBUG_ASSETS = pkg.resource_filename(__name__, "assets/DebugDataset")
+DEBUGV2_ASSETS = pkg.resource_filename(__name__, "assets/DebugDatasetV2")
+DONG_ASSETS = pkg.resource_filename(__name__, "assets/Dong2014")
+LAPTOPS_ASSETS = pkg.resource_filename(__name__, "assets/Laptops")
+NAKOV_ASSETS = pkg.resource_filename(__name__, "assets/Nakov2016")
+RESTAURANTS_ASSETS = pkg.resource_filename(__name__, "assets/Restaurants")
+ROSENTHAL_ASSETS = pkg.resource_filename(__name__, "assets/Rosenthal2015")
+SAEIDI_ASSETS = pkg.resource_filename(__name__, "assets/Saeidi2016")
+WANG_ASSETS = pkg.resource_filename(__name__, "assets/Wang2017")
+XUE_ASSETS = pkg.resource_filename(__name__, "assets/Xue2018")
 
-ASSETS_PATH = join(PACKAGE_PATH, "assets")
-DEFAULT_FONT_PATH = join(ASSETS_PATH, "Symbola.ttf")
-SPACY_MODEL_PATH = join(ASSETS_PATH, "en_core_web_sm")
-
+DATA_PATH = join(Path.home(), "tsaplay-data")
 DATASET_DATA_PATH = join(DATA_PATH, "datasets")
 EMBEDDING_DATA_PATH = join(DATA_PATH, "embeddings")
 FEATURES_DATA_PATH = join(DATA_PATH, "features")
