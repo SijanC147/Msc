@@ -10,19 +10,6 @@ import tsaplay.constants as CNSTS
 from tsaplay.utils.io import cprnt
 import pkg_resources as pkg
 
-from tsaplay.datasets import (
-    DEBUG,
-    DEBUGV2,
-    RESTAURANTS,
-    LAPTOPS,
-    DONG,
-    NAKOV,
-    ROSENTHAL,
-    SAEIDI,
-    WANG,
-    XUE,
-)
-
 from tsaplay.embeddings import (
     FASTTEXT_WIKI_300,
     GLOVE_TWITTER_25,
@@ -39,18 +26,30 @@ from tsaplay.embeddings import (
     W2V_RUS_300,
 )
 
+from tsaplay.datasets import (
+    DEBUG_DATASET,
+    DEBUGV2_DATASET,
+    RESTAURANTS_DATASET,
+    LAPTOPS_DATASET,
+    DONG_DATASET,
+    NAKOV_DATASET,
+    ROSENTHAL_DATASET,
+    SAEIDI_DATASET,
+    WANG_DATASET,
+    XUE_DATASET,
+)
 
 DATASETS = {
-    "debug": DEBUG,
-    "debugv2": DEBUGV2,
-    "restaurants": RESTAURANTS,
-    "laptops": LAPTOPS,
-    "dong": DONG,
-    "nakov": NAKOV,
-    "rosenthal": ROSENTHAL,
-    "saeidi": SAEIDI,
-    "wang": WANG,
-    "xue": XUE,
+    "debug": DEBUG_DATASET,
+    "debugv2": DEBUGV2_DATASET,
+    "restaurants": RESTAURANTS_DATASET,
+    "laptops": LAPTOPS_DATASET,
+    "dong": DONG_DATASET,
+    "nakov": NAKOV_DATASET,
+    "rosenthal": ROSENTHAL_DATASET,
+    "saeidi": SAEIDI_DATASET,
+    "wang": WANG_DATASET,
+    "xue": XUE_DATASET,
 }
 
 EMBEDDINGS = {
@@ -83,11 +82,27 @@ MODELS = {
 def run_experiment(args):
     tf.logging.set_verbosity(args.verbosity)
 
-    embedding = Embedding(EMBEDDINGS.get(args.embedding))
+    embedding = Embedding(
+        EMBEDDINGS.get(args.embedding),
+        data_root=pkg.resource_filename(__name__, "assets/_embedding"),
+    )
 
-    datasets = [Dataset(*DATASETS.get(dataset)) for dataset in args.datasets]
+    datasets = [
+        Dataset(
+            src_path=pkg.resource_filename(
+                __name__, "assets/_datasets/" + DATASETS.get(dataset)
+            ),
+            parser=None,
+            data_root=pkg.resource_filename(__name__, "assets/_datasets"),
+        )
+        for dataset in args.datasets
+    ]
 
-    feature_provider = FeatureProvider(datasets, embedding)
+    feature_provider = FeatureProvider(
+        datasets,
+        embedding,
+        data_root=pkg.resource_filename(__name__, "assets/_features"),
+    )
 
     model = MODELS.get(args.model)(params={"batch-size": args.batch_size})
 

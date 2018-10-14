@@ -1,6 +1,5 @@
 from os import makedirs
 from os.path import normpath, basename, join, exists
-from functools import wraps
 from collections import namedtuple
 import json
 import numpy as np
@@ -15,28 +14,15 @@ from tsaplay.utils.io import (
     unpickle_file as _unpickle,
     pickle_file as _pickle,
 )
-from tsaplay.utils.decorators import timeit
-import tsaplay.utils.parsers as dataset_parsers
-from tsaplay.constants import (
-    DATASET_DATA_PATH,
-    SPACY_MODEL,
-    DEBUG_ASSETS,
-    DEBUGV2_ASSETS,
-    DONG_ASSETS,
-    LAPTOPS_ASSETS,
-    NAKOV_ASSETS,
-    RESTAURANTS_ASSETS,
-    ROSENTHAL_ASSETS,
-    SAEIDI_ASSETS,
-    WANG_ASSETS,
-    XUE_ASSETS,
-)
+from tsaplay.utils.decorators import timeit, wrap_parser
+from tsaplay.constants import DATASET_DATA_PATH, SPACY_MODEL
 
 
 class Dataset:
-    def __init__(self, src_path, parser=None, distribution=None):
+    def __init__(self, src_path, parser, distribution=None, data_root=None):
+        self._data_root = data_root or DATASET_DATA_PATH
         self.__src_path = src_path
-        self.__parser = self._wrap_parser(parser)
+        self.__parser = parser
         self._initialize_all_internals()
         if distribution is not None:
             self._redistribute_data(distribution)
@@ -161,11 +147,8 @@ class Dataset:
         self.__test_file = search_dir(
             dir=self.__src_path, query="test", first=True, files_only=True
         )
-        if not self.__parser(self.__src_path):
-            self._gen_dir = self.__src_path
-        else:
-            self._gen_dir = join(DATASET_DATA_PATH, self.name)
-            makedirs(self._gen_dir, exist_ok=True)
+        self._gen_dir = join(self._data_root, self.name)
+        makedirs(self._gen_dir, exist_ok=True)
         self.__train_dict = self._load_dataset_dictionary(dict_type="train")
         self.__test_dict = self._load_dataset_dictionary(dict_type="test")
         self.__default_classes = np.unique(
@@ -193,7 +176,7 @@ class Dataset:
         if exists(dict_file):
             dictionary = _unpickle(path=dict_file)
         else:
-            dictionary = self.parser(data_file)
+            dictionary = self._parser_fn(data_file)
             _pickle(path=dict_file, data=dictionary)
         return dictionary
 
@@ -205,34 +188,6 @@ class Dataset:
         if not (exists(stats_file_path)):
             with open(stats_file_path, "w+") as stats_file:
                 json.dump(stats, stats_file, indent=4)
-
-    def _wrap_parser(self, _parser):
-        @wraps(_parser)
-        def wrapper(path):
-            try:
-                sentences, targets, offsets, labels = _parser(path)
-                return {
-                    "sentences": sentences,
-                    "targets": targets,
-                    "offsets": offsets,
-                    "labels": labels,
-                }
-            except ValueError:
-                sentences, targets, labels = _parser(path)
-                offsets = [
-                    sentence.lower().find(target.lower())
-                    for sentence, target in zip(sentences, targets)
-                ]
-                return {
-                    "sentences": sentences,
-                    "targets": targets,
-                    "offsets": offsets,
-                    "labels": labels,
-                }
-            except TypeError:
-                return False
-
-        return wrapper
 
     @timeit("Redistributing dataset", "Dataset redistributed")
     def _redistribute_data(self, distribution):
@@ -290,16 +245,3 @@ class Dataset:
         )
         self.__corpus = self.generate_corpus(self.__all_docs, dist_path)
 
-
-DatasetKey = namedtuple("DatasetKey", ["path", "parser"])
-
-DEBUG = DatasetKey(DEBUG_ASSETS, dataset_parsers.dong_parser)
-DEBUGV2 = DatasetKey(DEBUGV2_ASSETS, dataset_parsers.dong_parser)
-DONG = DatasetKey(DONG_ASSETS, dataset_parsers.dong_parser)
-NAKOV = DatasetKey(NAKOV_ASSETS, dataset_parsers.nakov_parser)
-SAEIDI = DatasetKey(SAEIDI_ASSETS, dataset_parsers.saeidi_parser)
-WANG = DatasetKey(WANG_ASSETS, dataset_parsers.wang_parser)
-XUE = DatasetKey(XUE_ASSETS, dataset_parsers.xue_parser)
-RESTAURANTS = DatasetKey(RESTAURANTS_ASSETS, dataset_parsers.xue_parser)
-LAPTOPS = DatasetKey(LAPTOPS_ASSETS, dataset_parsers.xue_parser)
-ROSENTHAL = DatasetKey(ROSENTHAL_ASSETS, dataset_parsers.rosenthal_parser)

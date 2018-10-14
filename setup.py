@@ -1,4 +1,4 @@
-from setuptools import find_packages, setup, sandbox
+from setuptools import find_packages, setup
 
 with open("requirements.txt") as requirements_file:
     REQUIREMENTS = requirements_file.read().splitlines()[1:]

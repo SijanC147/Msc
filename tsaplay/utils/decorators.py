@@ -198,3 +198,30 @@ def make_input_fn(mode):
         return input_fn
 
     return decorator
+
+
+def wrap_parser(parser_fn):
+    @wraps(parser_fn)
+    def wrapper(self, path):
+        try:
+            sentences, targets, offsets, labels = parser_fn(self, path)
+            return {
+                "sentences": sentences,
+                "targets": targets,
+                "offsets": offsets,
+                "labels": labels,
+            }
+        except ValueError:
+            sentences, targets, labels = parser_fn(self, path)
+            offsets = [
+                sentence.lower().find(target.lower())
+                for sentence, target in zip(sentences, targets)
+            ]
+            return {
+                "sentences": sentences,
+                "targets": targets,
+                "offsets": offsets,
+                "labels": labels,
+            }
+
+    return wrapper

@@ -4,22 +4,11 @@ from os.path import join, dirname, exists
 from datetime import datetime
 from shutil import copytree, rmtree
 import tsaplay.models as tsa_models
-from tsaplay.datasets import Dataset
+import tsaplay.utils.parsers as dataset_parsers
+from tsaplay.datasets import Dataset, DatasetKey
 from tsaplay.embeddings import Embedding
 from tsaplay.features import FeatureProvider
-
-from tsaplay.datasets import (
-    DEBUG,
-    DEBUGV2,
-    RESTAURANTS,
-    LAPTOPS,
-    DONG,
-    NAKOV,
-    ROSENTHAL,
-    SAEIDI,
-    WANG,
-    XUE,
-)
+from setuptools import sandbox
 
 from tsaplay.embeddings import (
     FASTTEXT_WIKI_300,
@@ -37,17 +26,67 @@ from tsaplay.embeddings import (
     W2V_RUS_300,
 )
 
+from tsaplay.datasets import (
+    DEBUG_DATASET_FOLDER,
+    DEBUGV2_DATASET_FOLDER,
+    DONG_DATASET_FOLDER,
+    LAPTOPS_DATASET_FOLDER,
+    NAKOV_DATASET_FOLDER,
+    RESTAURANTS_DATASET_FOLDER,
+    ROSENTHAL_DATASET_FOLDER,
+    SAEIDI_DATASET_FOLDER,
+    WANG_DATASET_FOLDER,
+    XUE_DATASET_FOLDER,
+)
+
+TEMP_PATH = "temp"
+TEMP_FEATURES_PATH = join("tsaplay", "assets", "_features")
+TEMP_EMBEDDING_PATH = join("tsaplay", "assets", "_embedding")
+TEMP_DATASET_PATH = join("tsaplay", "assets", "_datasets")
+
+DATASET_RESOURCE_PATH = join("resources")
+
 DATASETS = {
-    "debug": DEBUG,
-    "debugv2": DEBUGV2,
-    "restaurants": RESTAURANTS,
-    "laptops": LAPTOPS,
-    "dong": DONG,
-    "nakov": NAKOV,
-    "rosenthal": ROSENTHAL,
-    "saeidi": SAEIDI,
-    "wang": WANG,
-    "xue": XUE,
+    "debug": DatasetKey(
+        join(DATASET_RESOURCE_PATH, DEBUG_DATASET_FOLDER),
+        dataset_parsers.dong_parser,
+    ),
+    "debugv2": DatasetKey(
+        join(DATASET_RESOURCE_PATH, DEBUGV2_DATASET_FOLDER),
+        dataset_parsers.dong_parser,
+    ),
+    "restaurants": DatasetKey(
+        join(DATASET_RESOURCE_PATH, RESTAURANTS_DATASET_FOLDER),
+        dataset_parsers.xue_parser,
+    ),
+    "laptops": DatasetKey(
+        join(DATASET_RESOURCE_PATH, LAPTOPS_DATASET_FOLDER),
+        dataset_parsers.xue_parser,
+    ),
+    "dong": DatasetKey(
+        join(DATASET_RESOURCE_PATH, DONG_DATASET_FOLDER),
+        dataset_parsers.dong_parser,
+    ),
+    "nakov": DatasetKey(
+        join(DATASET_RESOURCE_PATH, NAKOV_DATASET_FOLDER),
+        dataset_parsers.nakov_parser,
+    ),
+    "rosenthal": DatasetKey(
+        join(DATASET_RESOURCE_PATH, ROSENTHAL_DATASET_FOLDER),
+        dataset_parsers.rosenthal_parser,
+    ),
+    "saeidi": DatasetKey(
+        join(DATASET_RESOURCE_PATH, SAEIDI_DATASET_FOLDER),
+        dataset_parsers.saeidi_parser,
+    ),
+    "wang": DatasetKey(
+        join(DATASET_RESOURCE_PATH, WANG_DATASET_FOLDER),
+        dataset_parsers.wang_parser,
+    ),
+    "xue": DatasetKey(
+        join(DATASET_RESOURCE_PATH, XUE_DATASET_FOLDER),
+        dataset_parsers.xue_parser,
+    ),
 }
 
 EMBEDDINGS = {
@@ -75,11 +114,6 @@ MODELS = {
     "memnet": tsa_models.MemNet,
     "ram": tsa_models.Ram,
 }
-
-TEMP_PATH = "temp"
-TEMP_INPUTDATA_PATH = join("tsaplay", "assets", "_inputdata")
-TEMP_EMBEDDING_PATH = join("tsaplay", "assets", "_embedding")
-TEMP_DATASET_PATH = join("tsaplay", "assets", "_datasets")
 
 
 def get_arguments():
@@ -173,8 +207,8 @@ def copy_over_tf_records(feature_provider, embedding_name, target_temp_path):
         parent_train, parent_test = dirname(tf_train), dirname(tf_test)
         index_train = parent_train.index(embedding_name)
         index_test = parent_test.index(embedding_name)
-        target_train = join(target_temp_path + parent_train[index_train:])
-        target_test = join(target_temp_path + parent_test[index_test:])
+        target_train = join(target_temp_path, parent_train[index_train:])
+        target_test = join(target_temp_path, parent_test[index_test:])
         copytree(parent_train, target_train)
         copytree(parent_test, target_test)
 
@@ -185,12 +219,12 @@ def setup_temp_data(embedding, datasets):
     feature_provider = FeatureProvider(datasets, embedding)
 
     temp_folder = create_temp_folder()
-    inputdata_temp_path = join(temp_folder, "inputdata")
+    features_temp_path = join(temp_folder, "features")
     embedding_temp_path = join(temp_folder, "embedding", embedding.name)
     datasets_temp_path = join(temp_folder, "datasets")
 
     copy_over_dataset_data(datasets, datasets_temp_path)
-    copy_over_tf_records(feature_provider, embedding.name, inputdata_temp_path)
+    copy_over_tf_records(feature_provider, embedding.name, features_temp_path)
     copytree(embedding.gen_dir, embedding_temp_path)
 
     return temp_folder
@@ -198,13 +232,14 @@ def setup_temp_data(embedding, datasets):
 
 def copy_to_assets(temp_folder):
     copytree(join(temp_folder, "datasets"), TEMP_DATASET_PATH)
-    copytree(join(temp_folder, "inputdata"), TEMP_INPUTDATA_PATH)
+    copytree(join(temp_folder, "features"), TEMP_FEATURES_PATH)
     copytree(join(temp_folder, "embedding"), TEMP_EMBEDDING_PATH)
 
 
 def clean_prev_input_data():
-    if exists(TEMP_INPUTDATA_PATH):
-        rmtree(TEMP_INPUTDATA_PATH)
+    rmtree(TEMP_DATASET_PATH, ignore_errors=True)
+    rmtree(TEMP_FEATURES_PATH, ignore_errors=True)
+    rmtree(TEMP_EMBEDDING_PATH, ignore_errors=True)
 
 
 def prepare_assets():
@@ -216,3 +251,4 @@ def prepare_assets():
 
 if __name__ == "__main__":
     prepare_assets()
+    sandbox.run_setup("setup.py", ["sdist"])

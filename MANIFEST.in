@@ -1,2 +1,3 @@
 include requirements.txt
-include tsaplay/assets/**/*
+include tsaplay/fonts/*
+recursive-include tsaplay/assets *

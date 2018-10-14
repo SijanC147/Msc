@@ -3,19 +3,8 @@ from os.path import join
 from pathlib import Path
 import pkg_resources as pkg
 
-DEFAULT_FONT = pkg.resource_filename(__name__, "assets/Symbola.ttf")
 SPACY_MODEL = pkg.resource_filename(__name__, "assets/en_core_web_sm")
-
-DEBUG_ASSETS = pkg.resource_filename(__name__, "assets/DebugDataset")
-DEBUGV2_ASSETS = pkg.resource_filename(__name__, "assets/DebugDatasetV2")
-DONG_ASSETS = pkg.resource_filename(__name__, "assets/Dong2014")
-LAPTOPS_ASSETS = pkg.resource_filename(__name__, "assets/Laptops")
-NAKOV_ASSETS = pkg.resource_filename(__name__, "assets/Nakov2016")
-RESTAURANTS_ASSETS = pkg.resource_filename(__name__, "assets/Restaurants")
-ROSENTHAL_ASSETS = pkg.resource_filename(__name__, "assets/Rosenthal2015")
-SAEIDI_ASSETS = pkg.resource_filename(__name__, "assets/Saeidi2016")
-WANG_ASSETS = pkg.resource_filename(__name__, "assets/Wang2017")
-XUE_ASSETS = pkg.resource_filename(__name__, "assets/Xue2018")
+DEFAULT_FONT = pkg.resource_filename(__name__, "fonts/Symbola.ttf")
 
 DATA_PATH = join(Path.home(), "tsaplay-data")
 DATASET_DATA_PATH = join(DATA_PATH, "datasets")

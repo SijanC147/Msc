@@ -24,7 +24,8 @@ W2V_RUS_300 = "word2vec-ruscorpora-300"
 
 
 class Embedding:
-    def __init__(self, source, oov=None):
+    def __init__(self, source, oov=None, data_root=None):
+        self._data_root = data_root or EMBEDDING_DATA_PATH
         self.oov = oov
         self.source = source
 
@@ -97,13 +98,9 @@ class Embedding:
     @timeit("Loading embedding model", "Embedding model loaded")
     def source(self, new_source):
         try:
-            if exists(new_source):
-                self._gen_dir = dirname(new_source)
-                self._source = basename(normpath(self._gen_dir))
-            else:
-                self._source = new_source
-                self._gen_dir = join(EMBEDDING_DATA_PATH, self.name)
-                makedirs(self._gen_dir, exist_ok=True)
+            self._source = new_source
+            self._gen_dir = join(self._data_root, self.name)
+            makedirs(self._gen_dir, exist_ok=True)
             self._gensim_model = self._load_gensim_model(self._source)
             self._set_vectors()
             if not exists(self.vocab_file_path):
