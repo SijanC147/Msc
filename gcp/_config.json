@@ -1,0 +1,21 @@
+{
+    "jobId": "my_job",
+    "labels": {
+        "type": "dev",
+        "owner": "sean"
+    },
+    "trainingInput": {
+        "scaleTier": "BASIC",
+        "pythonVersion": "3.5",
+        "runtimeVersion": "1.10",
+        "region": "europe-west1",
+        "args": [
+            "--embedding=wiki-50",
+            "--datasets=debug",
+            "--model=lcrrot",
+            "--batch-size=5",
+            "--steps=10",
+            "--verbosity=INFO"
+        ]
+    }
+}

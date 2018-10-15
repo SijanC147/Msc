@@ -158,4 +158,3 @@ class Embedding:
             if number % i == 0:
                 return i
             return 1
-

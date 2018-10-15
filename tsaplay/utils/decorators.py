@@ -200,11 +200,11 @@ def make_input_fn(mode):
     return decorator
 
 
-def wrap_parser(parser_fn):
-    @wraps(parser_fn)
-    def wrapper(self, path):
+def wrap_parsing_fn(parsing_fn):
+    @wraps(parsing_fn)
+    def wrapper(path):
         try:
-            sentences, targets, offsets, labels = parser_fn(self, path)
+            sentences, targets, offsets, labels = parsing_fn(path)
             return {
                 "sentences": sentences,
                 "targets": targets,
@@ -212,7 +212,7 @@ def wrap_parser(parser_fn):
                 "labels": labels,
             }
         except ValueError:
-            sentences, targets, labels = parser_fn(self, path)
+            sentences, targets, labels = parsing_fn(path)
             offsets = [
                 sentence.lower().find(target.lower())
                 for sentence, target in zip(sentences, targets)
@@ -225,3 +225,4 @@ def wrap_parser(parser_fn):
             }
 
     return wrapper
+

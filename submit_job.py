@@ -1,16 +1,16 @@
 import argparse
-from os import makedirs, rename, listdir
-from os.path import join, dirname, exists
+from os import makedirs, system
+from os.path import join, dirname, abspath
 from datetime import datetime
 from shutil import copytree, rmtree
-import tsaplay.models as tsa_models
-import tsaplay.utils.parsers as dataset_parsers
-from tsaplay.datasets import Dataset, DatasetKey
-from tsaplay.embeddings import Embedding
-from tsaplay.features import FeatureProvider
+from json import dump
 from setuptools import sandbox
-
+from tsaplay.utils.io import search_dir, platform, cprnt
+import tsaplay.models as tsa_models
+from tsaplay.datasets import Dataset
+from tsaplay.features import FeatureProvider
 from tsaplay.embeddings import (
+    Embedding,
     FASTTEXT_WIKI_300,
     GLOVE_TWITTER_25,
     GLOVE_TWITTER_50,
@@ -26,68 +26,10 @@ from tsaplay.embeddings import (
     W2V_RUS_300,
 )
 
-from tsaplay.datasets import (
-    DEBUG_DATASET_FOLDER,
-    DEBUGV2_DATASET_FOLDER,
-    DONG_DATASET_FOLDER,
-    LAPTOPS_DATASET_FOLDER,
-    NAKOV_DATASET_FOLDER,
-    RESTAURANTS_DATASET_FOLDER,
-    ROSENTHAL_DATASET_FOLDER,
-    SAEIDI_DATASET_FOLDER,
-    WANG_DATASET_FOLDER,
-    XUE_DATASET_FOLDER,
-)
-
 TEMP_PATH = "temp"
 TEMP_FEATURES_PATH = join("tsaplay", "assets", "_features")
-TEMP_EMBEDDING_PATH = join("tsaplay", "assets", "_embedding")
+TEMP_EMBEDDING_PATH = join("tsaplay", "assets", "_embeddings")
 TEMP_DATASET_PATH = join("tsaplay", "assets", "_datasets")
-
-DATASET_RESOURCE_PATH = join("resources")
-
-DATASETS = {
-    "debug": DatasetKey(
-        join(DATASET_RESOURCE_PATH, DEBUG_DATASET_FOLDER),
-        dataset_parsers.dong_parser,
-    ),
-    "debugv2": DatasetKey(
-        join(DATASET_RESOURCE_PATH, DEBUGV2_DATASET_FOLDER),
-        dataset_parsers.dong_parser,
-    ),
-    "restaurants": DatasetKey(
-        join(DATASET_RESOURCE_PATH, RESTAURANTS_DATASET_FOLDER),
-        dataset_parsers.xue_parser,
-    ),
-    "laptops": DatasetKey(
-        join(DATASET_RESOURCE_PATH, LAPTOPS_DATASET_FOLDER),
-        dataset_parsers.xue_parser,
-    ),
-    "dong": DatasetKey(
-        join(DATASET_RESOURCE_PATH, DONG_DATASET_FOLDER),
-        dataset_parsers.dong_parser,
-    ),
-    "nakov": DatasetKey(
-        join(DATASET_RESOURCE_PATH, NAKOV_DATASET_FOLDER),
-        dataset_parsers.nakov_parser,
-    ),
-    "rosenthal": DatasetKey(
-        join(DATASET_RESOURCE_PATH, ROSENTHAL_DATASET_FOLDER),
-        dataset_parsers.rosenthal_parser,
-    ),
-    "saeidi": DatasetKey(
-        join(DATASET_RESOURCE_PATH, SAEIDI_DATASET_FOLDER),
-        dataset_parsers.saeidi_parser,
-    ),
-    "wang": DatasetKey(
-        join(DATASET_RESOURCE_PATH, WANG_DATASET_FOLDER),
-        dataset_parsers.wang_parser,
-    ),
-    "xue": DatasetKey(
-        join(DATASET_RESOURCE_PATH, XUE_DATASET_FOLDER),
-        dataset_parsers.xue_parser,
-    ),
-}
 
 EMBEDDINGS = {
     "fasttext": FASTTEXT_WIKI_300,
@@ -132,7 +74,7 @@ def get_arguments():
         "--datasets",
         "-ds",
         type=str,
-        choices=[*DATASETS],
+        choices=Dataset.list_installed_datasets(),
         help="One or more datasets to use for training and evaluation.",
         default=["dong"],
         nargs="+",
@@ -215,7 +157,7 @@ def copy_over_tf_records(feature_provider, embedding_name, target_temp_path):
 
 def setup_temp_data(embedding, datasets):
     embedding = Embedding(EMBEDDINGS.get(embedding))
-    datasets = [Dataset(*DATASETS.get(dataset)) for dataset in datasets]
+    datasets = [Dataset(dataset_name) for dataset_name in datasets]
     feature_provider = FeatureProvider(datasets, embedding)
 
     temp_folder = create_temp_folder()
@@ -242,13 +184,80 @@ def clean_prev_input_data():
     rmtree(TEMP_EMBEDDING_PATH, ignore_errors=True)
 
 
-def prepare_assets():
-    args = get_arguments()
+def prepare_assets(args):
     temp_folder = setup_temp_data(args.embedding, args.datasets)
     clean_prev_input_data()
     copy_to_assets(temp_folder)
+    write_gcloud_config(args)
+
+
+def write_gcloud_config(args):
+    args_dict = vars(args)
+    args_list = []
+    for (key, value) in args_dict.items():
+        if not value:
+            continue
+        if isinstance(value, list):
+            value = " ".join(map(str, value))
+        else:
+            value = str(value)
+        args_list.append("--" + key.replace("_", "-") + "=" + value)
+    gcloud_config = {
+        "jobId": "my_job",
+        "labels": {"type": "dev", "owner": "sean"},
+        "trainingInput": {
+            "scaleTier": "BASIC",
+            "pythonVersion": "3.5",
+            "runtimeVersion": "1.10",
+            "region": "europe-west1",
+            "args": args_list,
+        },
+    }
+    config_file_path = join("gcp", "_config.json")
+    with open(config_file_path, "w") as config_file:
+        dump(gcloud_config, config_file, indent=4)
+
+
+def write_gcloud_cmd_script():
+    gcloud_cmd = """gcloud ml-engine jobs submit training {job_name} \\
+--job-dir={job_dir} \\
+--module-name={module_name} \\
+--staging-bucket={staging_bucket} \\
+--packages={package_name} \\
+--config={config_path} \\
+--stream-logs""".format(
+        job_name="testing_job_script_3",
+        job_dir="gs://tsaplay-bucket/testing_job_script",
+        module_name="tsaplay.task",
+        staging_bucket="gs://tsaplay-bucket/",
+        package_name=abspath(
+            search_dir(join("dist"), query="tsaplay", kind="files", first=True)
+        ),
+        config_path=abspath(join("gcp", "_config.json")),
+    )
+
+    cmd_script = """from os import system\n
+\nsystem(\"\"\"{0}\"\"\")\n""".format(
+        gcloud_cmd
+    )
+
+    cmd_file_path = abspath(join("gcp", "_cmd.py"))
+    with open(cmd_file_path, "w") as cmd_file:
+        cmd_file.write(cmd_script)
+
+    submit_job_cmd = "pyenv shell 2.7.15 && pyenv exec python {} && pyenv shell -".format(
+        cmd_file_path
+    )
+
+    print("Execute following command to submit job: ")
+    cprnt(submit_job_cmd)
+
+    if platform() == "MacOS":
+        system('echo "{}" | pbcopy'.format(submit_job_cmd))
+        cprnt(bow="Copied to clipboard!")
 
 
 if __name__ == "__main__":
-    prepare_assets()
+    prepare_assets(get_arguments())
     sandbox.run_setup("setup.py", ["sdist"])
+    write_gcloud_cmd_script()

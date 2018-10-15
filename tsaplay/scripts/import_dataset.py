@@ -6,6 +6,7 @@ from shutil import rmtree
 from os import makedirs
 from os.path import join, exists, normpath, basename
 from tsaplay.utils.io import pickle_file, search_dir, cprnt
+from tsaplay.utils.decorators import wrap_parsing_fn
 from tsaplay.constants import DATASET_DATA_PATH
 from tsaplay.datasets import Dataset
 
@@ -37,36 +38,9 @@ def get_dataset_dicts(train_file, test_file, parsing_fn):
 
 
 def get_raw_file_paths(path):
-    train_file = search_dir(path, "train", first=True, files_only=True)
-    test_file = search_dir(path, "train", first=True, files_only=True)
+    train_file = search_dir(path, "train", first=True, kind="files")
+    test_file = search_dir(path, "train", first=True, kind="files")
     return train_file, test_file
-
-
-def wrap_parsing_fn(parsing_fn):
-    @wraps(parsing_fn)
-    def wrapper(path):
-        try:
-            sentences, targets, offsets, labels = parsing_fn(path)
-            return {
-                "sentences": sentences,
-                "targets": targets,
-                "offsets": offsets,
-                "labels": labels,
-            }
-        except ValueError:
-            sentences, targets, labels = parsing_fn(path)
-            offsets = [
-                sentence.lower().find(target.lower())
-                for sentence, target in zip(sentences, targets)
-            ]
-            return {
-                "sentences": sentences,
-                "targets": targets,
-                "offsets": offsets,
-                "labels": labels,
-            }
-
-    return wrapper
 
 
 def get_parsing_fn(path, parser_name=None):
@@ -127,8 +101,6 @@ def is_valid_parsing_fn(parsing_fn_candidate):
 
 def main(args):
     dataset_name = args.dataset_name or basename(normpath(args.path))
-    cprnt(dataset_name)
-    cprnt(DATASET_DATA_PATH)
     parsing_fn = get_parsing_fn(args.path, args.parser_name)
     ftrain, ftest = get_raw_file_paths(args.path)
     train_dict, test_dict = get_dataset_dicts(ftrain, ftest, parsing_fn)
@@ -139,8 +111,8 @@ def main(args):
     makedirs(target_path)
     Dataset.write_stats_json(target_path, train=train_dict, test=test_dict)
     Dataset.generate_corpus(all_docs, target_path)
-    pickle_file(join(target_path, "_train_dict.pkl"), train_dict)
-    pickle_file(join(target_path, "_test_dict.pkl"), test_dict)
+    pickle_file(join(target_path, "_train.pkl"), train_dict)
+    pickle_file(join(target_path, "_test.pkl"), test_dict)
 
 
 if __name__ == "__main__":

@@ -112,15 +112,15 @@ def corpus_to_csv(path, corpus):
             writer.writerow(row)
 
 
-def search_dir(dir, query, first=False, files_only=False):
-    if files_only:
-        results = [
-            join(dir, f)
-            for f in listdir(dir)
-            if isfile(join(dir, f)) and query in f
-        ]
+def search_dir(path, query=None, first=False, kind=None):
+    if kind == "files":
+        results = [f for f in listdir(path) if isfile(join(path, f))]
+    elif kind == "folders":
+        results = [f for f in listdir(path) if not isfile(join(path, f))]
     else:
-        results = [join(dir, f) for f in listdir(dir) if query in f]
+        results = [f for f in listdir(path)]
+    if query:
+        results = [join(path, f) for f in results if query in f]
     return results[0] if first else results
 
 

@@ -1,6 +1,5 @@
 from os import makedirs
-from os.path import normpath, basename, join, exists
-from collections import namedtuple
+from os.path import join, exists, basename, normpath
 import json
 import numpy as np
 import spacy
@@ -14,39 +13,36 @@ from tsaplay.utils.io import (
     unpickle_file as _unpickle,
     pickle_file as _pickle,
 )
-from tsaplay.utils.decorators import timeit, wrap_parser
+from tsaplay.utils.decorators import timeit
 from tsaplay.constants import DATASET_DATA_PATH, SPACY_MODEL
 
 
 class Dataset:
-    def __init__(self, src_path, parser, distribution=None, data_root=None):
+    def __init__(self, name, distribution=None, data_root=None):
         self._data_root = data_root or DATASET_DATA_PATH
-        self.__src_path = src_path
-        self.__parser = parser
-        self._initialize_all_internals()
+        self._gen_dir = join(self._data_root, name)
+        if exists(self._gen_dir):
+            self.name = name
+            self._initialize_all_internals()
+        else:
+            raise ValueError(
+                """Expected name to be on of {0}, got {1}.
+                Import new datasets using 
+                tsaplay.scripts.import_dataset""".format(
+                    self.list_installed_datasets(self._data_root), name
+                )
+            )
         if distribution is not None:
             self._redistribute_data(distribution)
         else:
-            _, _, train_dist = get_class_distribution(self.train_dict)
-            _, _, test_dist = get_class_distribution(self.train_dict)
-            self.__train_dist_key = "_".join(map(str, train_dist))
-            self.__test_dist_key = "_".join(map(str, test_dist))
-
-    @property
-    def name(self):
-        return basename(normpath(self.src_path))
-
-    @property
-    def src_path(self):
-        return self.__src_path
+            train_dist_data = get_class_distribution(self.train_dict["labels"])
+            test_dist_data = get_class_distribution(self.train_dict["labels"])
+            self.__train_dist_key = "_".join(map(str, train_dist_data[2]))
+            self.__test_dist_key = "_".join(map(str, test_dist_data[2]))
 
     @property
     def gen_dir(self):
         return self._gen_dir
-
-    @property
-    def parser(self):
-        return self.__parser
 
     @property
     def train_dist_key(self):
@@ -55,14 +51,6 @@ class Dataset:
     @property
     def test_dist_key(self):
         return self.__test_dist_key
-
-    @property
-    def train_file(self):
-        return self.__train_file
-
-    @property
-    def test_file(self):
-        return self.__test_file
 
     @property
     def train_dict(self):
@@ -97,11 +85,20 @@ class Dataset:
             return "-".join([train_dist_key, test_dist_key])
 
     @classmethod
+    def list_installed_datasets(cls, data_root=DATASET_DATA_PATH):
+        return [
+            basename(normpath(path))
+            for path in search_dir(data_root, kind="folders")
+        ]
+
+    @classmethod
     def get_stats_dict(cls, classes=None, **data_dicts):
         stats = {}
         for key, value in data_dicts.items():
             stats[key] = stats.get(key, {})
-            dist_data = get_class_distribution(value, all_classes=classes)
+            dist_data = get_class_distribution(
+                value["labels"], all_classes=classes
+            )
             for (_class, count, dist) in zip(*dist_data):
                 stats[key].update(
                     {str(_class): {"count": str(count), "percent": str(dist)}}
@@ -141,16 +138,8 @@ class Dataset:
 
     @timeit("Initializing dataset internals", "Dataset internals initialized")
     def _initialize_all_internals(self):
-        self.__train_file = search_dir(
-            dir=self.__src_path, query="train", first=True, files_only=True
-        )
-        self.__test_file = search_dir(
-            dir=self.__src_path, query="test", first=True, files_only=True
-        )
-        self._gen_dir = join(self._data_root, self.name)
-        makedirs(self._gen_dir, exist_ok=True)
-        self.__train_dict = self._load_dataset_dictionary(dict_type="train")
-        self.__test_dict = self._load_dataset_dictionary(dict_type="test")
+        self.__train_dict = _unpickle(path=join(self.gen_dir, "_train.pkl"))
+        self.__test_dict = _unpickle(path=join(self.gen_dir, "_test.pkl"))
         self.__default_classes = np.unique(
             [label for label in self.__train_dict["labels"]]
         ).tolist()
@@ -164,21 +153,6 @@ class Dataset:
             self.__train_dict["sentences"] + self.__test_dict["sentences"]
         )
         self.__corpus = self.generate_corpus(self.__all_docs, self.gen_dir)
-
-    @timeit("Loading dataset dictionary", "Dataset dictionary loaded")
-    def _load_dataset_dictionary(self, dict_type):
-        if dict_type == "train":
-            dict_file = join(self.gen_dir, "_train_dict.pkl")
-            data_file = self.__train_file
-        else:
-            dict_file = join(self.gen_dir, "_test_dict.pkl")
-            data_file = self.__test_file
-        if exists(dict_file):
-            dictionary = _unpickle(path=dict_file)
-        else:
-            dictionary = self._parser_fn(data_file)
-            _pickle(path=dict_file, data=dictionary)
-        return dictionary
 
     @classmethod
     @timeit("Exporting dataset stats", "Dataset stats exported")
@@ -244,4 +218,3 @@ class Dataset:
             self.__train_dict["sentences"] + self.__test_dict["sentences"]
         )
         self.__corpus = self.generate_corpus(self.__all_docs, dist_path)
-

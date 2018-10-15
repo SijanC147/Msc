@@ -1,6 +1,5 @@
 import tensorflow as tf
 import numpy as np
-from tsaplay.utils.io import cprnt
 from tsaplay.utils.tf import sparse_sequences_to_dense, get_seq_lengths
 
 
@@ -73,14 +72,7 @@ def prep_dataset(tfrecords, params, processing_fn, mode):
     return dataset
 
 
-def default_class_func(sample):
-    return sample[3]
-
-
-def get_class_distribution(data_dict, all_classes=None, class_func=None):
-    class_fn = class_func or default_class_func
-    samples = list(zip(*data_dict.values()))
-    labels = [class_fn(sample) for sample in samples]
+def get_class_distribution(labels, all_classes=None):
     classes, counts = np.unique(labels, return_counts=True)
     if all_classes is not None and len(classes) != len(all_classes):
         all_counts = []
@@ -130,8 +122,7 @@ def re_distribute_counts(labels, target_dists):
     return unique, target_counts
 
 
-def resample_data_dict(data_dict, target_dists, class_func=None):
-    class_fn = class_func or default_class_func
+def resample_data_dict(data_dict, target_dists):
     labels = [label for label in data_dict["labels"]]
     classes, target_counts = re_distribute_counts(labels, target_dists)
     numpy_dtype = np.dtype(
@@ -143,11 +134,12 @@ def resample_data_dict(data_dict, target_dists, class_func=None):
         ]
     )
 
+    labels_index = [*data_dict].index("labels")
     samples = list(zip(*data_dict.values()))
     samples_by_class = {}
     for _class in classes:
         samples_by_class[str(_class)] = np.asarray(
-            [s for s in samples if class_fn(s) == _class], numpy_dtype
+            [s for s in samples if s[labels_index] == _class], numpy_dtype
         )
 
     resampled = np.concatenate(

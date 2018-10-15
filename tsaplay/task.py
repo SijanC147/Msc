@@ -1,15 +1,12 @@
 import argparse
 import comet_ml
 import tensorflow as tf
+import pkg_resources as pkg
 from tsaplay.datasets import Dataset
 from tsaplay.embeddings import Embedding
 from tsaplay.features import FeatureProvider
 from tsaplay.experiments import Experiment
 import tsaplay.models as tsa_models
-import tsaplay.constants as CNSTS
-from tsaplay.utils.io import cprnt
-import pkg_resources as pkg
-
 from tsaplay.embeddings import (
     FASTTEXT_WIKI_300,
     GLOVE_TWITTER_25,
@@ -25,32 +22,6 @@ from tsaplay.embeddings import (
     W2V_GOOGLE_300,
     W2V_RUS_300,
 )
-
-from tsaplay.datasets import (
-    DEBUG_DATASET,
-    DEBUGV2_DATASET,
-    RESTAURANTS_DATASET,
-    LAPTOPS_DATASET,
-    DONG_DATASET,
-    NAKOV_DATASET,
-    ROSENTHAL_DATASET,
-    SAEIDI_DATASET,
-    WANG_DATASET,
-    XUE_DATASET,
-)
-
-DATASETS = {
-    "debug": DEBUG_DATASET,
-    "debugv2": DEBUGV2_DATASET,
-    "restaurants": RESTAURANTS_DATASET,
-    "laptops": LAPTOPS_DATASET,
-    "dong": DONG_DATASET,
-    "nakov": NAKOV_DATASET,
-    "rosenthal": ROSENTHAL_DATASET,
-    "saeidi": SAEIDI_DATASET,
-    "wang": WANG_DATASET,
-    "xue": XUE_DATASET,
-}
 
 EMBEDDINGS = {
     "fasttext": FASTTEXT_WIKI_300,
@@ -82,27 +53,11 @@ MODELS = {
 def run_experiment(args):
     tf.logging.set_verbosity(args.verbosity)
 
-    embedding = Embedding(
-        EMBEDDINGS.get(args.embedding),
-        data_root=pkg.resource_filename(__name__, "assets/_embedding"),
-    )
+    embedding = Embedding(EMBEDDINGS.get(args.embedding))
 
-    datasets = [
-        Dataset(
-            src_path=pkg.resource_filename(
-                __name__, "assets/_datasets/" + DATASETS.get(dataset)
-            ),
-            parser=None,
-            data_root=pkg.resource_filename(__name__, "assets/_datasets"),
-        )
-        for dataset in args.datasets
-    ]
+    datasets = [Dataset(name) for name in args.datasets]
 
-    feature_provider = FeatureProvider(
-        datasets,
-        embedding,
-        data_root=pkg.resource_filename(__name__, "assets/_features"),
-    )
+    feature_provider = FeatureProvider(datasets, embedding)
 
     model = MODELS.get(args.model)(params={"batch-size": args.batch_size})
 
@@ -131,7 +86,7 @@ if __name__ == "__main__":
         "--datasets",
         "-ds",
         type=str,
-        choices=[*DATASETS],
+        choices=Dataset.list_installed_datasets(),
         help="One or more datasets to use for training and evaluation.",
         default=["dong"],
         nargs="+",

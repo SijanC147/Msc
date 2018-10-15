@@ -160,10 +160,16 @@ class FeatureProvider:
 
     def get_unique_classes(self):
         train_classes = np.array(
-            [get_class_distribution(ds.train_dict)[0] for ds in self._datasets]
+            [
+                get_class_distribution(ds.train_dict["labels"])[0]
+                for ds in self._datasets
+            ]
         ).flatten()
         test_classes = np.array(
-            [get_class_distribution(ds.test_dict)[0] for ds in self._datasets]
+            [
+                get_class_distribution(ds.test_dict["labels"])[0]
+                for ds in self._datasets
+            ]
         ).flatten()
 
         classes = np.unique(
