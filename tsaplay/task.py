@@ -68,9 +68,12 @@ def run_experiment(args):
     #     run_config={"keep_checkpoint_max": 50, "tf_random_seed": 1234},
     # )
 
-    distribution = tf.contrib.distribute.DistributeConfig(
-        train_distribute=tf.contrib.distribute.OneDeviceStrategy("/gpu:0")
-    )
+    # distribution = tf.contrib.distribute.DistributeConfig(
+    #     # train_distribute=tf.contrib.distribute.OneDeviceStrategy("/gpu:0")
+    #     train_distribute=tf.contrib.distribute.CollectiveAllReduceStrategy(
+    #         num_gpus_per_worker=4
+    #     )
+    # )
     experiment = Experiment(
         feature_provider,
         model,
@@ -79,7 +82,7 @@ def run_experiment(args):
         run_config={
             "tf_random_seed": 1234,
             "keep_checkpoint_max": 5000,
-            "experimental_distribute": distribution,
+            # "experimental_distribute": distribution,
         },
     )
 
