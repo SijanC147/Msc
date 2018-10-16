@@ -97,7 +97,7 @@ def logging(model, features, labels, spec, params):
             name="auc_op",
         ),
     }
-    train_hooks = spec.training_hooks or []
+    train_hooks = list(spec.training_hooks) or []
     train_hooks += [
         tf.train.LoggingTensorHook(
             tensors={
@@ -153,13 +153,26 @@ def scalars(model, features, labels, spec, params):
 
 def early_stopping(model, features, labels, spec, params):
     makedirs(model.estimator.eval_dir())
-    train_hooks = spec.training_hooks or []
+    train_hooks = list(spec.training_hooks) or []
     train_hooks += [
         stop_if_no_decrease_hook(
             estimator=model.estimator,
             metric_name="loss",
             max_steps_without_decrease=params.get("max_steps", 1000),
             min_steps=params.get("min_steps", 100),
+        )
+    ]
+    return spec._replace(training_hooks=train_hooks)
+
+
+@only(["TRAIN"])
+def profiling(model, features, labels, spec, params):
+    train_hooks = list(spec.training_hooks) or []
+    train_hooks += [
+        tf.train.ProfilerHook(
+            save_steps=100,
+            output_dir=model.run_config.model_dir,
+            show_memory=True,
         )
     ]
     return spec._replace(training_hooks=train_hooks)

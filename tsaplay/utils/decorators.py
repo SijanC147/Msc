@@ -70,7 +70,7 @@ def embed_sequences(model_fn):
     return wrapper
 
 
-def shard_saver(model_fn):
+def sharded_saver(model_fn):
     @wraps(model_fn)
     def wrapper(self, features, labels, mode, params):
         spec = model_fn(self, features, labels, mode, params)

@@ -121,7 +121,7 @@ class Experiment:
             "model_dir": join(self._experiment_dir),
             # "model_dir": join(self._experiment_dir, "tb_summary"),
             # "save_checkpoints_steps": 100,
-            # "save_summary_steps": 25,
+            "save_summary_steps": 25,
             # "log_step_count_steps": 25,
         }
         default_config.update(config_dict)

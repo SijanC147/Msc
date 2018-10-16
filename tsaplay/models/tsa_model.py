@@ -20,7 +20,7 @@ from tsaplay.utils.decorators import (
     addon,
     cometml,
     embed_sequences,
-    shard_saver,
+    sharded_saver,
 )
 from tsaplay.utils.data import make_dense_features
 from tsaplay.utils.addons import (
@@ -29,6 +29,7 @@ from tsaplay.utils.addons import (
     logging,
     histograms,
     scalars,
+    profiling,
 )
 
 
@@ -176,8 +177,8 @@ class TsaModel(ABC):
         return ServingInputReceiver(input_features, inputs)
 
     @cometml
-    @shard_saver
-    @addon([scalars, logging, histograms, conf_matrix])
+    @sharded_saver
+    @addon([scalars, logging, profiling, histograms, conf_matrix])
     @addon([prediction_outputs])
     @embed_sequences
     def _model_fn(self, features, labels, mode, params):

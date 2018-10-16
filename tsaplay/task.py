@@ -63,27 +63,13 @@ def run_experiment(args):
     feature_provider = FeatureProvider(datasets, embedding)
 
     model = MODELS.get(args.model)(params={"batch-size": args.batch_size})
-    # model = MODELS.get(args.model)(
-    #     params={"batch-size": args.batch_size, "hidden_units": 100},
-    #     run_config={"keep_checkpoint_max": 50, "tf_random_seed": 1234},
-    # )
 
-    # distribution = tf.contrib.distribute.DistributeConfig(
-    #     # train_distribute=tf.contrib.distribute.OneDeviceStrategy("/gpu:0")
-    #     train_distribute=tf.contrib.distribute.CollectiveAllReduceStrategy(
-    #         num_gpus_per_worker=4
-    #     )
-    # )
     experiment = Experiment(
         feature_provider,
         model,
         contd_tag=args.contd_tag,
         job_dir=args.job_dir,
-        run_config={
-            "tf_random_seed": 1234,
-            "keep_checkpoint_max": 5000,
-            # "experimental_distribute": distribution,
-        },
+        run_config={"tf_random_seed": 1234, "keep_checkpoint_max": 500},
     )
 
     experiment.run(job="train+eval", steps=args.steps)
