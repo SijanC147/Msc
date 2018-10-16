@@ -14,12 +14,13 @@ from tensorflow.estimator.export import (  # pylint: disable=E0401
 )
 from tsaplay.features import FeatureProvider
 from tsaplay.utils.draw import plot_distributions
-from tsaplay.utils.io import temp_pngs
+from tsaplay.utils.io import temp_pngs, cprnt
 from tsaplay.utils.decorators import (
     make_input_fn,
     addon,
     cometml,
     embed_sequences,
+    shard_saver,
 )
 from tsaplay.utils.data import make_dense_features
 from tsaplay.utils.addons import (
@@ -175,6 +176,7 @@ class TsaModel(ABC):
         return ServingInputReceiver(input_features, inputs)
 
     @cometml
+    @shard_saver
     @addon([scalars, logging, histograms, conf_matrix])
     @addon([prediction_outputs])
     @embed_sequences

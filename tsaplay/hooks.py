@@ -15,7 +15,7 @@ from tsaplay.utils.draw import (
 from tsaplay.utils.tf import image_to_summary
 from tsaplay.utils.io import cprnt, temp_pngs, get_image_from_plt
 
-matplotlib.use("TkAgg")
+# matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt  # noqa pylint: disable=C0411,C0412,C0413
 
 

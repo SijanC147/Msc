@@ -1,6 +1,7 @@
 import io
 import numpy as np
 import tensorflow as tf
+from tsaplay.utils.io import cprnt
 from tensorflow.estimator import ModeKeys  # pylint: disable=E0401
 
 

@@ -41,10 +41,15 @@ def embed_sequences(model_fn):
             embeddings = tf.get_variable(
                 "embeddings",
                 shape=[vocab_size, dim_size],
-                initializer=embedding_init,
+                # initializer=embedding_init,
                 trainable=trainable,
                 dtype=tf.float32,
             )
+
+        def init_embeddings(sess):
+            value = embedding_init()
+            sess.run(embeddings.initializer, {embeddings.initial_value: value})
+
         embedded_sequences = {}
         for key, value in features.items():
             if "_ids" in key:
@@ -58,7 +63,20 @@ def embed_sequences(model_fn):
                 )
                 embedded_sequences[embdd_key] = embedded_sequence
         features.update(embedded_sequences)
-        return model_fn(self, features, labels, mode, params)
+        spec = model_fn(self, features, labels, mode, params)
+        spec = scaffold_init_fn_on_spec(spec, init_embeddings)
+        return spec
+
+    return wrapper
+
+
+def shard_saver(model_fn):
+    @wraps(model_fn)
+    def wrapper(self, features, labels, mode, params):
+        spec = model_fn(self, features, labels, mode, params)
+        scaffold = spec.scaffold or tf.train.Scaffold()
+        scaffold._saver = tf.train.Saver(sharded=True)
+        return spec._replace(scaffold=scaffold)
 
     return wrapper
 
@@ -67,9 +85,7 @@ def cometml(model_fn):
     @wraps(model_fn)
     def wrapper(self, features, labels, mode, params):
         comet = self.comet_experiment
-        if comet is None or mode == ModeKeys.PREDICT:
-            return model_fn(self, features, labels, mode, params)
-        if mode in [ModeKeys.TRAIN, ModeKeys.EVAL]:
+        if comet is not None and mode in [ModeKeys.TRAIN, ModeKeys.EVAL]:
             run_config = self.run_config.__dict__
             comet_pretty_log(comet, self.aux_config, prefix="AUX")
             comet_pretty_log(comet, run_config, prefix="RUNCONFIG")
@@ -92,6 +108,7 @@ def cometml(model_fn):
 
                 comet.log_epoch_end(global_step)
             return spec
+        return model_fn(self, features, labels, mode, params)
 
     return wrapper
 
@@ -185,14 +202,13 @@ def make_input_fn(mode):
                 def process_dataset(features, labels):
                     return (args[0].processing_fn(features), labels)
 
-                dataset = prep_dataset(
+                return prep_dataset(
                     tfrecords=tfrecords,
                     params=params,
                     processing_fn=process_dataset,
                     mode=mode,
                 )
 
-                return dataset.make_one_shot_iterator().get_next()
             raise ValueError("Invalid mode: {0}".format(mode))
 
         return input_fn

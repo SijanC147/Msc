@@ -5,16 +5,21 @@
         "owner": "sean"
     },
     "trainingInput": {
-        "scaleTier": "BASIC",
+        "scaleTier": "CUSTOM",
+        "masterType": "standard_gpu",
+        "workerType": "standard_gpu",
+        "parameterServerType": "standard_gpu",
+        "workerCount": 4,
+        "parameterServerCount": 3,
         "pythonVersion": "3.5",
         "runtimeVersion": "1.10",
         "region": "europe-west1",
         "args": [
-            "--embedding=wiki-50",
-            "--datasets=debug",
+            "--embedding=commoncrawl-840",
+            "--datasets=dong",
             "--model=lcrrot",
-            "--batch-size=5",
-            "--steps=10",
+            "--batch-size=25",
+            "--steps=1000",
             "--verbosity=INFO"
         ]
     }

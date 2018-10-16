@@ -108,12 +108,12 @@ class Dataset:
     @classmethod
     @timeit("Generating corpus for dataset", "Corpus generated")
     def generate_corpus(cls, docs, path):
-        corpus_file = join(path, "_corpus.csv")
+        corpus_file = join(path, "_corpus.pkl")
         if exists(corpus_file):
-            corpus = corpus_from_csv(path=corpus_file)
+            corpus = _unpickle(corpus_file)
         else:
             corpus = cls.corpus_from_docs(docs)
-            corpus_to_csv(corpus_file, corpus)
+            _pickle(data=corpus, path=corpus_file)
         return corpus
 
     @classmethod

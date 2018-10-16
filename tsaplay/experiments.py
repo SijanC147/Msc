@@ -18,7 +18,7 @@ class Experiment:
         feature_provider,
         model,
         contd_tag=None,
-        config=None,
+        run_config=None,
         job_dir=None,
     ):
         self.feature_provider = feature_provider
@@ -26,7 +26,7 @@ class Experiment:
         self.contd_tag = contd_tag
         self.job_dir = job_dir
         self._initialize_experiment_dir()
-        self._initialize_model_run_config(config or {})
+        self._initialize_model_run_config(run_config or {})
         if self.contd_tag is not None:
             self._setup_comet_ml_experiment()
 
@@ -118,13 +118,14 @@ class Experiment:
 
     def _initialize_model_run_config(self, config_dict):
         default_config = {
-            "model_dir": join(self._experiment_dir, "tb_summary"),
-            "save_checkpoints_steps": 100,
-            "save_summary_steps": 25,
-            "log_step_count_steps": 25,
+            "model_dir": join(self._experiment_dir),
+            # "model_dir": join(self._experiment_dir, "tb_summary"),
+            # "save_checkpoints_steps": 100,
+            # "save_summary_steps": 25,
+            # "log_step_count_steps": 25,
         }
         default_config.update(config_dict)
-        self.model.run_config = tf.estimator.RunConfig(**default_config)
+        self.model.run_config = self.model.run_config.replace(**default_config)
 
     def _setup_comet_ml_experiment(self):
         api_key = environ.get("COMET_ML_API_KEY")

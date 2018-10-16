@@ -39,7 +39,7 @@ def get_dataset_dicts(train_file, test_file, parsing_fn):
 
 def get_raw_file_paths(path):
     train_file = search_dir(path, "train", first=True, kind="files")
-    test_file = search_dir(path, "train", first=True, kind="files")
+    test_file = search_dir(path, "test", first=True, kind="files")
     return train_file, test_file
 
 

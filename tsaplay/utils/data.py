@@ -1,5 +1,5 @@
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
 from tsaplay.utils.tf import sparse_sequences_to_dense, get_seq_lengths
 
 
@@ -50,6 +50,9 @@ def make_dense_features(features):
 def prep_dataset(tfrecords, params, processing_fn, mode):
     shuffle_buffer = params.get("shuffle-bufer", 50)
     dataset = tf.data.Dataset.list_files(file_pattern=tfrecords)
+    dataset = dataset.interleave(
+        tf.data.TFRecordDataset, cycle_length=5, block_length=1
+    )
     if mode == "EVAL":
         dataset = dataset.shuffle(buffer_size=shuffle_buffer)
     elif mode == "TRAIN":
@@ -57,17 +60,18 @@ def prep_dataset(tfrecords, params, processing_fn, mode):
             tf.contrib.data.shuffle_and_repeat(buffer_size=shuffle_buffer)
         )
 
-    dataset = dataset.interleave(
-        tf.data.TFRecordDataset, cycle_length=5, block_length=1
-    )
-    dataset = dataset.map(parse_tf_example, num_parallel_calls=5)
-    if processing_fn is not None:
-        dataset = dataset.map(processing_fn)
+    def parse_and_process(example):
+        return processing_fn(*parse_tf_example(example))
 
-    dataset = dataset.batch(params["batch-size"])
+    dataset = dataset.apply(
+        tf.contrib.data.map_and_batch(
+            parse_and_process, params["batch-size"], num_parallel_batches=5
+        )
+    )
     dataset = dataset.map(
         lambda features, labels: (make_dense_features(features), labels)
     )
+    dataset = dataset.prefetch(buffer_size=None)
 
     return dataset
 

@@ -1,19 +1,17 @@
 import sys
-import docker
 import pprint
-from inspect import getsource, getfile
-from termcolor import colored
 from datetime import datetime, timedelta
 from pickle import load, dump, HIGHEST_PROTOCOL
-from os.path import isfile, join, dirname, exists
+from csv import DictReader, DictWriter
 from json import dumps
 from os import listdir, system, makedirs
+from os.path import isfile, join, dirname
 from tempfile import mkdtemp
 from shutil import rmtree
 from io import BytesIO
+from termcolor import colored
 from PIL import Image
-from csv import DictReader, DictWriter
-from contextlib import contextmanager
+import docker
 
 
 def color(key):
@@ -32,10 +30,10 @@ def cprnt(*args, **kwargs):
     output = ""
     for arg in args:
         kwargs.update({"row": arg})
-    for (c, string) in kwargs.items():
+    for (color_key, string) in kwargs.items():
         if not isinstance(string, str):
             string = pprint.pformat(string)
-        col = "".join(filter(str.isalpha, c))
+        col = "".join(filter(str.isalpha, color_key))
         index = col.find("o")
         if index != -1:
             txt, _, frgnd = col.partition("o")

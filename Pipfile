@@ -4,7 +4,6 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-tensorflow = "*"
 matplotlib = "*"
 pillow = "*"
 docker = "*"
@@ -14,6 +13,8 @@ tqdm = "*"
 comet-ml = "*"
 pandas = "*"
 spacy = "*"
+tensorflow = {version="*", sys_platform = "== 'darwin'"}
+tensorflow-gpu = {version=">=1.11.0", sys_platform = "== 'linux'"}
 
 [dev-packages]
 tox-pipenv = "*"

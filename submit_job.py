@@ -90,6 +90,10 @@ def get_arguments():
     )
 
     parser.add_argument(
+        "--job-id", "-jid", type=str, help="ID of the job being submitted"
+    )
+
+    parser.add_argument(
         "--job-dir",
         help="GCS location to write checkpoints to and export models",
     )
@@ -195,7 +199,7 @@ def write_gcloud_config(args):
     args_dict = vars(args)
     args_list = []
     for (key, value) in args_dict.items():
-        if not value:
+        if not value or key == "job_id":
             continue
         if isinstance(value, list):
             value = " ".join(map(str, value))
@@ -206,7 +210,12 @@ def write_gcloud_config(args):
         "jobId": "my_job",
         "labels": {"type": "dev", "owner": "sean"},
         "trainingInput": {
-            "scaleTier": "BASIC",
+            "scaleTier": "CUSTOM",
+            "masterType": "standard_gpu",
+            "workerType": "standard_gpu",
+            "parameterServerType": "standard_gpu",
+            "workerCount": 4,
+            "parameterServerCount": 3,
             "pythonVersion": "3.5",
             "runtimeVersion": "1.10",
             "region": "europe-west1",
@@ -218,7 +227,7 @@ def write_gcloud_config(args):
         dump(gcloud_config, config_file, indent=4)
 
 
-def write_gcloud_cmd_script():
+def write_gcloud_cmd_script(args):
     gcloud_cmd = """gcloud ml-engine jobs submit training {job_name} \\
 --job-dir={job_dir} \\
 --module-name={module_name} \\
@@ -226,8 +235,8 @@ def write_gcloud_cmd_script():
 --packages={package_name} \\
 --config={config_path} \\
 --stream-logs""".format(
-        job_name="testing_job_script_3",
-        job_dir="gs://tsaplay-bucket/testing_job_script",
+        job_name=args.job_id,
+        job_dir="gs://tsaplay-bucket/{}".format(args.job_id),
         module_name="tsaplay.task",
         staging_bucket="gs://tsaplay-bucket/",
         package_name=abspath(
@@ -257,7 +266,11 @@ def write_gcloud_cmd_script():
         cprnt(bow="Copied to clipboard!")
 
 
-if __name__ == "__main__":
-    prepare_assets(get_arguments())
+def main(args):
+    prepare_assets(args)
     sandbox.run_setup("setup.py", ["sdist"])
-    write_gcloud_cmd_script()
+    write_gcloud_cmd_script(args)
+
+
+if __name__ == "__main__":
+    main(get_arguments())

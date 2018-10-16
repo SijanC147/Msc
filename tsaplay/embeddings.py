@@ -80,7 +80,8 @@ class Embedding:
         def _init(shape=shape, dtype=tf.float32, partition_info=None):
             return self.vectors
 
-        return _init
+        # return _init
+        return lambda: self.vectors
 
     @property
     def partitioned_initializer(self):
