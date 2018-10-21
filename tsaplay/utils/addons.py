@@ -168,11 +168,11 @@ def early_stopping(model, features, labels, spec, params):
 @only(["TRAIN"])
 def profiling(model, features, labels, spec, params):
     train_hooks = list(spec.training_hooks) or []
+    timeline_dir = join(model.run_config.model_dir)
+    makedirs(timeline_dir)
     train_hooks += [
         tf.train.ProfilerHook(
-            save_steps=100,
-            output_dir=model.run_config.model_dir,
-            show_memory=True,
+            save_steps=300, output_dir=timeline_dir, show_memory=True
         )
     ]
     return spec._replace(training_hooks=train_hooks)

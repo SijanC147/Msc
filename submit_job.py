@@ -211,11 +211,11 @@ def write_gcloud_config(args):
         "labels": {"type": "dev", "owner": "sean"},
         "trainingInput": {
             "scaleTier": "CUSTOM",
-            "masterType": "complex_model_m_gpu",
-            "workerType": "complex_model_m_gpu",
-            "parameterServerType": "complex_model_m_gpu",
-            "workerCount": 1,
-            "parameterServerCount": 1,
+            "masterType": "standard_gpu",
+            "workerType": "standard_gpu",
+            "parameterServerType": "standard_gpu",
+            "workerCount": 2,
+            "parameterServerCount": 6,
             "pythonVersion": "3.5",
             "runtimeVersion": "1.10",
             "region": "europe-west1",
@@ -263,7 +263,7 @@ def write_gcloud_cmd_script(args):
 
     if platform() == "MacOS":
         system('echo "{}" | pbcopy'.format(submit_job_cmd))
-        cprnt(bow="Copied to clipboard!")
+        cprnt(bow="Copied to clipboard.")
 
 
 def main(args):
