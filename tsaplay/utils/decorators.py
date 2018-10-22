@@ -17,10 +17,10 @@ def timeit(pre="", post=""):
             if environ.get("TIMEIT", "ON") == "ON":
                 name = func.__qualname__ + "():"
                 cprnt(r=name, g=pre)
-                ts = time.time()
+                start_time = time.time()
                 result = func(*args, **kw)
-                te = time.time()
-                time_taken = timedelta(seconds=(te - ts))
+                end_time = time.time()
+                time_taken = timedelta(seconds=(end_time - start_time))
                 cprnt(r=name, g=post + " in", row=str(time_taken))
                 return result
             return func(*args, **kw)
