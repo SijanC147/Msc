@@ -12,7 +12,7 @@ import spacy
 from spacy.language import Language
 from spacy.tokens import Doc
 from tsaplay.constants import EMBEDDING_DATA_PATH, SPACY_MODEL
-from tsaplay.utils.io import cprnt
+from tsaplay.utils.decorators import timeit
 
 FASTTEXT_WIKI_300 = "fasttext-wiki-news-subwords-300"
 GLOVE_TWITTER_25 = "glove-twitter-25"
@@ -47,9 +47,13 @@ class Embedding:
         self._vocab_filters = vocab_filters or []
         if self._vocab_filters:
             filters_list = [self._source] + self._vocab_filters
-            filters_list_str = sum(map(self.filters_as_str, filters_list), [])
+            filters_list_str = map(self.filters_as_str, filters_list)
+            filters_list_md5 = [
+                md5(str(filt).encode("utf-8")).hexdigest()
+                for filt in filters_list_str
+            ].sort()
             self._filter_hash_id = md5(
-                str(filters_list_str).encode("utf-8")
+                str(filters_list_md5).encode("utf-8")
             ).hexdigest()
         else:
             self._filter_hash_id = None
@@ -132,7 +136,7 @@ class Embedding:
     @property
     def initializer(self, structure=None):
         shape = (self.vocab_size, self.dim_size)
-        partition_size = int(self.vocab_size / 6)
+        partition_size = int(self.vocab_size / self.num_shards)
 
         def _init_var(shape=shape, dtype=tf.float32, partition_info=None):
             return self.vectors
@@ -161,8 +165,7 @@ class Embedding:
     def filters_as_str(cls, filter_condition):
         if callable(filter_condition):
             return [getsource(filter_condition)]
-        else:
-            return list(filter_condition)
+        return list(filter_condition)
 
     @classmethod
     def smallest_partition_divisor(cls, vocab_size):
@@ -190,63 +193,68 @@ class Embedding:
         return vocab_file_path
 
     @classmethod
-    def filter_gensim_model(cls, gensim_model, filter_list):
+    def export_gensim_model(cls, gensim_model, export_dir, aux_tokens=None):
+        model_bin_path = join(export_dir, "_gensim_model.bin")
+        gensim_model.save(model_bin_path)
+        default_aux_tokens = ["<PAD>", "<OOV>"]
+        aux = default_aux_tokens + (aux_tokens or [])
+        cls.export_vocab_files(gensim_model.index2word, export_dir, aux)
+
+    @classmethod
+    @timeit("Filtering embedding (this can take a while)", "Filtering done")
+    def filter_gensim_model(cls, gensim_model, vocab_filters):
         entities = gensim_model.index2word
 
-        filter_sets = sum(
-            map(list, filter(lambda cond: not callable(cond), filter_list)), []
-        )
-        if filter_sets:
-            entities = list(set(entities) & set(filter_sets))
-
-        filter_fns_list = list(filter(callable, filter_list))
-        if filter_fns_list:
+        function_filters = list(filter(callable, vocab_filters))
+        if function_filters:
             nlp = spacy.load(SPACY_MODEL)
             default_pipes_param = Parameter(
                 name="pipes",
                 kind=Parameter.POSITIONAL_OR_KEYWORD,
                 default=["dep", "ner", "pos"],
             )
-            emb_nlp = Language(
-                nlp.vocab, make_doc=lambda vocab: Doc(nlp.vocab, words=vocab)
-            )
-            for component in [None, "dep", "ner", "pos"]:
-                component_filter_fns = [
-                    filter_fn
-                    for filter_fn in filter_fns_list
-                    if component
-                    in list(
-                        signature(filter_fn)
-                        .parameters.get("pipes", default_pipes_param)
-                        .default
-                    )
-                ]
-                if component_filter_fns:
-                    if component == "dep":
-                        dep = spacy.pipeline.DependencyParser(nlp.vocab)
-                        dep.from_disk(join(SPACY_MODEL, "parser"))
-                        emb_nlp.add_pipe(dep)
-                    elif component == "ner":
-                        ner = spacy.pipeline.EntityRecognizer(nlp.vocab)
-                        ner.from_disk(join(SPACY_MODEL, "ner"))
-                        emb_nlp.add_pipe(ner)
-                    elif component == "pos":
-                        tagger = spacy.pipeline.Tagger(nlp.vocab)
-                        tagger = tagger.from_disk(join(SPACY_MODEL, "tagger"))
-                        emb_nlp.add_pipe(tagger)
 
-                    def filter_fns(token):
-                        keep = True
-                        for filter_fn in component_filter_fns:
-                            keep = keep and filter_fn(token)
-                            if not keep:
-                                return keep
-                        return keep
+            def make_doc(vocab):
+                return Doc(nlp.vocab, words=vocab)
 
-                    doc = emb_nlp(entities)
-                    entities = [
-                        token.text for token in filter(filter_fns, doc)
-                    ]
+            embedding_lang = Language(nlp.vocab, make_doc=make_doc)
+
+            required_pipes = [
+                signature(filter_fn)
+                .parameters.get("pipes", default_pipes_param)
+                .default
+                for filter_fn in function_filters
+            ]
+            required_pipes = set(sum(required_pipes, []))
+
+            if "dep" in required_pipes:
+                dep = spacy.pipeline.DependencyParser(nlp.vocab)
+                dep.from_disk(join(SPACY_MODEL, "parser"))
+                embedding_lang.add_pipe(dep)
+            if "ner" in required_pipes:
+                ner = spacy.pipeline.EntityRecognizer(nlp.vocab)
+                ner.from_disk(join(SPACY_MODEL, "ner"))
+                embedding_lang.add_pipe(ner)
+            if "pos" in required_pipes:
+                tagger = spacy.pipeline.Tagger(nlp.vocab)
+                tagger = tagger.from_disk(join(SPACY_MODEL, "tagger"))
+                embedding_lang.add_pipe(tagger)
+
+                def grouped(token):
+                    keep = True
+                    for filter_fn in function_filters:
+                        keep = keep and filter_fn(token)
+                        if not keep:
+                            return keep
+                    return keep
+
+                doc = embedding_lang(entities)
+                entities = [token.text for token in filter(grouped, doc)]
+
+        list_filters = filter(lambda cond: not callable(cond), vocab_filters)
+        list_filters = sum(list_filters, [])
+        if list_filters:
+            entities = list(set(entities) & set(list_filters))
 
         weights = [gensim_model.get_vector(entity) for entity in entities]
         filtered_model = KeyedVectors(gensim_model.vector_size)
@@ -254,12 +262,43 @@ class Embedding:
         return filtered_model
 
     @classmethod
-    def export_gensim_model(cls, gensim_model, export_dir, aux_tokens=None):
-        model_bin_path = join(export_dir, "_gensim_model.bin")
-        gensim_model.save(model_bin_path)
-        default_aux_tokens = ["<PAD>", "<OOV>"]
-        aux = default_aux_tokens + (aux_tokens or [])
-        cls.export_vocab_files(gensim_model.index2word, export_dir, aux)
+    def export_filtered_details(
+        cls, orig_model, filtered_model, vocab_filters, export_dir
+    ):
+        filter_details_file_path = join(export_dir, "_filter_details.txt")
+        if exists(filter_details_file_path):
+            return
+        orig_vocab = len(orig_model.index2word)
+        filt_vocab = len(filtered_model.index2word)
+        reduction_percent = ((orig_vocab - filt_vocab) / orig_vocab) * 100
+
+        def pprint_filters(filt):
+            filt_str = cls.filters_as_str(filt)
+            if not callable(filt):
+                return str(filt_str)
+            return filt_str[0]
+
+        filters_str = ""
+        function_filters = list(filter(callable, vocab_filters))
+        if function_filters:
+            fn_filters_str = "\n\n".join(map(pprint_filters, function_filters))
+            filters_str += "Function Filters: {0}".format(fn_filters_str)
+
+        list_filters = filter(lambda cond: not callable(cond), vocab_filters)
+        if list_filters:
+            list_filters_str = "\n\n".join(map(pprint_filters, list_filters))
+            filters_str += "List Filters: {0}".format(list_filters_str)
+
+        details_str = """
+Filtered Vocab Reduction: {filtered_vocab_size}/{original_vocab_size} ({percentage:.2f}%),
+Filters: {filters_str}""".format(
+            filtered_vocab_size=filt_vocab,
+            original_vocab_size=orig_vocab,
+            percentage=reduction_percent,
+            filters_str=filters_str,
+        )
+        with open(filter_details_file_path, "w") as filter_details_file:
+            filter_details_file.write(details_str)
 
     def _load_gensim_model(self, source, vocab_filters):
         save_model_file = join(self.gen_dir, "_gensim_model.bin")
@@ -280,34 +319,7 @@ class Embedding:
         self.export_gensim_model(gensim_model, source_model_dir)
         filtered_model = self.filter_gensim_model(gensim_model, vocab_filters)
         self.export_gensim_model(filtered_model, self.gen_dir)
-        self._write_filter_details(gensim_model, filtered_model, vocab_filters)
-        return filtered_model
-
-    def _write_filter_details(self, orig_model, filtered_model, filters):
-        filter_details_file_path = join(self.gen_dir, "_filter_details.txt")
-        if exists(filter_details_file_path):
-            return
-        orig_vocab = len(orig_model.index2word)
-        filt_vocab = len(filtered_model.index2word)
-        reduction_percent = ((orig_vocab - filt_vocab) / orig_vocab) * 100
-
-        def pretty_print_filters(filt):
-            filt_str = self.filters_as_str(filt)
-            if not callable(filt):
-                return str(filt_str)
-            return filt_str[0]
-
-        filters_str = "\n" + "\n".join(map(pretty_print_filters, filters))
-        details_str = """Source: {source},
-Filter Hash: {hash_id},
-Filtered Vocab Reduction: {filtered_vocab_size}/{original_vocab_size} ({percentage:.2f}%),
-Filters: {filters_str}""".format(
-            source=self._source,
-            hash_id=self._filter_hash_id,
-            filtered_vocab_size=filt_vocab,
-            original_vocab_size=orig_vocab,
-            percentage=reduction_percent,
-            filters_str=filters_str,
+        self.export_filtered_details(
+            gensim_model, filtered_model, vocab_filters, self.gen_dir
         )
-        with open(filter_details_file_path, "w") as filter_details_file:
-            filter_details_file.write(details_str)
+        return filtered_model
