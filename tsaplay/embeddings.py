@@ -264,6 +264,7 @@ class Embedding:
                             get_attrs = [
                                 attr.replace("!", "") for attr in attrs
                             ]
+                            pipes = ["None"]
                         elif pipes == ["pos"]:
                             attrs = params["tags"].default
                             get_attrs = ["pos_"]
@@ -366,15 +367,17 @@ class Embedding:
         function_filters = list(filter(callable, vocab_filters))
         if function_filters:
             fn_filters_str = "\n\n".join(map(pprint_filters, function_filters))
-            filters_str += "\nFunction Filters: {0}".format(fn_filters_str)
+            filters_str += "\nFunction Filters: \n{0}".format(fn_filters_str)
 
-        list_filters = filter(lambda cond: not callable(cond), vocab_filters)
+        list_filters = list(
+            filter(lambda cond: not callable(cond), vocab_filters)
+        )
         if list_filters:
             list_filters_str = "\n\n".join(map(pprint_filters, list_filters))
-            filters_str += "\nList Filters: {0}".format(list_filters_str)
+            filters_str += "\nList Filters: \n{0}".format(list_filters_str)
 
         details_str = """
-Filtered Vocab Reduction: {filtered_vocab_size}/{original_vocab_size} ({percentage:.2f}%),
+Filtered Vocab Reduction: {filtered_vocab_size}/{original_vocab_size} (-{percentage:.2f}%),\n
 Filters: {filters_str}""".format(
             filtered_vocab_size=filt_vocab,
             original_vocab_size=orig_vocab,
