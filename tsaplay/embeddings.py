@@ -50,11 +50,10 @@ class Embedding:
             self._oov = self.default_oov
         self._source = source
         if vocab_filters:
-            self._vocab_filters = list(set(vocab_filters))
-            filters_list = [self._source] + self._vocab_filters
-            filters_list_str = list(map(self.filters_as_str, filters_list))
+            filters_list_str = list(map(self.filters_as_str, vocab_filters))
+            filters_list_str = [self._source] + filters_list_str
             filters_list_md5 = [
-                md5(str(filt).encode("utf-8")).hexdigest()
+                md5(filt.encode("utf-8")).hexdigest()
                 for filt in filters_list_str
             ]
             filters_list_md5 = list(set(filters_list_md5))
@@ -69,7 +68,7 @@ class Embedding:
         self._gen_dir = join(self._data_root, self.name)
         makedirs(self._gen_dir, exist_ok=True)
         self._gensim_model = self.load_gensim_model(
-            source, self._vocab_filters, self._gen_dir
+            source, vocab_filters, self._gen_dir
         )
         self._flags = {
             "<PAD>": np.zeros(shape=self.dim_size),
@@ -140,8 +139,7 @@ class Embedding:
     def num_shards(self):
         return self._num_shards
 
-    @property
-    def initializer(self, structure=None):
+    def initializer_fn(self, structure=None):
         shape = (self.vocab_size, self.dim_size)
         partition_size = int(self.vocab_size / self.num_shards)
 
@@ -171,12 +169,14 @@ class Embedding:
     @classmethod
     def filters_as_str(cls, filter_condition):
         if isinstance(filter_condition, str):
-            return [filter_condition]
+            return filter_condition
         if isinstance(filter_condition, partial):
-            return [str(filter_condition.keywords)]
+            return str(filter_condition.keywords)
         if callable(filter_condition):
-            return [getsource(filter_condition)]
-        return list(filter_condition)
+            return getsource(filter_condition)
+        if hasattr(filter_condition, "sort"):
+            filter_condition.sort()
+        return str(filter_condition)
 
     @classmethod
     def smallest_partition_divisor(cls, vocab_size):
@@ -343,12 +343,15 @@ class Embedding:
         vocab_filters,
         export_dir,
     ):
-        report_file_path = join(export_dir, "_filter_report.csv")
-        with open(report_file_path, "w") as report_csvfile:
-            csvwriter = writer(report_csvfile)
-            header = ["Function", "Pipes", "Args", "Token", "Attributes"]
-            filter_report = [header] + [row for row in filter_report if row]
-            csvwriter.writerows(filter_report)
+        if filter_report:
+            report_file_path = join(export_dir, "_filter_report.csv")
+            with open(report_file_path, "w") as report_csvfile:
+                csvwriter = writer(report_csvfile)
+                header = ["Function", "Pipes", "Args", "Token", "Attributes"]
+                filter_report = [header] + [
+                    row for row in filter_report if row
+                ]
+                csvwriter.writerows(filter_report)
 
         filter_details_file_path = join(export_dir, "_filter_details.txt")
         if exists(filter_details_file_path):
@@ -357,23 +360,21 @@ class Embedding:
         filt_vocab = len(filtered_model.index2word)
         reduction_percent = ((orig_vocab - filt_vocab) / orig_vocab) * 100
 
-        def pprint_filters(filt):
-            filt_str = cls.filters_as_str(filt)
-            if not callable(filt):
-                return str(filt_str)
-            return filt_str[0]
-
         filters_str = "\n"
         function_filters = list(filter(callable, vocab_filters))
         if function_filters:
-            fn_filters_str = "\n\n".join(map(pprint_filters, function_filters))
+            fn_filters_str = "\n\n".join(
+                map(cls.filters_as_str, function_filters)
+            )
             filters_str += "\nFunction Filters: \n{0}".format(fn_filters_str)
 
         list_filters = list(
             filter(lambda cond: not callable(cond), vocab_filters)
         )
         if list_filters:
-            list_filters_str = "\n\n".join(map(pprint_filters, list_filters))
+            list_filters_str = "\n\n".join(
+                map(cls.filters_as_str, list_filters)
+            )
             filters_str += "\nList Filters: \n{0}".format(list_filters_str)
 
         details_str = """

@@ -1,8 +1,4 @@
 import tensorflow as tf
-from tensorflow.estimator import (  # pylint: disable=E0401
-    EstimatorSpec,
-    ModeKeys,
-)
 from tsaplay.models.tsa_model import TsaModel
 from tsaplay.utils.decorators import addon
 from tsaplay.utils.tf import (

@@ -35,14 +35,15 @@ def embed_sequences(model_fn):
     def wrapper(self, features, labels, mode, params):
         vocab_size = params["_vocab_size"]
         dim_size = params["_embedding_dim"]
-        embedding_init = params["_embedding_init"]
+        embedding_init = params["_embedding_init"]("variable")
+        # num_shards = params["_embedding_num_shards"]
         trainable = params.get("train_embeddings", True)
         with tf.variable_scope("embedding_layer", reuse=tf.AUTO_REUSE):
             embeddings = tf.get_variable(
                 "embeddings",
                 shape=[vocab_size, dim_size],
                 initializer=embedding_init,
-                partitioner=tf.fixed_size_partitioner(num_shards=6),
+                # partitioner=tf.fixed_size_partitioner(num_shards=num_shards),
                 trainable=trainable,
                 dtype=tf.float32,
             )
@@ -52,22 +53,21 @@ def embed_sequences(model_fn):
             if "_ids" in key:
                 component = key.replace("_ids", "")
                 embdd_key = component + "_emb"
-                # embedded_sequence = tf.contrib.layers.embed_sequence(
-                #     ids=value,
-                #     initializer=embeddings,
-                #     scope="embedding_layer",
-                #     reuse=True,
-                # )
-                embedded_sequence = tf.nn.embedding_lookup(
-                    params=embeddings, ids=value
+                embedded_sequence = tf.contrib.layers.embed_sequence(
+                    ids=value,
+                    initializer=embeddings,
+                    scope="embedding_layer",
+                    reuse=True,
                 )
+                # embedded_sequence = tf.nn.embedding_lookup(
+                #     params=embeddings, ids=value
+                # )
                 embedded_sequences[embdd_key] = embedded_sequence
         features.update(embedded_sequences)
         spec = model_fn(self, features, labels, mode, params)
 
         # def init_embeddings(sess):
-        #     value = embedding_init()
-        #     sess.run(embeddings.initializer, {embeddings.initial_value: value})
+        #     sess.run(embeddings.initializer, {embeddings.initial_value: embedding_init()})
         # spec = scaffold_init_fn_on_spec(spec, init_embeddings)
         return spec
 

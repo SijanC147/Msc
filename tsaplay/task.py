@@ -56,20 +56,27 @@ MODELS = {
 def run_experiment(args):
     tf.logging.set_verbosity(args.verbosity)
 
-    embedding = Embedding(EMBEDDINGS.get(args.embedding))
-
     datasets = [Dataset(name) for name in args.datasets]
+
+    corpus_filter = list(set(sum([ds.corpus for ds in datasets], [])))
+    embedding = Embedding(
+        EMBEDDINGS.get(args.embedding), vocab_filters=[corpus_filter]
+    )
+
+    # embedding = Embedding(EMBEDDINGS.get(args.embedding))
 
     feature_provider = FeatureProvider(datasets, embedding)
 
-    model = MODELS.get(args.model)(params={"batch-size": args.batch_size})
+    model = MODELS.get(args.model)(
+        params={"batch-size": args.batch_size, "hidden_units": 200}
+    )
 
     experiment = Experiment(
         feature_provider,
         model,
         contd_tag=args.contd_tag,
         job_dir=args.job_dir,
-        run_config={"tf_random_seed": 1234, "keep_checkpoint_max": 500},
+        run_config={"tf_random_seed": 1234},
     )
 
     experiment.run(job="train+eval", steps=args.steps)

@@ -40,7 +40,8 @@ class FeatureProvider:
             "_vocab_size": self._embedding.vocab_size,
             "_vocab_file": self._embedding.vocab_file_path,
             "_embedding_dim": self._embedding.dim_size,
-            "_embedding_init": self._embedding.initializer,
+            "_embedding_init": self._embedding.initializer_fn,
+            "_embedding_num_shards": self._embedding.num_shards,
         }
 
     @property
