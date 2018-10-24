@@ -63,7 +63,7 @@ def run_experiment(args):
         EMBEDDINGS.get(args.embedding), vocab_filters=[corpus_filter]
     )
 
-    # embedding = Embedding(EMBEDDINGS.get(args.embedding))
+    # embedding = Embedding(EMBEDDINGS.get(args.embedding), num_shards=6)
 
     feature_provider = FeatureProvider(datasets, embedding)
 
