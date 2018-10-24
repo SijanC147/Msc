@@ -70,6 +70,8 @@ def get_arguments():
         default="wiki-50",
     )
 
+    parser.add_argument("--filter-embedding", "-fe", action="store_true")
+
     parser.add_argument(
         "--datasets",
         "-ds",
@@ -201,11 +203,14 @@ def write_gcloud_config(args):
     for (key, value) in args_dict.items():
         if not value or key == "job_id":
             continue
-        if isinstance(value, list):
-            value = " ".join(map(str, value))
-        else:
-            value = str(value)
-        args_list.append("--" + key.replace("_", "-") + "=" + value)
+        if value:
+            if isinstance(value, list):
+                value = "=" + (" ".join(map(str, value)))
+            elif isinstance(value, bool):
+                value = ""
+            else:
+                value = "=" + str(value)
+            args_list.append("--" + key.replace("_", "-") + value)
     gcloud_config = {
         "jobId": "my_job",
         "labels": {"type": "dev", "owner": "sean"},
@@ -233,8 +238,8 @@ def write_gcloud_cmd_script(args):
 --module-name={module_name} \\
 --staging-bucket={staging_bucket} \\
 --packages={package_name} \\
---config={config_path} \\
---stream-logs""".format(
+--config={config_path}""".format(
+        # --stream-logs""".format(
         job_name=args.job_id,
         job_dir="gs://tsaplay-bucket/{}".format(args.job_id),
         module_name="tsaplay.task",

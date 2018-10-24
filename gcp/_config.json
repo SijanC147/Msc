@@ -15,11 +15,12 @@
         "runtimeVersion": "1.10",
         "region": "europe-west1",
         "args": [
-            "--embedding=commoncrawl-840",
+            "--embedding=twitter-200",
             "--datasets=dong",
             "--model=lcrrot",
+            "--contd-tag=baseline",
             "--batch-size=25",
-            "--steps=1000",
+            "--steps=2000",
             "--verbosity=INFO"
         ]
     }

@@ -22,7 +22,7 @@ class LcrRot(TsaModel):
             "batch-size": 25,
             "learning_rate": 0.1,
             "keep_prob": 0.5,
-            "hidden_units": 300,
+            "hidden_units": 200,
             "l2_weight": 1e-5,
             "momentum": 0.9,
             "initializer": tf.initializers.random_uniform(-0.1, 0.1),

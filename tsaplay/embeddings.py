@@ -36,12 +36,7 @@ W2V_RUS_300 = "word2vec-ruscorpora-300"
 
 class Embedding:
     def __init__(
-        self,
-        source,
-        oov=None,
-        num_shards=None,
-        vocab_filters=None,
-        data_root=None,
+        self, source, oov=None, num_shards=None, filters=None, data_root=None
     ):
         self._data_root = data_root or EMBEDDING_DATA_PATH
         self._oov = oov or self.default_oov
@@ -49,8 +44,8 @@ class Embedding:
             warn("OOV parameter is not callable, falling back to default.")
             self._oov = self.default_oov
         self._source = source
-        if vocab_filters:
-            filters_list_str = list(map(self.filters_as_str, vocab_filters))
+        if filters:
+            filters_list_str = list(map(self.filters_as_str, filters))
             filters_list_str = [self._source] + filters_list_str
             filters_list_md5 = [
                 md5(filt.encode("utf-8")).hexdigest()
@@ -68,7 +63,7 @@ class Embedding:
         self._gen_dir = join(self._data_root, self.name)
         makedirs(self._gen_dir, exist_ok=True)
         self._gensim_model = self.load_gensim_model(
-            source, vocab_filters, self._gen_dir
+            source, filters, self._gen_dir
         )
         self._flags = {
             "<PAD>": np.zeros(shape=self.dim_size),

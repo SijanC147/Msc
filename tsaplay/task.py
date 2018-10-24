@@ -58,12 +58,11 @@ def run_experiment(args):
 
     datasets = [Dataset(name) for name in args.datasets]
 
-    corpus_filter = list(set(sum([ds.corpus for ds in datasets], [])))
-    embedding = Embedding(
-        EMBEDDINGS.get(args.embedding), vocab_filters=[corpus_filter]
-    )
+    emb_filter = None
+    if args.filter_embedding:
+        emb_filter = [list(set(sum([ds.corpus for ds in datasets], [])))]
 
-    # embedding = Embedding(EMBEDDINGS.get(args.embedding), num_shards=6)
+    embedding = Embedding(EMBEDDINGS.get(args.embedding), filters=emb_filter)
 
     feature_provider = FeatureProvider(datasets, embedding)
 
@@ -95,6 +94,8 @@ if __name__ == "__main__":
         help="Pre-trained embedding to use.",
         default="wiki-50",
     )
+
+    parser.add_argument("--filter-embedding", "-fe", action="store_true")
 
     parser.add_argument(
         "--datasets",
