@@ -14,7 +14,7 @@ from tensorflow.python_io import TFRecordWriter
 
 from tsaplay.utils.decorators import timeit
 from tsaplay.utils.data import get_class_distribution
-from tsaplay.constants import FEATURES_DATA_PATH, SPACY_MODEL
+from tsaplay.constants import FEATURES_DATA_PATH, SPACY_MODEL, RANDOM_SEED
 
 
 class FeatureProvider:
@@ -205,6 +205,7 @@ class FeatureProvider:
         return self._write_filtered_vocab_file(dataset)
 
     def _write_tf_record_files(self, dataset, mode, tf_examples):
+        np.random.seed(RANDOM_SEED)
         np.random.shuffle(tf_examples)
         num_per_shard = int(
             math.ceil(len(tf_examples) / float(self._num_shards))

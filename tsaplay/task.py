@@ -53,37 +53,7 @@ MODELS = {
 }
 
 
-def run_experiment(args):
-    tf.logging.set_verbosity(args.verbosity)
-
-    datasets = [Dataset(name) for name in args.datasets]
-
-    emb_filter = None
-    if args.filter_embedding:
-        emb_filter = [list(set(sum([ds.corpus for ds in datasets], [])))]
-
-    embedding = Embedding(EMBEDDINGS.get(args.embedding), filters=emb_filter)
-
-    feature_provider = FeatureProvider(datasets, embedding)
-
-    model = MODELS.get(args.model)(
-        params={"batch-size": args.batch_size, "hidden_units": 200}
-    )
-
-    experiment = Experiment(
-        feature_provider,
-        model,
-        contd_tag=args.contd_tag,
-        job_dir=args.job_dir,
-        run_config={"tf_random_seed": 1234},
-    )
-
-    experiment.run(job="train+eval", steps=args.steps)
-
-    pkg.cleanup_resources()
-
-
-if __name__ == "__main__":
+def argument_parser():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -95,7 +65,12 @@ if __name__ == "__main__":
         default="wiki-50",
     )
 
-    parser.add_argument("--filter-embedding", "-fe", action="store_true")
+    parser.add_argument(
+        "--filter-embedding",
+        "-fe",
+        help="Filter embedding on unique tokens from datasets",
+        action="store_true",
+    )
 
     parser.add_argument(
         "--datasets",
@@ -114,6 +89,14 @@ if __name__ == "__main__":
         choices=[*MODELS],
         help="Choose model to train",
         default="lcrrot",
+    )
+
+    parser.add_argument(
+        "--model-params",
+        "-mp",
+        nargs="*",
+        help="Params to forward to model, must be in <key>=<value> format.",
+        required=False,
     )
 
     parser.add_argument(
@@ -151,4 +134,46 @@ if __name__ == "__main__":
         help="Set logging verbosity",
     )
 
-    run_experiment(parser.parse_args())
+    return parser
+
+
+def run_experiment(args):
+    tf.logging.set_verbosity(args.verbosity)
+
+    datasets = [Dataset(name) for name in args.datasets]
+
+    emb_filter = None
+    if args.filter_embedding:
+        emb_filter = [list(set(sum([ds.corpus for ds in datasets], [])))]
+    embedding = Embedding(EMBEDDINGS.get(args.embedding), filters=emb_filter)
+
+    feature_provider = FeatureProvider(datasets, embedding)
+
+    model_params = args.model_params or {}
+    if model_params:
+        model_params = [param.split("=") for param in model_params]
+        model_params = {
+            param[0]: (
+                int(param[1])
+                if param[1].isdigit()
+                else float(param[1])
+                if param[1].replace(".", "", 1).isdigit()
+                else param[1]
+            )
+            for param in model_params
+        }
+    model_params.update({"batch-size": args.batch_size})
+
+    model = MODELS.get(args.model)(params=model_params)
+
+    experiment = Experiment(
+        feature_provider, model, contd_tag=args.contd_tag, job_dir=args.job_dir
+    )
+
+    experiment.run(job="train+eval", steps=args.steps)
+
+    pkg.cleanup_resources()
+
+
+if __name__ == "__main__":
+    run_experiment(argument_parser().parse_args())

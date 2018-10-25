@@ -1,27 +1,22 @@
 {
-    "jobId": "my_job",
-    "labels": {
-        "type": "dev",
-        "owner": "sean"
-    },
+    "jobId": "nothing",
+    "labels": {},
     "trainingInput": {
         "scaleTier": "CUSTOM",
-        "masterType": "n1-highmem-16",
-        "workerType": "n1-highmem-16",
-        "parameterServerType": "n1-highmem-16",
+        "masterType": "n1-highmem-4",
+        "workerType": "n1-highmem-4",
+        "parameterServerType": "n1-highmem-4",
         "workerCount": 2,
         "parameterServerCount": 2,
         "pythonVersion": "3.5",
         "runtimeVersion": "1.10",
         "region": "europe-west1",
         "args": [
-            "--embedding=twitter-200",
-            "--datasets=dong",
-            "--model=lcrrot",
-            "--contd-tag=baseline",
-            "--batch-size=25",
-            "--steps=2000",
-            "--verbosity=INFO"
+            "-em=wiki-50",
+            "-ds=dong",
+            "-m=lcrrot",
+            "-b=25",
+            "-s=500"
         ]
     }
 }

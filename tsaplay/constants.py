@@ -3,6 +3,7 @@ from os.path import join
 from pathlib import Path
 import pkg_resources as pkg
 
+RANDOM_SEED = 1234
 SPACY_MODEL = pkg.resource_filename(__name__, "assets/en_core_web_sm")
 DEFAULT_FONT = pkg.resource_filename(__name__, "fonts/Symbola.ttf")
 

@@ -3,9 +3,9 @@ import re
 import itertools
 import numpy as np
 import tensorflow as tf
-from tensorflow.train import SessionRunHook, SessionRunArgs
+from tensorflow.train import SessionRunHook, SessionRunArgs, SecondOrStepTimer
 import matplotlib
-
+from tsaplay.constants import RANDOM_SEED
 from tsaplay.utils.draw import (
     draw_attention_heatmap,
     draw_prediction_label,
@@ -14,6 +14,7 @@ from tsaplay.utils.draw import (
 )
 from tsaplay.utils.tf import image_to_summary
 from tsaplay.utils.io import cprnt, temp_pngs, get_image_from_plt
+
 
 # matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt  # noqa pylint: disable=C0411,C0412,C0413
@@ -54,6 +55,7 @@ class SaveAttentionWeightVector(SessionRunHook):
         )
 
     def after_run(self, run_context, run_values):
+        np.random.seed(RANDOM_SEED)
         if self.n_picks is None or np.random.random() > self.freq:
             return
         results = run_values.results
@@ -208,3 +210,53 @@ class SaveConfusionMatrix(SessionRunHook):
 
         image = get_image_from_plt(plt)
         return image
+
+
+class MetadataHook(SessionRunHook):
+    def __init__(self, save_steps=None, save_secs=None, output_dir=""):
+        self._output_tag = "step-{}"
+        self._output_dir = output_dir
+        self._timer = SecondOrStepTimer(
+            every_secs=save_secs, every_steps=save_steps
+        )
+
+    def begin(self):
+        self._next_step = None
+        self._global_step_tensor = tf.train.get_global_step()
+        self._writer = tf.summary.FileWriter(
+            self._output_dir, tf.get_default_graph()
+        )
+
+        if self._global_step_tensor is None:
+            raise RuntimeError(
+                "Global step should be created to use ProfilerHook."
+            )
+
+    def before_run(self, run_context):
+        self._request_summary = (
+            self._next_step is None
+            or self._timer.should_trigger_for_step(self._next_step)
+        )
+        requests = {"global_step": self._global_step_tensor}
+        opts = (
+            tf.RunOptions(
+                trace_level=tf.RunOptions.FULL_TRACE  # pylint: disable=E1101
+            )
+            if self._request_summary
+            else None
+        )
+        return SessionRunArgs(requests, options=opts)
+
+    def after_run(self, run_context, run_values):
+        stale_global_step = run_values.results["global_step"]
+        global_step = stale_global_step + 1
+        if self._request_summary:
+            global_step = run_context.session.run(self._global_step_tensor)
+            self._writer.add_run_metadata(
+                run_values.run_metadata, self._output_tag.format(global_step)
+            )
+            self._writer.flush()
+        self._next_step = global_step + 1
+
+    def end(self, session):
+        self._writer.close()

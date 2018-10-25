@@ -15,7 +15,7 @@ from gensim.models import KeyedVectors
 import spacy
 from spacy.language import Language
 from spacy.tokens import Doc
-from tsaplay.constants import EMBEDDING_DATA_PATH, SPACY_MODEL
+from tsaplay.constants import EMBEDDING_DATA_PATH, SPACY_MODEL, RANDOM_SEED
 from tsaplay.utils.decorators import timeit
 from tsaplay.utils.io import cprnt
 
@@ -159,6 +159,7 @@ class Embedding:
 
     @classmethod
     def default_oov(cls, size):
+        np.random.seed(RANDOM_SEED)
         return np.random.uniform(low=-0.03, high=0.03, size=size)
 
     @classmethod

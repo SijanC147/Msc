@@ -5,6 +5,7 @@ from datetime import datetime
 from shutil import copytree, rmtree
 from json import dump
 from setuptools import sandbox
+from tsaplay.task import argument_parser as task_argument_parser
 from tsaplay.utils.io import search_dir, platform, cprnt
 import tsaplay.models as tsa_models
 from tsaplay.datasets import Dataset
@@ -58,79 +59,47 @@ MODELS = {
 }
 
 
-def get_arguments():
+def argument_parser():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        "--embedding",
-        "-em",
+        "--job-id",
+        "-jid",
         type=str,
-        choices=[*EMBEDDINGS],
-        help="Pre-trained embedding to use.",
-        default="wiki-50",
-    )
-
-    parser.add_argument("--filter-embedding", "-fe", action="store_true")
-
-    parser.add_argument(
-        "--datasets",
-        "-ds",
-        type=str,
-        choices=Dataset.list_installed_datasets(),
-        help="One or more datasets to use for training and evaluation.",
-        default=["dong"],
-        nargs="+",
-    )
-
-    parser.add_argument(
-        "--model",
-        "-m",
-        type=str,
-        choices=[*MODELS],
-        help="Choose model to train",
-        default="lcrrot",
-    )
-
-    parser.add_argument(
-        "--job-id", "-jid", type=str, help="ID of the job being submitted"
+        help="ID of the job to be submitted to gcloud.",
     )
 
     parser.add_argument(
         "--job-dir",
+        "-jdir",
         help="GCS location to write checkpoints to and export models",
     )
 
     parser.add_argument(
-        "--contd-tag",
-        type=str,
-        help="Continue a specific experiment resolved through this tag",
+        "--job-labels",
+        "-jlab",
+        help="Labels to add to the job, must be in <key>=<value> format.",
+        nargs="*",
+        required=False,
     )
 
     parser.add_argument(
-        "--batch-size",
-        "-b",
-        type=int,
-        help="Size of training and evaluation batches",
-        default=25,
+        "--stream-logs",
+        "-stream",
+        help="Include flag to stream logs in gcloud submit command",
+        action="store_true",
+        required=False,
     )
 
     parser.add_argument(
-        "--steps",
-        "-s",
-        type=int,
-        help="Choose how long to train the model",
-        default=300,
+        "--task-args",
+        "-t",
+        help="Arguments to pass forward to the task module",
+        nargs=argparse.REMAINDER,
+        required=True,
     )
 
-    parser.add_argument(
-        "--verbosity",
-        "-v",
-        choices=["DEBUG", "ERROR", "FATAL", "INFO", "WARN"],
-        default="INFO",
-        help="Set logging verbosity",
-    )
-
-    return parser.parse_args()
+    return parser
 
 
 def create_temp_folder():
@@ -191,7 +160,8 @@ def clean_prev_input_data():
 
 
 def prepare_assets(args):
-    temp_folder = setup_temp_data(args.embedding, args.datasets)
+    task_args = task_argument_parser().parse_args(args.task_args)
+    temp_folder = setup_temp_data(task_args.embedding, task_args.datasets)
     clean_prev_input_data()
     copy_to_assets(temp_folder)
     write_gcloud_config(args)
@@ -199,32 +169,25 @@ def prepare_assets(args):
 
 def write_gcloud_config(args):
     args_dict = vars(args)
-    args_list = []
-    for (key, value) in args_dict.items():
-        if not value or key == "job_id":
-            continue
-        if value:
-            if isinstance(value, list):
-                value = "=" + (" ".join(map(str, value)))
-            elif isinstance(value, bool):
-                value = ""
-            else:
-                value = "=" + str(value)
-            args_list.append("--" + key.replace("_", "-") + value)
+    job_id = args_dict["job_id"]
+    job_labels = args_dict["job_labels"] or {}
+    if job_labels:
+        job_labels = [label.split("=") for label in job_labels]
+        job_labels = {label[0]: label[1] for label in job_labels}
     gcloud_config = {
-        "jobId": "my_job",
-        "labels": {"type": "dev", "owner": "sean"},
+        "jobId": job_id,
+        "labels": job_labels,
         "trainingInput": {
             "scaleTier": "CUSTOM",
-            "masterType": "n1-highmem-16",
-            "workerType": "n1-highmem-16",
-            "parameterServerType": "n1-highmem-16",
+            "masterType": "n1-highmem-4",
+            "workerType": "n1-highmem-4",
+            "parameterServerType": "n1-highmem-4",
             "workerCount": 2,
             "parameterServerCount": 2,
             "pythonVersion": "3.5",
             "runtimeVersion": "1.10",
             "region": "europe-west1",
-            "args": args_list,
+            "args": args.task_args,
         },
     }
     config_file_path = join("gcp", "_config.json")
@@ -238,16 +201,16 @@ def write_gcloud_cmd_script(args):
 --module-name={module_name} \\
 --staging-bucket={staging_bucket} \\
 --packages={package_name} \\
---config={config_path}""".format(
-        # --stream-logs""".format(
+--config={config_path} {stream_logs}""".format(
         job_name=args.job_id,
-        job_dir="gs://tsaplay-bucket/{}".format(args.job_id),
+        job_dir=args.job_dir or "gs://tsaplay-bucket/{}".format(args.job_id),
         module_name="tsaplay.task",
         staging_bucket="gs://tsaplay-bucket/",
         package_name=abspath(
             search_dir(join("dist"), query="tsaplay", kind="files", first=True)
         ),
         config_path=abspath(join("gcp", "_config.json")),
+        stream_logs="--stream_logs" if args.stream_logs else "",
     )
 
     cmd_script = """from os import system\n
@@ -271,11 +234,11 @@ def write_gcloud_cmd_script(args):
         cprnt(bow="Copied to clipboard.")
 
 
-def main(args):
+def prepare_job(args):
     prepare_assets(args)
     sandbox.run_setup("setup.py", ["sdist"])
     write_gcloud_cmd_script(args)
 
 
 if __name__ == "__main__":
-    main(get_arguments())
+    prepare_job(argument_parser().parse_args())

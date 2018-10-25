@@ -29,7 +29,8 @@ from tsaplay.utils.addons import (
     logging,
     histograms,
     scalars,
-    profiling,
+    metadata,
+    timeline,
 )
 
 
@@ -50,6 +51,10 @@ class TsaModel(ABC):
     @property
     def comet_experiment(self):
         return self._comet_experiment
+
+    @property
+    def estimator(self):
+        return self._estimator
 
     @abstractmethod
     def set_params(self):
@@ -178,7 +183,7 @@ class TsaModel(ABC):
 
     @cometml
     @sharded_saver
-    @addon([scalars, logging, profiling, histograms, conf_matrix])
+    @addon([scalars, logging, metadata, histograms, conf_matrix])
     @addon([prediction_outputs])
     @embed_sequences
     def _model_fn(self, features, labels, mode, params):

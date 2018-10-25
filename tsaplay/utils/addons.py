@@ -1,3 +1,4 @@
+# pylint: disable=unused-argument
 from os.path import join
 from os import makedirs
 import tensorflow as tf
@@ -14,7 +15,11 @@ from tensorflow.estimator.export import (  # pylint: disable=E0401
 )
 from tsaplay.utils.io import cprnt
 from tsaplay.utils.decorators import only
-from tsaplay.hooks import SaveAttentionWeightVector, SaveConfusionMatrix
+from tsaplay.hooks import (
+    SaveAttentionWeightVector,
+    SaveConfusionMatrix,
+    MetadataHook,
+)
 
 
 @only(["PREDICT"])
@@ -37,8 +42,8 @@ def prediction_outputs(model, features, labels, spec, params):
 
 @only(["EVAL"])
 def attn_heatmaps(model, features, labels, spec, params):
-    eval_hooks = spec.evaluation_hooks
-    eval_hooks += (
+    eval_hooks = list(spec.evaluation_hooks) or []
+    eval_hooks += [
         SaveAttentionWeightVector(
             labels=labels,
             predictions=spec.predictions["class_ids"],
@@ -50,14 +55,14 @@ def attn_heatmaps(model, features, labels, spec, params):
             comet=model.comet_experiment,
             n_picks=model.aux_config.get("n_attn_heatmaps", 5),
             n_hops=params.get("n_hops"),
-        ),
-    )
+        )
+    ]
     return spec._replace(evaluation_hooks=eval_hooks)
 
 
 @only(["EVAL"])
 def conf_matrix(model, features, labels, spec, params):
-    eval_hooks = spec.evaluation_hooks
+    eval_hooks = list(spec.evaluation_hooks) or []
     eval_metrics = spec.eval_metric_ops or {}
     eval_metrics.update(
         {
@@ -68,7 +73,7 @@ def conf_matrix(model, features, labels, spec, params):
             )
         }
     )
-    eval_hooks += (
+    eval_hooks += [
         SaveConfusionMatrix(
             class_labels=model.aux_config["class_labels"],
             tensor_name="mean_iou/total_confusion_matrix",
@@ -76,8 +81,8 @@ def conf_matrix(model, features, labels, spec, params):
                 join(model.run_config.model_dir, "eval")
             ),
             comet=model.comet_experiment,
-        ),
-    )
+        )
+    ]
     return spec._replace(
         eval_metric_ops=eval_metrics, evaluation_hooks=eval_hooks
     )
@@ -105,7 +110,7 @@ def logging(model, features, labels, spec, params):
                 "accuracy": std_metrics["accuracy"][1],
                 "auc": std_metrics["auc"][1],
             },
-            every_n_iter=model.run_config.log_step_count_steps or 100,
+            every_n_iter=model.run_config.save_summary_steps,
         )
     ]
     return spec._replace(training_hooks=train_hooks)
@@ -152,8 +157,9 @@ def scalars(model, features, labels, spec, params):
 
 
 def early_stopping(model, features, labels, spec, params):
-    makedirs(model.estimator.eval_dir())
     train_hooks = list(spec.training_hooks) or []
+    eval_dir = model.estimator.eval_dir()
+    makedirs(eval_dir, exist_ok=True)
     train_hooks += [
         stop_if_no_decrease_hook(
             estimator=model.estimator,
@@ -166,13 +172,36 @@ def early_stopping(model, features, labels, spec, params):
 
 
 @only(["TRAIN"])
-def profiling(model, features, labels, spec, params):
+def timeline(model, features, labels, spec, params):
     train_hooks = list(spec.training_hooks) or []
-    timeline_dir = join(model.run_config.model_dir)
-    makedirs(timeline_dir)
+    profiler_dir = join(model.run_config.model_dir)
+    makedirs(profiler_dir, exist_ok=True)
+    summary_steps = model.run_config.save_summary_steps
     train_hooks += [
         tf.train.ProfilerHook(
-            save_steps=300, output_dir=timeline_dir, show_memory=True
+            save_steps=summary_steps, output_dir=profiler_dir, show_memory=True
         )
     ]
     return spec._replace(training_hooks=train_hooks)
+
+
+@only(["TRAIN", "EVAL"])
+def metadata(model, features, labels, spec, params):
+    summary_steps = model.run_config.save_summary_steps
+    if spec.mode == ModeKeys.TRAIN:
+        train_hooks = list(spec.training_hooks) or []
+        metadata_dir = model.run_config.model_dir
+        makedirs(metadata_dir, exist_ok=True)
+        train_hooks += [
+            MetadataHook(save_steps=summary_steps, output_dir=metadata_dir)
+        ]
+        spec = spec._replace(training_hooks=train_hooks)
+    elif spec.mode == ModeKeys.EVAL:
+        eval_hooks = list(spec.evaluation_hooks) or []
+        metadata_dir = model.estimator.eval_dir()
+        makedirs(metadata_dir, exist_ok=True)
+        eval_hooks += [
+            MetadataHook(save_steps=summary_steps, output_dir=metadata_dir)
+        ]
+        spec = spec._replace(evaluation_hooks=eval_hooks)
+    return spec

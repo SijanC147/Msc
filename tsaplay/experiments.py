@@ -9,7 +9,11 @@ from tsaplay.utils.io import (
     restart_tf_serve_container,
     cprnt,
 )
-from tsaplay.constants import EXPERIMENT_DATA_PATH, EXPORTS_DATA_PATH
+from tsaplay.constants import (
+    EXPERIMENT_DATA_PATH,
+    EXPORTS_DATA_PATH,
+    RANDOM_SEED,
+)
 
 
 class Experiment:
@@ -117,11 +121,15 @@ class Experiment:
             config_file.write(config_file_str)
 
     def _initialize_model_run_config(self, config_dict):
+        session_config = tf.ConfigProto(
+            allow_soft_placement=True, log_device_placement=True
+        )
         default_config = {
+            "tf_random_seed": RANDOM_SEED,
             "model_dir": join(self._experiment_dir, "tb_summary"),
-            "save_checkpoints_steps": 100,
-            "save_summary_steps": 25,
-            "log_step_count_steps": 25,
+            "save_summary_steps": 100,
+            "save_checkpoints_steps": 250,
+            "session_config": session_config,
         }
         default_config.update(config_dict)
         self.model.run_config = self.model.run_config.replace(**default_config)
@@ -129,10 +137,10 @@ class Experiment:
     def _setup_comet_ml_experiment(self):
         api_key = environ.get("COMET_ML_API_KEY")
         if api_key is not None:
-            comet_key_file = join(self._experiment_dir, "_cometml.key")
-            if exists(comet_key_file):
-                with open(comet_key_file, "r") as f:
-                    exp_key = f.readline().strip()
+            comet_key_file_path = join(self._experiment_dir, "_cometml.key")
+            if exists(comet_key_file_path):
+                with open(comet_key_file_path, "r") as comet_key_file:
+                    exp_key = comet_key_file.readline().strip()
             else:
                 comet_experiment = comet_ml.Experiment(
                     api_key=api_key,
@@ -141,6 +149,6 @@ class Experiment:
                 )
                 comet_experiment.set_name(self.contd_tag)
                 exp_key = comet_experiment.get_key()
-                with open(comet_key_file, "w+") as f:
-                    f.write(exp_key)
+                with open(comet_key_file_path, "w+") as comet_key_file:
+                    comet_key_file.write(exp_key)
             self.model.attach_comet_ml_experiment(api_key, exp_key)

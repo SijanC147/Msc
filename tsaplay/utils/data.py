@@ -1,5 +1,6 @@
 import numpy as np
 import tensorflow as tf
+from tsaplay.constants import RANDOM_SEED
 from tsaplay.utils.tf import sparse_sequences_to_dense, get_seq_lengths
 
 
@@ -146,6 +147,7 @@ def resample_data_dict(data_dict, target_dists):
             [s for s in samples if s[labels_index] == _class], numpy_dtype
         )
 
+    np.random.seed(RANDOM_SEED)
     resampled = np.concatenate(
         [
             np.random.choice(
