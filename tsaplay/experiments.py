@@ -28,9 +28,14 @@ class Experiment:
         self.feature_provider = feature_provider
         self.model = model
         self.contd_tag = contd_tag
-        self.job_dir = job_dir
-        self._initialize_experiment_dir()
-        self._initialize_model_run_config(run_config or {})
+        self.experiment_dir = job_dir or self._make_experiment_dir()
+        run_config = {
+            "model_dir": join(self.experiment_dir, "tb_summary"),
+            **(run_config or {}),
+        }
+        self.model.run_config = self.model.run_config.replace(
+            **self.make_default_run_cofig(run_config)
+        )
         if self.contd_tag is not None:
             self._setup_comet_ml_experiment()
 
@@ -85,24 +90,18 @@ class Experiment:
             if not isfile(join(EXPORTS_DATA_PATH, m))
         ]
 
-    def _initialize_experiment_dir(self):
-        if self.job_dir is not None:
-            experiment_dir = self.job_dir
-        else:
-            dir_parent = join(EXPERIMENT_DATA_PATH, self.model.name)
-            exp_dir_name = self.contd_tag or self.feature_provider.name
-            exp_dir_name = exp_dir_name.replace(" ", "_")
-            experiment_dir = join(dir_parent, exp_dir_name)
-            if exists(experiment_dir) and self.contd_tag is None:
-                i = 0
-                while exists(experiment_dir):
-                    i += 1
-                    experiment_dir = join(
-                        dir_parent, exp_dir_name + "_" + str(i)
-                    )
-
+    def _make_experiment_dir(self):
+        dir_parent = join(EXPERIMENT_DATA_PATH, self.model.name)
+        exp_dir_name = self.contd_tag or self.feature_provider.name
+        exp_dir_name = exp_dir_name.replace(" ", "_")
+        experiment_dir = join(dir_parent, exp_dir_name)
+        if exists(experiment_dir) and self.contd_tag is None:
+            i = 0
+            while exists(experiment_dir):
+                i += 1
+                experiment_dir = join(dir_parent, exp_dir_name + "_" + str(i))
         makedirs(experiment_dir, exist_ok=True)
-        self._experiment_dir = experiment_dir
+        return experiment_dir
 
     def _update_export_models_config(self):
         config_file_path = join(EXPORTS_DATA_PATH, "tfserve.conf")
@@ -120,24 +119,38 @@ class Experiment:
         with open(config_file_path, "w") as config_file:
             config_file.write(config_file_str)
 
-    def _initialize_model_run_config(self, config_dict):
-        session_config = tf.ConfigProto(
-            allow_soft_placement=True, log_device_placement=True
-        )
-        default_config = {
+    @classmethod
+    def make_default_run_cofig(cls, custom_config=None):
+        custom_config = custom_config or {}
+        custom_sess_config = {
+            "_".join(key.split("_")[1:]): value
+            for key, value in custom_config.items()
+            if key.split("_")[0] in ["session", "sess"]
+        }
+        custom_run_config = {
+            key: value
+            for key, value in custom_config.items()
+            if key.split("_")[0] not in ["session", "sess"]
+        }
+        default_session_config = {
+            "allow_soft_placement": True,
+            "log_device_placement": False,
+        }
+        default_session_config.update(custom_sess_config)
+        default_run_config = {
             "tf_random_seed": RANDOM_SEED,
-            "model_dir": join(self._experiment_dir, "tb_summary"),
             "save_summary_steps": 100,
             "save_checkpoints_steps": 250,
-            "session_config": session_config,
+            "session_config": tf.ConfigProto(**default_session_config),
         }
-        default_config.update(config_dict)
-        self.model.run_config = self.model.run_config.replace(**default_config)
+        default_run_config.update(custom_run_config)
+
+        return default_run_config
 
     def _setup_comet_ml_experiment(self):
         api_key = environ.get("COMET_ML_API_KEY")
         if api_key is not None:
-            comet_key_file_path = join(self._experiment_dir, "_cometml.key")
+            comet_key_file_path = join(self.experiment_dir, "_cometml.key")
             if exists(comet_key_file_path):
                 with open(comet_key_file_path, "r") as comet_key_file:
                     exp_key = comet_key_file.readline().strip()

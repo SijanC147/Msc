@@ -1,6 +1,5 @@
 import argparse
 from os import environ, getcwd
-from os.path import join
 import comet_ml
 import tensorflow as tf
 import pkg_resources as pkg
@@ -57,6 +56,11 @@ def argument_parser():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
+        "--job-dir",
+        help="GCS location to write checkpoints to and export models",
+    )
+
+    parser.add_argument(
         "--embedding",
         "-em",
         type=str,
@@ -100,8 +104,11 @@ def argument_parser():
     )
 
     parser.add_argument(
-        "--job-dir",
-        help="GCS location to write checkpoints to and export models",
+        "--run-config",
+        "-rc",
+        nargs="*",
+        help="Custom run_config parameters, must be in <key>=<value> format.",
+        required=False,
     )
 
     parser.add_argument(
@@ -137,37 +144,47 @@ def argument_parser():
     return parser
 
 
+def args_to_dict(args):
+    args_dict = args or {}
+    if args_dict:
+        args_dict = [arg.split("=") for arg in args_dict]
+        args_dict = {
+            arg[0]: (
+                int(arg[1])
+                if arg[1].isdigit()
+                else float(arg[1])
+                if arg[1].replace(".", "", 1).isdigit()
+                else arg[1]
+            )
+            for arg in args_dict
+        }
+    return args_dict
+
+
 def run_experiment(args):
     tf.logging.set_verbosity(args.verbosity)
 
     datasets = [Dataset(name) for name in args.datasets]
 
-    emb_filter = None
-    if args.filter_embedding:
-        emb_filter = [list(set(sum([ds.corpus for ds in datasets], [])))]
+    emb_filter = (
+        [list(set(sum([ds.corpus for ds in datasets], [])))]
+        if args.filter_embedding
+        else None
+    )
     embedding = Embedding(EMBEDDINGS.get(args.embedding), filters=emb_filter)
 
     feature_provider = FeatureProvider(datasets, embedding)
 
-    model_params = args.model_params or {}
-    if model_params:
-        model_params = [param.split("=") for param in model_params]
-        model_params = {
-            param[0]: (
-                int(param[1])
-                if param[1].isdigit()
-                else float(param[1])
-                if param[1].replace(".", "", 1).isdigit()
-                else param[1]
-            )
-            for param in model_params
-        }
+    model_params = args_to_dict(args.model_params)
     model_params.update({"batch-size": args.batch_size})
-
     model = MODELS.get(args.model)(params=model_params)
 
     experiment = Experiment(
-        feature_provider, model, contd_tag=args.contd_tag, job_dir=args.job_dir
+        feature_provider,
+        model,
+        run_config=args_to_dict(args.run_config),
+        contd_tag=args.contd_tag,
+        job_dir=args.job_dir,
     )
 
     experiment.run(job="train+eval", steps=args.steps)

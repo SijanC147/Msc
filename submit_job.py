@@ -168,14 +168,14 @@ def prepare_assets(args):
 
 
 def write_gcloud_config(args):
-    args_dict = vars(args)
-    job_id = args_dict["job_id"]
-    job_labels = args_dict["job_labels"] or {}
+    # args_dict = vars(args)
+    # job_id = args_dict["job_id"]
+    job_labels = args.job_labels or {}
     if job_labels:
         job_labels = [label.split("=") for label in job_labels]
         job_labels = {label[0]: label[1] for label in job_labels}
     gcloud_config = {
-        "jobId": job_id,
+        "jobId": args.job_id,
         "labels": job_labels,
         "trainingInput": {
             "scaleTier": "CUSTOM",

@@ -213,15 +213,14 @@ class SaveConfusionMatrix(SessionRunHook):
 
 
 class MetadataHook(SessionRunHook):
-    def __init__(self, save_steps=None, save_secs=None, output_dir=""):
-        self._output_tag = "step-{}"
+    def __init__(self, save_steps=None, save_batches=None, output_dir=""):
         self._output_dir = output_dir
-        self._timer = SecondOrStepTimer(
-            every_secs=save_secs, every_steps=save_steps
-        )
+        self._eval = save_batches is not None
+        self._freq = save_steps or save_batches
+        self._tag = "step-{0}" if not self._eval else "{0}-batch-{1}"
+        self._counter = 0 if not self._eval else 1
 
     def begin(self):
-        self._next_step = None
         self._global_step_tensor = tf.train.get_global_step()
         self._writer = tf.summary.FileWriter(
             self._output_dir, tf.get_default_graph()
@@ -233,30 +232,24 @@ class MetadataHook(SessionRunHook):
             )
 
     def before_run(self, run_context):
-        self._request_summary = (
-            self._next_step is None
-            or self._timer.should_trigger_for_step(self._next_step)
-        )
         requests = {"global_step": self._global_step_tensor}
-        opts = (
+        options = (
             tf.RunOptions(
                 trace_level=tf.RunOptions.FULL_TRACE  # pylint: disable=E1101
             )
-            if self._request_summary
+            if self._counter % self._freq == 0
             else None
         )
-        return SessionRunArgs(requests, options=opts)
+        return SessionRunArgs(requests, options=options)
 
     def after_run(self, run_context, run_values):
-        stale_global_step = run_values.results["global_step"]
-        global_step = stale_global_step + 1
-        if self._request_summary:
-            global_step = run_context.session.run(self._global_step_tensor)
-            self._writer.add_run_metadata(
-                run_values.run_metadata, self._output_tag.format(global_step)
-            )
+        global_step = run_values.results["global_step"]
+        if self._counter % self._freq == 0:
+            _id = [global_step] + ([self._counter] if self._eval else [])
+            tag = self._tag.format(*_id)
+            self._writer.add_run_metadata(run_values.run_metadata, tag)
             self._writer.flush()
-        self._next_step = global_step + 1
+        self._counter = (self._counter if self._eval else global_step) + 1
 
     def end(self, session):
         self._writer.close()

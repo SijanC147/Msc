@@ -200,8 +200,6 @@ def metadata(model, features, labels, spec, params):
         eval_hooks = list(spec.evaluation_hooks) or []
         metadata_dir = model.estimator.eval_dir()
         makedirs(metadata_dir, exist_ok=True)
-        eval_hooks += [
-            MetadataHook(save_steps=summary_steps, output_dir=metadata_dir)
-        ]
+        eval_hooks += [MetadataHook(save_batches=5, output_dir=metadata_dir)]
         spec = spec._replace(evaluation_hooks=eval_hooks)
     return spec
