@@ -39,10 +39,10 @@ def embed_sequences(model_fn):
     def wrapper(self, features, labels, mode, params):
         vocab_size = params["_vocab_size"]
         dim_size = params["_embedding_dim"]
-        # embedding_init = params["_embedding_init"]("partitioned")
-        # num_shards = params["_embedding_num_shards"]
+        embedding_init = params["_embedding_init"]("partitioned")
+        num_shards = params["_embedding_num_shards"]
         # cluster_spec = self.run_config.cluster_spec
-        embedding_init = params["_embedding_init"]("variable")
+        # embedding_init = params["_embedding_init"]("variable")
         trainable = params.get("train_embeddings", True)
         # with tf.device(tf.train.replica_device_setter(cluster=cluster_spec)):
         with tf.variable_scope("embedding_layer", reuse=tf.AUTO_REUSE):
@@ -50,7 +50,7 @@ def embed_sequences(model_fn):
                 "embeddings",
                 shape=[vocab_size, dim_size],
                 initializer=embedding_init,
-                # partitioner=tf.fixed_size_partitioner(num_shards=num_shards),
+                partitioner=tf.fixed_size_partitioner(num_shards=num_shards),
                 trainable=trainable,
                 dtype=tf.float32,
             )
@@ -164,8 +164,8 @@ def attach(addons, modes=None, order="POST"):
     return decorator
 
 
-addon = partial(attach, order="POST")
-prepare = partial(attach, order="PRE")
+addon = partial(attach, order="POST")  # pylint: disable=C0103
+prepare = partial(attach, order="PRE")  # pylint: disable=C0103
 
 
 def only(modes):

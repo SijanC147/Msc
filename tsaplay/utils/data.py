@@ -34,15 +34,14 @@ def make_dense_features(features):
     for key in features:
         if "_ids" in key:
             name, _, _ = key.partition("_")
-            name_str = sparse_sequences_to_dense(features[name])
+            if features.get(name):
+                dense_features.update(
+                    {name: sparse_sequences_to_dense(features[name])}
+                )
             name_ids = sparse_sequences_to_dense(features[key])
             name_lens = get_seq_lengths(name_ids)
             dense_features.update(
-                {
-                    name: name_str,
-                    name + "_ids": name_ids,
-                    name + "_len": name_lens,
-                }
+                {name + "_ids": name_ids, name + "_len": name_lens}
             )
     features.update(dense_features)
     return features

@@ -1,37 +1,26 @@
 {
-    "jobId": "scalars_addon_no_comet_ml",
+    "jobId": "less_freq_checkpoints_no_throttle_secs_part_emb_all_addons",
     "labels": {},
     "trainingInput": {
         "scaleTier": "CUSTOM",
-        "masterType": "n1-highmem-4",
-        "workerType": "n1-highmem-4",
-        "parameterServerType": "n1-highmem-4",
+        "masterType": "n1-highmem-8",
+        "workerType": "n1-highmem-8",
+        "parameterServerType": "n1-highmem-8",
         "workerCount": 2,
         "parameterServerCount": 2,
         "pythonVersion": "3.5",
         "runtimeVersion": "1.10",
         "region": "europe-west1",
         "args": [
-            "-em=wiki-50",
-            "-ds=debug2",
+            "-em=twitter-200",
+            "-ds=dong",
             "-fe",
             "-m=lcrrot",
-            "-b=5",
-            "-s=400",
+            "-b=25",
+            "-s=2000",
             "-mp",
-            "hidden_units=50",
-            "-v=DEBUG",
-            "-rc",
-            "keep_checkpoint_max=10",
-            "save_checkpoints_steps=50",
-            "save_summary_steps=20",
-            "-aux",
-            "attn_heatmaps=false",
-            "conf_matrix=false",
-            "metadata=false",
-            "logging=false",
-            "histograms=false",
-            "prediction_outputs=false"
+            "hidden_units=200",
+            "-v=DEBUG"
         ]
     }
 }

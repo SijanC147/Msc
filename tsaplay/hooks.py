@@ -3,7 +3,7 @@ import re
 import itertools
 import numpy as np
 import tensorflow as tf
-from tensorflow.train import SessionRunHook, SessionRunArgs, SecondOrStepTimer
+from tensorflow.train import SessionRunHook, SessionRunArgs
 import matplotlib
 from tsaplay.constants import RANDOM_SEED
 from tsaplay.utils.draw import (

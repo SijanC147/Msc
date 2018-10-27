@@ -1,7 +1,6 @@
 from os import listdir, environ, makedirs
 from os.path import join, isfile, exists
 from shutil import rmtree
-
 import comet_ml
 import tensorflow as tf
 from tsaplay.utils.io import (
@@ -123,26 +122,33 @@ class Experiment:
     @classmethod
     def make_default_run_cofig(cls, custom_config=None):
         custom_config = custom_config or {}
+
+        # setting session config anything other than None in distributed
+        # setting prevents device filters from being automatically set
+        # job hangs indefinitely at final checkpoint
         session_config_keywords = ["session", "sess"]
         custom_sess_config = {
             "_".join(key.split("_")[1:]): value
             for key, value in custom_config.items()
             if key.split("_")[0] in session_config_keywords
         }
-        custom_run_config = {
-            key: value
-            for key, value in custom_config.items()
-            if key.split("_")[0] not in session_config_keywords
-        }
         default_session_config = {
             "allow_soft_placement": True,
             "log_device_placement": False,
         }
         default_session_config.update(custom_sess_config)
+
+        custom_run_config = {
+            key: value
+            for key, value in custom_config.items()
+            if key.split("_")[0] not in session_config_keywords
+        }
         default_run_config = {
             "tf_random_seed": RANDOM_SEED,
             "save_summary_steps": 100,
             "save_checkpoints_steps": 500,
+            "log_step_count_steps": 100,
+            "keep_checkpoint_max": 0,
             # "session_config": tf.ConfigProto(**default_session_config),
         }
         default_run_config.update(custom_run_config)

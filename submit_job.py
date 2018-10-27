@@ -188,9 +188,9 @@ def write_gcloud_config(args):
         "labels": job_labels,
         "trainingInput": {
             "scaleTier": "CUSTOM",
-            "masterType": "n1-highmem-4",
-            "workerType": "n1-highmem-4",
-            "parameterServerType": "n1-highmem-4",
+            "masterType": "n1-highmem-8",
+            "workerType": "n1-highmem-8",
+            "parameterServerType": "n1-highmem-8",
             "workerCount": 2,
             "parameterServerCount": 2,
             "pythonVersion": "3.5",
