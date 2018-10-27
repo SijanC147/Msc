@@ -37,45 +37,58 @@ def timeit(pre="", post=""):
 def embed_sequences(model_fn):
     @wraps(model_fn)
     def wrapper(self, features, labels, mode, params):
+        embedding_format = self.aux_config.get("embedding_format", "variable")
+        embedding_layer = self.aux_config.get("embedding_layer", "embed_seq")
+        embedding_init = params["_embedding_init"](embedding_format)
+        num_shards = params["_embedding_num_shards"]
         vocab_size = params["_vocab_size"]
         dim_size = params["_embedding_dim"]
-        embedding_init = params["_embedding_init"]("partitioned")
-        num_shards = params["_embedding_num_shards"]
-        # cluster_spec = self.run_config.cluster_spec
-        # embedding_init = params["_embedding_init"]("variable")
+        embedding_partitioner = (
+            tf.fixed_size_partitioner(num_shards)
+            if embedding_format == "partitioned"
+            else None
+        )
+        embedding_initializer = (
+            embedding_init if embedding_format != "constant" else None
+        )
         trainable = params.get("train_embeddings", True)
-        # with tf.device(tf.train.replica_device_setter(cluster=cluster_spec)):
         with tf.variable_scope("embedding_layer", reuse=tf.AUTO_REUSE):
             embeddings = tf.get_variable(
                 "embeddings",
                 shape=[vocab_size, dim_size],
-                initializer=embedding_init,
-                partitioner=tf.fixed_size_partitioner(num_shards=num_shards),
+                initializer=embedding_initializer,
+                partitioner=embedding_partitioner,
                 trainable=trainable,
                 dtype=tf.float32,
             )
-
         embedded_sequences = {}
         for key, value in features.items():
             if "_ids" in key:
                 component = key.replace("_ids", "")
                 embdd_key = component + "_emb"
-                # embedded_sequence = tf.contrib.layers.embed_sequence(
-                #     ids=value,
-                #     initializer=embeddings,
-                #     scope="embedding_layer",
-                #     reuse=True,
-                # )
-                embedded_sequence = tf.nn.embedding_lookup(
-                    params=embeddings, ids=value
+                embedded_sequence = (
+                    tf.contrib.layers.embed_sequence(
+                        ids=value,
+                        initializer=embeddings,
+                        scope="embedding_layer",
+                        reuse=True,
+                    )
+                    if embedding_layer == "embed_seq"
+                    else tf.nn.embedding_lookup(params=embeddings, ids=value)
                 )
                 embedded_sequences[embdd_key] = embedded_sequence
         features.update(embedded_sequences)
         spec = model_fn(self, features, labels, mode, params)
+        if embedding_format == "constant":
 
-        # def init_embeddings(sess):
-        #     sess.run(embeddings.initializer, {embeddings.initial_value: embedding_init()})
-        # spec = scaffold_init_fn_on_spec(spec, init_embeddings)
+            def init_embeddings(sess):
+                sess.run(
+                    embeddings.initializer,
+                    {embeddings.initial_value: embedding_init()},
+                )
+
+            spec = scaffold_init_fn_on_spec(spec, init_embeddings)
+
         return spec
 
     return wrapper
@@ -86,7 +99,7 @@ def sharded_saver(model_fn):
     def wrapper(self, features, labels, mode, params):
         spec = model_fn(self, features, labels, mode, params)
         scaffold = spec.scaffold or tf.train.Scaffold()
-        scaffold._saver = tf.train.Saver(
+        scaffold._saver = tf.train.Saver(  # pylint: disable=W0212
             sharded=True,
             max_to_keep=self.run_config.keep_checkpoint_max,
             keep_checkpoint_every_n_hours=self.run_config.keep_checkpoint_every_n_hours,

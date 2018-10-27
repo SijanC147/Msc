@@ -146,7 +146,7 @@ class Experiment:
         default_run_config = {
             "tf_random_seed": RANDOM_SEED,
             "save_summary_steps": 100,
-            "save_checkpoints_steps": 500,
+            "save_checkpoints_steps": 1000,
             "log_step_count_steps": 100,
             "keep_checkpoint_max": 0,
             # "session_config": tf.ConfigProto(**default_session_config),

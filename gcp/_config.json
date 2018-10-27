@@ -1,5 +1,5 @@
 {
-    "jobId": "less_freq_checkpoints_no_throttle_secs_part_emb_all_addons",
+    "jobId": "chkpt_ev_1000_no_throttle_secs_var_emb_all_addons",
     "labels": {},
     "trainingInput": {
         "scaleTier": "CUSTOM",

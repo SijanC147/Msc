@@ -150,7 +150,6 @@ def scalars(model, features, labels, spec, params):
         eval_metrics.update(std_metrics)
         spec = spec._replace(eval_metric_ops=eval_metrics)
     else:
-        print("MARK:{}".format(model.run_config.cluster_spec))
         tf.summary.scalar("loss", spec.loss)
         tf.summary.scalar("accuracy", std_metrics["accuracy"][1])
         tf.summary.scalar("auc", std_metrics["auc"][1])
