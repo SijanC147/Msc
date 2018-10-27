@@ -213,18 +213,17 @@ class SaveConfusionMatrix(SessionRunHook):
 
 
 class MetadataHook(SessionRunHook):
-    def __init__(self, save_steps=None, save_batches=None, output_dir=""):
-        self._output_dir = output_dir
+    def __init__(self, summary_writer, save_steps=None, save_batches=None):
+        self._writer = summary_writer
         self._eval = save_batches is not None
         self._freq = save_steps or save_batches
         self._tag = "step-{0}" if not self._eval else "{0}-batch-{1}"
-        self._counter = 0 if not self._eval else 1
 
     def begin(self):
+        if self._freq == "once":
+            self._request_summary = True
+        self._counter = 0 if not self._eval else 1
         self._global_step_tensor = tf.train.get_global_step()
-        self._writer = tf.summary.FileWriter(
-            self._output_dir, tf.get_default_graph()
-        )
 
         if self._global_step_tensor is None:
             raise RuntimeError(
@@ -233,23 +232,23 @@ class MetadataHook(SessionRunHook):
 
     def before_run(self, run_context):
         requests = {"global_step": self._global_step_tensor}
+        if self._freq != "once":
+            self._request_summary = self._counter % self._freq == 0
         options = (
             tf.RunOptions(
                 trace_level=tf.RunOptions.FULL_TRACE  # pylint: disable=E1101
             )
-            if self._counter % self._freq == 0
+            if self._request_summary
             else None
         )
+
         return SessionRunArgs(requests, options=options)
 
     def after_run(self, run_context, run_values):
         global_step = run_values.results["global_step"]
-        if self._counter % self._freq == 0:
+        if self._request_summary:
+            self._request_summary = False
             _id = [global_step] + ([self._counter] if self._eval else [])
             tag = self._tag.format(*_id)
             self._writer.add_run_metadata(run_values.run_metadata, tag)
-            self._writer.flush()
         self._counter = (self._counter if self._eval else global_step) + 1
-
-    def end(self, session):
-        self._writer.close()

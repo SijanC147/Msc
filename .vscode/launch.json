@@ -5,6 +5,20 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python: Terminal (integrated)",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "args": [
+                "-jid=debug",
+                "-t",
+                "-em=wiki-50",
+                "-fe",
+                "-ds=debug2"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
             "name": "Task",
             "type": "python",
             "request": "launch",

@@ -35,6 +35,14 @@ class FeatureProvider:
         return "--".join([self._embedding.name] + dataset_names)
 
     @property
+    def datasets(self):
+        return self._datasets
+
+    @property
+    def embedding(self):
+        return self._embedding
+
+    @property
     def embedding_params(self):
         return {
             "_vocab_size": self._embedding.vocab_size,

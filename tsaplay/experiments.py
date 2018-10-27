@@ -22,6 +22,7 @@ class Experiment:
         feature_provider,
         model,
         contd_tag=None,
+        comet_api=None,
         run_config=None,
         job_dir=None,
     ):
@@ -30,14 +31,14 @@ class Experiment:
         self.contd_tag = contd_tag
         self.experiment_dir = job_dir or self._make_experiment_dir()
         run_config = {
-            "model_dir": join(self.experiment_dir, "tb_summary"),
+            "model_dir": join(self.experiment_dir),
             **(run_config or {}),
         }
         self.model.run_config = self.model.run_config.replace(
             **self.make_default_run_cofig(run_config)
         )
-        if self.contd_tag is not None:
-            self._setup_comet_ml_experiment()
+        if self.contd_tag and comet_api:
+            self._setup_comet_ml_experiment(api_key=comet_api)
 
     def run(self, job, steps):
         if job == "train":
@@ -122,15 +123,16 @@ class Experiment:
     @classmethod
     def make_default_run_cofig(cls, custom_config=None):
         custom_config = custom_config or {}
+        session_config_keywords = ["session", "sess"]
         custom_sess_config = {
             "_".join(key.split("_")[1:]): value
             for key, value in custom_config.items()
-            if key.split("_")[0] in ["session", "sess"]
+            if key.split("_")[0] in session_config_keywords
         }
         custom_run_config = {
             key: value
             for key, value in custom_config.items()
-            if key.split("_")[0] not in ["session", "sess"]
+            if key.split("_")[0] not in session_config_keywords
         }
         default_session_config = {
             "allow_soft_placement": True,
@@ -140,28 +142,24 @@ class Experiment:
         default_run_config = {
             "tf_random_seed": RANDOM_SEED,
             "save_summary_steps": 100,
-            "save_checkpoints_steps": 250,
-            "session_config": tf.ConfigProto(**default_session_config),
+            "save_checkpoints_steps": 500,
+            # "session_config": tf.ConfigProto(**default_session_config),
         }
         default_run_config.update(custom_run_config)
 
         return default_run_config
 
-    def _setup_comet_ml_experiment(self):
-        api_key = environ.get("COMET_ML_API_KEY")
-        if api_key is not None:
-            comet_key_file_path = join(self.experiment_dir, "_cometml.key")
-            if exists(comet_key_file_path):
-                with open(comet_key_file_path, "r") as comet_key_file:
-                    exp_key = comet_key_file.readline().strip()
-            else:
-                comet_experiment = comet_ml.Experiment(
-                    api_key=api_key,
-                    project_name=self.model.name,
-                    workspace="msc",
-                )
-                comet_experiment.set_name(self.contd_tag)
-                exp_key = comet_experiment.get_key()
-                with open(comet_key_file_path, "w+") as comet_key_file:
-                    comet_key_file.write(exp_key)
-            self.model.attach_comet_ml_experiment(api_key, exp_key)
+    def _setup_comet_ml_experiment(self, api_key):
+        comet_key_file_path = join(self.experiment_dir, "_cometml.key")
+        if exists(comet_key_file_path):
+            with open(comet_key_file_path, "r") as comet_key_file:
+                exp_key = comet_key_file.readline().strip()
+        else:
+            comet_experiment = comet_ml.Experiment(
+                api_key=api_key, project_name=self.model.name, workspace="msc"
+            )
+            comet_experiment.set_name(self.contd_tag)
+            exp_key = comet_experiment.get_key()
+            with open(comet_key_file_path, "w+") as comet_key_file:
+                comet_key_file.write(exp_key)
+        self.model.attach_comet_ml_experiment(api_key, exp_key)

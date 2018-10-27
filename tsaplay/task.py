@@ -4,6 +4,7 @@ import comet_ml
 import tensorflow as tf
 import pkg_resources as pkg
 from tsaplay.utils.io import cprnt
+from tsaplay.utils.decorators import timeit
 from tsaplay.datasets import Dataset
 from tsaplay.embeddings import Embedding
 from tsaplay.features import FeatureProvider
@@ -77,6 +78,12 @@ def argument_parser():
     )
 
     parser.add_argument(
+        "--comet-api",
+        "-cmt",
+        help="Comet.ml API key to upload experiment, contd_tag must be set",
+    )
+
+    parser.add_argument(
         "--datasets",
         "-ds",
         type=str,
@@ -99,7 +106,15 @@ def argument_parser():
         "--model-params",
         "-mp",
         nargs="*",
-        help="Params to forward to model, must be in <key>=<value> format.",
+        help="H-Params to forward to model (space-delimted <key>=<value>)",
+        required=False,
+    )
+
+    parser.add_argument(
+        "--aux-config",
+        "-aux",
+        nargs="*",
+        help="AUX config to forward to model (space-delimted <key>=<value>)",
         required=False,
     )
 
@@ -107,12 +122,13 @@ def argument_parser():
         "--run-config",
         "-rc",
         nargs="*",
-        help="Custom run_config parameters, must be in <key>=<value> format.",
+        help="Custom run_config parameters (space-delimted <key>=<value>)",
         required=False,
     )
 
     parser.add_argument(
         "--contd-tag",
+        "-contd",
         type=str,
         help="Continue a specific experiment resolved through this tag",
     )
@@ -154,6 +170,10 @@ def args_to_dict(args):
                 if arg[1].isdigit()
                 else float(arg[1])
                 if arg[1].replace(".", "", 1).isdigit()
+                else True
+                if arg[1].lower() == "true"
+                else False
+                if arg[1].lower() == "false"
                 else arg[1]
             )
             for arg in args_dict
@@ -161,9 +181,7 @@ def args_to_dict(args):
     return args_dict
 
 
-def run_experiment(args):
-    tf.logging.set_verbosity(args.verbosity)
-
+def get_feature_provider(args):
     datasets = [Dataset(name) for name in args.datasets]
 
     emb_filter = (
@@ -173,16 +191,23 @@ def run_experiment(args):
     )
     embedding = Embedding(EMBEDDINGS.get(args.embedding), filters=emb_filter)
 
-    feature_provider = FeatureProvider(datasets, embedding)
+    return FeatureProvider(datasets, embedding)
 
-    model_params = args_to_dict(args.model_params)
-    model_params.update({"batch-size": args.batch_size})
-    model = MODELS.get(args.model)(params=model_params)
+
+def run_experiment(args):
+    tf.logging.set_verbosity(args.verbosity)
+
+    feature_provider = get_feature_provider(args)
+
+    params = args_to_dict(args.model_params)
+    params.update({"batch-size": args.batch_size})
+    model = MODELS.get(args.model)(params, args_to_dict(args.aux_config))
 
     experiment = Experiment(
         feature_provider,
         model,
         run_config=args_to_dict(args.run_config),
+        comet_api=args.comet_api,
         contd_tag=args.contd_tag,
         job_dir=args.job_dir,
     )
@@ -192,5 +217,12 @@ def run_experiment(args):
     pkg.cleanup_resources()
 
 
+@timeit("Starting task", "Task complete")
+def main():
+    parser = argument_parser()
+    args = parser.parse_args()
+    run_experiment(args)
+
+
 if __name__ == "__main__":
-    run_experiment(argument_parser().parse_args())
+    main()

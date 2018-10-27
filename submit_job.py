@@ -5,7 +5,11 @@ from datetime import datetime
 from shutil import copytree, rmtree
 from json import dump
 from setuptools import sandbox
-from tsaplay.task import argument_parser as task_argument_parser
+from tsaplay.task import (
+    get_feature_provider,
+    argument_parser as task_argument_parser,
+)
+from tsaplay.utils.decorators import timeit
 from tsaplay.utils.io import search_dir, platform, cprnt
 import tsaplay.models as tsa_models
 from tsaplay.datasets import Dataset
@@ -61,6 +65,12 @@ MODELS = {
 
 def argument_parser():
     parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--jobs-file",
+        "-jf",
+        help="Text file with newline delimited args for multiple jobs",
+    )
 
     parser.add_argument(
         "--job-id",
@@ -130,11 +140,9 @@ def copy_over_tf_records(feature_provider, embedding_name, target_temp_path):
         copytree(parent_test, target_test)
 
 
-def setup_temp_data(embedding, datasets):
-    embedding = Embedding(EMBEDDINGS.get(embedding))
-    datasets = [Dataset(dataset_name) for dataset_name in datasets]
-    feature_provider = FeatureProvider(datasets, embedding)
-
+def setup_temp_data(feature_provider):
+    embedding = feature_provider.embedding
+    datasets = feature_provider.datasets
     temp_folder = create_temp_folder()
     features_temp_path = join(temp_folder, "features")
     embedding_temp_path = join(temp_folder, "embedding", embedding.name)
@@ -159,21 +167,22 @@ def clean_prev_input_data():
     rmtree(TEMP_EMBEDDING_PATH, ignore_errors=True)
 
 
-def prepare_assets(args):
+def prepare_job_assets(args):
     task_args = task_argument_parser().parse_args(args.task_args)
-    temp_folder = setup_temp_data(task_args.embedding, task_args.datasets)
+    feature_provider = get_feature_provider(task_args)
+    temp_folder = setup_temp_data(feature_provider)
     clean_prev_input_data()
     copy_to_assets(temp_folder)
     write_gcloud_config(args)
+    sandbox.run_setup("setup.py", ["sdist"])
 
 
 def write_gcloud_config(args):
-    # args_dict = vars(args)
-    # job_id = args_dict["job_id"]
     job_labels = args.job_labels or {}
     if job_labels:
         job_labels = [label.split("=") for label in job_labels]
         job_labels = {label[0]: label[1] for label in job_labels}
+
     gcloud_config = {
         "jobId": args.job_id,
         "labels": job_labels,
@@ -195,50 +204,47 @@ def write_gcloud_config(args):
         dump(gcloud_config, config_file, indent=4)
 
 
-def write_gcloud_cmd_script(args):
-    gcloud_cmd = """gcloud ml-engine jobs submit training {job_name} \\
+@timeit("Uploading job to gcloud...", "Job uploaded")
+def upload_job_to_gcloud(args):
+    staging_bucket = "gs://tsaplay-bucket/"
+    package = search_dir(abspath("dist"), "tsaplay", kind="files", first=True)
+    system(
+        """gcloud ml-engine jobs submit training {job_name} \\
 --job-dir={job_dir} \\
 --module-name={module_name} \\
 --staging-bucket={staging_bucket} \\
 --packages={package_name} \\
 --config={config_path} {stream_logs}""".format(
-        job_name=args.job_id,
-        job_dir=args.job_dir or "gs://tsaplay-bucket/{}".format(args.job_id),
-        module_name="tsaplay.task",
-        staging_bucket="gs://tsaplay-bucket/",
-        package_name=abspath(
-            search_dir(join("dist"), query="tsaplay", kind="files", first=True)
-        ),
-        config_path=abspath(join("gcp", "_config.json")),
-        stream_logs="--stream_logs" if args.stream_logs else "",
+            job_name=args.job_id,
+            staging_bucket=staging_bucket,
+            job_dir=staging_bucket + (args.job_dir or args.job_id),
+            module_name="tsaplay.task",
+            package_name=package,
+            config_path=abspath(join("gcp", "_config.json")),
+            stream_logs="--stream_logs" if args.stream_logs else "",
+        )
     )
 
-    cmd_script = """from os import system\n
-\nsystem(\"\"\"{0}\"\"\")\n""".format(
-        gcloud_cmd
-    )
 
-    cmd_file_path = abspath(join("gcp", "_cmd.py"))
-    with open(cmd_file_path, "w") as cmd_file:
-        cmd_file.write(cmd_script)
-
-    submit_job_cmd = "pyenv shell 2.7.15 && pyenv exec python {} && pyenv shell -".format(
-        cmd_file_path
-    )
-
-    print("Execute following command to submit job: ")
-    cprnt(submit_job_cmd)
-
-    if platform() == "MacOS":
-        system('echo "{}" | pbcopy'.format(submit_job_cmd))
-        cprnt(bow="Copied to clipboard.")
+def submit_single_job(args):
+    prepare_job_assets(args)
+    upload_job_to_gcloud(args)
 
 
-def prepare_job(args):
-    prepare_assets(args)
-    sandbox.run_setup("setup.py", ["sdist"])
-    write_gcloud_cmd_script(args)
+def submit_multiple_jobs(jobs_file_path):
+    parser = argument_parser()
+    for line in open(jobs_file_path, "r"):
+        submit_single_job(parser.parse_args(line.split()))
+
+
+def main():
+    parser = argument_parser()
+    args = parser.parse_args()
+    if args.jobs_file:
+        submit_multiple_jobs(args.jobs_file)
+    else:
+        submit_single_job(args)
 
 
 if __name__ == "__main__":
-    prepare_job(argument_parser().parse_args())
+    main()

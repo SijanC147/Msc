@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
-
 import comet_ml
 import tensorflow as tf
 from tensorflow.estimator import (  # pylint: disable=E0401
@@ -30,12 +29,11 @@ from tsaplay.utils.addons import (
     histograms,
     scalars,
     metadata,
-    timeline,
 )
 
 
 class TsaModel(ABC):
-    def __init__(self, params=None, run_config=None, aux_config=None):
+    def __init__(self, params=None, aux_config=None, run_config=None):
         self._comet_experiment = None
         self._estimator = None
         self.aux_config = aux_config or {}

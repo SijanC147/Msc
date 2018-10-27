@@ -150,6 +150,7 @@ def scalars(model, features, labels, spec, params):
         eval_metrics.update(std_metrics)
         spec = spec._replace(eval_metric_ops=eval_metrics)
     else:
+        print("MARK:{}".format(model.run_config.cluster_spec))
         tf.summary.scalar("loss", spec.loss)
         tf.summary.scalar("accuracy", std_metrics["accuracy"][1])
         tf.summary.scalar("auc", std_metrics["auc"][1])
@@ -193,13 +194,25 @@ def metadata(model, features, labels, spec, params):
         metadata_dir = model.run_config.model_dir
         makedirs(metadata_dir, exist_ok=True)
         train_hooks += [
-            MetadataHook(save_steps=summary_steps, output_dir=metadata_dir)
+            MetadataHook(
+                summary_writer=tf.summary.FileWriterCache.get(
+                    model.run_config.model_dir
+                ),
+                save_steps=summary_steps,
+            )
         ]
         spec = spec._replace(training_hooks=train_hooks)
     elif spec.mode == ModeKeys.EVAL:
         eval_hooks = list(spec.evaluation_hooks) or []
         metadata_dir = model.estimator.eval_dir()
         makedirs(metadata_dir, exist_ok=True)
-        eval_hooks += [MetadataHook(save_batches=5, output_dir=metadata_dir)]
+        eval_hooks += [
+            MetadataHook(
+                summary_writer=tf.summary.FileWriterCache.get(
+                    join(model.run_config.model_dir, "eval")
+                ),
+                save_batches="once",
+            )
+        ]
         spec = spec._replace(evaluation_hooks=eval_hooks)
     return spec

@@ -1,7 +1,7 @@
 import time
 import inspect
 from os import environ
-from datetime import timedelta
+from datetime import timedelta, datetime
 from functools import wraps, partial
 import tensorflow as tf
 from tensorflow.estimator import ModeKeys  # pylint: disable=E0401
@@ -16,12 +16,16 @@ def timeit(pre="", post=""):
         def wrapper(*args, **kw):
             if environ.get("TIMEIT", "ON") == "ON":
                 name = func.__qualname__ + "():"
-                cprnt(r=name, g=pre)
+                time_stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                cprnt(c=time_stamp, r=name, g=pre)
                 start_time = time.time()
                 result = func(*args, **kw)
                 end_time = time.time()
                 time_taken = timedelta(seconds=(end_time - start_time))
-                cprnt(r=name, g=post + " in", row=str(time_taken))
+                time_stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                cprnt(
+                    c=time_stamp, r=name, g=post + " in", row=str(time_taken)
+                )
                 return result
             return func(*args, **kw)
 
@@ -35,10 +39,10 @@ def embed_sequences(model_fn):
     def wrapper(self, features, labels, mode, params):
         vocab_size = params["_vocab_size"]
         dim_size = params["_embedding_dim"]
-        embedding_init = params["_embedding_init"]("partitioned")
-        num_shards = params["_embedding_num_shards"]
+        # embedding_init = params["_embedding_init"]("partitioned")
+        # num_shards = params["_embedding_num_shards"]
         # cluster_spec = self.run_config.cluster_spec
-        # embedding_init = params["_embedding_init"]("variable")
+        embedding_init = params["_embedding_init"]("variable")
         trainable = params.get("train_embeddings", True)
         # with tf.device(tf.train.replica_device_setter(cluster=cluster_spec)):
         with tf.variable_scope("embedding_layer", reuse=tf.AUTO_REUSE):
@@ -46,7 +50,7 @@ def embed_sequences(model_fn):
                 "embeddings",
                 shape=[vocab_size, dim_size],
                 initializer=embedding_init,
-                partitioner=tf.fixed_size_partitioner(num_shards=num_shards),
+                # partitioner=tf.fixed_size_partitioner(num_shards=num_shards),
                 trainable=trainable,
                 dtype=tf.float32,
             )
@@ -82,7 +86,11 @@ def sharded_saver(model_fn):
     def wrapper(self, features, labels, mode, params):
         spec = model_fn(self, features, labels, mode, params)
         scaffold = spec.scaffold or tf.train.Scaffold()
-        scaffold._saver = tf.train.Saver(sharded=True)
+        scaffold._saver = tf.train.Saver(
+            sharded=True,
+            max_to_keep=self.run_config.keep_checkpoint_max,
+            keep_checkpoint_every_n_hours=self.run_config.keep_checkpoint_every_n_hours,
+        )
         spec = spec._replace(scaffold=scaffold)
 
         return spec

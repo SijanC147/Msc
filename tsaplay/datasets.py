@@ -92,6 +92,7 @@ class Dataset:
         ]
 
     @classmethod
+    @timeit("Generating dataset stats", "Dataset stats generated")
     def get_stats_dict(cls, classes=None, **data_dicts):
         stats = {}
         for key, value in data_dicts.items():
@@ -106,18 +107,17 @@ class Dataset:
         return stats
 
     @classmethod
-    @timeit("Generating corpus for dataset", "Corpus generated")
-    def generate_corpus(cls, docs, path):
+    def write_corpus_file(cls, docs, path):
         corpus_file = join(path, "_corpus.pkl")
         if exists(corpus_file):
-            corpus = _unpickle(corpus_file)
-        else:
-            corpus = cls.corpus_from_docs(docs)
-            _pickle(data=corpus, path=corpus_file)
+            return _unpickle(corpus_file)
+        corpus = cls.generate_corpus(docs)
+        _pickle(data=corpus, path=corpus_file)
         return corpus
 
     @classmethod
-    def corpus_from_docs(cls, docs):
+    @timeit("Generating corpus for dataset", "Corpus generated")
+    def generate_corpus(cls, docs):
         corpus = {}
 
         nlp = spacy.load(SPACY_MODEL, disable=["parser", "ner"])
@@ -136,7 +136,6 @@ class Dataset:
 
         return corpus
 
-    @timeit("Initializing dataset internals", "Dataset internals initialized")
     def _initialize_all_internals(self):
         self.__train_dict = _unpickle(path=join(self.gen_dir, "_train.pkl"))
         self.__test_dict = _unpickle(path=join(self.gen_dir, "_test.pkl"))
@@ -144,7 +143,7 @@ class Dataset:
             [label for label in self.__train_dict["labels"]]
         ).tolist()
         self.write_stats_json(
-            self.gen_dir,
+            path=self.gen_dir,
             classes=self.__default_classes,
             train=self.__train_dict,
             test=self.__test_dict,
@@ -152,14 +151,13 @@ class Dataset:
         self.__all_docs = set(
             self.__train_dict["sentences"] + self.__test_dict["sentences"]
         )
-        self.__corpus = self.generate_corpus(self.__all_docs, self.gen_dir)
+        self.__corpus = self.write_corpus_file(self.__all_docs, self.gen_dir)
 
     @classmethod
-    @timeit("Exporting dataset stats", "Dataset stats exported")
     def write_stats_json(cls, path, classes=None, **data_dicts):
-        stats = cls.get_stats_dict(classes=classes, **data_dicts)
         stats_file_path = join(path, "_stats.json")
-        if not (exists(stats_file_path)):
+        if not exists(stats_file_path):
+            stats = cls.get_stats_dict(classes=classes, **data_dicts)
             with open(stats_file_path, "w+") as stats_file:
                 json.dump(stats, stats_file, indent=4)
 
@@ -205,7 +203,7 @@ class Dataset:
                 self.write_stats_json(
                     dist_path, classes=self.default_classes, **data_dicts
                 )
-                self.generate_corpus(set(all_docs), dist_path)
+                self.write_corpus_file(set(all_docs), dist_path)
 
                 if key == "train":
                     self.__train_dict = data_dicts[key]
@@ -217,4 +215,4 @@ class Dataset:
         self.__all_docs = set(
             self.__train_dict["sentences"] + self.__test_dict["sentences"]
         )
-        self.__corpus = self.generate_corpus(self.__all_docs, dist_path)
+        self.__corpus = self.write_corpus_file(self.__all_docs, dist_path)

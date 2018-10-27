@@ -1,7 +1,6 @@
 import argparse
 import imp
 import inspect
-from functools import wraps
 from shutil import rmtree
 from os import makedirs
 from os.path import join, exists, normpath, basename
@@ -13,7 +12,7 @@ from tsaplay.datasets import Dataset
 IMPORTER_MODULE_NAME = "tsaplay_dataset_importer"
 
 
-def get_args():
+def argument_parser():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("path", type=str, help="Path to the dataset files")
@@ -28,7 +27,7 @@ def get_args():
         default=None,
     )
 
-    return parser.parse_args()
+    return parser
 
 
 def get_dataset_dicts(train_file, test_file, parsing_fn):
@@ -99,7 +98,7 @@ def is_valid_parsing_fn(parsing_fn_candidate):
     return len(valid_params) == 1
 
 
-def main(args):
+def generate_dataset_files(args):
     dataset_name = args.dataset_name or basename(normpath(args.path))
     parsing_fn = get_parsing_fn(args.path, args.parser_name)
     ftrain, ftest = get_raw_file_paths(args.path)
@@ -110,10 +109,16 @@ def main(args):
         rmtree(target_path)
     makedirs(target_path)
     Dataset.write_stats_json(target_path, train=train_dict, test=test_dict)
-    Dataset.generate_corpus(all_docs, target_path)
+    Dataset.write_corpus_file(all_docs, target_path)
     pickle_file(join(target_path, "_train.pkl"), train_dict)
     pickle_file(join(target_path, "_test.pkl"), test_dict)
 
 
+def main():
+    parser = argument_parser()
+    args = parser.parse_args()
+    generate_dataset_files(args)
+
+
 if __name__ == "__main__":
-    main(get_args())
+    main()

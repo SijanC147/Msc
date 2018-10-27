@@ -1,5 +1,5 @@
 {
-    "jobId": "sum_steps_100_save_chkpt_steps250_metadata_rep3",
+    "jobId": "scalars_addon_no_comet_ml",
     "labels": {},
     "trainingInput": {
         "scaleTier": "CUSTOM",
@@ -13,10 +13,25 @@
         "region": "europe-west1",
         "args": [
             "-em=wiki-50",
-            "-ds=dong",
+            "-ds=debug2",
+            "-fe",
             "-m=lcrrot",
-            "-b=25",
-            "-s=500"
+            "-b=5",
+            "-s=400",
+            "-mp",
+            "hidden_units=50",
+            "-v=DEBUG",
+            "-rc",
+            "keep_checkpoint_max=10",
+            "save_checkpoints_steps=50",
+            "save_summary_steps=20",
+            "-aux",
+            "attn_heatmaps=false",
+            "conf_matrix=false",
+            "metadata=false",
+            "logging=false",
+            "histograms=false",
+            "prediction_outputs=false"
         ]
     }
 }
