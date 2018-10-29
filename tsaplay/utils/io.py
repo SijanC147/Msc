@@ -111,9 +111,9 @@ def corpus_to_csv(path, corpus):
 
 
 def search_dir(path, query=None, first=False, kind=None):
-    if kind == "files":
+    if "file" in kind:
         results = [f for f in listdir(path) if isfile(join(path, f))]
-    elif kind == "folders":
+    elif "folder" in kind:
         results = [f for f in listdir(path) if not isfile(join(path, f))]
     else:
         results = [f for f in listdir(path)]

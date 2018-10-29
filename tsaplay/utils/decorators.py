@@ -3,6 +3,7 @@ import inspect
 from os import environ
 from datetime import timedelta, datetime
 from functools import wraps, partial
+from warnings import warn
 import tensorflow as tf
 from tensorflow.estimator import ModeKeys  # pylint: disable=E0401
 from tsaplay.utils.io import cprnt, comet_pretty_log
@@ -14,17 +15,28 @@ def timeit(pre="", post=""):
     def inner_decorator(func):
         @wraps(func)
         def wrapper(*args, **kw):
-            if environ.get("TIMEIT", "ON") == "ON":
+            if environ.get("TIMEIT", "ON").lower() != "off":
+                environ["timeit_indent"] = str(
+                    int(environ.get("timeit_indent", -1)) + 1
+                )
+                indent = " " * int(environ["timeit_indent"])
                 name = func.__qualname__ + "():"
-                time_stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                time_stamp = indent + datetime.now().strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                )
                 cprnt(c=time_stamp, r=name, g=pre)
                 start_time = time.time()
                 result = func(*args, **kw)
                 end_time = time.time()
                 time_taken = timedelta(seconds=(end_time - start_time))
-                time_stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                time_stamp = indent + datetime.now().strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                )
                 cprnt(
                     c=time_stamp, r=name, g=post + " in", row=str(time_taken)
+                )
+                environ["timeit_indent"] = str(
+                    int(environ["timeit_indent"]) - 1
                 )
                 return result
             return func(*args, **kw)
@@ -37,19 +49,26 @@ def timeit(pre="", post=""):
 def embed_sequences(model_fn):
     @wraps(model_fn)
     def wrapper(self, features, labels, mode, params):
-        embedding_format = self.aux_config.get("embedding_format", "variable")
-        embedding_layer = self.aux_config.get("embedding_layer", "embed_seq")
-        embedding_init = params["_embedding_init"](embedding_format)
+        embedding_init = self.aux_config.get("embedding_init", "variable")
+        embedding_op = self.aux_config.get("embedding_op", "embed_lookup")
+        if embedding_init == "partitioned" and embedding_op == "embed_seq":
+            warn(
+                """Cannot use embed_seq op with partitioned embedding \
+since it uses 'mod' partitioned strategy, using tf.nn.embedding_lookup \
+with 'div' partition strategy instead."""
+            )
+            embedding_op = "embed_lookup"
+        embedding_init_fn = params["_embedding_init"](embedding_init)
         num_shards = params["_embedding_num_shards"]
         vocab_size = params["_vocab_size"]
         dim_size = params["_embedding_dim"]
         embedding_partitioner = (
             tf.fixed_size_partitioner(num_shards)
-            if embedding_format == "partitioned"
+            if embedding_init == "partitioned"
             else None
         )
         embedding_initializer = (
-            embedding_init if embedding_format != "constant" else None
+            embedding_init_fn if embedding_init != "constant" else None
         )
         trainable = params.get("train_embeddings", True)
         with tf.variable_scope("embedding_layer", reuse=tf.AUTO_REUSE):
@@ -73,18 +92,20 @@ def embed_sequences(model_fn):
                         scope="embedding_layer",
                         reuse=True,
                     )
-                    if embedding_layer == "embed_seq"
-                    else tf.nn.embedding_lookup(params=embeddings, ids=value)
+                    if embedding_op == "embed_seq"
+                    else tf.nn.embedding_lookup(
+                        params=embeddings, ids=value, partition_strategy="div"
+                    )
                 )
                 embedded_sequences[embdd_key] = embedded_sequence
         features.update(embedded_sequences)
         spec = model_fn(self, features, labels, mode, params)
-        if embedding_format == "constant":
+        if embedding_init == "constant":
 
             def init_embeddings(sess):
                 sess.run(
                     embeddings.initializer,
-                    {embeddings.initial_value: embedding_init()},
+                    {embeddings.initial_value: embedding_init_fn()},
                 )
 
             spec = scaffold_init_fn_on_spec(spec, init_embeddings)

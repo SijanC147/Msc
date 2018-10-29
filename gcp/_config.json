@@ -1,25 +1,24 @@
 {
-    "jobId": "chkpt_ev_1000_no_throttle_secs_var_emb_all_addons",
+    "jobId": "single_master_filtered5",
     "labels": {},
     "trainingInput": {
-        "scaleTier": "CUSTOM",
-        "masterType": "n1-highmem-8",
-        "workerType": "n1-highmem-8",
-        "parameterServerType": "n1-highmem-8",
-        "workerCount": 2,
-        "parameterServerCount": 2,
+        "scaleTier": "BASIC_GPU",
         "pythonVersion": "3.5",
         "runtimeVersion": "1.10",
         "region": "europe-west1",
         "args": [
             "-em=twitter-200",
-            "-ds=dong",
             "-fe",
+            "-ds=dong",
             "-m=lcrrot",
-            "-b=25",
-            "-s=2000",
+            "-b=100",
+            "-s=5000",
             "-mp",
-            "hidden_units=200",
+            "hidden_units=300",
+            "shuffle-buffer=100000",
+            "-aux",
+            "embedding_format=variable",
+            "embedding_layer=embed_seq",
             "-v=DEBUG"
         ]
     }

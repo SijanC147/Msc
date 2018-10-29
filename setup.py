@@ -5,7 +5,7 @@ with open("requirements.txt") as requirements_file:
 
 setup(
     name="tsaplay",
-    version="0.1.dev",
+    version="0.2.dev",
     author="Sean Bugeja",
     author_email="seanbugeja23@gmail.com",
     license="LICENSE",

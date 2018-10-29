@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 import comet_ml
 import tensorflow as tf
+from tensorflow.python import debug as tf_debug  # pylint: disable=E0611
 from tensorflow.estimator import (  # pylint: disable=E0401
     RunConfig,
     Estimator,
@@ -37,9 +38,20 @@ class TsaModel(ABC):
         self._comet_experiment = None
         self._estimator = None
         self.aux_config = aux_config or {}
+        self._hooks = (
+            []
+            if not self.aux_config.get("debug")
+            else [tf_debug.LocalCLIDebugHook()]
+            if self.aux_config.get("debug") == "cli"
+            else [
+                tf_debug.TensorBoardDebugHook(
+                    "localhost:{}".format(self.aux_config.get("debug"))
+                )
+            ]
+        )
         self.run_config = RunConfig(**(run_config or {}))
         self.params = self.set_params()
-        if params is not None:
+        if params:
             self.params.update(params)
 
     @property
@@ -110,6 +122,7 @@ class TsaModel(ABC):
                 tfrecords=feature_provider.train_tfrecords, params=self.params
             ),
             steps=steps,
+            hooks=self._hooks,
         )
 
     def evaluate(self, feature_provider):
@@ -118,7 +131,8 @@ class TsaModel(ABC):
         self._estimator.evaluate(
             input_fn=lambda: self.eval_input_fn(
                 tfrecords=feature_provider.test_tfrecords, params=self.params
-            )
+            ),
+            hooks=self._hooks,
         )
 
     def train_and_eval(self, feature_provider, steps):
@@ -129,6 +143,7 @@ class TsaModel(ABC):
                 tfrecords=feature_provider.train_tfrecords, params=self.params
             ),
             max_steps=steps,
+            hooks=self._hooks,
         )
         eval_spec = tf.estimator.EvalSpec(
             input_fn=lambda: self.eval_input_fn(
@@ -136,6 +151,7 @@ class TsaModel(ABC):
             ),
             steps=None,
             throttle_secs=0,
+            hooks=self._hooks,
         )
         tf.estimator.train_and_evaluate(
             estimator=self._estimator,

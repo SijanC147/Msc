@@ -78,6 +78,13 @@ def argument_parser():
     )
 
     parser.add_argument(
+        "--num-shards",
+        "-ns",
+        help="Number of shards to split embedding into. (for partitoned init)",
+        type=int,
+    )
+
+    parser.add_argument(
         "--comet-api",
         "-cmt",
         help="Comet.ml API key to upload experiment, contd_tag must be set",
@@ -189,7 +196,11 @@ def get_feature_provider(args):
         if args.filter_embedding
         else None
     )
-    embedding = Embedding(EMBEDDINGS.get(args.embedding), filters=emb_filter)
+    embedding = Embedding(
+        EMBEDDINGS.get(args.embedding),
+        filters=emb_filter,
+        num_shards=args.num_shards,
+    )
 
     return FeatureProvider(datasets, embedding)
 

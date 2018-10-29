@@ -176,13 +176,14 @@ class Embedding:
 
     @classmethod
     def smallest_partition_divisor(cls, vocab_size):
+        square_root = floor(sqrt(vocab_size))
         if vocab_size % 2 == 0:
             return 2
         square_root = floor(sqrt(vocab_size))
         for i in (3, square_root, 2):
             if vocab_size % i == 0:
                 return i
-            return 1
+        return 1
 
     @classmethod
     def export_vocab_files(cls, vocab, export_dir, aux_tokens=None):

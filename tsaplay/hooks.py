@@ -3,6 +3,7 @@ import re
 import itertools
 import numpy as np
 import tensorflow as tf
+from warnings import warn
 from tensorflow.train import SessionRunHook, SessionRunArgs
 import matplotlib
 from tsaplay.constants import RANDOM_SEED
@@ -250,5 +251,8 @@ class MetadataHook(SessionRunHook):
             self._request_summary = False
             _id = [global_step] + ([self._counter] if self._eval else [])
             tag = self._tag.format(*_id)
-            self._writer.add_run_metadata(run_values.run_metadata, tag)
+            try:
+                self._writer.add_run_metadata(run_values.run_metadata, tag)
+            except ValueError:
+                warn("Skipped metadata with tag {}.".format(tag))
         self._counter = (self._counter if self._eval else global_step) + 1

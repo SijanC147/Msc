@@ -2,6 +2,7 @@ import numpy as np
 import tensorflow as tf
 from tsaplay.constants import RANDOM_SEED
 from tsaplay.utils.tf import sparse_sequences_to_dense, get_seq_lengths
+from tsaplay.utils.io import cprnt
 
 
 def parse_tf_example(example):
@@ -48,7 +49,7 @@ def make_dense_features(features):
 
 
 def prep_dataset(tfrecords, params, processing_fn, mode):
-    shuffle_buffer = params.get("shuffle-bufer", 30)
+    shuffle_buffer = params.get("shuffle-buffer", 30)
     dataset = tf.data.Dataset.list_files(file_pattern=tfrecords)
     dataset = dataset.interleave(
         tf.data.TFRecordDataset, cycle_length=3, block_length=1
@@ -59,6 +60,8 @@ def prep_dataset(tfrecords, params, processing_fn, mode):
         dataset = dataset.apply(
             tf.contrib.data.shuffle_and_repeat(buffer_size=shuffle_buffer)
         )
+
+    # dataset = dataset.shuffle(buffer_size=shuffle_buffer)
 
     def parse_and_process(example):
         return processing_fn(*parse_tf_example(example))
