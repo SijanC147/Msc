@@ -1,10 +1,13 @@
 import argparse
-from os import environ, getcwd
+from sys import argv
+from os import environ, getcwd, execvpe
+from warnings import warn
 import comet_ml
 import tensorflow as tf
 import pkg_resources as pkg
 from tsaplay.utils.io import cprnt
 from tsaplay.utils.decorators import timeit
+import tsaplay.utils.filters as available_filters
 from tsaplay.datasets import Dataset
 from tsaplay.embeddings import Embedding
 from tsaplay.features import FeatureProvider
@@ -71,16 +74,16 @@ def argument_parser():
     )
 
     parser.add_argument(
-        "--filter-embedding",
-        "-fe",
+        "--embedding-filters",
+        "-ef",
         help="Filter embedding on unique tokens from datasets",
-        action="store_true",
+        nargs="*",
     )
 
     parser.add_argument(
-        "--num-shards",
-        "-ns",
-        help="Number of shards to split embedding into. (for partitoned init)",
+        "--max-shards",
+        "-ms",
+        help="Max number of shards to partition embedding.",
         type=int,
     )
 
@@ -191,15 +194,29 @@ def args_to_dict(args):
 def get_feature_provider(args):
     datasets = [Dataset(name) for name in args.datasets]
 
-    emb_filter = (
-        [list(set(sum([ds.corpus for ds in datasets], [])))]
-        if args.filter_embedding
-        else None
-    )
+    emb_filters = args.embedding_filters or []
+    if emb_filters:
+        emb_filters_resolved = []
+        for emb_filter in emb_filters:
+            if emb_filter == "corpus":
+                emb_filters_resolved.append(
+                    list(set(sum([ds.corpus for ds in datasets], [])))
+                )
+            else:
+                try:
+                    emb_filters_resolved.append(
+                        available_filters.__getattribute__(emb_filter)
+                    )
+                except AttributeError:
+                    warn("Could not find {} filter.".format(emb_filter))
+    else:
+        emb_filters_resolved = None
+
+    max_shards = args.max_shards or 10
     embedding = Embedding(
         EMBEDDINGS.get(args.embedding),
-        filters=emb_filter,
-        num_shards=args.num_shards,
+        filters=emb_filters_resolved,
+        max_shards=max_shards,
     )
 
     return FeatureProvider(datasets, embedding)
@@ -214,10 +231,23 @@ def run_experiment(args):
     params.update({"batch-size": args.batch_size})
     model = MODELS.get(args.model)(params, args_to_dict(args.aux_config))
 
+    run_config = args_to_dict(args.run_config)
+    # distribute_config = tf.contrib.distribute.DistributeConfig(
+    #     train_distribute=tf.contrib.distribute.ParameterServerStrategy(
+    #         num_gpus_per_worker=4
+    #     ),
+    #     # eval_distribute=tf.contrib.distribute.ParameterServerStrategy(
+    #     #     num_gpus_per_worker=4
+    #     # ),
+    #     # train_distribute=tf.contrib.distribute.MirroredStrategy(num_gpus=4),
+    #     # eval_distribute=tf.contrib.distribute.MirroredStrategy(num_gpus=4),
+    # )
+    # run_config.update({"experimental_distribute": distribute_config})
+
     experiment = Experiment(
         feature_provider,
         model,
-        run_config=args_to_dict(args.run_config),
+        run_config=run_config,
         comet_api=args.comet_api,
         contd_tag=args.contd_tag,
         job_dir=args.job_dir,
@@ -228,6 +258,14 @@ def run_experiment(args):
     pkg.cleanup_resources()
 
 
+def nvidia_cuda_prof_tools_path_fix():
+    ld_lib_path = environ.get("LD_LIBRARY_PATH")
+    if ld_lib_path and ld_lib_path.find("CUPTI") == -1:
+        cupti_path = "/usr/local/cuda-9.0/extras/CUPTI/lib64"
+        environ["LD_LIBRARY_PATH"] = ":".join([cupti_path, ld_lib_path])
+        execvpe("python3", ["python3"] + argv, environ)
+
+
 @timeit("Starting task", "Task complete")
 def main():
     parser = argument_parser()
@@ -236,4 +274,5 @@ def main():
 
 
 if __name__ == "__main__":
+    nvidia_cuda_prof_tools_path_fix()
     main()

@@ -1,24 +1,21 @@
 {
-    "jobId": "single_master_filtered5",
+    "jobId": "tclstm_whole_6part_div_25batch_5000steps_50hu_30shuf_stdgpu_par4",
     "labels": {},
     "trainingInput": {
-        "scaleTier": "BASIC_GPU",
+        "scaleTier": "CUSTOM",
+        "masterType": "standard_gpu",
         "pythonVersion": "3.5",
         "runtimeVersion": "1.10",
         "region": "europe-west1",
         "args": [
-            "-em=twitter-200",
-            "-fe",
+            "-em=wiki-50",
             "-ds=dong",
-            "-m=lcrrot",
-            "-b=100",
+            "-m=tclstm",
+            "-b=25",
             "-s=5000",
             "-mp",
-            "hidden_units=300",
-            "shuffle-buffer=100000",
-            "-aux",
-            "embedding_format=variable",
-            "embedding_layer=embed_seq",
+            "hidden_units=50",
+            "parallel_calls=4",
             "-v=DEBUG"
         ]
     }

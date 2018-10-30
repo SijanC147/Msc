@@ -19,19 +19,14 @@ def timeit(pre="", post=""):
                 environ["timeit_indent"] = str(
                     int(environ.get("timeit_indent", -1)) + 1
                 )
-                indent = " " * int(environ["timeit_indent"])
                 name = func.__qualname__ + "():"
-                time_stamp = indent + datetime.now().strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                )
+                time_stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 cprnt(c=time_stamp, r=name, g=pre)
                 start_time = time.time()
                 result = func(*args, **kw)
                 end_time = time.time()
                 time_taken = timedelta(seconds=(end_time - start_time))
-                time_stamp = indent + datetime.now().strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                )
+                time_stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 cprnt(
                     c=time_stamp, r=name, g=post + " in", row=str(time_taken)
                 )
@@ -49,7 +44,7 @@ def timeit(pre="", post=""):
 def embed_sequences(model_fn):
     @wraps(model_fn)
     def wrapper(self, features, labels, mode, params):
-        embedding_init = self.aux_config.get("embedding_init", "variable")
+        embedding_init = self.aux_config.get("embedding_init", "partitioned")
         embedding_op = self.aux_config.get("embedding_op", "embed_lookup")
         if embedding_init == "partitioned" and embedding_op == "embed_seq":
             warn(

@@ -116,6 +116,7 @@ class TsaModel(ABC):
 
     def train(self, feature_provider, steps):
         self._send_dist_data_to_comet(feature_provider, ["train"])
+        self._send_embedding_filter_data_to_comet(feature_provider)
         self._initialize_estimator(feature_provider)
         self._estimator.train(
             input_fn=lambda: self.train_input_fn(
@@ -127,6 +128,7 @@ class TsaModel(ABC):
 
     def evaluate(self, feature_provider):
         self._send_dist_data_to_comet(feature_provider, ["test"])
+        self._send_embedding_filter_data_to_comet(feature_provider)
         self._initialize_estimator(feature_provider)
         self._estimator.evaluate(
             input_fn=lambda: self.eval_input_fn(
@@ -137,6 +139,7 @@ class TsaModel(ABC):
 
     def train_and_eval(self, feature_provider, steps):
         self._send_dist_data_to_comet(feature_provider, ["train", "test"])
+        self._send_embedding_filter_data_to_comet(feature_provider)
         self._initialize_estimator(feature_provider)
         train_spec = tf.estimator.TrainSpec(
             input_fn=lambda: self.train_input_fn(
@@ -226,3 +229,31 @@ class TsaModel(ABC):
         ]
         for temp_png in temp_pngs(dist_images, dist_image_names):
             self.comet_experiment.log_image(temp_png)
+
+    def _send_embedding_filter_data_to_comet(self, feature_provider):
+        if self.comet_experiment is None:
+            return
+        filter_details = feature_provider.embedding.filter_details
+        if filter_details:
+            self.comet_experiment.log_other("Filter Hash", filter_details.hash)
+            self.comet_experiment.log_other(
+                "Filter Reduction", filter_details.reduction
+            )
+            report = filter_details.report
+            if report:
+                header = "".join(
+                    ["<th>{}</th>".format(heading) for heading in report[0]]
+                )
+                data = report[1:]
+                data = "".join(
+                    [
+                        "<tr>{}</tr>".format(
+                            "".join(
+                                ["<td>{}</td>".format(value) for value in row]
+                            )
+                        )
+                        for row in data
+                    ]
+                )
+                table = "<table><tr>{0}</tr>{1}</table>".format(header, data)
+                self.comet_experiment.log_html(table)

@@ -2,7 +2,7 @@
 from functools import partial
 
 
-def no_pipe_filter(token, pipes=[None], attrs=[]):
+def _no_pipe_filter(token, pipes=[None], attrs=[]):
     return True in [
         getattr(token, attr)
         if attr[0] != "!"
@@ -11,7 +11,7 @@ def no_pipe_filter(token, pipes=[None], attrs=[]):
     ]
 
 
-def pipe_filter(token, pipes=[], tags=[], attr=""):
+def _pipe_filter(token, pipes=[], tags=[], attr=""):
     keep = True
     include = [tag for tag in tags if tag[0] != "!"]
     if include:
@@ -24,17 +24,19 @@ def pipe_filter(token, pipes=[], tags=[], attr=""):
     return keep
 
 
-no_numbers = partial(no_pipe_filter, attrs=["!like_num", "is_alpha"])
-no_urls = partial(no_pipe_filter, attrs=["!like_url"])
-no_emails = partial(no_pipe_filter, attrs=["!like_email"])
-no_currency = partial(no_pipe_filter, attrs=["!is_currency"])
-only_ascii = partial(no_pipe_filter, attrs=["is_ascii"])
+_pos_pipe_filter = partial(_pipe_filter, pipes=["pos"], attr="pos_")
+_dep_pipe_filter = partial(_pipe_filter, pipes=["dep"], attr="dep_")
+_ner_pipe_filter = partial(_pipe_filter, pipes=["ner"], attr="ent_type")
 
 
-pos_pipe_filter = partial(pipe_filter, pipes=["pos"], attr="pos_")
-dep_pipe_filter = partial(pipe_filter, pipes=["dep"], attr="dep_")
-ner_pipe_filter = partial(pipe_filter, pipes=["ner"], attr="ent_type")
+no_numbers = partial(_no_pipe_filter, attrs=["!like_num", "is_alpha"])
+no_urls = partial(_no_pipe_filter, attrs=["!like_url"])
+no_emails = partial(_no_pipe_filter, attrs=["!like_email"])
+no_currency = partial(_no_pipe_filter, attrs=["!is_currency"])
+only_ascii = partial(_no_pipe_filter, attrs=["is_ascii"])
 
 
-no_unknown_pos = partial(pos_pipe_filter, tags=["!X", "!XX"])
-no_proper_nouns = partial(pos_pipe_filter, tags=["!PROPN"])
+no_unknown_pos = partial(_pos_pipe_filter, tags=["!X", "!XX"])
+no_proper_nouns = partial(_pos_pipe_filter, tags=["!PROPN"])
+
+pos_set_one = partial(_pos_pipe_filter, tags=["ADJ", "ADV", "NOUN", "VERB"])

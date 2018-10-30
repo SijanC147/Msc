@@ -25,8 +25,9 @@
             "module": "tsaplay.task",
             "args": [
                 "-em=wiki-50",
+                "-ef=corpus",
                 "-ds=dong",
-                "-m=lcrrot",
+                "-m=tclstm",
                 "-b=25",
                 "-s=100"
             ],

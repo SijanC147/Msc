@@ -102,6 +102,12 @@ def argument_parser():
     )
 
     parser.add_argument(
+        "--show-sdist",
+        help="Print output from setup.py sdist",
+        action="store_true",
+    )
+
+    parser.add_argument(
         "--task-args",
         "-t",
         help="Arguments to pass forward to the task module",
@@ -167,6 +173,7 @@ def clean_prev_input_data():
     rmtree(TEMP_EMBEDDING_PATH, ignore_errors=True)
 
 
+@timeit("Packaging job...", "Job packaged")
 def prepare_job_assets(args):
     task_args = task_argument_parser().parse_args(args.task_args)
     feature_provider = get_feature_provider(task_args)
@@ -174,7 +181,8 @@ def prepare_job_assets(args):
     clean_prev_input_data()
     copy_to_assets(temp_folder)
     write_gcloud_config(args)
-    sandbox.run_setup("setup.py", ["sdist"])
+    sdist_args = ([] if args.show_sdist else ["-q"]) + ["sdist"]
+    sandbox.run_setup("setup.py", sdist_args)
 
 
 def write_gcloud_config(args):
@@ -188,9 +196,9 @@ def write_gcloud_config(args):
         "labels": job_labels,
         "trainingInput": {
             "scaleTier": "CUSTOM",
-            "masterType": "n1-highcpu-96",
+            "masterType": "standard_gpu",
             # "workerType": "n1-standard-16",
-            # "parameterServerType": "n1-standard-16",
+            # "parameterServerType": "standard_gpu",
             # "workerCount": 5,
             # "parameterServerCount": 2,
             "pythonVersion": "3.5",

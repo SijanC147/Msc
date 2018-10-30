@@ -50,9 +50,17 @@ def make_dense_features(features):
 
 def prep_dataset(tfrecords, params, processing_fn, mode):
     shuffle_buffer = params.get("shuffle-buffer", 30)
+    parallel_calls = params.get("parallel_calls", 4)
+    parallel_batches = params.get("parallel_batches", parallel_calls)
+    prefetch_buffer = params.get("prefetch_buffer", 100)
     dataset = tf.data.Dataset.list_files(file_pattern=tfrecords)
-    dataset = dataset.interleave(
-        tf.data.TFRecordDataset, cycle_length=3, block_length=1
+    dataset = dataset.apply(
+        tf.contrib.data.parallel_interleave(
+            tf.data.TFRecordDataset,
+            cycle_length=3,
+            buffer_output_elements=prefetch_buffer,
+            prefetch_input_elements=parallel_calls,
+        )
     )
     if mode == "EVAL":
         dataset = dataset.shuffle(buffer_size=shuffle_buffer)
@@ -61,20 +69,18 @@ def prep_dataset(tfrecords, params, processing_fn, mode):
             tf.contrib.data.shuffle_and_repeat(buffer_size=shuffle_buffer)
         )
 
-    # dataset = dataset.shuffle(buffer_size=shuffle_buffer)
-
-    def parse_and_process(example):
-        return processing_fn(*parse_tf_example(example))
-
     dataset = dataset.apply(
         tf.contrib.data.map_and_batch(
-            parse_and_process, params["batch-size"], num_parallel_batches=5
+            lambda example: processing_fn(*parse_tf_example(example)),
+            params["batch-size"],
+            num_parallel_batches=parallel_batches,
         )
     )
     dataset = dataset.map(
-        lambda features, labels: (make_dense_features(features), labels)
+        lambda features, labels: (make_dense_features(features), labels),
+        num_parallel_calls=parallel_calls,
     )
-    dataset = dataset.prefetch(buffer_size=None)
+    dataset = dataset.cache()
 
     return dataset
 

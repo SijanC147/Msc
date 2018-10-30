@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from pickle import load, dump, HIGHEST_PROTOCOL
 from csv import DictReader, DictWriter
 from json import dumps
-from os import listdir, system, makedirs
+from os import listdir, system, makedirs, environ
 from os.path import isfile, join, dirname
 from tempfile import mkdtemp
 from shutil import rmtree
@@ -28,6 +28,7 @@ def color(key):
 
 def cprnt(*args, **kwargs):
     output = ""
+    indent = " " * int(environ.get("timeit_indent", 0))
     for arg in args:
         kwargs.update({"row": arg})
     for (color_key, string) in kwargs.items():
@@ -40,7 +41,7 @@ def cprnt(*args, **kwargs):
             output += colored(string, color(txt), "on_" + color(frgnd)) + " "
         else:
             output += colored(string, color(col)) + " "
-    print(output)
+    print(indent + output)
 
 
 def platform():

@@ -1,6 +1,7 @@
 from os import makedirs
 from os.path import join, exists, dirname
 from math import sqrt, floor
+from collections import namedtuple
 from inspect import getsource, Parameter, signature, getmembers
 from hashlib import md5
 from warnings import warn
@@ -17,7 +18,7 @@ from spacy.language import Language
 from spacy.tokens import Doc
 from tsaplay.constants import EMBEDDING_DATA_PATH, SPACY_MODEL, RANDOM_SEED
 from tsaplay.utils.decorators import timeit
-from tsaplay.utils.io import cprnt
+from tsaplay.utils.io import cprnt, pickle_file, unpickle_file
 
 FASTTEXT_WIKI_300 = "fasttext-wiki-news-subwords-300"
 GLOVE_TWITTER_25 = "glove-twitter-25"
@@ -33,10 +34,12 @@ GLOVE_COMMON840_300 = "glove-cc840-300"
 W2V_GOOGLE_300 = "word2vec-google-news-300"
 W2V_RUS_300 = "word2vec-ruscorpora-300"
 
+FilterDetails = namedtuple("FilterDetails", "hash filter reduction report")
+
 
 class Embedding:
     def __init__(
-        self, source, oov=None, num_shards=None, filters=None, data_root=None
+        self, source, oov=None, max_shards=10, filters=None, data_root=None
     ):
         self._data_root = data_root or EMBEDDING_DATA_PATH
         self._oov = oov or self.default_oov
@@ -62,8 +65,18 @@ class Embedding:
             self._name = source
         self._gen_dir = join(self._data_root, self.name)
         makedirs(self._gen_dir, exist_ok=True)
-        self._gensim_model = self.load_gensim_model(
+        self._gensim_model, filter_details = self.load_gensim_model(
             source, filters, self._gen_dir
+        )
+        self._filter_details = (
+            FilterDetails(
+                self._filter_hash_id,
+                filter_details.filter,
+                filter_details.reduction,
+                filter_details.report,
+            )
+            if filter_details
+            else None
         )
         self._flags = {
             "<PAD>": np.zeros(shape=self.dim_size),
@@ -76,16 +89,9 @@ class Embedding:
                 self._gensim_model.vectors,
             ]
         ).astype(np.float32)
-        self._num_shards = num_shards or self.smallest_partition_divisor(
-            self.vocab_size
+        self._num_shards = self.ideal_partition_divisor(
+            self.vocab_size, max_shards
         )
-        if self.vocab_size % self._num_shards != 0:
-            self._num_shards = self.smallest_partition_divisor(self.vocab_size)
-            warn(
-                "vocab {0} not a multiple of {1}, using {2} shards".format(
-                    self.vocab_size, num_shards, self._num_shards
-                )
-            )
         self._vocab_file_path = self.export_vocab_files(
             self.vocab, self.gen_dir
         )
@@ -121,6 +127,10 @@ class Embedding:
     @property
     def vocab_file_path(self):
         return self._vocab_file_path
+
+    @property
+    def filter_details(self):
+        return self._filter_details
 
     @property
     def flags(self):
@@ -175,15 +185,10 @@ class Embedding:
         return str(filter_condition)
 
     @classmethod
-    def smallest_partition_divisor(cls, vocab_size):
-        square_root = floor(sqrt(vocab_size))
-        if vocab_size % 2 == 0:
-            return 2
-        square_root = floor(sqrt(vocab_size))
-        for i in (3, square_root, 2):
+    def ideal_partition_divisor(cls, vocab_size, max_shards):
+        for i in range(max_shards, 0, -1):
             if vocab_size % i == 0:
                 return i
-        return 1
 
     @classmethod
     def export_vocab_files(cls, vocab, export_dir, aux_tokens=None):
@@ -321,7 +326,7 @@ class Embedding:
         filtered_model.add(entities, weights)
 
         if detail_dir:
-            cls.export_filtered_details(
+            filter_str, reduction_percent = cls.export_filtered_details(
                 gensim_model,
                 filtered_model,
                 filter_report,
@@ -329,7 +334,11 @@ class Embedding:
                 detail_dir,
             )
 
-        return filtered_model
+        cprnt("Embedding size reduced by {}%".format(reduction_percent))
+        filter_details = FilterDetails(
+            None, filter_str, reduction_percent, filter_report
+        )
+        return filtered_model, filter_details
 
     @classmethod
     def export_filtered_details(
@@ -385,11 +394,19 @@ Filters: {filters_str}""".format(
         with open(filter_details_file_path, "w") as filter_details_file:
             filter_details_file.write(details_str)
 
+        return filters_str, reduction_percent
+
     @classmethod
     def load_gensim_model(cls, source, vocab_filters, data_dir):
         save_model_file = join(data_dir, "_gensim_model.bin")
         if exists(save_model_file):
-            return KeyedVectors.load(save_model_file)
+            filter_details_file = join(data_dir, "_filter_details")
+            filter_details = (
+                unpickle_file(filter_details_file)
+                if exists(filter_details_file)
+                else None
+            )
+            return KeyedVectors.load(save_model_file), filter_details
         source_model_dir = join(dirname(data_dir), source)
         source_model_file = join(source_model_dir, "_gensim_model.bin")
         if exists(source_model_file):
@@ -401,9 +418,12 @@ Filters: {filters_str}""".format(
             except:
                 raise ValueError("Invalid source {0}".format(source))
         if not vocab_filters:
-            return gensim_model
-        filtered_model = cls.filter_gensim_model(
+            return gensim_model, None
+        filtered_model, filter_details = cls.filter_gensim_model(
             gensim_model, vocab_filters, data_dir
         )
+        pickle_file(
+            path=join(data_dir, "_filter_details"), data=filter_details
+        )
         cls.export_gensim_model(filtered_model, data_dir)
-        return filtered_model
+        return filtered_model, filter_details
