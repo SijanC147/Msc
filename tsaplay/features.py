@@ -149,7 +149,9 @@ class FeatureProvider:
     def tokenize_phrases(cls, phrases):
         token_lists = []
         nlp = spacy.load(SPACY_MODEL, disable=["parser", "ner"])
-        for doc in tqdm(nlp.pipe(phrases, batch_size=100, n_threads=-1)):
+        for doc in tqdm(
+            nlp.pipe(phrases, batch_size=100, n_threads=-1), total=len(phrases)
+        ):
             tokens = list(filter(cls.token_filter, doc))
             token_lists.append([t.text.lower() for t in tokens])
         return token_lists
@@ -292,9 +294,9 @@ class FeatureProvider:
 
     @timeit("Generating sparse tensors of tokens", "Sparse tensors generated")
     def _sparse_tensors_from_tokens(self, l_tok, trg_tok, r_tok):
-        l_sp = [self.get_tokens_sp_tensor(l) for l in l_tok]
-        trg_sp = [self.get_tokens_sp_tensor(t) for t in trg_tok]
-        r_sp = [self.get_tokens_sp_tensor(r) for r in r_tok]
+        l_sp = [self.get_tokens_sp_tensor(l) for l in tqdm(l_tok)]
+        trg_sp = [self.get_tokens_sp_tensor(t) for t in tqdm(trg_tok)]
+        r_sp = [self.get_tokens_sp_tensor(r) for r in tqdm(r_tok)]
         return (l_sp, trg_sp, r_sp)
 
     @timeit("Building graph with required embedding lookup ops", "Graph built")

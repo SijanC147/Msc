@@ -38,5 +38,5 @@ only_ascii = partial(_no_pipe_filter, attrs=["is_ascii"])
 
 no_unknown_pos = partial(_pos_pipe_filter, tags=["!X", "!XX"])
 no_proper_nouns = partial(_pos_pipe_filter, tags=["!PROPN"])
-
 pos_set_one = partial(_pos_pipe_filter, tags=["ADJ", "ADV", "NOUN", "VERB"])
+only_adjectives = partial(_pos_pipe_filter, tags=["ADJ"])
