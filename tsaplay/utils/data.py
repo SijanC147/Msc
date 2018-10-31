@@ -87,7 +87,7 @@ def prep_dataset(tfrecords, params, processing_fn, mode):
     return dataset
 
 
-def get_class_distribution(labels, all_classes=None):
+def class_dist_info(labels, all_classes=None):
     classes, counts = np.unique(labels, return_counts=True)
     if all_classes is not None and len(classes) != len(all_classes):
         all_counts = []
@@ -179,8 +179,20 @@ def resample_data_dict(data_dict, target_dists):
     return resampled_data_dict
 
 
-def merge_dicts_lists(*dicts):
+def merge_dicts(*dicts):
     new_dict = defaultdict(list)
-    for k, v in chain.from_iterable(map(dict.items, dicts)):
-        new_dict[k] += v
+    for key, value in chain.from_iterable(map(dict.items, dicts)):
+        new_dict[key] += value
     return dict(new_dict)
+
+
+def class_dist_stats(classes=None, **data_dicts):
+    stats = {}
+    for key, value in data_dicts.items():
+        stats[key] = stats.get(key, {})
+        dist_data = class_dist_info(value["labels"], all_classes=classes)
+        for (_class, count, dist) in zip(*dist_data):
+            stats[key].update(
+                {str(_class): {"count": str(count), "percent": str(dist)}}
+            )
+    return stats

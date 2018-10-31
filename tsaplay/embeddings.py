@@ -38,14 +38,8 @@ FilterDetails = namedtuple("FilterDetails", "hash filter reduction report")
 
 
 class Embedding:
-    def __init__(
-        self, source, oov=None, max_shards=10, filters=None, data_root=None
-    ):
+    def __init__(self, source, filters=None, data_root=None):
         self._data_root = data_root or EMBEDDING_DATA_PATH
-        self._oov = oov or self.default_oov
-        if not callable(self._oov):
-            warn("OOV parameter is not callable, falling back to default.")
-            self._oov = self.default_oov
         self._source = source
         if filters:
             filters_list_str = list(map(self.filters_as_str, filters))
@@ -79,14 +73,8 @@ class Embedding:
             else None
         )
         self._vectors = np.concatenate(
-            [
-                [np.zeros(shape=self.dim_size)],
-                self._gensim_model.vectors,
-            ]
+            [[np.zeros(shape=self.dim_size)], self._gensim_model.vectors]
         ).astype(np.float32)
-        self._num_shards = self.ideal_partition_divisor(
-            self.vocab_size, max_shards
-        )
         self._vocab_file_path = self.export_vocab_files(
             self.vocab, self.gen_dir
         )
@@ -98,10 +86,6 @@ class Embedding:
     @property
     def name(self):
         return self._name
-
-    @property
-    def oov(self):
-        return self._oov
 
     @property
     def gen_dir(self):
@@ -131,38 +115,6 @@ class Embedding:
     def vectors(self):
         return self._vectors
 
-    @property
-    def num_shards(self):
-        return self._num_shards
-
-    def initializer_fn(self, structure=None):
-        shape = (self.vocab_size, self.dim_size)
-        partition_size = int(self.vocab_size / self.num_shards)
-
-        def _init_var(shape=shape, dtype=tf.float32, partition_info=None):
-            return self.vectors
-
-        def _init_part_var(shape=shape, dtype=tf.float32, partition_info=None):
-            part_offset = partition_info.single_offset(shape)
-            this_slice = part_offset + partition_size
-            return self.vectors[part_offset:this_slice]
-
-        def _init_const():
-            return self.vectors
-
-        _init_fn = {
-            "partitioned": _init_part_var,
-            "constant": _init_const,
-            "variable": _init_var,
-        }.get(structure, _init_var)
-
-        return _init_fn
-
-    @classmethod
-    def default_oov(cls, size):
-        np.random.seed(RANDOM_SEED)
-        return np.random.uniform(low=-0.03, high=0.03, size=size)
-
     @classmethod
     def filters_as_str(cls, filter_condition):
         if isinstance(filter_condition, str):
@@ -175,12 +127,6 @@ class Embedding:
             filter_condition = list(set(map(str.lower, filter_condition)))
             filter_condition.sort()
         return str(filter_condition)
-
-    @classmethod
-    def ideal_partition_divisor(cls, vocab_size, max_shards):
-        for i in range(max_shards, 0, -1):
-            if vocab_size % i == 0:
-                return i
 
     @classmethod
     def export_vocab_files(cls, vocab, export_dir, aux_tokens=None):
@@ -375,13 +321,8 @@ class Embedding:
             )
             filters_str += "\nList Filters: \n{0}".format(list_filters_str)
 
-        details_str = """
-Filtered Vocab Reduction: {filtered_vocab_size}/{original_vocab_size} (-{percentage:.2f}%),\n
-Filters: {filters_str}""".format(
-            filtered_vocab_size=filt_vocab,
-            original_vocab_size=orig_vocab,
-            percentage=reduction_percent,
-            filters_str=filters_str,
+        details_str = "Reduction: {0}/{1} (-{2:.2f}%)\nFilters: {3}".format(
+            filt_vocab, orig_vocab, reduction_percent, filters_str
         )
         with open(filter_details_file_path, "w") as filter_details_file:
             filter_details_file.write(details_str)

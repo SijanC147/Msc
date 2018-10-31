@@ -209,9 +209,7 @@ class TsaModel(ABC):
     def _initialize_estimator(self, feature_provider):
         self.aux_config["_feature_provider"] = feature_provider.name
         if not self.aux_config.get("class_labels"):
-            self.aux_config[
-                "class_labels"
-            ] = feature_provider.get_unique_classes()
+            self.aux_config["class_labels"] = feature_provider.class_labels
         self.params["_n_out_classes"] = len(self.aux_config["class_labels"])
         self.params.update(feature_provider.embedding_params)
         self._estimator = Estimator(
@@ -221,7 +219,7 @@ class TsaModel(ABC):
     def _send_dist_data_to_comet(self, feature_provider, modes):
         if self.comet_experiment is None:
             return
-        stats = feature_provider.get_datasets_stats()
+        stats = feature_provider.dist_stats
         dist_images = [plot_distributions(stats, mode) for mode in modes]
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         dist_image_names = [

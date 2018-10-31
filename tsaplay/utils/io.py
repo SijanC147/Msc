@@ -1,9 +1,8 @@
 import sys
 import pprint
+import json
+import pickle
 from datetime import datetime, timedelta
-from pickle import load, dump, HIGHEST_PROTOCOL
-from csv import DictReader, DictWriter
-from json import dumps
 from os import listdir, system, makedirs, environ
 from os.path import isfile, join, dirname
 from tempfile import mkdtemp
@@ -84,31 +83,18 @@ def restart_tf_serve_container():
 
 def unpickle_file(path):
     with open(path, "rb") as f:
-        return load(f)
+        return pickle.load(f)
 
 
 def pickle_file(path, data):
     makedirs(dirname(path), exist_ok=True)
-    with open(path, "wb") as f:
-        return dump(data, f, HIGHEST_PROTOCOL)
+    with open(path, "wb") as pkl_file:
+        return pickle.dump(data, pkl_file, pickle.HIGHEST_PROTOCOL)
 
 
-def corpus_from_csv(path):
-    corpus = {}
-    with open(path) as csvfile:
-        reader = DictReader(csvfile)
-        for row in reader:
-            corpus[row["word"]] = int(row["count"])
-    return corpus
-
-
-def corpus_to_csv(path, corpus):
-    with open(path, "w") as csvfile:
-        writer = DictWriter(csvfile, fieldnames=["word", "count"])
-        writer.writeheader()
-        for word, count in corpus.items():
-            row = {"word": word, "count": count}
-            writer.writerow(row)
+def dump_json(path, data):
+    with open(path, "w+") as json_file:
+        json.dump(data, json_file, indent=4)
 
 
 def search_dir(path, query=None, first=False, kind=None):
@@ -159,7 +145,7 @@ def comet_pretty_log(comet, data_dict, prefix=None, hparams=False):
         if prefix:
             key = prefix.upper() + ": " + key
         try:
-            dumps(value)
+            json.dumps(value)
         except TypeError:
             value = str(value)
         if log_as_param:

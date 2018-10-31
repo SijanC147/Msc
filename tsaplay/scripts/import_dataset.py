@@ -108,8 +108,8 @@ def generate_dataset_files(args):
     if exists(target_path):
         rmtree(target_path)
     makedirs(target_path)
-    Dataset.write_stats_json(target_path, train=train_dict, test=test_dict)
-    Dataset.write_corpus_file(all_docs, target_path)
+    # Dataset.write_stats_json(target_path, train=train_dict, test=test_dict)
+    # Dataset.write_corpus_file(all_docs, target_path)
     pickle_file(join(target_path, "_train.pkl"), train_dict)
     pickle_file(join(target_path, "_test.pkl"), test_dict)
 
