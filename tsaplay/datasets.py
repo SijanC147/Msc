@@ -27,7 +27,7 @@ class Dataset:
         else:
             raise ValueError(
                 """Expected name to be on of {0}, got {1}.
-                Import new datasets using 
+                Import new datasets using
                 tsaplay.scripts.import_dataset""".format(
                     self.list_installed_datasets(self._data_root), name
                 )

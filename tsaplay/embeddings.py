@@ -78,14 +78,9 @@ class Embedding:
             if filter_details
             else None
         )
-        self._flags = {
-            "<PAD>": np.zeros(shape=self.dim_size),
-            "<OOV>": self._oov(size=self.dim_size),
-        }
         self._vectors = np.concatenate(
             [
-                [self._flags["<PAD>"]],
-                [self._flags["<OOV>"]],
+                [np.zeros(shape=self.dim_size)],
                 self._gensim_model.vectors,
             ]
         ).astype(np.float32)
@@ -114,7 +109,7 @@ class Embedding:
 
     @property
     def vocab(self):
-        return [*self.flags] + self._gensim_model.index2word
+        return ["<PAD>"] + self._gensim_model.index2word
 
     @property
     def dim_size(self):
@@ -131,10 +126,6 @@ class Embedding:
     @property
     def filter_details(self):
         return self._filter_details
-
-    @property
-    def flags(self):
-        return self._flags
 
     @property
     def vectors(self):
@@ -181,6 +172,7 @@ class Embedding:
         if callable(filter_condition):
             return getsource(filter_condition)
         if hasattr(filter_condition, "sort"):
+            filter_condition = list(set(map(str.lower, filter_condition)))
             filter_condition.sort()
         return str(filter_condition)
 

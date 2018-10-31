@@ -3,6 +3,7 @@ from os import makedirs
 from csv import DictWriter
 from datetime import datetime
 from zipfile import ZipFile, ZIP_DEFLATED
+from hashlib import md5
 import math
 import numpy as np
 import spacy
@@ -12,8 +13,9 @@ from tensorflow.train import BytesList, Feature, Features, Example, Int64List
 from tensorflow.python.client.timeline import Timeline  # pylint: disable=E0611
 from tensorflow.python_io import TFRecordWriter
 
+from tsaplay.utils.io import pickle_file, unpickle_file
 from tsaplay.utils.decorators import timeit
-from tsaplay.utils.data import get_class_distribution
+from tsaplay.utils.data import get_class_distribution, merge_dicts_lists
 from tsaplay.constants import FEATURES_DATA_PATH, SPACY_MODEL, RANDOM_SEED
 
 
@@ -21,7 +23,9 @@ class FeatureProvider:
     def __init__(self, datasets, embedding, num_shards=None, data_root=None):
         self._data_root = data_root or FEATURES_DATA_PATH
         self._embedding = embedding
-        self._datasets = datasets
+        self._datasets = list(datasets)
+        self._train_dict = merge_dicts_lists(ds.train_dict for ds in self._datasets)
+        self._test_dict = merge_dicts_lists(ds.test_dict for ds in self._datasets)
         self._num_shards = num_shards or 10
         self.__fetch_dict = self._build_fetch_dict()
         if self.__fetch_dict:
@@ -54,17 +58,21 @@ class FeatureProvider:
 
     @property
     def train_tfrecords(self):
-        return [
-            self._get_tf_record_folder_pattern(dataset, "train")
-            for dataset in self._datasets
-        ]
+        return join(self._tf_record_folder("train"), "*.tfrecord")
 
     @property
     def test_tfrecords(self):
-        return [
-            self._get_tf_record_folder_pattern(dataset, "test")
-            for dataset in self._datasets
-        ]
+        return join(self._tf_record_folder("test"), "*.tfrecord")
+
+    @property
+    def feature_dir(self):
+        datasets_dir = "--".join(
+            [
+                "{0}-{1}".format(dataset.name, dataset.get_dist_key())
+                for dataset in self.datasets
+            ]
+        )
+        return join(self._data_root, self.embedding.name, datasets_dir)
 
     @classmethod
     @timeit("Tokenizing dataset", "Tokenization complete")
@@ -126,12 +134,12 @@ class FeatureProvider:
         return [l + minimum for l in labels]
 
     @classmethod
-    def index_lookup_table(cls, vocab_file):
+    def index_lookup_table(cls, vocab_file, num_oov=0):
         return tf.contrib.lookup.index_table_from_file(
             vocabulary_file=vocab_file,
             key_column_index=0,
             value_column_index=1,
-            default_value=1,
+            num_oov_buckets=num_oov,
             delimiter="\t",
         )
 
@@ -155,6 +163,22 @@ class FeatureProvider:
             tokens = list(filter(cls.token_filter, doc))
             token_lists.append([t.text.lower() for t in tokens])
         return token_lists
+
+    @classmethod
+    @timeit("Generating vocabulary for lookup table", "Vocabulary generated")
+    def generate_lookup_vocab(cls, embedding, datasets):
+        datasets_corpus = [
+            [word.lower() for word in dataset.corpus]
+            for dataset in list(datasets)
+        ]
+        datasets_corpus = sum(datasets_corpus, [])
+        not_oov_words = set(embedding.vocab) & set(datasets_corpus)
+        num_oov_words = len(datasets_corpus) - len(not_oov_words)
+        vocab_lookup_data = [
+            (word, embedding.vocab.index(word)) for word in not_oov_words
+        ]
+
+        return vocab_lookup_data, num_oov_words
 
     def get_datasets_stats(self):
         stats = {}
@@ -189,39 +213,18 @@ class FeatureProvider:
         classes = classes.astype(np.str).tolist()
 
         return classes
+    
+    def _tf_record_folder(self, mode):
+        return join(self.feature_dir, "_{mode}".format(mode=mode))
 
-    def _get_gen_dir(self, dataset, mode=None):
-        dataset_dir = join(self._data_root, self._embedding.name, dataset.name)
-        dist_key = dataset.get_dist_key(mode)
-        try:
-            dist_key.index("-")
-            gen_dir = join(dataset_dir, "_composites", dist_key)
-        except ValueError:
-            gen_dir = join(dataset_dir, dist_key)
-        makedirs(gen_dir, exist_ok=True)
-        return gen_dir
-
-    def _get_tf_record_folder_pattern(self, dataset, mode):
-        folder = self._get_tf_record_folder_name(dataset, mode)
-        return join(folder, "*.tfrecord")
-
-    def _get_tf_record_folder_name(self, dataset, mode):
-        return join(self._get_gen_dir(dataset, mode), "_" + mode)
-
-    def _get_filtered_vocab_file(self, dataset):
-        vocab_file = join(self._get_gen_dir(dataset), "_vocab_file.txt")
-        if exists(vocab_file):
-            return vocab_file
-        return self._write_filtered_vocab_file(dataset)
-
-    def _write_tf_record_files(self, dataset, mode, tf_examples):
+    def _write_tf_record_files(self, mode, tf_examples):
         np.random.seed(RANDOM_SEED)
         np.random.shuffle(tf_examples)
         num_per_shard = int(
             math.ceil(len(tf_examples) / float(self._num_shards))
         )
         total_shards = int(math.ceil(len(tf_examples) / float(num_per_shard)))
-        folder_path = self._get_tf_record_folder_name(dataset, mode)
+        folder_path = self._tf_record_folder(mode)
         makedirs(folder_path, exist_ok=True)
         for shard_no in range(total_shards):
             start = shard_no * num_per_shard
@@ -239,17 +242,20 @@ class FeatureProvider:
         return folder_path
 
     def _build_fetch_dict(self):
-        fetch_dict = {}
-        for dataset in self._datasets:
-            name = dataset.name + dataset.get_dist_key()
-            for mode in ["train", "test"]:
-                tf_record_file = self._get_tf_record_folder_name(dataset, mode)
-                if not exists(tf_record_file):
-                    fetch_dict[name] = fetch_dict.get(name, {})
-                    fetch_dict[name][mode] = self._append_fetches(
-                        dataset, mode
-                    )
-        return fetch_dict
+        if exists(self.feature_dir):
+            return {}
+        vocab_file_data, num_oov_words = self.generate_lookup_vocab(
+            self._embedding, self._datasets
+        )
+        vocab_file_path = join(self.feature_dir, "_vocab_file.txt")
+        with open(vocab_file_path, "w") as vocab_file:
+            for (word, index) in vocab_file_data:
+                vocab_file.write("{0}\t{1}\n".format(word, index))
+        ids_table = self.index_lookup_table(vocab_file_path, num_oov_words)
+        return {
+            mode: self._append_fetches("train", ids_table)
+            for mode in ["trian", "test"]
+        }
 
     def _feature_lists_from_dict(self, feats):
         feats["left"] = [l.tolist()[0] for l in feats["left"]]
@@ -276,21 +282,17 @@ class FeatureProvider:
 
     @timeit("Generating any missing tfrecord files", "TFrecord files ready")
     def _generate_missing_tf_record_files(self):
-        values, metadata = self._run_fetches()
-        self._write_run_metadata(metadata)
-        for dataset in self._datasets:
-            name = dataset.name + dataset.get_dist_key()
-            for mode in values.get(name, []):
-                if mode == "train":
-                    labels = dataset.train_dict["labels"]
-                else:
-                    labels = dataset.test_dict["labels"]
-                feature_dict = values[name][mode]
-                labels = self.zero_norm_labels(labels)
-                features = self._feature_lists_from_dict(feature_dict)
-                data_zip = zip(*features, labels)
-                tf_examples = [self._make_tf_example(*dz) for dz in data_zip]
-                self._write_tf_record_files(dataset, mode, tf_examples)
+        values = self._run_fetches()
+        for mode in ["train", "test"]:
+            if mode == "train":
+                labels = self._train_dict["labels"]
+            else:
+                labels = self._test_dict["labels"]
+            labels = self.zero_norm_labels(labels)
+            features = self._feature_lists_from_dict(values[mode])
+            data_zip = zip(*features, labels)
+            tf_examples = [self._make_tf_example(*dz) for dz in data_zip]
+            self._write_tf_record_files(mode, tf_examples)
 
     @timeit("Generating sparse tensors of tokens", "Sparse tensors generated")
     def _sparse_tensors_from_tokens(self, l_tok, trg_tok, r_tok):
@@ -300,19 +302,16 @@ class FeatureProvider:
         return (l_sp, trg_sp, r_sp)
 
     @timeit("Building graph with required embedding lookup ops", "Graph built")
-    def _append_fetches(self, dataset, mode):
+    def _append_fetches(self, mode, ids_table):
         if mode == "train":
-            data = dataset.train_dict
+            data = self._train_dict
         else:
-            data = dataset.test_dict
+            data = self._test_dict
 
         tokens = self.tokens_from_dict(data)
-        self._write_tokens_file(dataset, mode, tokens)
+        self._write_tokens_file(mode, tokens)
 
         sparse_tokens = self._sparse_tensors_from_tokens(*tokens)
-
-        vocab_file = self._get_filtered_vocab_file(dataset)
-        ids_table = self.index_lookup_table(vocab_file)
 
         left_ids_ops, target_ids_ops, right_ids_ops = [], [], []
         left_ops, target_ops, right_ops = [], [], []
@@ -336,38 +335,21 @@ class FeatureProvider:
         }
 
     @timeit("Executing graph", "Graph execution complete")
-    def _run_fetches(self):
+    def _run_fetches(self, write_metadata=False):
         if tf.executing_eagerly():
             raise ValueError("Eager execution is not supported.")
         with tf.Session() as sess:
             sess.run(tf.tables_initializer())
             run_opts = tf.RunOptions(
                 trace_level=tf.RunOptions.FULL_TRACE  # pylint: disable=E1101
-            )
+            ) if write_metadata else None
             run_metadata = tf.RunMetadata()
             values = sess.run(
                 self.__fetch_dict, options=run_opts, run_metadata=run_metadata
             )
-
-        return values, run_metadata
-
-    @timeit("Exporting lookup table vocabulary file", "Vocab file exported")
-    def _write_filtered_vocab_file(self, dataset):
-        vocab = self._embedding.vocab
-        vocab_set = set(vocab)
-        corpus = ["<PAD>", "<OOV>"] + dataset.corpus
-        corpus_set = set(c.lower() for c in corpus)
-
-        not_oov_set = set.intersection(vocab_set, corpus_set)
-
-        filtered = [(w, vocab.index(w)) for w in not_oov_set]
-
-        vocab_file_path = join(self._get_gen_dir(dataset), "_vocab_file.txt")
-        with open(vocab_file_path, "w") as vocab_file:
-            for (word, index) in filtered:
-                vocab_file.write("{0}\t{1}\n".format(word, index))
-
-        return vocab_file_path
+        if write_metadata:
+            self._write_run_metadata(run_metadata)
+        return values 
 
     @timeit("Exporting graph run metadata", "Metadata exported")
     def _write_run_metadata(self, run_metadata):
@@ -382,9 +364,9 @@ class FeatureProvider:
             zipf.writestr(file_name, data=ctf)
 
     @timeit("Exporting tokens to csv file", "Tokens csv exported")
-    def _write_tokens_file(self, dataset, mode, tokens):
+    def _write_tokens_file(self, mode, tokens):
         file_name = "_" + mode + "_tokens.csv"
-        file_path = join(self._get_gen_dir(dataset, mode), file_name)
+        file_path = join(self.feature_dir, file_name)
         with open(file_path, "w", encoding="utf-8") as csvfile:
             fieldnames = ["Left", "Target", "Right"]
             writer = DictWriter(csvfile, fieldnames=fieldnames)

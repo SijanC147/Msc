@@ -1,3 +1,5 @@
+from collections import defaultdict
+from itertools import chain
 import numpy as np
 import tensorflow as tf
 from tsaplay.constants import RANDOM_SEED
@@ -137,6 +139,7 @@ def re_distribute_counts(labels, target_dists):
 
 def resample_data_dict(data_dict, target_dists):
     labels = [label for label in data_dict["labels"]]
+
     classes, target_counts = re_distribute_counts(labels, target_dists)
     numpy_dtype = np.dtype(
         [
@@ -174,3 +177,10 @@ def resample_data_dict(data_dict, target_dists):
         resampled_data_dict[value] = [sample[index] for sample in resampled]
 
     return resampled_data_dict
+
+
+def merge_dicts_lists(*dicts):
+    new_dict = defaultdict(list)
+    for k, v in chain.from_iterable(map(dict.items, dicts)):
+        new_dict[k] += v
+    return dict(new_dict)
