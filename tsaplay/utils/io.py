@@ -2,6 +2,8 @@ import sys
 import pprint
 import json
 import pickle
+from csv import DictWriter
+from zipfile import ZipFile, ZIP_DEFLATED
 from datetime import datetime, timedelta
 from os import listdir, system, makedirs, environ
 from os.path import isfile, join, dirname
@@ -11,6 +13,7 @@ from io import BytesIO
 from termcolor import colored
 from PIL import Image
 import docker
+from tensorflow.python.client.timeline import Timeline  # pylint: disable=E0611
 
 
 def color(key):
@@ -82,8 +85,8 @@ def restart_tf_serve_container():
 
 
 def unpickle_file(path):
-    with open(path, "rb") as f:
-        return pickle.load(f)
+    with open(path, "rb") as pkl_file:
+        return pickle.load(pkl_file)
 
 
 def pickle_file(path, data):
@@ -95,6 +98,27 @@ def pickle_file(path, data):
 def dump_json(path, data):
     with open(path, "w+") as json_file:
         json.dump(data, json_file, indent=4)
+
+
+def export_run_metadata(run_metadata, path):
+    file_name = datetime.now().strftime("%Y%m%d-%H%M%S") + ".json"
+    time_line = Timeline(run_metadata.step_stats)  # pylint: disable=E1101
+    ctf = time_line.generate_chrome_trace_format()
+    zip_name = file_name.replace(".json", ".zip")
+    zip_path = join(path, zip_name)
+    with ZipFile(zip_path, "w", ZIP_DEFLATED) as zipf:
+        zipf.writestr(file_name, data=ctf)
+
+
+def write_csv(path, data_dict):
+    fieldnames = [*data_dict]
+    with open(path, "w", encoding="utf-8") as csvfile:
+        writer = DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        for values in zip(*data_dict.values()):
+            writer.writerow(
+                {key: value for key, value in zip(fieldnames, values)}
+            )
 
 
 def search_dir(path, query=None, first=False, kind=None):

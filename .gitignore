@@ -107,3 +107,4 @@ data/glove.twitter.27B.100d.txt
 # pycharm
 .idea/
 .DS_Store
+debug.py

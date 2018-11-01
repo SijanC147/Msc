@@ -1,9 +1,13 @@
-from os import getcwd, makedirs
+from os import makedirs
 from os.path import join
+from functools import partial
 from pathlib import Path
 import pkg_resources as pkg
+import numpy as np
 
 RANDOM_SEED = 1234
+DELIMITER = "<SEP>"
+DEFAULT_OOV_FN = partial(np.random.uniform, low=-0.03, high=0.03)
 SPACY_MODEL = pkg.resource_filename(__name__, "assets/en_core_web_sm")
 DEFAULT_FONT = pkg.resource_filename(__name__, "fonts/Symbola.ttf")
 

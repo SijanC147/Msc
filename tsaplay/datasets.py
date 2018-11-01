@@ -1,76 +1,43 @@
 from os import makedirs
 from os.path import join, exists, basename, normpath
-from operator import itemgetter
-import numpy as np
-import spacy
-from spacy.attrs import ORTH  # pylint: disable=E0611
-from tsaplay.features import FeatureProvider
 from tsaplay.utils.data import (
     resample_data_dict,
     class_dist_info,
     class_dist_stats,
+    generate_corpus,
 )
 from tsaplay.utils.io import search_dir, unpickle_file, pickle_file, dump_json
 from tsaplay.utils.decorators import timeit
-from tsaplay.constants import DATASET_DATA_PATH, SPACY_MODEL
+from tsaplay.constants import DATASET_DATA_PATH
 
 
 class Dataset:
-    def __init__(self, name, distribution=None, data_root=None):
-        self._data_root = data_root or DATASET_DATA_PATH
-        self._gen_dir = join(self._data_root, name)
-        if not exists(self._gen_dir):
-            raise ValueError(
-                """Expected name to be one of {0}, got {1}.
-                Import new datasets using
-                tsaplay.scripts.import_dataset""".format(
-                    self.list_installed_datasets(self._data_root), name
-                )
-            )
-        self._name = name
-        train_dict_path = join(self.gen_dir, "_train_dict.pkl")
-        test_dict_path = join(self.gen_dir, "_test_dict.pkl")
-        stats_file_path = join(self.gen_dir, "_stats.json")
-        train_corpus_path = join(self.gen_dir, "_train_corpus.pkl")
-        test_corpus_path = join(self.gen_dir, "_test_corpus.pkl")
-        self._train_dict = unpickle_file(path=train_dict_path)
-        self._test_dict = unpickle_file(path=test_dict_path)
-        if distribution:
-            self._redistribute_data(distribution)
-        if exists(train_corpus_path):
-            self._train_corpus = unpickle_file(path=train_corpus_path)
-        else:
-            train_docs = self._train_dict["sentences"]
-            self._train_corpus = self.generate_corpus(set(train_docs))
-            pickle_file(path=train_corpus_path, data=self._train_corpus)
-        if exists(test_corpus_path):
-            self._test_corpus = unpickle_file(path=test_corpus_path)
-        else:
-            test_docs = self._test_dict["sentences"]
-            self._test_corpus = self.generate_corpus(set(test_docs))
-            pickle_file(path=test_corpus_path, data=self._test_corpus)
+    def __init__(self, name, redist=None):
+        self._name = None
+        self._uid = None
+        self._gen_dir = None
+        self._train_dict = None
+        self._test_dict = None
+        self._train_corpus = None
+        self._test_corpus = None
+        self._train_dist = None
+        self._test_dist = None
+        self._class_labels = None
 
-        labels = self._train_dict["labels"] + self._test_dict["labels"]
-        self._class_labels = list(set(labels))
+        self._init_gen_dir(name)
+        for mode in ["train", "test"]:
+            self._init_data_dict(mode, self.gen_dir)
+            self._init_dist_info(mode, self.gen_dir)
+            self._init_corpus(mode, self.gen_dir)
 
-        dump_json(
-            path=stats_file_path,
-            data=class_dist_stats(
-                classes=self._class_labels,
-                train=self._train_dict,
-                test=self._test_dict,
-            ),
+        # if redist:
+        #     self._redistribute_data(redist)
+
+        self._uid = "{name}-{train_dist}-{test_dist}".format(
+            name=self._name,
+            train_dist=self._train_dist,
+            test_dist=self._test_dist,
         )
-        train_dist_data = class_dist_info(self._train_dict["labels"])
-        test_dist_data = class_dist_info(self._test_dict["labels"])
-        train_dist_key = "_".join(map(str, train_dist_data[2]))
-        test_dist_key = "_".join(map(str, test_dist_data[2]))
-        self._dist_key = (
-            train_dist_key
-            if train_dist_key == test_dist_key
-            else "-".join([train_dist_key, test_dist_key])
-        )
-        self._uid = "-".join([self._name, self._dist_key])
 
     @property
     def name(self):
@@ -104,34 +71,63 @@ class Dataset:
     def class_labels(self):
         return self._class_labels
 
-    @property
-    def dist_key(self):
-        return self._dist_key
+    def _init_gen_dir(self, name):
+        data_root = DATASET_DATA_PATH
+        gen_dir = join(data_root, name)
+        if not exists(gen_dir):
+            installed_datasets = [
+                basename(normpath(path))
+                for path in search_dir(data_root, kind="folders")
+            ]
+            raise ValueError(
+                """Expected name to be one of {0}, got {1}.
+                Import new datasets using
+                tsaplay.scripts.import_dataset""".format(
+                    installed_datasets, name
+                )
+            )
+        else:
+            self._gen_dir = gen_dir
+            self._name = name
 
-    @classmethod
-    def list_installed_datasets(cls, data_root=DATASET_DATA_PATH):
-        return [
-            basename(normpath(path))
-            for path in search_dir(data_root, kind="folders")
-        ]
+    def _init_data_dict(self, mode, path):
+        data_dict_file = "_{mode}_dict.pkl".format(mode=mode)
+        data_dict_path = join(path, data_dict_file)
+        if not exists(data_dict_path):
+            raise ValueError
+        data_dict_attr = "_{mode}_dict".format(mode=mode)
+        data_dict = unpickle_file(data_dict_path)
+        class_labels = self._class_labels or []
+        class_labels = set(class_labels + data_dict["labels"])
+        self._class_labels = list(class_labels)
+        setattr(self, data_dict_attr, data_dict)
 
-    @classmethod
-    @timeit("Generating corpus for dataset", "Corpus generated")
-    def generate_corpus(cls, docs):
-        corpus = {}
-        nlp = spacy.load(SPACY_MODEL, disable=["parser", "ner"])
-        docs_joined = " ".join(map(lambda document: document.strip(), docs))
-        if len(docs_joined) > 1000000:
-            nlp.max_length = len(docs_joined) + 1
-        tokens = nlp(docs_joined)
-        tokens = list(filter(FeatureProvider.token_filter, tokens))
-        doc = nlp(" ".join(map(lambda token: token.text, tokens)))
-        counts = doc.count_by(ORTH)
-        words = counts.items()
-        words.sort(key=itemgetter(1), reverse=True)
-        for word_id, cnt in words:
-            corpus[nlp.vocab.strings[word_id]] = cnt
-        return corpus
+    def _init_corpus(self, mode, path):
+        corpus_pkl_file = "_{mode}_corpus.pkl".format(mode=mode)
+        corpus_pkl_path = join(path, corpus_pkl_file)
+        if exists(corpus_pkl_path):
+            corpus = unpickle_file(corpus_pkl_path)
+        else:
+            dict_attr = "_{mode}_dict".format(mode=mode)
+            data_dict = getattr(self, dict_attr)
+            docs = data_dict["sentences"]
+            corpus = generate_corpus(docs, mode)
+            pickle_file(data=corpus, path=corpus_pkl_path)
+        corpus_attr = "_{mode}_corpus".format(mode=mode)
+        setattr(self, corpus_attr, corpus)
+
+    def _init_dist_info(self, mode, path):
+        dist_info_file = "_{mode}_dist.json".format(mode=mode)
+        dist_info_path = join(path, dist_info_file)
+        data_dict_attr = "_{mode}_dict".format(mode=mode)
+        data_dict = getattr(self, data_dict_attr)
+        _, _, dist_info = class_dist_info(data_dict["labels"])
+        dist_key = "_".join(map(str, dist_info))
+        dist_key_attr = "_{mode}_dist".format(mode=mode)
+        setattr(self, dist_key_attr, dist_key)
+        if not exists(dist_info_path):
+            data = {"classes": set(data_dict["labels"]), mode: data_dict}
+            dump_json(path=dist_info_path, data=class_dist_stats(**data))
 
     @timeit("Redistributing dataset", "Dataset redistributed")
     def _redistribute_data(self, distribution):
@@ -165,7 +161,7 @@ class Dataset:
 
                     resampled_dict = resample_data_dict(orig_dict, dist_values)
                     resampled_docs = set(resampled_dict["sentences"])
-                    resampled_corpus = self.generate_corpus(resampled_docs)
+                    resampled_corpus = generate_corpus(resampled_docs)
                     pickle_file(path=dist_dict_path, data=resampled_dict)
                     pickle_file(path=dist_corpus_path, data=resampled_corpus)
                     data_dicts[mode] = resampled_dict

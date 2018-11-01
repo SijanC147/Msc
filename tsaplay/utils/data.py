@@ -1,8 +1,13 @@
 from collections import defaultdict
-from itertools import chain
+from itertools import chain, groupby
+from operator import itemgetter
 import numpy as np
 import tensorflow as tf
-from tsaplay.constants import RANDOM_SEED
+import spacy
+from spacy.attrs import ORTH  # pylint: disable=E0611
+from tqdm import tqdm
+from tsaplay.constants import RANDOM_SEED, SPACY_MODEL
+from tsaplay.utils.filters import default_token_filter
 from tsaplay.utils.tf import sparse_sequences_to_dense, get_seq_lengths
 from tsaplay.utils.io import cprnt
 
@@ -196,3 +201,55 @@ def class_dist_stats(classes=None, **data_dicts):
                 {str(_class): {"count": str(count), "percent": str(dist)}}
             )
     return stats
+
+
+def target_offsets(sentences, targets):
+    return [
+        sentence.lower().find(target.lower())
+        for (sentence, target) in zip(sentences, targets)
+    ]
+
+
+def partition_sentences(sentences, targets, offsets=None):
+    offsets = offsets or target_offsets(sentences, targets)
+    left_ctxts = [sen[:off] for (sen, off) in zip(sentences, offsets)]
+    targets = list(map(str.strip, targets))
+    right_off = [off + len(trg) for (off, trg) in zip(offsets, targets)]
+    right_ctxts = [sen[r_off:] for (sen, r_off) in zip(sentences, right_off)]
+    left_ctxts = list(map(str.strip, left_ctxts))
+    right_ctxts = list(map(str.strip, right_ctxts))
+    return left_ctxts, targets, right_ctxts
+
+
+def zero_norm_labels(labels):
+    return [label + abs(min(labels)) for label in labels]
+
+
+def split_list(data, counts=None, parts=None):
+    counts = counts or ([int(len(data) / parts)] * parts)
+    offsets = [0] + np.cumsum(counts).tolist()
+    return [data[offsets[i] : offsets[i + 1]] for i in range(len(offsets) - 1)]
+
+
+def generate_corpus(docs, mode=None):
+    desc = (
+        "Building {mode} Corpus".format(mode=mode.capitalize())
+        if mode
+        else "Building Corpus"
+    )
+    nlp = spacy.load(SPACY_MODEL, disable=["parser", "ner"])
+    doc_pipe = nlp.pipe(set(docs), batch_size=100, n_threads=-1)
+    word_counts = (
+        [
+            (nlp.vocab.strings[key], count)
+            for (key, count) in doc.count_by(ORTH).items()
+        ]
+        for doc in tqdm(doc_pipe, total=len(docs), desc=desc)
+    )
+    word_counts = sorted(chain(*word_counts))
+    words = [
+        (key, sum(j for _, j in group))
+        for key, group in groupby(word_counts, key=itemgetter(0))
+    ]
+    words.sort(key=itemgetter(1), reverse=True)
+    return {word: count for word, count in words}

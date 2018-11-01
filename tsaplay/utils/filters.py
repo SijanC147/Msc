@@ -2,6 +2,16 @@
 from functools import partial
 
 
+def default_token_filter(token):
+    if token.like_url:
+        return False
+    if token.like_email:
+        return False
+    if token.text in ["\uFE0F"]:
+        return False
+    return True
+
+
 def _no_pipe_filter(token, pipes=[None], attrs=[]):
     return True in [
         getattr(token, attr)
