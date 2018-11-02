@@ -7,6 +7,7 @@ import numpy as np
 
 RANDOM_SEED = 1234
 DELIMITER = "<SEP>"
+PAD_TOKEN = "<PAD>"
 DEFAULT_OOV_FN = partial(np.random.uniform, low=-0.03, high=0.03)
 SPACY_MODEL = pkg.resource_filename(__name__, "assets/en_core_web_sm")
 DEFAULT_FONT = pkg.resource_filename(__name__, "fonts/Symbola.ttf")

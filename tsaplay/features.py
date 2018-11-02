@@ -27,6 +27,7 @@ from tsaplay.utils.data import (
     partition_sentences,
     zero_norm_labels,
     split_list,
+    generate_corpus,
 )
 from tsaplay.constants import (
     FEATURES_DATA_PATH,
@@ -78,10 +79,10 @@ class FeatureProvider:
             labels = self._train_dict["labels"] + self._test_dict["labels"]
             self._class_labels = list(set(labels))
             train_docs = set(self._train_dict["sentences"])
-            self._train_corpus = Dataset.generate_corpus(train_docs)
+            self._train_corpus = generate_corpus(train_docs)
             pickle_file(path=train_corpus_path, data=self._train_corpus)
             test_docs = set(self._test_dict["sentences"])
-            self._test_corpus = Dataset.generate_corpus(test_docs)
+            self._test_corpus = generate_corpus(test_docs)
             pickle_file(path=test_corpus_path, data=self._test_corpus)
             self._dist_stats = {
                 ds.name: class_dist_stats(
@@ -288,7 +289,6 @@ class FeatureProvider:
             fetch_dict[key] = string_ops + id_ops
         return fetch_dict
 
-    @timeit("Executing graph", "Graph execution complete")
     def _fetch_data(self, fetch_dict, write_metadata=False):
         run_opts = (
             tf.RunOptions(

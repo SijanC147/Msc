@@ -6,7 +6,7 @@ from csv import DictWriter
 from zipfile import ZipFile, ZIP_DEFLATED
 from datetime import datetime, timedelta
 from os import listdir, system, makedirs, environ
-from os.path import isfile, join, dirname
+from os.path import isfile, join, dirname, basename, normpath
 from tempfile import mkdtemp
 from shutil import rmtree
 from io import BytesIO
@@ -176,3 +176,10 @@ def comet_pretty_log(comet, data_dict, prefix=None, hparams=False):
             comet.log_parameter(key, value)
         else:
             comet.log_other(key, value)
+
+
+def list_folders(path):
+    return [
+        basename(normpath(folder))
+        for folder in search_dir(path, kind="folders")
+    ]

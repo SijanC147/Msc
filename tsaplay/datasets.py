@@ -1,12 +1,17 @@
 from os import makedirs
-from os.path import join, exists, basename, normpath
+from os.path import join, exists
 from tsaplay.utils.data import (
     resample_data_dict,
     class_dist_info,
     class_dist_stats,
     generate_corpus,
 )
-from tsaplay.utils.io import search_dir, unpickle_file, pickle_file, dump_json
+from tsaplay.utils.io import (
+    unpickle_file,
+    pickle_file,
+    dump_json,
+    list_folders,
+)
 from tsaplay.utils.decorators import timeit
 from tsaplay.constants import DATASET_DATA_PATH
 
@@ -29,9 +34,6 @@ class Dataset:
             self._init_data_dict(mode, self.gen_dir)
             self._init_dist_info(mode, self.gen_dir)
             self._init_corpus(mode, self.gen_dir)
-
-        # if redist:
-        #     self._redistribute_data(redist)
 
         self._uid = "{name}-{train_dist}-{test_dist}".format(
             name=self._name,
@@ -75,15 +77,12 @@ class Dataset:
         data_root = DATASET_DATA_PATH
         gen_dir = join(data_root, name)
         if not exists(gen_dir):
-            installed_datasets = [
-                basename(normpath(path))
-                for path in search_dir(data_root, kind="folders")
-            ]
+            available_datasets = list_folders(data_root)
             raise ValueError(
-                """Expected name to be one of {0}, got {1}.
-                Import new datasets using
+                """Expected  Dataset name to be one of {0},\
+                got {1}. Import new datasets using\
                 tsaplay.scripts.import_dataset""".format(
-                    installed_datasets, name
+                    available_datasets, name
                 )
             )
         else:
@@ -128,52 +127,3 @@ class Dataset:
         if not exists(dist_info_path):
             data = {"classes": set(data_dict["labels"]), mode: data_dict}
             dump_json(path=dist_info_path, data=class_dist_stats(**data))
-
-    @timeit("Redistributing dataset", "Dataset redistributed")
-    def _redistribute_data(self, distribution):
-        dists_dir = join(self.gen_dir, "_dists")
-        makedirs(dists_dir, exist_ok=True)
-        if isinstance(distribution, list):
-            dist_list = distribution
-            distribution = {"train": dist_list, "test": dist_list}
-        elif not isinstance(distribution, dict):
-            raise ValueError
-        for key, dist_values in distribution.items():
-            dist_folder = "_".join([str(int(v * 100)) for v in dist_values])
-            dist_path = join(dists_dir, dist_folder)
-            makedirs(dist_path, exist_ok=True)
-            dist_dict_path = join(dist_path, "_" + key + "_dict.pkl")
-            dist_corpus_path = join(dist_path, "_" + key + "_corpus.pkl")
-            if exists(dist_dict_path):
-                resampled_dict = unpickle_file(path=dist_dict_path)
-                if key == "train":
-                    self._train_dict = resampled_dict
-                else:
-                    self._test_dict = resampled_dict
-            else:
-                data_dicts = {}
-                for mode in ["train", "test"]:
-                    dist_dict_path = join(dist_path, "_" + mode + "_dict.pkl")
-                    if mode == "train":
-                        orig_dict = self._train_dict
-                    else:
-                        orig_dict = self._test_dict
-
-                    resampled_dict = resample_data_dict(orig_dict, dist_values)
-                    resampled_docs = set(resampled_dict["sentences"])
-                    resampled_corpus = generate_corpus(resampled_docs)
-                    pickle_file(path=dist_dict_path, data=resampled_dict)
-                    pickle_file(path=dist_corpus_path, data=resampled_corpus)
-                    data_dicts[mode] = resampled_dict
-
-                dump_json(
-                    path=join(dist_path, "_stats.json"),
-                    data=class_dist_stats(
-                        classes=self.class_labels, **data_dicts
-                    ),
-                )
-
-                if key == "train":
-                    self._train_dict = data_dicts[key]
-                else:
-                    self._test_dict = data_dicts[key]

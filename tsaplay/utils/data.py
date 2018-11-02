@@ -1,6 +1,9 @@
-from collections import defaultdict
+from collections import defaultdict, Iterable
 from itertools import chain, groupby
 from operator import itemgetter
+from inspect import getsource
+from hashlib import md5
+from functools import partial
 import numpy as np
 import tensorflow as tf
 import spacy
@@ -253,3 +256,32 @@ def generate_corpus(docs, mode=None):
     ]
     words.sort(key=itemgetter(1), reverse=True)
     return {word: count for word, count in words}
+
+
+def stringify(list_element):
+    if isinstance(list_element, str):
+        return list_element
+    if isinstance(list_element, partial):
+        return str(list_element.keywords)
+    if callable(list_element):
+        return getsource(list_element)
+    if hasattr(list_element, "sort"):
+        list_element = list(set(map(str.lower, list_element)))
+        list_element.sort()
+    return str(list_element)
+
+
+def hash_data(data):
+    if not data:
+        return ""
+    if not isinstance(data, Iterable):
+        data = str(data)
+    if isinstance(data, str):
+        data = data.encode()
+    if isinstance(data, bytes):
+        return md5(data).hexdigest()
+    data = map(stringify, data)
+    data = map(str.encode, data)
+    data = [md5(el).hexdigest() for el in data]
+    data.sort()
+    return md5(str(data).encode()).hexdigest()
