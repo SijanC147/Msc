@@ -194,6 +194,17 @@ def merge_dicts(*dicts):
     return dict(new_dict)
 
 
+def merge_corpi(*corpi):
+    corpi_items = [map(tuple, corpus.items()) for corpus in corpi]
+    corpi_items = sorted(chain(*corpi_items))
+    corpus = [
+        (key, sum(j for _, j in group))
+        for key, group in groupby(corpi_items, key=itemgetter(0))
+    ]
+    corpus.sort(key=itemgetter(1), reverse=True)
+    return {word: count for word, count in corpus}
+
+
 def class_dist_stats(classes=None, **data_dicts):
     stats = {}
     for key, value in data_dicts.items():
@@ -285,3 +296,38 @@ def hash_data(data):
     data = [md5(el).hexdigest() for el in data]
     data.sort()
     return md5(str(data).encode()).hexdigest()
+
+
+def tokenize_data(include=None, **data_dicts):
+    include = set(map(str.lower, include)) if include else False
+    docs = [
+        sum(
+            partition_sentences(data_dict["sentences"], data_dict["targets"]),
+            [],
+        )
+        for data_dict in data_dicts.values()
+    ]
+    doc_lengths = [len(doc) for doc in docs]
+    docs = sum(docs, [])
+    nlp = spacy.load(SPACY_MODEL, disable=["parser", "ner"])
+    doc_pipe = nlp.pipe(docs, batch_size=100, n_threads=-1)
+    tokens = [
+        [
+            token.text.lower()
+            for token in filter(default_token_filter, doc)
+            if not include or token.text.lower() in include
+        ]
+        for doc in tqdm(doc_pipe, total=len(docs), desc="Tokenizing Data")
+    ]
+    all_tokens_zipped = zip(
+        [*data_dicts], split_list(tokens, counts=doc_lengths)
+    )
+    parts = ["Left", "Target", "Right"]
+
+    return {
+        key: {
+            part: tokens
+            for part, tokens in zip(parts, split_list(all_tokens, parts=3))
+        }
+        for key, all_tokens in all_tokens_zipped
+    }

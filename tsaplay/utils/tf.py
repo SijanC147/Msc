@@ -1,8 +1,11 @@
 import io
 import numpy as np
 import tensorflow as tf
-from tsaplay.utils.io import cprnt
 from tensorflow.estimator import ModeKeys  # pylint: disable=E0401
+from tensorflow.train import BytesList, Feature, Features, Example, Int64List
+from tsaplay.constants import DELIMITER, MAX_EMBEDDING_SHARDS
+from tsaplay.utils.io import cprnt, export_run_metadata
+from tsaplay.utils.data import zero_norm_labels, split_list
 
 
 def tf_class_distribution(labels):
@@ -270,3 +273,124 @@ def image_to_summary(name, image):
         value=[tf.Summary.Value(tag=name, image=summary_image)]
     )
     return summary
+
+
+def index_lookup_table(vocab_file, oov_buckets=0):
+    return tf.contrib.lookup.index_table_from_file(
+        vocabulary_file=vocab_file,
+        key_column_index=0,
+        value_column_index=1,
+        num_oov_buckets=oov_buckets,
+        delimiter="\t",
+    )
+
+
+def fetch_lookup_ops(tokens_lists, lookup_table):
+    tokens_list = [
+        DELIMITER.join(tkns_list).encode() for tkns_list in tokens_lists
+    ]
+    tokens_tensors = [
+        tf.constant([tkns_list], dtype=tf.string) for tkns_list in tokens_list
+    ]
+    tokens_sp_tensors = [
+        tf.string_split(tkn_ten, DELIMITER) for tkn_ten in tokens_tensors
+    ]
+    string_ops = [
+        tf.sparse_tensor_to_dense(sp_tensor, default_value=b"")
+        for sp_tensor in tokens_sp_tensors
+    ]
+    id_ops = [
+        tf.sparse_tensor_to_dense(lookup_table.lookup(sp_tensor))
+        for sp_tensor in tokens_sp_tensors
+    ]
+    return string_ops + id_ops
+
+
+def run_lookups(fetch_dict, metadata_path=None, eager=False):
+    if tf.executing_eagerly() and not eager:
+        raise ValueError("Eager execution is not supported.")
+    run_metadata = tf.RunMetadata()
+    run_opts = (
+        tf.RunOptions(
+            trace_level=tf.RunOptions.FULL_TRACE  # pylint: disable=E1101
+        )
+        if metadata_path
+        else None
+    )
+
+    with tf.Session() as sess:
+        sess.run(tf.tables_initializer())
+        values_dict = sess.run(
+            fetch_dict, options=run_opts, run_metadata=run_metadata
+        )
+
+    if metadata_path:
+        export_run_metadata(run_metadata, path=metadata_path)
+
+    return {
+        key: [value.tolist()[0] for value in values]
+        for (key, values) in values_dict.items()
+    }
+
+
+def make_tf_examples(string_features, int_features, labels):
+    int_features += [[label] for label in zero_norm_labels(labels)]
+    string_features = [
+        Feature(bytes_list=BytesList(value=val)) for val in string_features
+    ]
+    int_features = [
+        Feature(int64_list=Int64List(value=val)) for val in int_features
+    ]
+    all_features = string_features + int_features
+    return [
+        Example(
+            features=Features(
+                feature={
+                    "left": left,
+                    "target": target,
+                    "right": right,
+                    "left_ids": left_ids,
+                    "target_ids": target_ids,
+                    "right_ids": right_ids,
+                    "labels": label,
+                }
+            )
+        )
+        for (
+            left,
+            target,
+            right,
+            left_ids,
+            target_ids,
+            right_ids,
+            label,
+        ) in zip(*split_list(all_features, parts=7))
+    ]
+
+
+def partitioner_num_shards(vocab_size, max_shards=MAX_EMBEDDING_SHARDS):
+    for i in range(max_shards, 0, -1):
+        if vocab_size % i == 0:
+            return i
+
+
+def embedding_initializer(vectors, num_shards, structure=None):
+    shape = vectors.shape
+    partition_size = int(shape[0] / num_shards)
+
+    def _init_part_var(shape=shape, dtype=tf.float32, partition_info=None):
+        part_offset = partition_info.single_offset(shape)
+        this_slice = part_offset + partition_size
+        return vectors[part_offset:this_slice]
+
+    def _init_var(shape=shape, dtype=tf.float32, partition_info=None):
+        return vectors
+
+    def _init_const():
+        return vectors
+
+    return {
+        "partitioned": _init_part_var,
+        "variable": _init_var,
+        "constant": _init_const,
+    }.get(structure, _init_part_var)

@@ -2,6 +2,7 @@ import sys
 import pprint
 import json
 import pickle
+import math
 from csv import DictWriter
 from zipfile import ZipFile, ZIP_DEFLATED
 from datetime import datetime, timedelta
@@ -13,7 +14,10 @@ from io import BytesIO
 from termcolor import colored
 from PIL import Image
 import docker
+import numpy as np
 from tensorflow.python.client.timeline import Timeline  # pylint: disable=E0611
+from tensorflow.python_io import TFRecordWriter
+from tsaplay.constants import RANDOM_SEED, TF_RECORD_SHARDS
 
 
 def color(key):
@@ -183,3 +187,40 @@ def list_folders(path):
         basename(normpath(folder))
         for folder in search_dir(path, kind="folders")
     ]
+
+
+def write_tfrecords(path, tf_examples, num_shards=TF_RECORD_SHARDS):
+    np.random.seed(RANDOM_SEED)
+    np.random.shuffle(tf_examples)
+    tf_examples = [example.SerializeToString() for example in tf_examples]
+    num_per_shard = int(math.ceil(len(tf_examples) / float(num_shards)))
+    total_shards = int(math.ceil(len(tf_examples) / float(num_per_shard)))
+    makedirs(path, exist_ok=True)
+    for shard_no in range(total_shards):
+        start = shard_no * num_per_shard
+        end = min((shard_no + 1) * num_per_shard, len(tf_examples))
+        file_name = "{0}_of_{1}.tfrecord".format(shard_no + 1, total_shards)
+        file_path = join(path, file_name)
+        with TFRecordWriter(file_path) as tf_writer:
+            for serialized_example in tf_examples[start:end]:
+                tf_writer.write(serialized_example)
+        if end == len(tf_examples):
+            break
+
+
+def write_vocab_file(path, vocab, indices=None):
+    if indices:
+        vocab_info = zip(vocab, indices)
+        with open(path, "w") as vocab_file:
+            for (word, index) in vocab_info:
+                vocab_file.write("{0}\t{1}\n".format(word, index))
+    else:
+        with open(path, "w") as vocab_file:
+            for word in vocab:
+                vocab_file.write("{0}\n".format(word))
+
+
+def read_vocab_file(path):
+    with open(path, "r") as vocab_file:
+        vocab = vocab_file.readlines()
+    return vocab

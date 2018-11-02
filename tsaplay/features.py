@@ -1,146 +1,69 @@
 from os.path import join, exists
 from os import makedirs
-from csv import DictWriter
-from hashlib import md5
-import math
 import numpy as np
-import spacy
-import collections
-from shutil import rmtree
-from tqdm import tqdm
-import tensorflow as tf
-from tensorflow.train import BytesList, Feature, Features, Example, Int64List
-from tensorflow.python_io import TFRecordWriter
 
-from tsaplay.datasets import Dataset
-from tsaplay.utils.filters import default_token_filter
+from tsaplay.constants import FEATURES_DATA_PATH, DEFAULT_OOV_FN
+from tsaplay.utils.tf import (
+    index_lookup_table,
+    fetch_lookup_ops,
+    run_lookups,
+    make_tf_examples,
+    partitioner_num_shards,
+    embedding_initializer,
+)
 from tsaplay.utils.io import (
     pickle_file,
     unpickle_file,
-    export_run_metadata,
-    write_csv,
+    write_tfrecords,
+    write_vocab_file,
+    read_vocab_file,
 )
-from tsaplay.utils.decorators import timeit
 from tsaplay.utils.data import (
     merge_dicts,
-    class_dist_stats,
-    partition_sentences,
-    zero_norm_labels,
+    merge_corpi,
     split_list,
-    generate_corpus,
-)
-from tsaplay.constants import (
-    FEATURES_DATA_PATH,
-    SPACY_MODEL,
-    RANDOM_SEED,
-    DELIMITER,
-    DEFAULT_OOV_FN,
+    hash_data,
+    tokenize_data,
 )
 
 
 class FeatureProvider:
-    def __init__(
-        self,
-        datasets,
-        embedding,
-        oov=None,
-        max_shards=10,
-        oov_buckets=0,
-        data_root=None,
-    ):
-        np.random.seed(RANDOM_SEED)
-        self._data_root = data_root or FEATURES_DATA_PATH
-        self._embedding = embedding
-        self._datasets = (
-            datasets
-            if isinstance(datasets, collections.Iterable)
-            else [datasets]
-        )
-        embedding_name = self._embedding.name
-        datasets_name = "--".join([ds.name for ds in self._datasets])
-        self._name = "{0}--{1}".format(embedding_name, datasets_name)
-        self._gen_dir = join(self._data_root, embedding_name, datasets_name)
-        self._tfrecord_path = join(self._gen_dir, "_{mode}")
-        self._tfrecords_glob = join(self._tfrecord_path, "*.tfrecord")
-        train_dict_path = join(self._gen_dir, "_train_dict.pkl")
-        test_dict_path = join(self._gen_dir, "_test_dict.pkl")
-        train_corpus_path = join(self._gen_dir, "_train_corpus.pkl")
-        test_corpus_path = join(self._gen_dir, "_test_corpus.pkl")
-        vocab_file_path = join(self._gen_dir, "_vocab_file.txt")
-        if exists(self._gen_dir):
-            rmtree(self._gen_dir)
-        if not exists(self._gen_dir):
-            train_dicts = (ds.train_dict for ds in self._datasets)
-            self._train_dict = merge_dicts(*train_dicts)
-            pickle_file(path=train_dict_path, data=self._train_dict)
-            test_dicts = (ds.test_dict for ds in self._datasets)
-            self._test_dict = merge_dicts(*test_dicts)
-            pickle_file(path=test_dict_path, data=self._test_dict)
-            labels = self._train_dict["labels"] + self._test_dict["labels"]
-            self._class_labels = list(set(labels))
-            train_docs = set(self._train_dict["sentences"])
-            self._train_corpus = generate_corpus(train_docs)
-            pickle_file(path=train_corpus_path, data=self._train_corpus)
-            test_docs = set(self._test_dict["sentences"])
-            self._test_corpus = generate_corpus(test_docs)
-            pickle_file(path=test_corpus_path, data=self._test_corpus)
-            self._dist_stats = {
-                ds.name: class_dist_stats(
-                    ds.class_labels, train=ds.train_dict, test=ds.test_dict
-                )
-                for ds in self._datasets
-            }
-            train_vocab = set(word.lower() for word in [*self._train_corpus])
-            embedding_vocab = set(self._embedding.vocab)
-            in_vocab_words = embedding_vocab & train_vocab
-            oov_words = train_vocab - embedding_vocab
-            if oov:
-                oov = (
-                    DEFAULT_OOV_FN
-                    if not callable(oov) or oov == "default"
-                    else oov
-                )
-                self._embedding.vocab += list(oov_words)
-                embedding_dim = self._embedding.dim_size
-                embedding_vectors = self._embedding.vectors
-                oov_vectors = np.asarray(
-                    [oov(size=embedding_dim) for word in oov_words]
-                ).astype(np.float32)
-                self._embedding.vectors = np.concatenate(
-                    [embedding_vectors, oov_vectors]
-                )
-                vocab_lookup_info = [
-                    (word, self._embedding.vocab.index(word))
-                    for word in train_vocab
-                ]
-            else:
-                vocab_lookup_info = [
-                    (word, self._embedding.vocab.index(word))
-                    for word in in_vocab_words
-                ]
-            with open(vocab_file_path, "w") as vocab_file:
-                for (word, index) in vocab_lookup_info:
-                    vocab_file.write("{0}\t{1}\n".format(word, index))
-            lookup_table = self.index_lookup_table(
-                vocab_file_path, oov_buckets
-            )
-            tokenized_data = self.tokenize_data(
-                train=self._train_dict,
-                test=self._test_dict,
-                exclude=oov_words if not oov else None,
-                export_dir=self._gen_dir,
-            )
-            fetch_dict = self._make_fetch_dict(tokenized_data, lookup_table)
-            values = self._fetch_data(fetch_dict)
-            self._generate_tf_records(values)
+    def __init__(self, datasets, embedding, oov=None, oov_buckets=0):
+        self._name = None
+        self._uid = None
+        self._gen_dir = None
+        self._vocab = None
+        self._datasets = None
+        self._embedding = None
+        self._class_labels = None
+        self._train_dict = None
+        self._test_dict = None
+        self._train_corpus = None
+        self._test_corpus = None
+        self._train_tokens = None
+        self._test_tokens = None
+        self._train_tfrecords = None
+        self._test_tfrecords = None
 
-        for i in range(max_shards, 0, -1):
-            if self._embedding.vocab_size % i == 0:
-                self._embedding_shards = i
+        self._init_uid(datasets, embedding, oov, oov_buckets)
+        self._init_gen_dir(self.uid)
+        for mode in ["train", "test"]:
+            self._init_data_dict(mode, datasets)
+            self._init_corpus(mode, datasets)
+
+        temp_vocab_file_path = self._init_vocab(embedding, oov)
+
+        self._init_token_data()
+        self._init_tfrecords(temp_vocab_file_path, oov_buckets)
+        self._init_embedding_params(embedding, oov)
 
     @property
     def name(self):
         return self._name
+
+    @property
+    def uid(self):
+        return self._uid
 
     @property
     def datasets(self):
@@ -164,214 +87,148 @@ class FeatureProvider:
 
     @property
     def train_tfrecords(self):
-        return self._tfrecords_glob.format(mode="train")
+        return join(self.gen_dir, "_train", "*.tfrecord")
 
     @property
     def test_tfrecords(self):
-        return self._tfrecords_glob.format(mode="test")
+        return join(self.gen_dir, "_test", "*.tfrecord")
 
     @property
     def embedding_params(self):
-        return {
-            "_vocab_size": self._embedding.vocab_size,
-            "_vocab_file": self._embedding.vocab_file_path,
-            "_embedding_dim": self._embedding.dim_size,
-            "_embedding_init": self.embedding_initializer,
-            "_embedding_num_shards": self._embedding_shards,
-        }
+        self._embedding_params
 
-    def embedding_initializer(self, structure=None):
-        embedding = self._embedding
-        shape = (embedding.vocab_size, embedding.dim_size)
-        partition_size = int(embedding.vocab_size / self._embedding_shards)
+    def _init_uid(self, datasets, embedding, oov, oov_buckets):
+        try:
+            datasets_uids = [dataset.uid for dataset in datasets]
+        except TypeError:
+            datasets_uids = [dataset.uid for dataset in [datasets]]
+        oov_policy = [oov, oov_buckets]
+        uid_data = [embedding.uid] + datasets_uids + oov_policy
+        self._uid = hash_data(uid_data)
 
-        def _init_var(shape=shape, dtype=tf.float32, partition_info=None):
-            return embedding.vectors
+    def _init_gen_dir(self, uid):
+        data_root = FEATURES_DATA_PATH
+        gen_dir = join(data_root, uid)
+        if not exists(gen_dir):
+            makedirs(gen_dir)
+        self._gen_dir = gen_dir
 
-        def _init_part_var(shape=shape, dtype=tf.float32, partition_info=None):
-            part_offset = partition_info.single_offset(shape)
-            this_slice = part_offset + partition_size
-            return embedding.vectors[part_offset:this_slice]
-
-        def _init_const():
-            return embedding.vectors
-
-        _init_fn = {
-            "partitioned": _init_part_var,
-            "constant": _init_const,
-            "variable": _init_var,
-        }.get(structure, _init_var)
-
-        return _init_fn
-
-    @classmethod
-    def index_lookup_table(cls, vocab_file, oov_buckets=0):
-        return tf.contrib.lookup.index_table_from_file(
-            vocabulary_file=vocab_file,
-            key_column_index=0,
-            value_column_index=1,
-            num_oov_buckets=oov_buckets,
-            delimiter="\t",
-        )
-
-    @classmethod
-    def tokenize_data(cls, exclude=None, export_dir=None, **data_dicts):
-        exclude = set([word.lower() for word in exclude] if exclude else [])
-        token_jobs = [
-            sum(
-                partition_sentences(
-                    data_dict["sentences"], data_dict["targets"]
-                ),
-                [],
-            )
-            for data_dict in data_dicts.values()
-        ]
-        job_counts = [len(token_job) for token_job in token_jobs]
-        token_jobs_joined = sum(token_jobs, [])
-        nlp = spacy.load(SPACY_MODEL, disable=["parser", "ner"])
-        token_generator = nlp.pipe(
-            token_jobs_joined, batch_size=100, n_threads=-1
-        )
-        encoded_tokens = [
-            DELIMITER.join(
-                [
-                    token.text.lower()
-                    for token in list(filter(default_token_filter, doc))
-                    if token.text.lower() not in exclude
-                ]
-            ).encode()
-            for doc in tqdm(token_generator, total=len(token_jobs_joined))
-        ]
-        tokens_dict = {
-            key: tokens
-            for key, tokens in zip(
-                [*data_dicts], split_list(encoded_tokens, counts=job_counts)
-            )
-        }
-        if export_dir:
-            csv_file_name = "_{}_tokens.csv"
-            for mode, tokens_list in tokens_dict.items():
-                csv_file_path = join(export_dir, csv_file_name.format(mode))
-                decoded_tokens = [
-                    [
-                        str(enc_token, "utf-8").replace(DELIMITER, " ")
-                        for enc_token in enc_tokens
-                    ]
-                    for enc_tokens in split_list(tokens_list, parts=3)
-                ]
-                csv_data_dict = {
-                    key: decoded_token
-                    for key, decoded_token in zip(
-                        ["Left", "Target", "Right"], decoded_tokens
-                    )
-                }
-                write_csv(csv_file_path, csv_data_dict)
-
-        return tokens_dict
-
-    def _make_fetch_dict(self, tokenized_data_dict, lookup_table):
-        fetch_dict = {}
-        for (key, value) in tokenized_data_dict.items():
-            sp_tensors = [
-                tf.string_split(
-                    tf.constant([tokens_list], dtype=tf.string), DELIMITER
+    def _init_data_dict(self, mode, datasets):
+        data_dict_attr = "_{mode}_dict".format(mode=mode)
+        data_dict_file = "_{mode}_dict.pkl".format(mode=mode)
+        data_dict_path = join(self._gen_dir, data_dict_file)
+        if exists(data_dict_path):
+            data_dict = unpickle_file(data_dict_path)
+        else:
+            try:
+                data_dicts = (
+                    getattr(dataset, data_dict_attr) for dataset in datasets
                 )
-                for tokens_list in tqdm(value)
-            ]
-            string_ops = [
-                tf.sparse_tensor_to_dense(sp_tensor, default_value=b"")
-                for sp_tensor in sp_tensors
-            ]
-            id_ops = [
-                tf.sparse_tensor_to_dense(lookup_table.lookup(sp_tensor))
-                for sp_tensor in sp_tensors
-            ]
-            fetch_dict[key] = string_ops + id_ops
-        return fetch_dict
+                data_dict = merge_dicts(*data_dicts)
+            except TypeError:
+                data_dict = getattr(datasets, data_dict_attr)
+        class_labels = self._class_labels or []
+        class_labels = set(class_labels + data_dict["labels"])
+        self._class_labels = list(class_labels)
+        setattr(self, data_dict_attr, data_dict)
 
-    def _fetch_data(self, fetch_dict, write_metadata=False):
-        run_opts = (
-            tf.RunOptions(
-                trace_level=tf.RunOptions.FULL_TRACE  # pylint: disable=E1101
-            )
-            if write_metadata
-            else None
-        )
-        run_metadata = tf.RunMetadata()
-        if tf.executing_eagerly():
-            raise ValueError("Eager execution is not supported.")
-        with tf.Session() as sess:
-            sess.run(tf.tables_initializer())
-            values_dict = sess.run(
-                fetch_dict, options=run_opts, run_metadata=run_metadata
-            )
-        if write_metadata:
-            metadata_path = join(self._data_root, "_meta")
-            makedirs(metadata_path, exist_ok=True)
-            export_run_metadata(run_metadata, path=metadata_path)
-        values_lists = {}
-        for (key, values) in values_dict.items():
-            values_lists[key] = [value.tolist()[0] for value in values]
-        return values_lists
+    def _init_corpus(self, mode, datasets):
+        corpus_attr = "_{mode}_corpus".format(mode=mode)
+        corpus_file = "_{mode}_corpus.pkl".format(mode=mode)
+        corpus_path = join(self._gen_dir, corpus_file)
+        if exists(corpus_path):
+            corpus = unpickle_file(corpus_path)
+        else:
+            try:
+                corpi = (getattr(dataset, corpus_attr) for dataset in datasets)
+                corpus = merge_corpi(*corpi)
+            except TypeError:
+                corpus = getattr(datasets, corpus_attr)
+        setattr(self, corpus_attr, corpus)
 
-    def _generate_tf_records(self, values_dict):
-        for (mode, values) in values_dict.items():
-            data_dict = "_{mode}_dict".format(mode=mode)
-            labels = self.__getattribute__(data_dict)["labels"]
-            string_features, int_features = split_list(values, parts=2)
-            int_features += [[label] for label in zero_norm_labels(labels)]
-            string_features = [
-                Feature(bytes_list=BytesList(value=val))
-                for val in string_features
-            ]
-            int_features = [
-                Feature(int64_list=Int64List(value=val))
-                for val in int_features
-            ]
-            all_features = string_features + int_features
-            features_list = [
-                Features(
-                    feature={
-                        "left": left,
-                        "target": target,
-                        "right": right,
-                        "left_ids": left_ids,
-                        "target_ids": target_ids,
-                        "right_ids": right_ids,
-                        "labels": label,
-                    }
+    def _init_vocab(self, embedding, oov):
+        vocab_file = "_vocab{ext}"
+        vocab_path = join(self._gen_dir, vocab_file.format(ext=".txt"))
+        self._vocab_file = vocab_path
+        if exists(self._vocab_file):
+            self._vocab = read_vocab_file(vocab_path)
+        else:
+            self._vocab = embedding.vocab
+            train_vocab = map(str.lower, [*self._train_corpus])
+            if oov:
+                oov_vocab = set(train_vocab) - set(self._vocab)
+                self._vocab += list(oov_vocab)
+            write_vocab_file(vocab_path, self._vocab)
+            vocab_tsv = join(self._gen_dir, vocab_file.format(ext=".tsv"))
+            write_vocab_file(vocab_tsv, self._vocab)
+        temp_vocab_file = vocab_path.format(ext=".filt.txt")
+        if not exists(temp_vocab_file):
+            temp_vocab = list(set(train_vocab) + set(self._vocab))
+            indices = [self._vocab.index(word) for word in temp_vocab]
+            write_vocab_file(temp_vocab_file, temp_vocab, indices=indices)
+        return temp_vocab_file
+
+    def _init_token_data(self):
+        to_tokenize = {}
+        for mode in ["train", "test"]:
+            token_data_attr = "_{mode}_tokens".format(mode=mode)
+            token_data_file = "_{mode}_tokens.pkl".format(mode=mode)
+            token_data_path = join(self._gen_dir, token_data_file)
+            if exists(token_data_path):
+                token_data = unpickle_file(token_data_path)
+                setattr(self, token_data_attr, token_data)
+            else:
+                data_dict_attr = "_{mode}_dict".format(mode=mode)
+                data_dict = getattr(self, data_dict_attr)
+                to_tokenize[mode] = data_dict
+        if to_tokenize:
+            tokens_dict = tokenize_data(include=self._vocab, **to_tokenize)
+            for mode, token_data in tokens_dict.items():
+                token_data_attr = "_{mode}_tokens".format(mode=mode)
+                token_data_file = "_{mode}_tokens.pkl".format(mode=mode)
+                token_data_path = join(self._gen_dir, token_data_file)
+                pickle_file(path=token_data_path, data=token_data)
+                setattr(self, token_data_attr, token_data)
+
+    def _init_tfrecords(self, vocab_file, oov_buckets):
+        fetches = {}
+        lookup_table = index_lookup_table(vocab_file, oov_buckets)
+        for mode in ["train", "test"]:
+            tfrecord_folder = "_{mode}".format(mode=mode)
+            tfrecord_path = join(self._gen_dir, tfrecord_folder)
+            if not exists(tfrecord_path):
+                tokens_attr = "_{mode}_tokens"
+                tokens_dict = getattr(self, tokens_attr)
+                tokens_lists = [value for value in tokens_dict.values()]
+                tokens_lists = sum(tokens_lists, [])
+                fetches[mode] = fetch_lookup_ops(tokens_lists, lookup_table)
+        if fetches:
+            fetch_results = run_lookups(vocab_file, metadata_path=self.gen_dir)
+            for mode, values in fetch_results.items():
+                data_dict_attr = "_{mode}_dict".format(mode=mode)
+                data_dict = getattr(self, data_dict_attr)
+                string_features, int_features = split_list(values, parts=2)
+                tfexamples = make_tf_examples(
+                    string_features, int_features, data_dict["labels"]
                 )
-                for (
-                    left,
-                    target,
-                    right,
-                    left_ids,
-                    target_ids,
-                    right_ids,
-                    label,
-                ) in zip(*split_list(all_features, parts=7))
-            ]
-            tf_examples = [
-                Example(features=features).SerializeToString()
-                for features in features_list
-            ]
-            self._write_tf_record_files(mode, tf_examples)
+                tfrecord_folder = "_{mode}".format(mode=mode)
+                tfrecord_path = join(self._gen_dir, tfrecord_folder)
+                write_tfrecords(tfrecord_path, tfexamples)
 
-    def _write_tf_record_files(self, mode, tf_examples):
-        np.random.shuffle(tf_examples)
-        num_per_shard = int(math.ceil(len(tf_examples) / float(10)))
-        total_shards = int(math.ceil(len(tf_examples) / float(num_per_shard)))
-        folder_path = self._tfrecord_path.format(mode=mode)
-        makedirs(folder_path, exist_ok=True)
-        for shard_no in range(total_shards):
-            start = shard_no * num_per_shard
-            end = min((shard_no + 1) * num_per_shard, len(tf_examples))
-            file_name = "{0}_of_{1}.tfrecord".format(
-                shard_no + 1, total_shards
-            )
-            file_path = join(folder_path, file_name)
-            with TFRecordWriter(file_path) as tf_writer:
-                for serialized_example in tf_examples[start:end]:
-                    tf_writer.write(serialized_example)
-            if end == len(tf_examples):
-                break
+    def _init_embedding_params(self, embedding, oov):
+        vocab_size = len(self._vocab)
+        num_shards = partitioner_num_shards(vocab_size)
+        dim_size = embedding.dim_size
+        num_oov_words = vocab_size - embedding.vocab_size
+        oov = oov or DEFAULT_OOV_FN
+        embedding_vectors = embedding.vectors
+        oov_vectors = oov(size=(num_oov_words, dim_size))
+        vectors = np.concatenate([embedding_vectors, oov_vectors], axis=0)
+        init_fn = embedding_initializer(vectors, num_shards)
+        self._embedding_params = {
+            "_vocab_size": vocab_size,
+            "_vocab_file": self._vocab_file,
+            "_embedding_dim": dim_size,
+            "_embedding_init": init_fn,
+            "_embedding_num_shards": num_shards,
+        }
