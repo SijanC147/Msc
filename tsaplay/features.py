@@ -82,10 +82,6 @@ class FeatureProvider:
         return self._class_labels
 
     @property
-    def dist_stats(self):
-        return self._dist_stats
-
-    @property
     def train_tfrecords(self):
         return join(self.gen_dir, "_train", "*.tfrecord")
 
@@ -95,7 +91,7 @@ class FeatureProvider:
 
     @property
     def embedding_params(self):
-        self._embedding_params
+        return self._embedding_params
 
     def _init_uid(self, datasets, embedding, oov, oov_buckets):
         try:

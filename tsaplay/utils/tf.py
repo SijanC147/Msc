@@ -91,12 +91,12 @@ def masked_softmax(logits, mask):
     :param mask: (N, L)
     :return: probabilities (N, L, T)
     """
-    v = tf.shape(logits)[2]
+    seq_len = tf.shape(logits)[2]
     indices = tf.cast(tf.where(tf.logical_not(mask)), tf.int32)
     inf = tf.constant(
         np.array([[tf.float32.max]], dtype=np.float32), dtype=tf.float32
     )
-    infs = tf.tile(inf, [tf.shape(indices)[0], v])
+    infs = tf.tile(inf, [tf.shape(indices)[0], seq_len])
     infmask = tf.scatter_nd(
         indices=indices, updates=infs, shape=tf.shape(logits)
     )

@@ -1,7 +1,5 @@
-from os import makedirs
 from os.path import join, exists
 from tsaplay.utils.data import (
-    resample_data_dict,
     class_dist_info,
     class_dist_stats,
     generate_corpus,
@@ -12,7 +10,6 @@ from tsaplay.utils.io import (
     dump_json,
     list_folders,
 )
-from tsaplay.utils.decorators import timeit
 from tsaplay.constants import DATASET_DATA_PATH
 
 

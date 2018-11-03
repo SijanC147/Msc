@@ -13,11 +13,11 @@ from shutil import rmtree
 from io import BytesIO
 from termcolor import colored
 from PIL import Image
-import docker
 import numpy as np
 from tensorflow.python.client.timeline import Timeline  # pylint: disable=E0611
 from tensorflow.python_io import TFRecordWriter
 from tsaplay.constants import RANDOM_SEED, TF_RECORD_SHARDS
+import docker
 
 
 def color(key):
