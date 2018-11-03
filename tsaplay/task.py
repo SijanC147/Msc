@@ -1,49 +1,19 @@
 import argparse
 from sys import argv
-from os import environ, getcwd, execvpe
+from os import environ, execvpe
 from warnings import warn
 import comet_ml
 import tensorflow as tf
 import pkg_resources as pkg
-from tsaplay.utils.io import cprnt
-from tsaplay.utils.decorators import timeit
+from tsaplay.utils.debug import timeit
 import tsaplay.utils.filters as available_filters
+from tsaplay.utils.io import list_folders
 from tsaplay.datasets import Dataset
 from tsaplay.embeddings import Embedding
 from tsaplay.features import FeatureProvider
 from tsaplay.experiments import Experiment
 import tsaplay.models as tsa_models
-from tsaplay.embeddings import (
-    FASTTEXT_WIKI_300,
-    GLOVE_TWITTER_25,
-    GLOVE_TWITTER_50,
-    GLOVE_TWITTER_100,
-    GLOVE_TWITTER_200,
-    GLOVE_WIKI_GIGA_50,
-    GLOVE_WIKI_GIGA_100,
-    GLOVE_WIKI_GIGA_200,
-    GLOVE_WIKI_GIGA_300,
-    GLOVE_COMMON42_300,
-    GLOVE_COMMON840_300,
-    W2V_GOOGLE_300,
-    W2V_RUS_300,
-)
-
-EMBEDDINGS = {
-    "fasttext": FASTTEXT_WIKI_300,
-    "twitter-25": GLOVE_TWITTER_25,
-    "twitter-50": GLOVE_TWITTER_50,
-    "twitter-100": GLOVE_TWITTER_100,
-    "twitter-200": GLOVE_TWITTER_200,
-    "wiki-50": GLOVE_WIKI_GIGA_50,
-    "wiki-100": GLOVE_WIKI_GIGA_100,
-    "wiki-200": GLOVE_WIKI_GIGA_200,
-    "wiki-300": GLOVE_WIKI_GIGA_300,
-    "commoncrawl-42": GLOVE_COMMON42_300,
-    "commoncrawl-840": GLOVE_COMMON840_300,
-    "w2v-google-300": W2V_GOOGLE_300,
-    "w2v-rus-300": W2V_RUS_300,
-}
+from tsaplay.constants import EMBEDDING_SHORTHANDS, DATASET_DATA_PATH
 
 MODELS = {
     "lstm": tsa_models.Lstm,
@@ -68,7 +38,7 @@ def argument_parser():
         "--embedding",
         "-em",
         type=str,
-        choices=[*EMBEDDINGS],
+        choices=[*EMBEDDING_SHORTHANDS],
         help="Pre-trained embedding to use.",
         default="wiki-50",
     )
@@ -97,7 +67,7 @@ def argument_parser():
         "--datasets",
         "-ds",
         type=str,
-        choices=Dataset.list_installed_datasets(),
+        choices=list_folders(DATASET_DATA_PATH),
         help="One or more datasets to use for training and evaluation.",
         default=["dong"],
         nargs="+",
@@ -212,11 +182,8 @@ def get_feature_provider(args):
     else:
         emb_filters_resolved = None
 
-    max_shards = args.max_shards or 10
     embedding = Embedding(
-        EMBEDDINGS.get(args.embedding),
-        filters=emb_filters_resolved,
-        max_shards=max_shards,
+        EMBEDDING_SHORTHANDS.get(args.embedding), filters=emb_filters_resolved
     )
 
     return FeatureProvider(datasets, embedding)

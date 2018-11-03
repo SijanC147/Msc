@@ -4,10 +4,9 @@ import inspect
 from shutil import rmtree
 from os import makedirs
 from os.path import join, exists, normpath, basename
-from tsaplay.utils.io import pickle_file, search_dir, cprnt
-from tsaplay.utils.decorators import wrap_parsing_fn
+from tsaplay.utils.io import pickle_file, search_dir
+from tsaplay.utils.data import wrap_parsing_fn
 from tsaplay.constants import DATASET_DATA_PATH
-from tsaplay.datasets import Dataset
 
 IMPORTER_MODULE_NAME = "tsaplay_dataset_importer"
 
@@ -103,13 +102,10 @@ def generate_dataset_files(args):
     parsing_fn = get_parsing_fn(args.path, args.parser_name)
     ftrain, ftest = get_raw_file_paths(args.path)
     train_dict, test_dict = get_dataset_dicts(ftrain, ftest, parsing_fn)
-    all_docs = set(train_dict["sentences"] + test_dict["sentences"])
     target_path = join(DATASET_DATA_PATH, dataset_name)
     if exists(target_path):
         rmtree(target_path)
     makedirs(target_path)
-    # Dataset.write_stats_json(target_path, train=train_dict, test=test_dict)
-    # Dataset.write_corpus_file(all_docs, target_path)
     pickle_file(join(target_path, "_train.pkl"), train_dict)
     pickle_file(join(target_path, "_test.pkl"), test_dict)
 

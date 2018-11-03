@@ -1,53 +1,21 @@
 import sys
-import pprint
 import json
 import pickle
 import math
 from csv import DictWriter
 from zipfile import ZipFile, ZIP_DEFLATED
 from datetime import datetime, timedelta
-from os import listdir, system, makedirs, environ
+from os import listdir, system, makedirs
 from os.path import isfile, join, dirname, basename, normpath
 from tempfile import mkdtemp
 from shutil import rmtree
 from io import BytesIO
-from termcolor import colored
 from PIL import Image
 import numpy as np
 from tensorflow.python.client.timeline import Timeline  # pylint: disable=E0611
 from tensorflow.python_io import TFRecordWriter
 from tsaplay.constants import RANDOM_SEED, TF_RECORD_SHARDS
 import docker
-
-
-def color(key):
-    return {
-        "r": "red",
-        "g": "green",
-        "y": "yellow",
-        "b": "blue",
-        "m": "magenta",
-        "c": "cyan",
-        "w": "white",
-    }.get(key, "grey")
-
-
-def cprnt(*args, **kwargs):
-    output = ""
-    indent = " " * int(environ.get("timeit_indent", 0))
-    for arg in args:
-        kwargs.update({"row": arg})
-    for (color_key, string) in kwargs.items():
-        if not isinstance(string, str):
-            string = pprint.pformat(string)
-        col = "".join(filter(str.isalpha, color_key))
-        index = col.find("o")
-        if index != -1:
-            txt, _, frgnd = col.partition("o")
-            output += colored(string, color(txt), "on_" + color(frgnd)) + " "
-        else:
-            output += colored(string, color(col)) + " "
-    print(indent + output)
 
 
 def platform():
@@ -160,26 +128,6 @@ def get_image_from_plt(plt):
         image_bytes = output.getvalue()
 
     return Image.open(BytesIO(image_bytes))
-
-
-def comet_pretty_log(comet, data_dict, prefix=None, hparams=False):
-    for key, value in data_dict.items():
-        if hparams and key[0] == "_" and prefix is None:
-            prefix = "autoparam"
-        log_as_param = hparams and key[0] != "_"
-        key = key.replace("-", "_")
-        key = key.split("_")
-        key = " ".join(map(str.capitalize, key)).strip()
-        if prefix:
-            key = prefix.upper() + ": " + key
-        try:
-            json.dumps(value)
-        except TypeError:
-            value = str(value)
-        if log_as_param:
-            comet.log_parameter(key, value)
-        else:
-            comet.log_other(key, value)
 
 
 def list_folders(path):

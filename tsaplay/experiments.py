@@ -3,11 +3,7 @@ from os.path import join, isfile, exists
 from shutil import rmtree
 import comet_ml
 import tensorflow as tf
-from tsaplay.utils.io import (
-    start_tensorboard,
-    restart_tf_serve_container,
-    cprnt,
-)
+from tsaplay.utils.io import start_tensorboard, restart_tf_serve_container
 from tsaplay.constants import (
     EXPERIMENT_DATA_PATH,
     EXPORTS_DATA_PATH,

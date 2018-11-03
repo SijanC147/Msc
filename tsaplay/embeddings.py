@@ -1,11 +1,13 @@
-from os import makedirs
 from os.path import join, exists
 import numpy as np
 import gensim.downloader as gensim_data
 from gensim.models import KeyedVectors
-from tsaplay.constants import EMBEDDING_DATA_PATH, PAD_TOKEN
-from tsaplay.utils.decorators import timeit
-from tsaplay.utils.io import cprnt, list_folders
+from tsaplay.constants import (
+    EMBEDDING_DATA_PATH,
+    PAD_TOKEN,
+    EMBEDDING_SHORTHANDS,
+)
+from tsaplay.utils.io import list_folders
 from tsaplay.utils.data import hash_data
 
 
@@ -16,6 +18,7 @@ class Embedding:
         self._gen_dir = None
         self._gensim_model = None
         self._vocab = None
+        self._vocab_size = None
         self._dim_size = None
         self._vectors = None
 
@@ -43,6 +46,10 @@ class Embedding:
         return self._vocab
 
     @property
+    def vocab_size(self):
+        return self._vocab_size
+
+    @property
     def dim_size(self):
         return self._dim_size
 
@@ -51,12 +58,16 @@ class Embedding:
         return self._vectors
 
     def _init_gen_dir(self, name):
+        name = EMBEDDING_SHORTHANDS.get(name, name)
         data_root = EMBEDDING_DATA_PATH
         gen_dir = join(data_root, name)
         gensim_models = gensim_data.info(name_only=True)["models"]
         if not exists(gen_dir) and name not in gensim_models:
             offline_models = list_folders(data_root)
-            available_embeddings = set(offline_models + gensim_models)
+            shorthand_names = [*EMBEDDING_SHORTHANDS]
+            available_embeddings = set(
+                offline_models + gensim_models + shorthand_names
+            )
             raise ValueError(
                 """Expected Embedding name to be one of {0},\
                 got {1}.""".format(
@@ -76,5 +87,6 @@ class Embedding:
             self._gensim_model.save(gensim_model_path)
         self._dim_size = self._gensim_model.vector_size
         self._vocab = [PAD_TOKEN] + self._gensim_model.index2word
+        self._vocab_size = len(self._vocab)
         pad_value = [np.zeros(shape=self._dim_size).astype(np.float32)]
         self._vectors = np.concatenate([pad_value, self._gensim_model.vectors])

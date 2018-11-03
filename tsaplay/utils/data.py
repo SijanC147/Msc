@@ -3,96 +3,40 @@ from itertools import chain, groupby
 from operator import itemgetter
 from inspect import getsource
 from hashlib import md5
-from functools import partial
+from functools import partial, wraps
 import numpy as np
-import tensorflow as tf
 import spacy
 from spacy.attrs import ORTH  # pylint: disable=E0611
 from tqdm import tqdm
 from tsaplay.constants import RANDOM_SEED, SPACY_MODEL
 from tsaplay.utils.filters import default_token_filter
-from tsaplay.utils.tf import sparse_sequences_to_dense, get_seq_lengths
-from tsaplay.utils.io import cprnt
 
 
-def parse_tf_example(example):
-    feature_spec = {
-        "left": tf.VarLenFeature(dtype=tf.string),
-        "target": tf.VarLenFeature(dtype=tf.string),
-        "right": tf.VarLenFeature(dtype=tf.string),
-        "left_ids": tf.VarLenFeature(dtype=tf.int64),
-        "target_ids": tf.VarLenFeature(dtype=tf.int64),
-        "right_ids": tf.VarLenFeature(dtype=tf.int64),
-        "labels": tf.FixedLenFeature(dtype=tf.int64, shape=[]),
-    }
-    parsed_example = tf.parse_example([example], features=feature_spec)
+def wrap_parsing_fn(parsing_fn):
+    @wraps(parsing_fn)
+    def wrapper(path):
+        try:
+            sentences, targets, offsets, labels = parsing_fn(path)
+            return {
+                "sentences": sentences,
+                "targets": targets,
+                "offsets": offsets,
+                "labels": labels,
+            }
+        except ValueError:
+            sentences, targets, labels = parsing_fn(path)
+            offsets = [
+                sentence.lower().find(target.lower())
+                for sentence, target in zip(sentences, targets)
+            ]
+            return {
+                "sentences": sentences,
+                "targets": targets,
+                "offsets": offsets,
+                "labels": labels,
+            }
 
-    features = {
-        "left": parsed_example["left"],
-        "target": parsed_example["target"],
-        "right": parsed_example["right"],
-        "left_ids": parsed_example["left_ids"],
-        "target_ids": parsed_example["target_ids"],
-        "right_ids": parsed_example["right_ids"],
-    }
-    labels = tf.squeeze(parsed_example["labels"], axis=0)
-
-    return (features, labels)
-
-
-def make_dense_features(features):
-    dense_features = {}
-    for key in features:
-        if "_ids" in key:
-            name, _, _ = key.partition("_")
-            if features.get(name):
-                dense_features.update(
-                    {name: sparse_sequences_to_dense(features[name])}
-                )
-            name_ids = sparse_sequences_to_dense(features[key])
-            name_lens = get_seq_lengths(name_ids)
-            dense_features.update(
-                {name + "_ids": name_ids, name + "_len": name_lens}
-            )
-    features.update(dense_features)
-    return features
-
-
-def prep_dataset(tfrecords, params, processing_fn, mode):
-    shuffle_buffer = params.get("shuffle-buffer", 30)
-    parallel_calls = params.get("parallel_calls", 4)
-    parallel_batches = params.get("parallel_batches", parallel_calls)
-    prefetch_buffer = params.get("prefetch_buffer", 100)
-    dataset = tf.data.Dataset.list_files(file_pattern=tfrecords)
-    dataset = dataset.apply(
-        tf.contrib.data.parallel_interleave(
-            tf.data.TFRecordDataset,
-            cycle_length=3,
-            buffer_output_elements=prefetch_buffer,
-            prefetch_input_elements=parallel_calls,
-        )
-    )
-    if mode == "EVAL":
-        dataset = dataset.shuffle(buffer_size=shuffle_buffer)
-    elif mode == "TRAIN":
-        dataset = dataset.apply(
-            tf.contrib.data.shuffle_and_repeat(buffer_size=shuffle_buffer)
-        )
-
-    dataset = dataset.apply(
-        tf.contrib.data.map_and_batch(
-            lambda example: processing_fn(*parse_tf_example(example)),
-            params["batch-size"],
-            num_parallel_batches=parallel_batches,
-        )
-    )
-    dataset = dataset.map(
-        lambda features, labels: (make_dense_features(features), labels),
-        num_parallel_calls=parallel_calls,
-    )
-    dataset = dataset.cache()
-
-    return dataset
+    return wrapper
 
 
 def class_dist_info(labels, all_classes=None):
@@ -302,7 +246,11 @@ def tokenize_data(include=None, **data_dicts):
     include = set(map(str.lower, include)) if include else False
     docs = [
         sum(
-            partition_sentences(data_dict["sentences"], data_dict["targets"]),
+            partition_sentences(
+                data_dict["sentences"],
+                data_dict["targets"],
+                data_dict.get("offsets"),
+            ),
             [],
         )
         for data_dict in data_dicts.values()
@@ -331,3 +279,4 @@ def tokenize_data(include=None, **data_dicts):
         }
         for key, all_tokens in all_tokens_zipped
     }
+

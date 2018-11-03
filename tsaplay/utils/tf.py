@@ -1,28 +1,211 @@
 import io
+from warnings import warn
+from functools import wraps
 import numpy as np
 import tensorflow as tf
 from tensorflow.estimator import ModeKeys  # pylint: disable=E0401
 from tensorflow.train import BytesList, Feature, Features, Example, Int64List
 from tsaplay.constants import DELIMITER, MAX_EMBEDDING_SHARDS
-from tsaplay.utils.io import cprnt, export_run_metadata
+from tsaplay.utils.io import export_run_metadata
 from tsaplay.utils.data import zero_norm_labels, split_list
 
 
-def tf_class_distribution(labels):
-    with tf.name_scope("debug_distribution_monitor"):
-        ones = tf.ones_like(labels)
-        zeros = tf.zeros_like(labels)
+def embed_sequences(model_fn):
+    @wraps(model_fn)
+    def wrapper(self, features, labels, mode, params):
+        embedding_init = self.aux_config.get("embedding_init", "partitioned")
+        embedding_op = self.aux_config.get("embedding_op", "embed_lookup")
+        if embedding_init == "partitioned" and embedding_op == "embed_seq":
+            warn(
+                """Cannot use embed_seq op with partitioned embedding \
+                    since it uses 'mod' partitioned strategy, \
+                    using tf.nn.embedding_lookup \
+                    with 'div' partition strategy instead."""
+            )
+            embedding_op = "embed_lookup"
+        embedding_init_fn = params["_embedding_init"](embedding_init)
+        num_shards = params["_embedding_num_shards"]
+        vocab_size = params["_vocab_size"]
+        dim_size = params["_embedding_dim"]
+        embedding_partitioner = (
+            tf.fixed_size_partitioner(num_shards)
+            if embedding_init == "partitioned"
+            else None
+        )
+        embedding_initializer = (
+            embedding_init_fn if embedding_init != "constant" else None
+        )
+        trainable = params.get("train_embeddings", True)
+        with tf.variable_scope("embedding_layer", reuse=tf.AUTO_REUSE):
+            embeddings = tf.get_variable(
+                "embeddings",
+                shape=[vocab_size, dim_size],
+                initializer=embedding_initializer,
+                partitioner=embedding_partitioner,
+                trainable=trainable,
+                dtype=tf.float32,
+            )
+        embedded_sequences = {}
+        for key, value in features.items():
+            if "_ids" in key:
+                component = key.replace("_ids", "")
+                embdd_key = component + "_emb"
+                embedded_sequence = (
+                    tf.contrib.layers.embed_sequence(
+                        ids=value,
+                        initializer=embeddings,
+                        scope="embedding_layer",
+                        reuse=True,
+                    )
+                    if embedding_op == "embed_seq"
+                    else tf.nn.embedding_lookup(
+                        params=embeddings, ids=value, partition_strategy="div"
+                    )
+                )
+                embedded_sequences[embdd_key] = embedded_sequence
+        features.update(embedded_sequences)
+        spec = model_fn(self, features, labels, mode, params)
+        if embedding_init == "constant":
 
-        negative = tf.reduce_sum(tf.where(tf.equal(labels, 0), ones, zeros))
-        neutral = tf.reduce_sum(tf.where(tf.equal(labels, 1), ones, zeros))
-        positive = tf.reduce_sum(tf.where(tf.equal(labels, 2), ones, zeros))
+            def init_embeddings(sess):
+                sess.run(
+                    embeddings.initializer,
+                    {embeddings.initial_value: embedding_init_fn()},
+                )
 
-        distribution = tf.stack([negative, neutral, positive])
-        totals = tf.reduce_sum(ones) * tf.ones_like(distribution)
+            spec = scaffold_init_fn_on_spec(spec, init_embeddings)
 
-        percentages = tf.divide(distribution, totals) * 100
+        return spec
 
-    return tf.cast(percentages, tf.int32)
+    return wrapper
+
+
+def sharded_saver(model_fn):
+    @wraps(model_fn)
+    def wrapper(self, features, labels, mode, params):
+        spec = model_fn(self, features, labels, mode, params)
+        scaffold = spec.scaffold or tf.train.Scaffold()
+        scaffold._saver = tf.train.Saver(  # pylint: disable=W0212
+            sharded=True,
+            max_to_keep=self.run_config.keep_checkpoint_max,
+            keep_checkpoint_every_n_hours=self.run_config.keep_checkpoint_every_n_hours,
+        )
+        spec = spec._replace(scaffold=scaffold)
+
+        return spec
+
+    return wrapper
+
+
+def parse_tf_example(example):
+    feature_spec = {
+        "left": tf.VarLenFeature(dtype=tf.string),
+        "target": tf.VarLenFeature(dtype=tf.string),
+        "right": tf.VarLenFeature(dtype=tf.string),
+        "left_ids": tf.VarLenFeature(dtype=tf.int64),
+        "target_ids": tf.VarLenFeature(dtype=tf.int64),
+        "right_ids": tf.VarLenFeature(dtype=tf.int64),
+        "labels": tf.FixedLenFeature(dtype=tf.int64, shape=[]),
+    }
+    parsed_example = tf.parse_example([example], features=feature_spec)
+
+    features = {
+        "left": parsed_example["left"],
+        "target": parsed_example["target"],
+        "right": parsed_example["right"],
+        "left_ids": parsed_example["left_ids"],
+        "target_ids": parsed_example["target_ids"],
+        "right_ids": parsed_example["right_ids"],
+    }
+    labels = tf.squeeze(parsed_example["labels"], axis=0)
+
+    return (features, labels)
+
+
+def make_dense_features(features):
+    dense_features = {}
+    for key in features:
+        if "_ids" in key:
+            name, _, _ = key.partition("_")
+            if features.get(name):
+                dense_features.update(
+                    {name: sparse_sequences_to_dense(features[name])}
+                )
+            name_ids = sparse_sequences_to_dense(features[key])
+            name_lens = get_seq_lengths(name_ids)
+            dense_features.update(
+                {name + "_ids": name_ids, name + "_len": name_lens}
+            )
+    features.update(dense_features)
+    return features
+
+
+def make_input_fn(mode):
+    def decorator(func):
+        @wraps(func)
+        def input_fn(*args, **kwargs):
+            if mode in ["TRAIN", "EVAL"]:
+                try:
+                    tfrecords = args[1]
+                except IndexError:
+                    tfrecords = kwargs.get("tfrecords")
+                try:
+                    params = args[2]
+                except IndexError:
+                    params = kwargs.get("params")
+
+                def process_dataset(features, labels):
+                    return (args[0].processing_fn(features), labels)
+
+                return prep_dataset(
+                    tfrecords=tfrecords,
+                    params=params,
+                    processing_fn=process_dataset,
+                    mode=mode,
+                )
+
+            raise ValueError("Invalid mode: {0}".format(mode))
+
+        return input_fn
+
+    return decorator
+
+
+def prep_dataset(tfrecords, params, processing_fn, mode):
+    shuffle_buffer = params.get("shuffle-buffer", 30)
+    parallel_calls = params.get("parallel_calls", 4)
+    parallel_batches = params.get("parallel_batches", parallel_calls)
+    prefetch_buffer = params.get("prefetch_buffer", 100)
+    dataset = tf.data.Dataset.list_files(file_pattern=tfrecords)
+    dataset = dataset.apply(
+        tf.contrib.data.parallel_interleave(
+            tf.data.TFRecordDataset,
+            cycle_length=3,
+            buffer_output_elements=prefetch_buffer,
+            prefetch_input_elements=parallel_calls,
+        )
+    )
+    if mode == "EVAL":
+        dataset = dataset.shuffle(buffer_size=shuffle_buffer)
+    elif mode == "TRAIN":
+        dataset = dataset.apply(
+            tf.contrib.data.shuffle_and_repeat(buffer_size=shuffle_buffer)
+        )
+
+    dataset = dataset.apply(
+        tf.contrib.data.map_and_batch(
+            lambda example: processing_fn(*parse_tf_example(example)),
+            params["batch-size"],
+            num_parallel_batches=parallel_batches,
+        )
+    )
+    dataset = dataset.map(
+        lambda features, labels: (make_dense_features(features), labels),
+        num_parallel_calls=parallel_calls,
+    )
+    dataset = dataset.cache()
+
+    return dataset
 
 
 def scaffold_init_fn_on_spec(spec, new_fn):
@@ -275,9 +458,9 @@ def image_to_summary(name, image):
     return summary
 
 
-def index_lookup_table(vocab_file, oov_buckets=0):
+def index_lookup_table(vocab_file_path, oov_buckets=0):
     return tf.contrib.lookup.index_table_from_file(
-        vocabulary_file=vocab_file,
+        vocabulary_file=vocab_file_path,
         key_column_index=0,
         value_column_index=1,
         num_oov_buckets=oov_buckets,
@@ -372,9 +555,10 @@ def partitioner_num_shards(vocab_size, max_shards=MAX_EMBEDDING_SHARDS):
     for i in range(max_shards, 0, -1):
         if vocab_size % i == 0:
             return i
+    return 1
 
 
-def embedding_initializer(vectors, num_shards, structure=None):
+def embedding_initializer_fn(vectors, num_shards, structure=None):
     shape = vectors.shape
     partition_size = int(shape[0] / num_shards)
 

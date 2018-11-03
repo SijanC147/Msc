@@ -8,11 +8,28 @@ import numpy as np
 RANDOM_SEED = 1234
 DELIMITER = "<SEP>"
 PAD_TOKEN = "<PAD>"
+BUCKET_TOKEN = "<BKT-{num}>"
 TF_RECORD_SHARDS = 10
 MAX_EMBEDDING_SHARDS = 10
 DEFAULT_OOV_FN = partial(np.random.uniform, low=-0.03, high=0.03)
 SPACY_MODEL = pkg.resource_filename(__name__, "assets/en_core_web_sm")
 DEFAULT_FONT = pkg.resource_filename(__name__, "fonts/Symbola.ttf")
+
+EMBEDDING_SHORTHANDS = {
+    "fasttext": "fasttext-wiki-news-subwords-300",
+    "twitter-25": "glove-twitter-25",
+    "twitter-50": "glove-twitter-50",
+    "twitter-100": "glove-twitter-100",
+    "twitter-200": "glove-twitter-200",
+    "wiki-50": "glove-wiki-gigaword-50",
+    "wiki-100": "glove-wiki-gigaword-100",
+    "wiki-200": "glove-wiki-gigaword-200",
+    "wiki-300": "glove-wiki-gigaword-300",
+    "commoncrawl-42": "glove-cc42-300",
+    "commoncrawl-840": "glove-cc840-300",
+    "w2v-google-300": "word2vec-google-news-300",
+    "w2v-rus-300": "word2vec-ruscorpora-300",
+}
 
 try:
     DATA_PATH = join(Path.home(), "tsaplay-data")

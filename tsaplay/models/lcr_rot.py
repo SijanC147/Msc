@@ -11,9 +11,7 @@ from tsaplay.utils.tf import (
     l2_regularized_loss,
     generate_attn_heatmap_summary,
 )
-from tsaplay.utils.decorators import addon
-from tsaplay.utils.addons import attn_heatmaps
-from tsaplay.utils.io import cprnt
+from tsaplay.utils.addons import addon, attn_heatmaps
 
 
 class LcrRot(TsaModel):

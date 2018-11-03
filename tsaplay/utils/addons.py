@@ -1,6 +1,7 @@
 # pylint: disable=unused-argument
 from os.path import join
 from os import makedirs
+from functools import wraps, partial
 import tensorflow as tf
 from tensorflow.estimator import ModeKeys  # pylint: disable=E0401
 from tensorflow.saved_model.signature_constants import (
@@ -13,13 +14,77 @@ from tensorflow.estimator.export import (  # pylint: disable=E0401
     PredictOutput,
     ClassificationOutput,
 )
-from tsaplay.utils.io import cprnt
-from tsaplay.utils.decorators import only
 from tsaplay.hooks import (
     SaveAttentionWeightVector,
     SaveConfusionMatrix,
     MetadataHook,
 )
+
+
+def attach(addons, modes=None, order="POST"):
+    def decorator(model_fn):
+        @wraps(model_fn)
+        def wrapper(self, features, labels, mode, params):
+            aux = self.aux_config
+            targets = modes or ["train", "eval", "predict"]
+            target_modes = [
+                {
+                    "train": ModeKeys.TRAIN,
+                    "eval": ModeKeys.EVAL,
+                    "predict": ModeKeys.PREDICT,
+                }.get(trg_mode.lower())
+                for trg_mode in targets
+            ]
+            applicable_addons = [
+                addon
+                for addon in addons
+                if mode in target_modes and aux.get(addon.__name__, True)
+            ]
+            if order == "PRE":
+                for add_on in applicable_addons:
+                    add_on(self, features, labels, mode, params)
+                spec = model_fn(self, features, labels, mode, params)
+            elif order == "POST":
+                spec = model_fn(self, features, labels, mode, params)
+                for add_on in applicable_addons:
+                    spec = add_on(self, features, labels, spec, params)
+            return spec
+
+        return wrapper
+
+    return decorator
+
+
+addon = partial(attach, order="POST")  # pylint: disable=C0103
+prepare = partial(attach, order="PRE")  # pylint: disable=C0103
+
+
+def only(modes):
+    def decorator(addon_fn):
+        @wraps(addon_fn)
+        def wrapper(*args, **kwargs):
+            addon_order = None
+            modes = [mode.lower() for mode in modes]
+            try:
+                addon_order, context_mode = (
+                    ("POST", args[3].mode)
+                    if hasattr(args[3], "mode")
+                    else ("PRE", args[3])
+                )
+            except IndexError:
+                addon_order, context_mode = (
+                    ("PRE", kwargs.get("mode"))
+                    if kwargs.get("mode")
+                    else ("POST", kwargs.get("spec").mode)
+                )
+            if context_mode.lower() in modes:
+                return addon_fn(*args, **kwargs)
+            if addon_order == "POST":
+                return args[3]
+
+        return wrapper
+
+    return decorator
 
 
 @only(["PREDICT"])

@@ -78,13 +78,14 @@ def byte_encode_array(array):
 
 def main():
 
-    model, signature, batch_file, sentence, target = parse_args()
+    model, signature, batch_file_path, sentence, target = parse_args()
 
     feat_dict = {"sentences": [], "targets": []}
 
-    if batch_file is not None:
-        with open(batch_file, "r") as f:
-            csvreader = DictReader(f, fieldnames=["target", "sentence"])
+    if batch_file_path is not None:
+        with open(batch_file_path, "r") as batch_file:
+            fieldnames = ["target", "sentence"]
+            csvreader = DictReader(batch_file, fieldnames=fieldnames)
             for row in csvreader:
                 feat_dict["targets"].append(row["target"].strip())
                 feat_dict["sentences"].append(row["sentence"].strip())
