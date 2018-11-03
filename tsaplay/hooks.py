@@ -14,7 +14,7 @@ from tsaplay.utils.draw import (
     tabulate_attention_value,
 )
 from tsaplay.utils.tf import image_to_summary
-from tsaplay.utils.io import cprnt, temp_pngs, get_image_from_plt
+from tsaplay.utils.io import temp_pngs, get_image_from_plt
 
 
 # matplotlib.use("TkAgg")

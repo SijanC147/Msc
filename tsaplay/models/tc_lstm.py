@@ -5,6 +5,7 @@ from tsaplay.utils.tf import (
     variable_len_batch_mean,
     dropout_lstm_cell,
 )
+from tsaplay.utils.debug import cprnt
 
 
 class TcLstm(TsaModel):

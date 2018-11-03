@@ -161,41 +161,46 @@ def args_to_dict(args):
     return args_dict
 
 
-def get_feature_provider(args):
+def get_feature_provider(args, params):
     datasets = [Dataset(name) for name in args.datasets]
+    embedding = Embedding(EMBEDDING_SHORTHANDS.get(args.embedding))
 
-    emb_filters = args.embedding_filters or []
-    if emb_filters:
-        emb_filters_resolved = []
-        for emb_filter in emb_filters:
-            if emb_filter == "corpus":
-                emb_filters_resolved.append(
-                    list(set(sum([ds.corpus for ds in datasets], [])))
-                )
-            else:
-                try:
-                    emb_filters_resolved.append(
-                        available_filters.__getattribute__(emb_filter)
-                    )
-                except AttributeError:
-                    warn("Could not find {} filter.".format(emb_filter))
-    else:
-        emb_filters_resolved = None
+    # emb_filters = args.embedding_filters or []
+    # if emb_filters:
+    #     emb_filters_resolved = []
+    #     for emb_filter in emb_filters:
+    #         if emb_filter == "corpus":
+    #             emb_filters_resolved.append(
+    #                 list(set(sum([ds.corpus for ds in datasets], [])))
+    #             )
+    #         else:
+    #             try:
+    #                 emb_filters_resolved.append(
+    #                     available_filters.__getattribute__(emb_filter)
+    #                 )
+    #             except AttributeError:
+    #                 warn("Could not find {} filter.".format(emb_filter))
+    # else:
+    #     emb_filters_resolved = None
 
-    embedding = Embedding(
-        EMBEDDING_SHORTHANDS.get(args.embedding), filters=emb_filters_resolved
-    )
+    # embedding = Embedding(
+    #     EMBEDDING_SHORTHANDS.get(args.embedding), filters=emb_filters_resolved
+    # )
 
-    return FeatureProvider(datasets, embedding)
+    oov = params.get("oov")
+    oov_buckets = params.get("oov_buckets", 1)
+
+    return FeatureProvider(datasets, embedding, oov, oov_buckets)
 
 
 def run_experiment(args):
     tf.logging.set_verbosity(args.verbosity)
 
-    feature_provider = get_feature_provider(args)
-
     params = args_to_dict(args.model_params)
     params.update({"batch-size": args.batch_size})
+
+    feature_provider = get_feature_provider(args, params)
+
     model = MODELS.get(args.model)(params, args_to_dict(args.aux_config))
 
     run_config = args_to_dict(args.run_config)

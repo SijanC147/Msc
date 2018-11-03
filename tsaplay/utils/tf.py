@@ -1,6 +1,8 @@
 import io
 from warnings import warn
 from functools import wraps
+from itertools import tee, chain
+from tqdm import tqdm
 import numpy as np
 import tensorflow as tf
 from tensorflow.estimator import ModeKeys  # pylint: disable=E0401
@@ -8,6 +10,7 @@ from tensorflow.train import BytesList, Feature, Features, Example, Int64List
 from tsaplay.constants import DELIMITER, MAX_EMBEDDING_SHARDS
 from tsaplay.utils.io import export_run_metadata
 from tsaplay.utils.data import zero_norm_labels, split_list
+from tsaplay.utils.debug import cprnt
 
 
 def embed_sequences(model_fn):
@@ -23,7 +26,7 @@ def embed_sequences(model_fn):
                     with 'div' partition strategy instead."""
             )
             embedding_op = "embed_lookup"
-        embedding_init_fn = params["_embedding_init"](embedding_init)
+        embedding_init_fn = params["_embedding_init"]
         num_shards = params["_embedding_num_shards"]
         vocab_size = params["_vocab_size"]
         dim_size = params["_embedding_dim"]
@@ -468,25 +471,91 @@ def index_lookup_table(vocab_file_path, oov_buckets=0):
     )
 
 
-def fetch_lookup_ops(tokens_lists, lookup_table):
-    tokens_list = [
-        DELIMITER.join(tkns_list).encode() for tkns_list in tokens_lists
-    ]
-    tokens_tensors = [
+def fetch_lookup_ops(lookup_table, **tokens_lists):
+    list_lengths = [len(tkn_list) for tkn_list in tokens_lists.values()]
+    tkns_lsts = sum([tkn_list for tkn_list in tokens_lists.values()], [])
+
+    tokens_list = (
+        DELIMITER.join(tkns_list).encode() for tkns_list in tkns_lsts
+    )
+    tokens_tensors = (
         tf.constant([tkns_list], dtype=tf.string) for tkns_list in tokens_list
-    ]
-    tokens_sp_tensors = [
+    )
+    tokens_sp_tensors = (
         tf.string_split(tkn_ten, DELIMITER) for tkn_ten in tokens_tensors
-    ]
-    string_ops = [
+    )
+    string_sp_tensors, id_sp_tensors = tee(tokens_sp_tensors)
+    string_ops = (
         tf.sparse_tensor_to_dense(sp_tensor, default_value=b"")
-        for sp_tensor in tokens_sp_tensors
-    ]
-    id_ops = [
+        for sp_tensor in string_sp_tensors
+    )
+    id_ops = (
         tf.sparse_tensor_to_dense(lookup_table.lookup(sp_tensor))
-        for sp_tensor in tokens_sp_tensors
-    ]
-    return string_ops + id_ops
+        for sp_tensor in id_sp_tensors
+    )
+    op_generator = chain(string_ops, id_ops)
+
+    total = len(tkns_lsts) * 2
+    op_generator = tqdm(op_generator, total=total, desc="Building Lookup Ops")
+    ops = [op for op in op_generator]
+
+    string_ops, id_ops = split_list(ops, parts=2)
+
+    return {
+        key: str_ops + id_ops
+        for (key, str_ops, id_ops) in zip(
+            [*tokens_lists],
+            split_list(string_ops, counts=list_lengths),
+            split_list(id_ops, counts=list_lengths),
+        )
+    }
+
+
+# def fetch_lookup_ops(tokens_lists, lookup_table):
+#     total = len(tokens_lists) * 2
+#     tokens_list = (
+#         DELIMITER.join(tkns_list).encode() for tkns_list in tokens_list
+#     )
+#     tokens_tensors = (
+#         tf.constant([tkns_list], dtype=tf.string) for tkns_list in tokens_list
+#     )
+#     tokens_sp_tensors = (
+#         tf.string_split(tkn_ten, DELIMITER) for tkn_ten in tokens_tensors
+#     )
+#     string_sp_tensors, id_sp_tensors = tee(tokens_sp_tensors)
+#     string_ops = (
+#         tf.sparse_tensor_to_dense(sp_tensor, default_value=b"")
+#         for sp_tensor in string_sp_tensors
+#     )
+#     id_ops = (
+#         tf.sparse_tensor_to_dense(lookup_table.lookup(sp_tensor))
+#         for sp_tensor in id_sp_tensors
+#     )
+#     op_generator = chain(string_ops, id_ops)
+#     op_generator = tqdm(op_generator, total=total, desc="Building Lookup Ops")
+#     ops = [op for op in op_generator]
+#     return ops
+
+
+# def fetch_lookup_ops(tokens_lists, lookup_table):
+#     tokens_list = [
+#         DELIMITER.join(tkns_list).encode() for tkns_list in tokens_lists
+#     ]
+#     tokens_tensors = [
+#         tf.constant([tkns_list], dtype=tf.string) for tkns_list in tokens_list
+#     ]
+#     tokens_sp_tensors = [
+#         tf.string_split(tkn_ten, DELIMITER) for tkn_ten in tokens_tensors
+#     ]
+#     string_ops = [
+#         tf.sparse_tensor_to_dense(sp_tensor, default_value=b"")
+#         for sp_tensor in tokens_sp_tensors
+#     ]
+#     id_ops = [
+#         tf.sparse_tensor_to_dense(lookup_table.lookup(sp_tensor))
+#         for sp_tensor in tokens_sp_tensors
+#     ]
+#     return string_ops + id_ops
 
 
 def run_lookups(fetch_dict, metadata_path=None, eager=False):

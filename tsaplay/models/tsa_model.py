@@ -32,6 +32,7 @@ from tsaplay.utils.addons import (
     scalars,
     metadata,
 )
+from tsaplay.utils.debug import cprnt
 
 
 class TsaModel(ABC):
@@ -210,7 +211,8 @@ class TsaModel(ABC):
     def _initialize_estimator(self, feature_provider):
         self.aux_config["_feature_provider"] = feature_provider.name
         if not self.aux_config.get("class_labels"):
-            self.aux_config["class_labels"] = feature_provider.class_labels
+            class_labels = list(map(str, feature_provider.class_labels))
+            self.aux_config["class_labels"] = class_labels
         self.params["_n_out_classes"] = len(self.aux_config["class_labels"])
         self.params.update(feature_provider.embedding_params)
         self._estimator = Estimator(

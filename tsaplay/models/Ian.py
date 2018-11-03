@@ -1,6 +1,5 @@
 import tensorflow as tf
 from tsaplay.models.tsa_model import TsaModel
-from tsaplay.utils.decorators import addon
 from tsaplay.utils.tf import (
     variable_len_batch_mean,
     dropout_lstm_cell,
@@ -8,7 +7,7 @@ from tsaplay.utils.tf import (
     attention_unit,
     generate_attn_heatmap_summary,
 )
-from tsaplay.utils.addons import attn_heatmaps
+from tsaplay.utils.addons import addon, attn_heatmaps
 
 
 class Ian(TsaModel):

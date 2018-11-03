@@ -138,7 +138,7 @@ def merge_dicts(*dicts):
     return dict(new_dict)
 
 
-def merge_corpi(*corpi):
+def merge_corpora(*corpi):
     corpi_items = [map(tuple, corpus.items()) for corpus in corpi]
     corpi_items = sorted(chain(*corpi_items))
     corpus = [
@@ -147,6 +147,11 @@ def merge_corpi(*corpi):
     ]
     corpus.sort(key=itemgetter(1), reverse=True)
     return {word: count for word, count in corpus}
+
+
+def corpora_vocab(*corpora):
+    all_vocab = [list(map(str.lower, [*corpus])) for corpus in corpora]
+    return list(set(sum(all_vocab, [])))
 
 
 def class_dist_stats(classes=None, **data_dicts):
@@ -243,7 +248,7 @@ def hash_data(data):
 
 
 def tokenize_data(include=None, **data_dicts):
-    include = set(map(str.lower, include)) if include else False
+    include = set(map(str.lower, include)) if include else None
     docs = [
         sum(
             partition_sentences(
@@ -263,7 +268,7 @@ def tokenize_data(include=None, **data_dicts):
         [
             token.text.lower()
             for token in filter(default_token_filter, doc)
-            if not include or token.text.lower() in include
+            if token.text.lower() in include or not include
         ]
         for doc in tqdm(doc_pipe, total=len(docs), desc="Tokenizing Data")
     ]

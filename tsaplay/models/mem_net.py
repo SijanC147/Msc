@@ -1,8 +1,7 @@
 from math import ceil
 import tensorflow as tf
 from tsaplay.models.tsa_model import TsaModel
-from tsaplay.utils.addons import attn_heatmaps
-from tsaplay.utils.decorators import addon
+from tsaplay.utils.addons import addon, attn_heatmaps
 from tsaplay.utils.tf import (
     masked_softmax,
     variable_len_batch_mean,

@@ -19,6 +19,7 @@ from tsaplay.hooks import (
     SaveConfusionMatrix,
     MetadataHook,
 )
+from tsaplay.utils.debug import cprnt
 
 
 def attach(addons, modes=None, order="POST"):
@@ -64,7 +65,6 @@ def only(modes):
         @wraps(addon_fn)
         def wrapper(*args, **kwargs):
             addon_order = None
-            modes = [mode.lower() for mode in modes]
             try:
                 addon_order, context_mode = (
                     ("POST", args[3].mode)
@@ -77,7 +77,7 @@ def only(modes):
                     if kwargs.get("mode")
                     else ("POST", kwargs.get("spec").mode)
                 )
-            if context_mode.lower() in modes:
+            if context_mode.lower() in [mode.lower() for mode in modes]:
                 return addon_fn(*args, **kwargs)
             if addon_order == "POST":
                 return args[3]
