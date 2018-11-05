@@ -13,7 +13,7 @@ from tensorflow.estimator.export import (  # pylint: disable=E0401
 )
 from tsaplay.utils.tf import (
     make_input_fn,
-    index_lookup_table,
+    ids_lookup_table,
     make_dense_features,
     embed_sequences,
     sharded_saver,
@@ -183,7 +183,7 @@ class TsaModel(ABC):
         }
         parsed_example = tf.parse_example(inputs_serialized, feature_spec)
 
-        ids_table = index_lookup_table(self.params["_vocab_file"])
+        ids_table = ids_lookup_table(self.params["_vocab_file"])
         features = {
             "left": parsed_example["left"],
             "target": parsed_example["target"],
@@ -211,8 +211,8 @@ class TsaModel(ABC):
     def _initialize_estimator(self, feature_provider):
         self.aux_config["_feature_provider"] = feature_provider.name
         if not self.aux_config.get("class_labels"):
-            class_labels = list(map(str, feature_provider.class_labels))
-            self.aux_config["class_labels"] = class_labels
+            class_labels = map(str, sorted(feature_provider.class_labels))
+            self.aux_config["class_labels"] = list(class_labels)
         self.params["_n_out_classes"] = len(self.aux_config["class_labels"])
         self.params.update(feature_provider.embedding_params)
         self._estimator = Estimator(

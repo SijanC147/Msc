@@ -12,7 +12,8 @@ BUCKET_TOKEN = "<BKT-{num}>"
 TF_RECORD_SHARDS = 10
 MAX_EMBEDDING_SHARDS = 10
 DEFAULT_OOV_FN = partial(np.random.uniform, low=-0.03, high=0.03)
-SPACY_MODEL = pkg.resource_filename(__name__, "assets/en_core_web_sm")
+ASSETS_PATH = pkg.resource_filename(__name__, "assets")
+SPACY_MODEL = join(ASSETS_PATH, "en_core_web_sm")
 DEFAULT_FONT = pkg.resource_filename(__name__, "fonts/Symbola.ttf")
 
 EMBEDDING_SHORTHANDS = {
@@ -34,7 +35,7 @@ EMBEDDING_SHORTHANDS = {
 try:
     DATA_PATH = join(Path.home(), "tsaplay-data")
 except TypeError:
-    DATA_PATH = pkg.resource_filename(__name__, "assets")
+    DATA_PATH = ASSETS_PATH
 
 DATASET_DATA_PATH = join(DATA_PATH, "_datasets")
 EMBEDDING_DATA_PATH = join(DATA_PATH, "_embeddings")

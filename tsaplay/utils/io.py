@@ -6,9 +6,9 @@ from csv import DictWriter
 from zipfile import ZipFile, ZIP_DEFLATED
 from datetime import datetime, timedelta
 from os import listdir, system, makedirs
-from os.path import isfile, join, dirname, basename, normpath
+from os.path import isfile, join, dirname, basename, normpath, exists, relpath
 from tempfile import mkdtemp
-from shutil import rmtree
+from shutil import rmtree, copytree, copy as _copy
 from io import BytesIO
 from PIL import Image
 import numpy as np
@@ -130,6 +130,18 @@ def get_image_from_plt(plt):
     return Image.open(BytesIO(image_bytes))
 
 
+def copy(src_path, dst_path, rel=None, force=True):
+    if not isfile(src_path):
+        folder_name = basename(normpath(src_path))
+        dst_path = relpath(dst_path, rel) if rel else dst_path
+        dst_path = join(dst_path, folder_name)
+        if exists(dst_path) and force:
+            rmtree(dst_path, ignore_errors=True)
+        copytree(src_path, dst_path)
+    else:
+        _copy(src_path, dst_path)
+
+
 def list_folders(path):
     return [
         basename(normpath(folder))
@@ -159,16 +171,16 @@ def write_tfrecords(path, tf_examples, num_shards=TF_RECORD_SHARDS):
 def write_vocab_file(path, vocab, indices=None):
     if indices:
         vocab_info = zip(vocab, indices)
-        with open(path, "w") as vocab_file:
+        with open(path, "w", encoding="utf-8") as vocab_file:
             for (word, index) in vocab_info:
                 vocab_file.write("{0}\t{1}\n".format(word, index))
     else:
-        with open(path, "w") as vocab_file:
+        with open(path, "w", encoding="utf-8") as vocab_file:
             for word in vocab:
                 vocab_file.write("{0}\n".format(word))
 
 
 def read_vocab_file(path):
-    with open(path, "r") as vocab_file:
+    with open(path, "r", encoding="utf-8") as vocab_file:
         vocab = vocab_file.readlines()
     return vocab

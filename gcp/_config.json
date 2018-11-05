@@ -1,5 +1,5 @@
 {
-    "jobId": "tclstm_whole_6part_div_25batch_5000steps_50hu_30shuf_stdgpu_par4",
+    "jobId": "oov_eval_3",
     "labels": {},
     "trainingInput": {
         "scaleTier": "CUSTOM",
@@ -8,14 +8,15 @@
         "runtimeVersion": "1.10",
         "region": "europe-west1",
         "args": [
-            "-em=wiki-50",
+            "-em=twitter-200",
             "-ds=dong",
-            "-m=tclstm",
+            "-m=lcrrot",
             "-b=25",
             "-s=5000",
             "-mp",
-            "hidden_units=50",
-            "parallel_calls=4",
+            "hidden_units=300",
+            "oov=True",
+            "oov_buckets=25",
             "-v=DEBUG"
         ]
     }

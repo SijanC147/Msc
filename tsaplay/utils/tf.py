@@ -461,7 +461,7 @@ def image_to_summary(name, image):
     return summary
 
 
-def index_lookup_table(vocab_file_path, oov_buckets=0):
+def ids_lookup_table(vocab_file_path, oov_buckets=0):
     return tf.contrib.lookup.index_table_from_file(
         vocabulary_file=vocab_file_path,
         key_column_index=0,
@@ -509,53 +509,6 @@ def fetch_lookup_ops(lookup_table, **tokens_lists):
             split_list(id_ops, counts=list_lengths),
         )
     }
-
-
-# def fetch_lookup_ops(tokens_lists, lookup_table):
-#     total = len(tokens_lists) * 2
-#     tokens_list = (
-#         DELIMITER.join(tkns_list).encode() for tkns_list in tokens_list
-#     )
-#     tokens_tensors = (
-#         tf.constant([tkns_list], dtype=tf.string) for tkns_list in tokens_list
-#     )
-#     tokens_sp_tensors = (
-#         tf.string_split(tkn_ten, DELIMITER) for tkn_ten in tokens_tensors
-#     )
-#     string_sp_tensors, id_sp_tensors = tee(tokens_sp_tensors)
-#     string_ops = (
-#         tf.sparse_tensor_to_dense(sp_tensor, default_value=b"")
-#         for sp_tensor in string_sp_tensors
-#     )
-#     id_ops = (
-#         tf.sparse_tensor_to_dense(lookup_table.lookup(sp_tensor))
-#         for sp_tensor in id_sp_tensors
-#     )
-#     op_generator = chain(string_ops, id_ops)
-#     op_generator = tqdm(op_generator, total=total, desc="Building Lookup Ops")
-#     ops = [op for op in op_generator]
-#     return ops
-
-
-# def fetch_lookup_ops(tokens_lists, lookup_table):
-#     tokens_list = [
-#         DELIMITER.join(tkns_list).encode() for tkns_list in tokens_lists
-#     ]
-#     tokens_tensors = [
-#         tf.constant([tkns_list], dtype=tf.string) for tkns_list in tokens_list
-#     ]
-#     tokens_sp_tensors = [
-#         tf.string_split(tkn_ten, DELIMITER) for tkn_ten in tokens_tensors
-#     ]
-#     string_ops = [
-#         tf.sparse_tensor_to_dense(sp_tensor, default_value=b"")
-#         for sp_tensor in tokens_sp_tensors
-#     ]
-#     id_ops = [
-#         tf.sparse_tensor_to_dense(lookup_table.lookup(sp_tensor))
-#         for sp_tensor in tokens_sp_tensors
-#     ]
-#     return string_ops + id_ops
 
 
 def run_lookups(fetch_dict, metadata_path=None, eager=False):

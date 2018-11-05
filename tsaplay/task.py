@@ -161,32 +161,9 @@ def args_to_dict(args):
     return args_dict
 
 
-def get_feature_provider(args, params):
-    datasets = [Dataset(name) for name in args.datasets]
-    embedding = Embedding(EMBEDDING_SHORTHANDS.get(args.embedding))
-
-    # emb_filters = args.embedding_filters or []
-    # if emb_filters:
-    #     emb_filters_resolved = []
-    #     for emb_filter in emb_filters:
-    #         if emb_filter == "corpus":
-    #             emb_filters_resolved.append(
-    #                 list(set(sum([ds.corpus for ds in datasets], [])))
-    #             )
-    #         else:
-    #             try:
-    #                 emb_filters_resolved.append(
-    #                     available_filters.__getattribute__(emb_filter)
-    #                 )
-    #             except AttributeError:
-    #                 warn("Could not find {} filter.".format(emb_filter))
-    # else:
-    #     emb_filters_resolved = None
-
-    # embedding = Embedding(
-    #     EMBEDDING_SHORTHANDS.get(args.embedding), filters=emb_filters_resolved
-    # )
-
+def get_feature_provider(datasets, embedding, params):
+    datasets = [Dataset(name) for name in datasets]
+    embedding = Embedding(EMBEDDING_SHORTHANDS.get(embedding))
     oov = params.get("oov")
     oov_buckets = params.get("oov_buckets", 1)
 
@@ -199,23 +176,14 @@ def run_experiment(args):
     params = args_to_dict(args.model_params)
     params.update({"batch-size": args.batch_size})
 
-    feature_provider = get_feature_provider(args, params)
+    datasets = args.datasets
+    embedding = args.embedding
+
+    feature_provider = get_feature_provider(datasets, embedding, params)
 
     model = MODELS.get(args.model)(params, args_to_dict(args.aux_config))
 
     run_config = args_to_dict(args.run_config)
-    # distribute_config = tf.contrib.distribute.DistributeConfig(
-    #     train_distribute=tf.contrib.distribute.ParameterServerStrategy(
-    #         num_gpus_per_worker=4
-    #     ),
-    #     # eval_distribute=tf.contrib.distribute.ParameterServerStrategy(
-    #     #     num_gpus_per_worker=4
-    #     # ),
-    #     # train_distribute=tf.contrib.distribute.MirroredStrategy(num_gpus=4),
-    #     # eval_distribute=tf.contrib.distribute.MirroredStrategy(num_gpus=4),
-    # )
-    # run_config.update({"experimental_distribute": distribute_config})
-
     experiment = Experiment(
         feature_provider,
         model,

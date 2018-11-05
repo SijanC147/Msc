@@ -222,7 +222,9 @@ def stringify(list_element):
     if isinstance(list_element, str):
         return list_element
     if isinstance(list_element, partial):
-        return str(list_element.keywords)
+        keywords = list_element.keywords
+        keywords = {key: val for key, val in sorted(keywords.items())}
+        return str(keywords)
     if callable(list_element):
         return getsource(list_element)
     if hasattr(list_element, "sort"):
@@ -237,14 +239,17 @@ def hash_data(data):
     if not isinstance(data, Iterable):
         data = str(data)
     if isinstance(data, str):
-        data = data.encode()
+        data = data.encode(encoding="utf-8")
     if isinstance(data, bytes):
         return md5(data).hexdigest()
-    data = map(stringify, data)
-    data = map(str.encode, data)
+    data = list(map(stringify, data))
+    data = list(map(lambda d: d.encode(encoding="utf-8"), data))
+    print(data)
     data = [md5(el).hexdigest() for el in data]
+    print(data)
     data.sort()
-    return md5(str(data).encode()).hexdigest()
+    print(data)
+    return md5(str(data).encode(encoding="utf-8")).hexdigest()
 
 
 def tokenize_data(include=None, **data_dicts):

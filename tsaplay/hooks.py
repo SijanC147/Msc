@@ -14,7 +14,7 @@ from tsaplay.utils.draw import (
     tabulate_attention_value,
 )
 from tsaplay.utils.tf import image_to_summary
-from tsaplay.utils.io import temp_pngs, get_image_from_plt
+from tsaplay.utils.io import temp_pngs, get_image_from_plt, pickle_file
 
 
 # matplotlib.use("TkAgg")
@@ -73,7 +73,6 @@ class SaveAttentionWeightVector(SessionRunHook):
         indices = np.random.choice(
             list(range(len(targets))), size=self.n_picks, replace=False
         )
-
         images = []
         tables = []
         for i in indices:
