@@ -2,11 +2,20 @@ import sys
 import json
 import pickle
 import math
-from csv import DictWriter
+import csv
 from zipfile import ZipFile, ZIP_DEFLATED
 from datetime import datetime, timedelta
 from os import listdir, system, makedirs
-from os.path import isfile, join, dirname, basename, normpath, exists, relpath
+from os.path import (
+    isfile,
+    join,
+    dirname,
+    basename,
+    normpath,
+    exists,
+    relpath,
+    splitext,
+)
 from tempfile import mkdtemp
 from shutil import rmtree, copytree, copy as _copy
 from io import BytesIO
@@ -76,21 +85,32 @@ def export_run_metadata(run_metadata, path):
     file_name = datetime.now().strftime("%Y%m%d-%H%M%S") + ".json"
     time_line = Timeline(run_metadata.step_stats)  # pylint: disable=E1101
     ctf = time_line.generate_chrome_trace_format()
-    zip_name = file_name.replace(".json", ".zip")
-    zip_path = join(path, zip_name)
-    with ZipFile(zip_path, "w", ZIP_DEFLATED) as zipf:
-        zipf.writestr(file_name, data=ctf)
+    write_zippped_file(path=join(path, file_name), data=ctf)
 
 
-def write_csv(path, data_dict):
-    fieldnames = [*data_dict]
+def write_csv(path, data, header=None):
     with open(path, "w", encoding="utf-8") as csvfile:
-        writer = DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writeheader()
-        for values in zip(*data_dict.values()):
-            writer.writerow(
-                {key: value for key, value in zip(fieldnames, values)}
-            )
+        if not isinstance(data, dict):
+            data = [header] + data if header else data
+            writer = csv.writer(csvfile)
+            writer.writerows(data)
+        else:
+            header = header or [*data]
+            writer = csv.DictWriter(csvfile, fieldnames=header)
+            writer.writeheader()
+            for values in zip(*data.values()):
+                writer.writerow(
+                    {key: value for key, value in zip(header, values)}
+                )
+
+
+def write_zippped_file(path, data):
+    file_path, file_extension = splitext(path)
+    file_name = basename(normpath(path))
+    if file_extension != ".zip":
+        path = file_path + ".zip"
+    with ZipFile(path, "w", ZIP_DEFLATED) as zip_file:
+        zip_file.writestr(file_name, data=data)
 
 
 def search_dir(path, query=None, first=False, kind=None):

@@ -1,4 +1,5 @@
-from os.path import join, exists
+from os import makedirs
+from os.path import join, exists, dirname
 import numpy as np
 import gensim.downloader as gensim_data
 from gensim.models import KeyedVectors
@@ -7,8 +8,8 @@ from tsaplay.constants import (
     PAD_TOKEN,
     EMBEDDING_SHORTHANDS,
 )
-from tsaplay.utils.io import list_folders
-from tsaplay.utils.data import hash_data
+from tsaplay.utils.io import list_folders, write_csv, dump_json
+from tsaplay.utils.data import hash_data, filter_vocab_list
 
 
 class Embedding:
@@ -23,7 +24,7 @@ class Embedding:
         self._vectors = None
 
         self._init_gen_dir(name)
-        self._init_gensim_model(self.name, self.gen_dir)
+        self._init_gensim_model(filters)
 
         self._uid = "{name}{filter_hash}".format(
             name=self._name, filter_hash=hash_data(filters)
@@ -78,13 +79,39 @@ class Embedding:
             self._gen_dir = gen_dir
             self._name = name
 
-    def _init_gensim_model(self, name, path):
-        gensim_model_path = join(path, "_gensim_model.bin")
+    def _init_gensim_model(self, filters):
+        gensim_model_dir = (
+            join(self.gen_dir, hash_data(filters)) if filters else self.gen_dir
+        )
+        gensim_model_path = join(gensim_model_dir, "_gensim_model.bin")
         if exists(gensim_model_path):
             self._gensim_model = KeyedVectors.load(gensim_model_path)
+        elif filters:
+            makedirs(gensim_model_dir, exist_ok=True)
+            source_model_path = join(self.gen_dir, "_gensim_model.bin")
+            if exists(source_model_path):
+                source_model = KeyedVectors.load(source_model_path)
+            else:
+                source_model = gensim_data.load(self.name)
+                source_model.save(source_model_path)
+            source_vocab = source_model.index2word
+            filtered_vocab, filter_report, filter_details = filter_vocab_list(
+                source_vocab, filters, incl_report=True
+            )
+            report_path = join(gensim_model_dir, "_filter_report.csv")
+            details_path = join(gensim_model_dir, "_filter_details.json")
+            write_csv(path=report_path, data=filter_report)
+            dump_json(path=details_path, data=filter_details)
+            weights = [
+                source_model.get_vector(word) for word in filtered_vocab
+            ]
+            filtered_model = KeyedVectors(source_model.vector_size)
+            filtered_model.add(filtered_vocab, weights)
+            self._gensim_model = filtered_model
         else:
-            self._gensim_model = gensim_data.load(name)
-            self._gensim_model.save(gensim_model_path)
+            self._gensim_model = gensim_data.load(self.name)
+        self._gensim_model.save(gensim_model_path)
+        self._gen_dir = gensim_model_dir
         self._dim_size = self._gensim_model.vector_size
         self._vocab = [PAD_TOKEN] + self._gensim_model.index2word
         self._vocab_size = len(self._vocab)

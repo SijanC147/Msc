@@ -1,15 +1,16 @@
+from contextlib import redirect_stdout
+from io import StringIO
 from collections import defaultdict, Iterable
 from itertools import chain, groupby
 from operator import itemgetter
 from inspect import getsource
 from hashlib import md5
 from functools import partial, wraps
-import numpy as np
-import spacy
-from spacy.attrs import ORTH  # pylint: disable=E0611
 from tqdm import tqdm
-from tsaplay.constants import RANDOM_SEED, SPACY_MODEL
-from tsaplay.utils.filters import default_token_filter
+import numpy as np
+from tsaplay.constants import RANDOM_SEED, DELIMITER
+from tsaplay.utils.filters import default_token_filter, group_filter_fns
+from tsaplay.utils.spacy import pipe_docs, word_counts, pipe_vocab
 
 
 def wrap_parsing_fn(parsing_fn):
@@ -194,28 +195,26 @@ def split_list(data, counts=None, parts=None):
     return [data[offsets[i] : offsets[i + 1]] for i in range(len(offsets) - 1)]
 
 
+def accum_tuple_list_gen(gen, sort=True):
+    data = sorted(chain(*gen))
+    data = [
+        (key, sum(j for _, j in group))
+        for key, group in groupby(data, key=itemgetter(0))
+    ]
+    if sort:
+        data.sort(key=itemgetter(1), reverse=True)
+    return data
+
+
 def generate_corpus(docs, mode=None):
     desc = (
         "Building {mode} Corpus".format(mode=mode.capitalize())
         if mode
         else "Building Corpus"
     )
-    nlp = spacy.load(SPACY_MODEL, disable=["parser", "ner"])
-    doc_pipe = nlp.pipe(set(docs), batch_size=100, n_threads=-1)
-    word_counts = (
-        [
-            (nlp.vocab.strings[key], count)
-            for (key, count) in doc.count_by(ORTH).items()
-        ]
-        for doc in tqdm(doc_pipe, total=len(docs), desc=desc)
-    )
-    word_counts = sorted(chain(*word_counts))
-    words = [
-        (key, sum(j for _, j in group))
-        for key, group in groupby(word_counts, key=itemgetter(0))
-    ]
-    words.sort(key=itemgetter(1), reverse=True)
-    return {word: count for word, count in words}
+    words = word_counts(set(docs), pbar_desc=desc)
+    counts = accum_tuple_list_gen(words)
+    return {word: count for word, count in counts}
 
 
 def stringify(list_element):
@@ -265,15 +264,13 @@ def tokenize_data(include=None, **data_dicts):
     ]
     doc_lengths = [len(doc) for doc in docs]
     docs = sum(docs, [])
-    nlp = spacy.load(SPACY_MODEL, disable=["parser", "ner"])
-    doc_pipe = nlp.pipe(docs, batch_size=100, n_threads=-1)
     tokens = [
         [
             token.text.lower()
             for token in filter(default_token_filter, doc)
             if token.text.lower() in include or not include
         ]
-        for doc in tqdm(doc_pipe, total=len(docs), desc="Tokenizing Data")
+        for doc in pipe_docs(docs, pbar_desc="Tokenizing data")
     ]
     all_tokens_zipped = zip(
         [*data_dicts], split_list(tokens, counts=doc_lengths)
@@ -287,4 +284,56 @@ def tokenize_data(include=None, **data_dicts):
         }
         for key, all_tokens in all_tokens_zipped
     }
+
+
+def filter_vocab_list(vocab, filters, incl_report=None):
+    filtered = vocab
+    orig_len = len(filtered)
+    filter_sets = list(filter(lambda filt: not callable(filt), filters))
+    if filter_sets:
+        filter_sets = sum(map(list, filter_sets), [])
+        filtered = list(set(filtered) & set(filter_sets))
+
+    filter_fns = list(filter(callable, filters))
+    if filter_fns:
+        filter_fn, req_pipes, report_header = group_filter_fns(
+            *filter_fns, stdout_report=incl_report
+        )
+        vocab_pipe = pipe_vocab(
+            filtered, pipes=req_pipes, pbar_desc="Parsing vocabulary"
+        )
+        if incl_report:
+            report_str = StringIO()
+            with redirect_stdout(report_str):
+                filtered = [
+                    [token.text for token in filter(filter_fn, doc)]
+                    for doc in vocab_pipe
+                ]
+            filter_report = report_str.getvalue().split("\n")
+            filter_report = [row.split(DELIMITER) for row in filter_report]
+            filter_report = report_header + filter_report
+        else:
+            filtered = [
+                [token.text for token in filter(filter_fn, doc)]
+                for doc in vocab_pipe
+            ]
+        filtered = sum(tqdm(filtered, desc="Filtering vocabulary"), [])
+
+    if incl_report:
+        filtered_length = len(filtered)
+        reduction = ((orig_len - filtered_length) / orig_len) * 100
+        filter_details = {
+            "vocab": {
+                "original": orig_len,
+                "filtered": filtered_length,
+                "reduction": reduction,
+            },
+            "filters": {
+                "functions": list(map(stringify, filter_fns)),
+                "sets": list(map(stringify, filter_sets)),
+            },
+        }
+
+        return filtered, filter_report, filter_details
+    return filtered
 

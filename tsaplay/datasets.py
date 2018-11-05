@@ -121,15 +121,13 @@ class Dataset:
         srcdir_attr = "_{mode}_srcdir".format(mode=mode)
         data_dict_dir = getattr(self, srcdir_attr)
         data_dict_path = join(data_dict_dir, data_dict_file)
-        if not redist and not exists(data_dict_path):
-            raise ValueError
-        if redist and not exists(data_dict_path):
+        if exists(data_dict_path):
+            data_dict = unpickle_file(data_dict_path)
+        elif redist:
             source_data_dict_path = join(self.gen_dir, data_dict_file)
             source_data_dict = unpickle_file(source_data_dict_path)
             data_dict = resample_data_dict(source_data_dict, redist)
             pickle_file(path=data_dict_path, data=data_dict)
-        else:
-            data_dict = unpickle_file(data_dict_path)
         class_labels = self._class_labels or []
         class_labels = set(class_labels + data_dict["labels"])
         self._class_labels = list(class_labels)
