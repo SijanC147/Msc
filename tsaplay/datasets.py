@@ -1,8 +1,10 @@
+from os import makedirs
 from os.path import join, exists
 from tsaplay.utils.data import (
     class_dist_info,
     class_dist_stats,
     generate_corpus,
+    resample_data_dict,
 )
 from tsaplay.utils.io import (
     unpickle_file,
@@ -22,15 +24,18 @@ class Dataset:
         self._test_dict = None
         self._train_corpus = None
         self._test_corpus = None
+        self._train_srcdir = None
+        self._test_srcdir = None
         self._train_dist = None
         self._test_dist = None
         self._class_labels = None
 
         self._init_gen_dir(name)
         for mode in ["train", "test"]:
-            self._init_data_dict(mode, self.gen_dir)
-            self._init_dist_info(mode, self.gen_dir)
-            self._init_corpus(mode, self.gen_dir)
+            self._init_srcdirs(mode, redist)
+            self._init_data_dict(mode, redist)
+            self._init_dist_info(mode)
+            self._init_corpus(mode)
 
         self._uid = "{name}-{train_dist}-{test_dist}".format(
             name=self._name,
@@ -49,6 +54,14 @@ class Dataset:
     @property
     def gen_dir(self):
         return self._gen_dir
+
+    @property
+    def train_srcdir(self):
+        return self._train_srcdir
+
+    @property
+    def test_srcdir(self):
+        return self._test_srcdir
 
     @property
     def train_dict(self):
@@ -86,21 +99,47 @@ class Dataset:
             self._gen_dir = gen_dir
             self._name = name
 
-    def _init_data_dict(self, mode, path):
+    def _init_srcdirs(self, mode, redist):
+        redist = redist.get(mode) if isinstance(redist, dict) else redist
+        srcdir_attr = "_{mode}_srcdir".format(mode=mode)
+        srcdir = (
+            join(
+                self.gen_dir,
+                "_redists",
+                "_".join(map(str, redist)).replace(".", ""),
+            )
+            if redist
+            else self.gen_dir
+        )
+        makedirs(srcdir, exist_ok=True)
+        setattr(self, srcdir_attr, srcdir)
+
+    def _init_data_dict(self, mode, redist):
         data_dict_file = "_{mode}_dict.pkl".format(mode=mode)
-        data_dict_path = join(path, data_dict_file)
-        if not exists(data_dict_path):
-            raise ValueError
         data_dict_attr = "_{mode}_dict".format(mode=mode)
-        data_dict = unpickle_file(data_dict_path)
+        redist = redist.get(mode) if isinstance(redist, dict) else redist
+        srcdir_attr = "_{mode}_srcdir".format(mode=mode)
+        data_dict_dir = getattr(self, srcdir_attr)
+        data_dict_path = join(data_dict_dir, data_dict_file)
+        if not redist and not exists(data_dict_path):
+            raise ValueError
+        if redist and not exists(data_dict_path):
+            source_data_dict_path = join(self.gen_dir, data_dict_file)
+            source_data_dict = unpickle_file(source_data_dict_path)
+            data_dict = resample_data_dict(source_data_dict, redist)
+            pickle_file(path=data_dict_path, data=data_dict)
+        else:
+            data_dict = unpickle_file(data_dict_path)
         class_labels = self._class_labels or []
         class_labels = set(class_labels + data_dict["labels"])
         self._class_labels = list(class_labels)
         setattr(self, data_dict_attr, data_dict)
 
-    def _init_corpus(self, mode, path):
+    def _init_corpus(self, mode):
         corpus_pkl_file = "_{mode}_corpus.pkl".format(mode=mode)
-        corpus_pkl_path = join(path, corpus_pkl_file)
+        srcdir_attr = "_{mode}_srcdir".format(mode=mode)
+        corpus_pkl_dir = getattr(self, srcdir_attr)
+        corpus_pkl_path = join(corpus_pkl_dir, corpus_pkl_file)
         if exists(corpus_pkl_path):
             corpus = unpickle_file(corpus_pkl_path)
         else:
@@ -112,9 +151,11 @@ class Dataset:
         corpus_attr = "_{mode}_corpus".format(mode=mode)
         setattr(self, corpus_attr, corpus)
 
-    def _init_dist_info(self, mode, path):
+    def _init_dist_info(self, mode):
         dist_info_file = "_{mode}_dist.json".format(mode=mode)
-        dist_info_path = join(path, dist_info_file)
+        srcdir_attr = "_{mode}_srcdir".format(mode=mode)
+        dist_info_dir = getattr(self, srcdir_attr)
+        dist_info_path = join(dist_info_dir, dist_info_file)
         data_dict_attr = "_{mode}_dict".format(mode=mode)
         data_dict = getattr(self, data_dict_attr)
         _, _, dist_info = class_dist_info(data_dict["labels"])

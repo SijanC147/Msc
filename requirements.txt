@@ -53,9 +53,8 @@ six==1.11.0
 smart-open==1.7.1
 spacy==2.0.16
 tensorboard==1.11.0
-tensorflow-gpu==1.11.0 ; sys_platform == 'linux'
+tensorflow==1.11.0 
 tensorflow-serving-api==1.11.0
-tensorflow==1.11.0 ; sys_platform == 'darwin'
 termcolor==1.1.0
 thinc==6.12.0
 toolz==0.9.0

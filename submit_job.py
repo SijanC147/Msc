@@ -8,7 +8,7 @@ from tsaplay.task import (
     argument_parser as task_argument_parser,
     args_to_dict,
 )
-from tsaplay.utils.io import search_dir, copy
+from tsaplay.utils.io import search_dir, copy, clean_dirs
 from tsaplay.constants import (
     ASSETS_PATH,
     DATASET_DATA_PATH,
@@ -26,6 +26,8 @@ MODELS = {
     "memnet": tsa_models.MemNet,
     "ram": tsa_models.Ram,
 }
+
+DEST_PATH = join(ASSETS_PATH, "_{}")
 
 
 def argument_parser():
@@ -59,6 +61,14 @@ def argument_parser():
     )
 
     parser.add_argument(
+        "--machine-types",
+        "-mch",
+        help="Specify the gcloud machine types to use",
+        nargs="*",
+        required=False,
+    )
+
+    parser.add_argument(
         "--stream-logs",
         "-stream",
         help="Include flag to stream logs in gcloud submit command",
@@ -83,60 +93,32 @@ def argument_parser():
     return parser
 
 
-def prepare_job_assets(args):
-    task_args = task_argument_parser().parse_args(args.task_args)
-    feature_provider = get_feature_provider(
-        task_args.datasets,
-        task_args.embedding,
-        args_to_dict(task_args.model_params),
-    )
-    asset_dst_path = join(ASSETS_PATH, "_{}")
-    features_dst = join(
-        asset_dst_path.format("features"), feature_provider.uid
-    )
-    makedirs(features_dst, exist_ok=True)
-    for dataset in feature_provider.datasets:
-        copy(
-            dataset.gen_dir,
-            asset_dst_path.format("datasets"),
-            rel=DATASET_DATA_PATH,
-        )
-    copy(
-        feature_provider.embedding.gen_dir,
-        asset_dst_path.format("embeddings"),
-        rel=EMBEDDING_DATA_PATH,
-    )
-    copy(
-        feature_provider.embedding_params["_vocab_file"],
-        features_dst,
-        rel=FEATURES_DATA_PATH,
-    )
-    for mode in ["train", "test"]:
-        tfrecord_src = dirname(
-            getattr(feature_provider, "{}_tfrecords".format(mode))
-        )
-        tokens_src = join(
-            feature_provider.gen_dir, "_{}_tokens.pkl".format(mode)
-        )
-        copy(tfrecord_src, features_dst, rel=FEATURES_DATA_PATH)
-        copy(tokens_src, features_dst, rel=FEATURES_DATA_PATH)
-
-    write_gcloud_config(args)
-    sdist_args = ([] if args.show_sdist else ["-q"]) + ["sdist"]
-    sandbox.run_setup("setup.py", sdist_args)
+def fix_requirements_for_machine_types(machine_types):
+    with open("requirements.txt", "r") as requirements_file:
+        reqs = requirements_file.read()
+    reqs = reqs.replace("tensorflow-gpu==", "tensorflow==")
+    for value in machine_types.values():
+        if "gpu" in value or "p100" in value or "v100" in value:
+            reqs = reqs.replace("tensorflow==", "tensorflow-gpu==")
+    with open("requirements.txt", "w") as requirements_file:
+        requirements_file.write(reqs)
 
 
 def write_gcloud_config(args):
+    machine_types = args_to_dict(args.machine_types) or {
+        "masterType": "standard_gpu",
+        # "workerType": "n1-standard-16",
+        # "parameterServerType": "standard_gpu",
+        # "workerCount": 5,
+        # "parameterServerCount": 2,
+    }
+    fix_requirements_for_machine_types(machine_types)
     gcloud_config = {
         "jobId": args.job_id,
         "labels": args_to_dict(args.job_labels),
         "trainingInput": {
             "scaleTier": "CUSTOM",
-            "masterType": "standard_gpu",
-            # "workerType": "n1-standard-16",
-            # "parameterServerType": "standard_gpu",
-            # "workerCount": 5,
-            # "parameterServerCount": 2,
+            **machine_types,
             "pythonVersion": "3.5",
             "runtimeVersion": "1.10",
             "region": "europe-west1",
@@ -148,16 +130,52 @@ def write_gcloud_config(args):
         dump(gcloud_config, config_file, indent=4)
 
 
+def prepare_job_assets(args):
+    task_args = task_argument_parser().parse_args(args.task_args)
+    feature_provider = get_feature_provider(
+        task_args.datasets,
+        task_args.embedding,
+        args_to_dict(task_args.model_params),
+    )
+    datasets = feature_provider.datasets
+    embedding = feature_provider.embedding
+    vocab_file = feature_provider.embedding_params["_vocab_file"]
+
+    features_dest = DEST_PATH.format("features")
+    datasets_dest = DEST_PATH.format("datasets")
+    embeddings_dest = DEST_PATH.format("embeddings")
+    clean_dirs(features_dest, datasets_dest, embeddings_dest)
+
+    features_dest = join(features_dest, feature_provider.uid)
+    makedirs(features_dest, exist_ok=True)
+    copy(embedding.gen_dir, embeddings_dest, rel=EMBEDDING_DATA_PATH)
+    copy(vocab_file, features_dest, rel=FEATURES_DATA_PATH)
+    for mode in ["train", "test"]:
+        for dataset in datasets:
+            srcdir_attr = "_{mode}_srcdir".format(mode=mode)
+            dataset_srcdir = getattr(dataset, srcdir_attr)
+            copy(dataset_srcdir, datasets_dest, rel=DATASET_DATA_PATH)
+        tfrecords_attr = "{}_tfrecords".format(mode)
+        tokens_pkl_file = "_{}_tokens.pkl".format(mode)
+        tfrecord_src = dirname(getattr(feature_provider, tfrecords_attr))
+        tokens_src = join(feature_provider.gen_dir, tokens_pkl_file)
+        copy(tfrecord_src, features_dest, rel=FEATURES_DATA_PATH)
+        copy(tokens_src, features_dest, rel=FEATURES_DATA_PATH)
+
+    sdist_args = ([] if args.show_sdist else ["-q"]) + ["sdist"]
+    sandbox.run_setup("setup.py", sdist_args)
+
+
 def upload_job_to_gcloud(args):
     staging_bucket = "gs://tsaplay-bucket/"
     package = search_dir(abspath("dist"), "tsaplay", kind="files", first=True)
     system(
         """gcloud ml-engine jobs submit training {job_name} \\
---job-dir={job_dir} \\
---module-name={module_name} \\
---staging-bucket={staging_bucket} \\
---packages={package_name} \\
---config={config_path} {stream_logs}""".format(
+            --job-dir={job_dir} \\
+            --module-name={module_name} \\
+            --staging-bucket={staging_bucket} \\
+            --packages={package_name} \\
+            --config={config_path} {stream_logs}""".format(
             job_name=args.job_id,
             staging_bucket=staging_bucket,
             job_dir=staging_bucket + (args.job_dir or args.job_id),
@@ -170,6 +188,7 @@ def upload_job_to_gcloud(args):
 
 
 def submit_job(args):
+    write_gcloud_config(args)
     prepare_job_assets(args)
     upload_job_to_gcloud(args)
 

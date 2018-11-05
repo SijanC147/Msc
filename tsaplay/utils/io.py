@@ -142,6 +142,12 @@ def copy(src_path, dst_path, rel=None, force=True):
         _copy(src_path, dst_path)
 
 
+def clean_dirs(*paths):
+    for path in paths:
+        rmtree(path, ignore_errors=True)
+        makedirs(path)
+
+
 def list_folders(path):
     return [
         basename(normpath(folder))

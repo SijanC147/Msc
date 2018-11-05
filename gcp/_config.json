@@ -1,22 +1,20 @@
 {
-    "jobId": "oov_eval_3",
+    "jobId": "oov_eval_5",
     "labels": {},
     "trainingInput": {
         "scaleTier": "CUSTOM",
-        "masterType": "standard_gpu",
+        "masterType": "standard",
         "pythonVersion": "3.5",
         "runtimeVersion": "1.10",
         "region": "europe-west1",
         "args": [
-            "-em=twitter-200",
+            "-em=wiki-50",
             "-ds=dong",
             "-m=lcrrot",
             "-b=25",
-            "-s=5000",
+            "-s=1000",
             "-mp",
-            "hidden_units=300",
-            "oov=True",
-            "oov_buckets=25",
+            "hidden_units=150",
             "-v=DEBUG"
         ]
     }

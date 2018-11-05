@@ -222,9 +222,10 @@ def stringify(list_element):
     if isinstance(list_element, str):
         return list_element
     if isinstance(list_element, partial):
+        function_name = {"func": list_element.func.__qualname__}
         keywords = list_element.keywords
         keywords = {key: val for key, val in sorted(keywords.items())}
-        return str(keywords)
+        return str({**function_name, **keywords})
     if callable(list_element):
         return getsource(list_element)
     if hasattr(list_element, "sort"):
@@ -244,11 +245,8 @@ def hash_data(data):
         return md5(data).hexdigest()
     data = list(map(stringify, data))
     data = list(map(lambda d: d.encode(encoding="utf-8"), data))
-    print(data)
     data = [md5(el).hexdigest() for el in data]
-    print(data)
     data.sort()
-    print(data)
     return md5(str(data).encode(encoding="utf-8")).hexdigest()
 
 

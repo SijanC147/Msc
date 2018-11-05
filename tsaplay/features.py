@@ -17,6 +17,7 @@ from tsaplay.utils.io import (
     write_tfrecords,
     write_vocab_file,
     read_vocab_file,
+    dump_json,
 )
 from tsaplay.utils.data import (
     merge_dicts,
@@ -25,6 +26,7 @@ from tsaplay.utils.data import (
     split_list,
     hash_data,
     tokenize_data,
+    stringify,
 )
 
 
@@ -53,6 +55,7 @@ class FeatureProvider:
 
         self._init_uid()
         self._init_gen_dir()
+        self._write_info_file()
         for mode in ["train", "test"]:
             self._init_data_dict(mode)
             self._init_corpus(mode)
@@ -72,7 +75,10 @@ class FeatureProvider:
 
     @property
     def datasets(self):
-        return self._datasets
+        try:
+            return list(self._datasets)
+        except TypeError:
+            return [self._datasets]
 
     @property
     def embedding(self):
@@ -99,12 +105,8 @@ class FeatureProvider:
         return self._embedding_params
 
     def _init_uid(self):
-        try:
-            datasets_uids = [dataset.uid for dataset in self._datasets]
-            dataset_names = [dataset.name for dataset in self._datasets]
-        except TypeError:
-            datasets_uids = [self._datasets.uid]
-            dataset_names = [self._datasets.name]
+        datasets_uids = [dataset.uid for dataset in self.datasets]
+        dataset_names = [dataset.name for dataset in self.datasets]
         oov_policy = [self._oov, self._oov_buckets]
         uid_data = [self._embedding.uid] + datasets_uids + oov_policy
         print(uid_data)
@@ -114,10 +116,30 @@ class FeatureProvider:
 
     def _init_gen_dir(self):
         data_root = FEATURES_DATA_PATH
-        gen_dir = join(data_root, self._uid)
+        gen_dir = join(data_root, self._name)
         if not exists(gen_dir):
             makedirs(gen_dir)
         self._gen_dir = gen_dir
+
+    def _write_info_file(self):
+        info_path = join(self.gen_dir, "info.json")
+        info = {
+            "uid": self.uid,
+            "name": self.name,
+            "datasets": {
+                "uids": [dataset.uid for dataset in self.datasets],
+                "names": [dataset.name for dataset in self.datasets],
+            },
+            "embedding": {
+                "uid": self.embedding.uid,
+                "name": self.embedding.name,
+            },
+            "oov_policy": {
+                "oov": stringify(self._oov),
+                "oov_buckets": self._oov_buckets,
+            },
+        }
+        dump_json(path=info_path, data=info)
 
     def _init_data_dict(self, mode):
         data_dict_attr = "_{mode}_dict".format(mode=mode)
@@ -126,14 +148,10 @@ class FeatureProvider:
         if exists(data_dict_path):
             data_dict = unpickle_file(data_dict_path)
         else:
-            try:
-                data_dicts = (
-                    getattr(dataset, data_dict_attr)
-                    for dataset in self._datasets
-                )
-                data_dict = merge_dicts(*data_dicts)
-            except TypeError:
-                data_dict = getattr(self._datasets, data_dict_attr)
+            data_dicts = (
+                getattr(dataset, data_dict_attr) for dataset in self.datasets
+            )
+            data_dict = merge_dicts(*data_dicts)
             pickle_file(path=data_dict_path, data=data_dict)
         class_labels = self._class_labels or []
         class_labels = set(class_labels + data_dict["labels"])
@@ -147,13 +165,10 @@ class FeatureProvider:
         if exists(corpus_path):
             corpus = unpickle_file(corpus_path)
         else:
-            try:
-                corpora = (
-                    getattr(dataset, corpus_attr) for dataset in self._datasets
-                )
-                corpus = merge_corpora(*corpora)
-            except TypeError:
-                corpus = getattr(self._datasets, corpus_attr)
+            corpora = (
+                getattr(dataset, corpus_attr) for dataset in self.datasets
+            )
+            corpus = merge_corpora(*corpora)
             pickle_file(path=corpus_path, data=corpus)
         setattr(self, corpus_attr, corpus)
 
@@ -163,8 +178,6 @@ class FeatureProvider:
         vocab_file_path = join(self._gen_dir, vocab_file)
         self._vocab_file = vocab_file_path
         train_vocab = corpora_vocab(self._train_corpus)
-        print("VOCAB FILE PATH: {}".format(self._vocab_file))
-        print(exists(self._vocab_file))
         if exists(self._vocab_file):
             self._vocab = read_vocab_file(vocab_file_path)
         else:
@@ -188,8 +201,6 @@ class FeatureProvider:
             token_data_attr = "_{mode}_tokens".format(mode=mode)
             token_data_file = "_{mode}_tokens.pkl".format(mode=mode)
             token_data_path = join(self._gen_dir, token_data_file)
-            print("TOKEN FILE PATH: {}".format(token_data_path))
-            print(exists(token_data_path))
             if exists(token_data_path):
                 token_data = unpickle_file(token_data_path)
                 setattr(self, token_data_attr, token_data)
