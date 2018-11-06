@@ -6,7 +6,6 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 import matplotlib as mpl
 from matplotlib.font_manager import FontProperties
 from tsaplay.constants import DEFAULT_FONT
-from pkg_resources import resource_stream
 from tsaplay.utils.io import get_image_from_plt
 
 
