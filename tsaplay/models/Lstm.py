@@ -1,16 +1,15 @@
 import tensorflow as tf
 from tsaplay.models.tsa_model import TsaModel
-from tsaplay.utils.tf import dropout_lstm_cell
+from tsaplay.utils.tf import lstm_cell
 
 
 class Lstm(TsaModel):
     def set_params(self):
         return {
-            "batch-size": 100,
+            "batch-size": 25,
             "learning_rate": 0.01,
-            "keep_prob": 0.8,
-            "hidden_units": 100,
-            "initializer": tf.initializers.random_uniform(-0.03, 0.03),
+            "hidden_units": 200,
+            "initializer": tf.initializers.random_uniform(-0.003, 0.003),
         }
 
     @classmethod
@@ -28,11 +27,7 @@ class Lstm(TsaModel):
 
     def model_fn(self, features, labels, mode, params):
         _, final_states = tf.nn.dynamic_rnn(
-            cell=dropout_lstm_cell(
-                hidden_units=params["hidden_units"],
-                initializer=params["initializer"],
-                keep_prob=params["keep_prob"],
-            ),
+            cell=lstm_cell(**params),
             inputs=features["sentence_emb"],
             sequence_length=features["sentence_len"],
             dtype=tf.float32,

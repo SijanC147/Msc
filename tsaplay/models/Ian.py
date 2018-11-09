@@ -2,7 +2,7 @@ import tensorflow as tf
 from tsaplay.models.tsa_model import TsaModel
 from tsaplay.utils.tf import (
     variable_len_batch_mean,
-    dropout_lstm_cell,
+    lstm_cell,
     l2_regularized_loss,
     attention_unit,
     generate_attn_heatmap_summary,
@@ -39,11 +39,7 @@ class Ian(TsaModel):
     def model_fn(self, features, labels, mode, params):
         with tf.variable_scope("context_lstm"):
             context_hidden_states, _ = tf.nn.dynamic_rnn(
-                cell=dropout_lstm_cell(
-                    hidden_units=params["hidden_units"],
-                    initializer=params["initializer"],
-                    keep_prob=params["keep_prob"],
-                ),
+                cell=lstm_cell(**params),
                 inputs=features["context_emb"],
                 sequence_length=features["context_len"],
                 dtype=tf.float32,
@@ -56,11 +52,7 @@ class Ian(TsaModel):
 
         with tf.variable_scope("target_lstm"):
             target_hidden_states, _ = tf.nn.dynamic_rnn(
-                cell=dropout_lstm_cell(
-                    hidden_units=params["hidden_units"],
-                    initializer=params["initializer"],
-                    keep_prob=params["keep_prob"],
-                ),
+                cell=lstm_cell(**params),
                 inputs=features["target_emb"],
                 sequence_length=features["target_len"],
                 dtype=tf.float32,

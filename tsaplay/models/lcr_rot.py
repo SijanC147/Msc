@@ -1,4 +1,3 @@
-from os.path import join
 import tensorflow as tf
 from tensorflow.contrib.rnn import (  # pylint: disable=E0611
     stack_bidirectional_dynamic_rnn
@@ -7,7 +6,7 @@ from tsaplay.models.tsa_model import TsaModel
 from tsaplay.utils.tf import (
     variable_len_batch_mean,
     attention_unit,
-    dropout_lstm_cell,
+    lstm_cell,
     l2_regularized_loss,
     generate_attn_heatmap_summary,
 )
@@ -30,20 +29,8 @@ class LcrRot(TsaModel):
     def model_fn(self, features, labels, mode, params):
         with tf.variable_scope("target_bi_lstm"):
             target_hidden_states, _, _ = stack_bidirectional_dynamic_rnn(
-                cells_fw=[
-                    dropout_lstm_cell(
-                        hidden_units=params["hidden_units"],
-                        initializer=params["initializer"],
-                        keep_prob=params["keep_prob"],
-                    )
-                ],
-                cells_bw=[
-                    dropout_lstm_cell(
-                        hidden_units=params["hidden_units"],
-                        initializer=params["initializer"],
-                        keep_prob=params["keep_prob"],
-                    )
-                ],
+                cells_fw=[lstm_cell(**params)],
+                cells_bw=[lstm_cell(**params)],
                 inputs=features["target_emb"],
                 sequence_length=features["target_len"],
                 dtype=tf.float32,
@@ -56,20 +43,8 @@ class LcrRot(TsaModel):
 
         with tf.variable_scope("left_bi_lstm"):
             left_hidden_states, _, _ = stack_bidirectional_dynamic_rnn(
-                cells_fw=[
-                    dropout_lstm_cell(
-                        hidden_units=params["hidden_units"],
-                        initializer=params["initializer"],
-                        keep_prob=params["keep_prob"],
-                    )
-                ],
-                cells_bw=[
-                    dropout_lstm_cell(
-                        hidden_units=params["hidden_units"],
-                        initializer=params["initializer"],
-                        keep_prob=params["keep_prob"],
-                    )
-                ],
+                cells_fw=[lstm_cell(**params)],
+                cells_bw=[lstm_cell(**params)],
                 inputs=features["left_emb"],
                 sequence_length=features["left_len"],
                 dtype=tf.float32,
@@ -77,20 +52,8 @@ class LcrRot(TsaModel):
 
         with tf.variable_scope("right_bi_lstm"):
             right_hidden_states, _, _ = stack_bidirectional_dynamic_rnn(
-                cells_fw=[
-                    dropout_lstm_cell(
-                        hidden_units=params["hidden_units"],
-                        initializer=params["initializer"],
-                        keep_prob=params["keep_prob"],
-                    )
-                ],
-                cells_bw=[
-                    dropout_lstm_cell(
-                        hidden_units=params["hidden_units"],
-                        initializer=params["initializer"],
-                        keep_prob=params["keep_prob"],
-                    )
-                ],
+                cells_fw=[lstm_cell(**params)],
+                cells_bw=[lstm_cell(**params)],
                 inputs=features["right_emb"],
                 sequence_length=features["right_len"],
                 dtype=tf.float32,

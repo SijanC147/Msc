@@ -7,8 +7,8 @@ from tsaplay.utils.addons import addon, attn_heatmaps
 from tsaplay.utils.tf import (
     masked_softmax,
     variable_len_batch_mean,
-    dropout_lstm_cell,
-    dropout_gru_cell,
+    lstm_cell,
+    gru_cell,
     l2_regularized_loss,
     generate_attn_heatmap_summary,
     create_snapshots_container,
@@ -65,20 +65,8 @@ class Ram(TsaModel):
         forward_cells = []
         backward_cells = []
         for _ in range(params["n_lstm_layers"]):
-            forward_cells.append(
-                dropout_lstm_cell(
-                    hidden_units=params["lstm_hidden_units"],
-                    initializer=params["initializer"],
-                    keep_prob=params["keep_prob"],
-                )
-            )
-            backward_cells.append(
-                dropout_lstm_cell(
-                    hidden_units=params["lstm_hidden_units"],
-                    initializer=params["initializer"],
-                    keep_prob=params["keep_prob"],
-                )
-            )
+            forward_cells.append(lstm_cell(**params))
+            backward_cells.append(lstm_cell(**params))
 
         with tf.variable_scope("bi_lstm"):
             memory_star, _, _ = stack_bidirectional_dynamic_rnn(
@@ -150,11 +138,7 @@ class Ram(TsaModel):
 
             with tf.variable_scope("gru_layer", reuse=tf.AUTO_REUSE):
                 _, final_state = tf.nn.dynamic_rnn(
-                    cell=dropout_gru_cell(
-                        hidden_units=params["gru_hidden_units"],
-                        initializer=params["initializer"],
-                        keep_prob=params["keep_prob"],
-                    ),
+                    cell=gru_cell(**params),
                     inputs=content_i_al,
                     sequence_length=features["sentence_len"],
                     dtype=tf.float32,

@@ -3,6 +3,7 @@ import json
 import pickle
 import math
 import csv
+import re
 from zipfile import ZipFile, ZIP_DEFLATED
 from datetime import datetime, timedelta
 from os import listdir, system, makedirs
@@ -208,5 +209,40 @@ def write_vocab_file(path, vocab, indices=None):
 
 def read_vocab_file(path):
     with open(path, "r", encoding="utf-8") as vocab_file:
-        vocab = vocab_file.readlines()
-    return vocab
+        return [word.strip() for word in vocab_file]
+
+
+def args_to_dict(args):
+    args_dict = args or {}
+    if args_dict:
+        args_dict = [arg.split("=") for arg in args_dict]
+        args_dict = {
+            arg[0]: (
+                int(arg[1])
+                if arg[1].isdigit()
+                else float(arg[1])
+                if arg[1].replace(".", "", 1).isdigit()
+                else True
+                if arg[1].lower() == "true"
+                else False
+                if arg[1].lower() == "false"
+                else arg[1]
+            )
+            for arg in args_dict
+        }
+    return args_dict
+
+
+def arg_with_info(arg):
+    pat = re.compile(r"([^\[]*)[\[]?([^\]]*)[\]]?")
+    arg = pat.match(arg).groups()
+    primary_arg = arg[0]
+    additional_info = None
+    if arg[1]:
+        additional_info = arg[1].split(",")
+        additional_info = (
+            {key: val for key, val in zip(["train", "test"], additional_info)}
+            if len(additional_info) == 2
+            else additional_info
+        )
+    return primary_arg, additional_info

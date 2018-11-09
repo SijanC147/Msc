@@ -1,5 +1,4 @@
 import io
-from warnings import warn
 from functools import wraps
 from itertools import tee, chain
 from tqdm import tqdm
@@ -7,37 +6,31 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.estimator import ModeKeys  # pylint: disable=E0401
 from tensorflow.train import BytesList, Feature, Features, Example, Int64List
-from tsaplay.constants import DELIMITER, MAX_EMBEDDING_SHARDS
+from tsaplay.constants import TF_DELIMITER, MAX_EMBEDDING_SHARDS
 from tsaplay.utils.io import export_run_metadata
 from tsaplay.utils.data import zero_norm_labels, split_list
-from tsaplay.utils.debug import cprnt
+from tsaplay.utils.debug import cprnt, timeit
 
 
 def embed_sequences(model_fn):
     @wraps(model_fn)
     def wrapper(self, features, labels, mode, params):
+        embedded_sequences = {}
         embedding_init = self.aux_config.get("embedding_init", "partitioned")
-        embedding_op = self.aux_config.get("embedding_op", "embed_lookup")
-        if embedding_init == "partitioned" and embedding_op == "embed_seq":
-            warn(
-                """Cannot use embed_seq op with partitioned embedding \
-                    since it uses 'mod' partitioned strategy, \
-                    using tf.nn.embedding_lookup \
-                    with 'div' partition strategy instead."""
-            )
-            embedding_op = "embed_lookup"
         embedding_init_fn = params["_embedding_init"]
         num_shards = params["_embedding_num_shards"]
-        vocab_size = params["_vocab_size"]
-        dim_size = params["_embedding_dim"]
         embedding_partitioner = (
             tf.fixed_size_partitioner(num_shards)
             if embedding_init == "partitioned"
             else None
         )
         embedding_initializer = (
-            embedding_init_fn if embedding_init != "constant" else None
+            params["_embedding_init"]
+            if embedding_init in ["variable", "partitioned"]
+            else None
         )
+        vocab_size = params["_vocab_size"]
+        dim_size = params["_embedding_dim"]
         trainable = params.get("train_embeddings", True)
         with tf.variable_scope("embedding_layer", reuse=tf.AUTO_REUSE):
             embeddings = tf.get_variable(
@@ -48,22 +41,12 @@ def embed_sequences(model_fn):
                 trainable=trainable,
                 dtype=tf.float32,
             )
-        embedded_sequences = {}
         for key, value in features.items():
             if "_ids" in key:
                 component = key.replace("_ids", "")
                 embdd_key = component + "_emb"
-                embedded_sequence = (
-                    tf.contrib.layers.embed_sequence(
-                        ids=value,
-                        initializer=embeddings,
-                        scope="embedding_layer",
-                        reuse=True,
-                    )
-                    if embedding_op == "embed_seq"
-                    else tf.nn.embedding_lookup(
-                        params=embeddings, ids=value, partition_strategy="div"
-                    )
+                embedded_sequence = tf.nn.embedding_lookup(
+                    params=embeddings, ids=value, partition_strategy="div"
                 )
                 embedded_sequences[embdd_key] = embedded_sequence
         features.update(embedded_sequences)
@@ -181,7 +164,7 @@ def prep_dataset(tfrecords, params, processing_fn, mode):
     prefetch_buffer = params.get("prefetch_buffer", 100)
     dataset = tf.data.Dataset.list_files(file_pattern=tfrecords)
     dataset = dataset.apply(
-        tf.contrib.data.parallel_interleave(
+        tf.data.experimental.parallel_interleave(
             tf.data.TFRecordDataset,
             cycle_length=3,
             buffer_output_elements=prefetch_buffer,
@@ -192,11 +175,11 @@ def prep_dataset(tfrecords, params, processing_fn, mode):
         dataset = dataset.shuffle(buffer_size=shuffle_buffer)
     elif mode == "TRAIN":
         dataset = dataset.apply(
-            tf.contrib.data.shuffle_and_repeat(buffer_size=shuffle_buffer)
+            tf.data.experimental.shuffle_and_repeat(buffer_size=shuffle_buffer)
         )
 
     dataset = dataset.apply(
-        tf.contrib.data.map_and_batch(
+        tf.data.experimental.map_and_batch(
             lambda example: processing_fn(*parse_tf_example(example)),
             params["batch-size"],
             num_parallel_batches=parallel_batches,
@@ -231,7 +214,7 @@ def sparse_sequences_to_dense(sp_sequences):
         default = b""
     else:
         default = 0
-    dense = tf.sparse_tensor_to_dense(sp_sequences, default_value=default)
+    dense = tf.sparse.to_dense(sp_sequences, default_value=default)
     needs_squeezing = tf.equal(tf.size(sp_sequences.dense_shape), 3)
     dense = tf.cond(
         needs_squeezing, lambda: tf.squeeze(dense, axis=1), lambda: dense
@@ -291,29 +274,37 @@ def masked_softmax(logits, mask):
     return masked_sm
 
 
-def gru_cell(hidden_units, inititalizer):
-    return tf.nn.rnn_cell.GRUCell(
+def gru_cell(**params):
+    hidden_units = params.get("gru_hidden_units", params.get("hidden_units"))
+    initializer = params.get("gru_initializer", params.get("initializer"))
+    keep_prob = params.get("gru_keep_prob", params.get("keep_prob"))
+    gru = tf.nn.rnn_cell.GRUCell(
         num_units=hidden_units,
-        kernel_initializer=inititalizer,
-        bias_initializer=inititalizer,
+        kernel_initializer=initializer,
+        bias_initializer=initializer,
+    )
+    return (
+        gru
+        if not keep_prob
+        else tf.contrib.rnn.DropoutWrapper(
+            cell=gru, output_keep_prob=keep_prob
+        )
     )
 
 
-def dropout_gru_cell(hidden_units, initializer, keep_prob):
-    return tf.contrib.rnn.DropoutWrapper(
-        cell=gru_cell(hidden_units, initializer), output_keep_prob=keep_prob
-    )
-
-
-def lstm_cell(hidden_units, initializer):
-    return tf.nn.rnn_cell.LSTMCell(
+def lstm_cell(**params):
+    hidden_units = params.get("lstm_hidden_units", params.get("hidden_units"))
+    initializer = params.get("lstm_initializer", params.get("initializer"))
+    keep_prob = params.get("lstm_keep_prob", params.get("keep_prob"))
+    lstm = tf.nn.rnn_cell.LSTMCell(
         num_units=hidden_units, initializer=initializer
     )
-
-
-def dropout_lstm_cell(hidden_units, initializer, keep_prob):
-    return tf.contrib.rnn.DropoutWrapper(
-        cell=lstm_cell(hidden_units, initializer), output_keep_prob=keep_prob
+    return (
+        lstm
+        if not keep_prob
+        else tf.contrib.rnn.DropoutWrapper(
+            cell=lstm, output_keep_prob=keep_prob
+        )
     )
 
 
@@ -476,21 +467,21 @@ def fetch_lookup_ops(lookup_table, **tokens_lists):
     tkns_lsts = sum([tkn_list for tkn_list in tokens_lists.values()], [])
 
     tokens_list = (
-        DELIMITER.join(tkns_list).encode() for tkns_list in tkns_lsts
+        TF_DELIMITER.join(tkns_list).encode("utf-8") for tkns_list in tkns_lsts
     )
     tokens_tensors = (
         tf.constant([tkns_list], dtype=tf.string) for tkns_list in tokens_list
     )
     tokens_sp_tensors = (
-        tf.string_split(tkn_ten, DELIMITER) for tkn_ten in tokens_tensors
+        tf.string_split(tkn_ten, TF_DELIMITER) for tkn_ten in tokens_tensors
     )
     string_sp_tensors, id_sp_tensors = tee(tokens_sp_tensors)
     string_ops = (
-        tf.sparse_tensor_to_dense(sp_tensor, default_value=b"")
+        tf.sparse.to_dense(sp_tensor, default_value=b"")
         for sp_tensor in string_sp_tensors
     )
     id_ops = (
-        tf.sparse_tensor_to_dense(lookup_table.lookup(sp_tensor))
+        tf.sparse.to_dense(lookup_table.lookup(sp_tensor))
         for sp_tensor in id_sp_tensors
     )
     op_generator = chain(string_ops, id_ops)
@@ -511,6 +502,7 @@ def fetch_lookup_ops(lookup_table, **tokens_lists):
     }
 
 
+@timeit("Executing token ID lookups", "Token IDs generated")
 def run_lookups(fetch_dict, metadata_path=None, eager=False):
     if tf.executing_eagerly() and not eager:
         raise ValueError("Eager execution is not supported.")

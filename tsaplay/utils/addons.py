@@ -4,7 +4,7 @@ from os import makedirs
 from functools import wraps, partial
 import tensorflow as tf
 from tensorflow.estimator import ModeKeys  # pylint: disable=E0401
-from tensorflow.saved_model.signature_constants import (
+from tensorflow.saved_model.signature_constants import (  # pylint: disable=E0401
     DEFAULT_SERVING_SIGNATURE_DEF_KEY
 )
 from tensorflow.contrib.estimator import (  # pylint: disable=E0611

@@ -20,6 +20,7 @@ tensorflow-gpu = {version=">=1.11.0", sys_platform = "== 'linux'"}
 tox-pipenv = "*"
 pytest = "*"
 hypothesis = "*"
+matplotlib-venn = "*"
 
 [requires]
 python_version = "3.6"

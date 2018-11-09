@@ -24,12 +24,13 @@
             "request": "launch",
             "module": "tsaplay.task",
             "args": [
-                "-em=wiki-50",
-                "-ef=corpus",
+                "-em='twitter-50[corpus]'",
                 "-ds=dong",
-                "-m=tclstm",
+                "-m=lstm",
                 "-b=25",
-                "-s=100"
+                "-s=100",
+                "-mp",
+                "num_oov_buckets=500"
             ],
             "console": "integratedTerminal"
         },

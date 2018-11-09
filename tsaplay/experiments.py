@@ -1,13 +1,16 @@
-from os import listdir, environ, makedirs
+from os import listdir, makedirs
 from os.path import join, isfile, exists
 from shutil import rmtree
 import comet_ml
-import tensorflow as tf
 from tsaplay.utils.io import start_tensorboard, restart_tf_serve_container
 from tsaplay.constants import (
     EXPERIMENT_DATA_PATH,
     EXPORTS_DATA_PATH,
     RANDOM_SEED,
+    SAVE_SUMMARY_STEPS,
+    SAVE_CHECKPOINTS_STEPS,
+    LOG_STEP_COUNT_STEPS,
+    KEEP_CHECKPOINT_MAX,
 )
 
 
@@ -24,7 +27,7 @@ class Experiment:
         self.feature_provider = feature_provider
         self.model = model
         self.contd_tag = contd_tag
-        self.experiment_dir = job_dir or self._make_experiment_dir()
+        self.experiment_dir = self._make_experiment_dir(job_dir)
         run_config = {
             "model_dir": join(self.experiment_dir),
             **(run_config or {}),
@@ -86,8 +89,9 @@ class Experiment:
             if not isfile(join(EXPORTS_DATA_PATH, m))
         ]
 
-    def _make_experiment_dir(self):
-        dir_parent = join(EXPERIMENT_DATA_PATH, self.model.name)
+    def _make_experiment_dir(self, job_dir):
+        data_root = job_dir or EXPERIMENT_DATA_PATH
+        dir_parent = join(data_root, self.model.name)
         exp_dir_name = self.contd_tag or self.feature_provider.name
         exp_dir_name = exp_dir_name.replace(" ", "_")
         experiment_dir = join(dir_parent, exp_dir_name)
@@ -141,10 +145,10 @@ class Experiment:
         }
         default_run_config = {
             "tf_random_seed": RANDOM_SEED,
-            "save_summary_steps": 100,
-            "save_checkpoints_steps": 1000,
-            "log_step_count_steps": 100,
-            "keep_checkpoint_max": 0,
+            "save_summary_steps": SAVE_SUMMARY_STEPS,
+            "save_checkpoints_steps": SAVE_CHECKPOINTS_STEPS,
+            "log_step_count_steps": LOG_STEP_COUNT_STEPS,
+            "keep_checkpoint_max": KEEP_CHECKPOINT_MAX,
             # "session_config": tf.ConfigProto(**default_session_config),
         }
         default_run_config.update(custom_run_config)

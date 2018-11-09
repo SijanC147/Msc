@@ -132,15 +132,20 @@ def resample_data_dict(data_dict, target_dists):
     return resampled_data_dict
 
 
-def merge_dicts(*dicts):
-    new_dict = defaultdict(list)
+def accumulate_dicts(*args, accum_fn=None, default=None, **kwargs):
+    dicts = list(args or []) + (list(kwargs.values()) if kwargs else [])
+    new_dict = defaultdict(default or list)
+    accum_fn = accum_fn or (lambda prev, curr: prev + curr)
     for key, value in chain.from_iterable(map(dict.items, dicts)):
-        new_dict[key] += value
+        try:
+            new_dict[key] = accum_fn(new_dict[key], value)
+        except TypeError:
+            new_dict[key] = accum_fn(new_dict[key], default(value))
     return dict(new_dict)
 
 
-def merge_corpora(*corpi):
-    corpi_items = [map(tuple, corpus.items()) for corpus in corpi]
+def merge_corpora(*corpora):
+    corpi_items = [map(tuple, corpus.items()) for corpus in corpora]
     corpi_items = sorted(chain(*corpi_items))
     corpus = [
         (key, sum(j for _, j in group))
@@ -288,6 +293,7 @@ def tokenize_data(include=None, **data_dicts):
 
 def filter_vocab_list(vocab, filters, incl_report=None):
     filtered = vocab
+    filter_report = None
     orig_len = len(filtered)
     filter_sets = list(filter(lambda filt: not callable(filt), filters))
     if filter_sets:
@@ -319,21 +325,39 @@ def filter_vocab_list(vocab, filters, incl_report=None):
             ]
         filtered = sum(tqdm(filtered, desc="Filtering vocabulary"), [])
 
-    if incl_report:
-        filtered_length = len(filtered)
-        reduction = ((orig_len - filtered_length) / orig_len) * 100
-        filter_details = {
-            "vocab": {
-                "original": orig_len,
-                "filtered": filtered_length,
-                "reduction": reduction,
-            },
-            "filters": {
-                "functions": list(map(stringify, filter_fns)),
-                "sets": list(map(stringify, filter_sets)),
-            },
-        }
+    filtered_length = len(filtered)
+    reduction = ((orig_len - filtered_length) / orig_len) * 100
+    filter_details = {
+        "vocab": {
+            "original": orig_len,
+            "filtered": filtered_length,
+            "reduction": reduction,
+        },
+        "filters": {
+            "functions": list(map(stringify, filter_fns)),
+            "sets": list(map(stringify, filter_sets)),
+        },
+    }
 
-        return filtered, filter_report, filter_details
-    return filtered
+    return filtered, filter_report, filter_details
+
+
+def tokens_by_assigned_id(words, ids, start=None, stop=None, keys=None):
+    ids_dict = defaultdict(set)
+    try:
+        words = sum(words, [])
+        ids = sum(ids, [])
+    except TypeError:
+        pass
+    start = start or min(ids)
+    stop = stop or (start + len(keys)) if keys else max(ids)
+    for word, index in zip(words, ids):
+        if start <= index <= stop:
+            key = keys[index - start] if keys else str("index")
+            ids_dict[key] |= (
+                set([str(word, "utf-8")])
+                if isinstance(word, bytes)
+                else set([word])
+            )
+    return {key: list(value) for key, value in ids_dict.items()}
 

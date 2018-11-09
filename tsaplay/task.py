@@ -1,19 +1,21 @@
 import argparse
+import traceback
 from sys import argv
 from os import environ, execvpe
-from warnings import warn
-import comet_ml
-import tensorflow as tf
+from os.path import join
 import pkg_resources as pkg
-from tsaplay.utils.debug import timeit
-import tsaplay.utils.filters as available_filters
-from tsaplay.utils.io import list_folders
+from datetime import datetime
+import comet_ml  # pylint: disable=W0611
+import tensorflow as tf
+from tsaplay.utils.debug import timeit, cprnt
+from tsaplay.utils.io import args_to_dict, arg_with_info
+from tsaplay.utils.data import corpora_vocab
 from tsaplay.datasets import Dataset
 from tsaplay.embeddings import Embedding
 from tsaplay.features import FeatureProvider
 from tsaplay.experiments import Experiment
 import tsaplay.models as tsa_models
-from tsaplay.constants import EMBEDDING_SHORTHANDS, DATASET_DATA_PATH
+from tsaplay.constants import EMBEDDING_SHORTHANDS
 
 MODELS = {
     "lstm": tsa_models.Lstm,
@@ -29,51 +31,50 @@ MODELS = {
 def argument_parser():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument(
+    subparsers = parser.add_subparsers()
+    batch_task_parser = subparsers.add_parser("batch")
+    batch_task_parser.add_argument(
+        "batch_file",
+        help="Path to batch file containing list of jobs to run sequentially",
+    )
+
+    single_task_parser = subparsers.add_parser("single")
+    single_task_parser.add_argument(
         "--job-dir",
         help="GCS location to write checkpoints to and export models",
     )
 
-    parser.add_argument(
+    single_task_parser.add_argument(
         "--embedding",
         "-em",
-        type=str,
-        choices=[*EMBEDDING_SHORTHANDS],
-        help="Pre-trained embedding to use.",
+        type=arg_with_info,
+        help="Pre-trained embedding to use, <embedding>[..filters]",
         default="wiki-50",
     )
 
-    parser.add_argument(
-        "--embedding-filters",
-        "-ef",
-        help="Filter embedding on unique tokens from datasets",
-        nargs="*",
+    single_task_parser.add_argument(
+        "--datasets",
+        "-ds",
+        type=arg_with_info,
+        help="One or more datasets to use, <dataset>[redist(,test_dist)]+",
+        default=["dong"],
+        nargs="+",
     )
 
-    parser.add_argument(
+    single_task_parser.add_argument(
         "--max-shards",
         "-ms",
         help="Max number of shards to partition embedding.",
         type=int,
     )
 
-    parser.add_argument(
+    single_task_parser.add_argument(
         "--comet-api",
         "-cmt",
         help="Comet.ml API key to upload experiment, contd_tag must be set",
     )
 
-    parser.add_argument(
-        "--datasets",
-        "-ds",
-        type=str,
-        choices=list_folders(DATASET_DATA_PATH),
-        help="One or more datasets to use for training and evaluation.",
-        default=["dong"],
-        nargs="+",
-    )
-
-    parser.add_argument(
+    single_task_parser.add_argument(
         "--model",
         "-m",
         type=str,
@@ -82,7 +83,7 @@ def argument_parser():
         default="lcrrot",
     )
 
-    parser.add_argument(
+    single_task_parser.add_argument(
         "--model-params",
         "-mp",
         nargs="*",
@@ -90,7 +91,7 @@ def argument_parser():
         required=False,
     )
 
-    parser.add_argument(
+    single_task_parser.add_argument(
         "--aux-config",
         "-aux",
         nargs="*",
@@ -98,7 +99,7 @@ def argument_parser():
         required=False,
     )
 
-    parser.add_argument(
+    single_task_parser.add_argument(
         "--run-config",
         "-rc",
         nargs="*",
@@ -106,14 +107,14 @@ def argument_parser():
         required=False,
     )
 
-    parser.add_argument(
+    single_task_parser.add_argument(
         "--contd-tag",
         "-contd",
         type=str,
         help="Continue a specific experiment resolved through this tag",
     )
 
-    parser.add_argument(
+    single_task_parser.add_argument(
         "--batch-size",
         "-b",
         type=int,
@@ -121,7 +122,7 @@ def argument_parser():
         default=25,
     )
 
-    parser.add_argument(
+    single_task_parser.add_argument(
         "--steps",
         "-s",
         type=int,
@@ -129,10 +130,10 @@ def argument_parser():
         default=300,
     )
 
-    parser.add_argument(
+    single_task_parser.add_argument(
         "--verbosity",
         "-v",
-        choices=["DEBUG", "ERROR", "FATAL", "INFO", "WARN"],
+        choices=["DEBUG", "INFO", "WARN", "ERROR", "FATAL"],
         default="INFO",
         help="Set logging verbosity",
     )
@@ -140,47 +141,34 @@ def argument_parser():
     return parser
 
 
-def args_to_dict(args):
-    args_dict = args or {}
-    if args_dict:
-        args_dict = [arg.split("=") for arg in args_dict]
-        args_dict = {
-            arg[0]: (
-                int(arg[1])
-                if arg[1].isdigit()
-                else float(arg[1])
-                if arg[1].replace(".", "", 1).isdigit()
-                else True
-                if arg[1].lower() == "true"
-                else False
-                if arg[1].lower() == "false"
-                else arg[1]
-            )
-            for arg in args_dict
-        }
-    return args_dict
+def make_feature_provider(args):
+    datasets = [Dataset(name, redist) for (name, redist) in args.datasets]
+
+    embedding_name, filters_arg = args.embedding
+
+    filters = []
+    if filters_arg and "corpus" in filters_arg:
+        corpora = ({**ds.train_corpus, **ds.test_corpus} for ds in datasets)
+        filters += [corpora_vocab(*corpora)]
+
+    embedding = Embedding(EMBEDDING_SHORTHANDS.get(embedding_name), filters)
+    params = args_to_dict(args.model_params)
+
+    return FeatureProvider(datasets, embedding, **params)
 
 
-def get_feature_provider(datasets, embedding, params):
-    datasets = [Dataset(name) for name in datasets]
-    embedding = Embedding(EMBEDDING_SHORTHANDS.get(embedding))
-    oov = params.get("oov")
-    oov_buckets = params.get("oov_buckets", 1)
+@timeit("Starting Experiment", "Experiment complete")
+def run_experiment(args, experiment_index=None):
+    if experiment_index is not None:
+        cprnt(y="Running experiment {}".format(experiment_index))
+        cprnt(y="Args: {}".format(args))
 
-    return FeatureProvider(datasets, embedding, oov, oov_buckets)
-
-
-def run_experiment(args):
     tf.logging.set_verbosity(args.verbosity)
+
+    feature_provider = make_feature_provider(args)
 
     params = args_to_dict(args.model_params)
     params.update({"batch-size": args.batch_size})
-
-    datasets = args.datasets
-    embedding = args.embedding
-
-    feature_provider = get_feature_provider(datasets, embedding, params)
-
     model = MODELS.get(args.model)(params, args_to_dict(args.aux_config))
 
     run_config = args_to_dict(args.run_config)
@@ -195,8 +183,6 @@ def run_experiment(args):
 
     experiment.run(job="train+eval", steps=args.steps)
 
-    pkg.cleanup_resources()
-
 
 def nvidia_cuda_prof_tools_path_fix():
     ld_lib_path = environ.get("LD_LIBRARY_PATH")
@@ -206,13 +192,40 @@ def nvidia_cuda_prof_tools_path_fix():
         execvpe("python3", ["python3"] + argv, environ)
 
 
-@timeit("Starting task", "Task complete")
+def parse_batch_file(batch_file_path):
+    with open(batch_file_path, "r") as batch_file:
+        return [
+            ["single"] + cmd.strip().split()
+            for cmd in batch_file
+            if cmd.strip() and cmd[0] not in ["#", ";"]
+        ]
+
+def run_next_experiment(batch_file_path):
+    jobs = parse_batch_file(batch_file_path)
+    task_index = int(environ.get("TSATASK", 0))
+    if task_index >= len(jobs):
+        del environ["TSATASK"]
+        return
+    task_parser = argument_parser()
+    try:
+        task_args = task_parser.parse_args(jobs[task_index])
+        run_experiment(task_args, experiment_index=task_index)
+    except Exception:  # pylint: disable=W0703
+        traceback.print_exc()
+    environ["TSATASK"] = str(task_index + 1)
+    next_cmd = "python3 -m tsaplay.task batch {0}".format(batch_file_path)
+    execvpe("python3", next_cmd.split(), environ)
+
+
 def main():
-    parser = argument_parser()
-    args = parser.parse_args()
-    run_experiment(args)
+    nvidia_cuda_prof_tools_path_fix()
+    args = argument_parser().parse_args()
+    try:
+        run_next_experiment(args.batch_file)
+    except AttributeError:
+        run_experiment(args)
+    pkg.cleanup_resources()
 
 
 if __name__ == "__main__":
-    nvidia_cuda_prof_tools_path_fix()
     main()

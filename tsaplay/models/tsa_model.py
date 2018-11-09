@@ -32,7 +32,6 @@ from tsaplay.utils.addons import (
     scalars,
     metadata,
 )
-from tsaplay.utils.debug import cprnt
 
 
 class TsaModel(ABC):

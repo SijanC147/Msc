@@ -2,7 +2,12 @@ from os.path import join, exists
 from os import makedirs
 import numpy as np
 
-from tsaplay.constants import FEATURES_DATA_PATH, DEFAULT_OOV_FN, BUCKET_TOKEN
+from tsaplay.constants import (
+    FEATURES_DATA_PATH,
+    DEFAULT_OOV_FN,
+    BUCKET_TOKEN,
+    RANDOM_SEED,
+)
 from tsaplay.utils.tf import (
     ids_lookup_table,
     fetch_lookup_ops,
@@ -20,24 +25,30 @@ from tsaplay.utils.io import (
     dump_json,
 )
 from tsaplay.utils.data import (
-    merge_dicts,
+    accumulate_dicts,
     merge_corpora,
     corpora_vocab,
     split_list,
     hash_data,
     tokenize_data,
     stringify,
+    tokens_by_assigned_id,
 )
 
 
 class FeatureProvider:
-    def __init__(self, datasets, embedding, oov=None, oov_buckets=None):
+    def __init__(self, datasets, embedding, **kwargs):
+        num_oov_buckets = kwargs.get("num_oov_buckets", 0)
+        oov = kwargs.get("oov")
+        self._num_oov_buckets = max(num_oov_buckets, 0)
+        self._oov_fn = (
+            DEFAULT_OOV_FN
+            if ((oov or self._num_oov_buckets) and not callable(oov))
+            else oov
+        )
+
         self._datasets = datasets
         self._embedding = embedding
-        self._oov = DEFAULT_OOV_FN if oov and not callable(oov) else oov
-        self._oov_buckets = (
-            oov_buckets if oov_buckets and isinstance(oov_buckets, int) else 1
-        )
 
         self._name = None
         self._uid = None
@@ -52,18 +63,18 @@ class FeatureProvider:
         self._test_tokens = None
         self._train_tfrecords = None
         self._test_tfrecords = None
+        self._oov_buckets = None
 
         self._init_uid()
         self._init_gen_dir()
-        self._write_info_file()
         for mode in ["train", "test"]:
             self._init_data_dict(mode)
             self._init_corpus(mode)
-
         self._init_vocab()
         self._init_token_data()
-        self._init_tfrecords()
         self._init_embedding_params()
+        self._init_tfrecords()
+        self._write_info_file()
 
     @property
     def name(self):
@@ -107,7 +118,7 @@ class FeatureProvider:
     def _init_uid(self):
         datasets_uids = [dataset.uid for dataset in self.datasets]
         dataset_names = [dataset.name for dataset in self.datasets]
-        oov_policy = [self._oov, self._oov_buckets]
+        oov_policy = [bool(self._oov_fn), self._num_oov_buckets]
         uid_data = [self._embedding.uid] + datasets_uids + oov_policy
         print(uid_data)
         self._uid = hash_data(uid_data)
@@ -121,26 +132,6 @@ class FeatureProvider:
             makedirs(gen_dir)
         self._gen_dir = gen_dir
 
-    def _write_info_file(self):
-        info_path = join(self.gen_dir, "info.json")
-        info = {
-            "uid": self.uid,
-            "name": self.name,
-            "datasets": {
-                "uids": [dataset.uid for dataset in self.datasets],
-                "names": [dataset.name for dataset in self.datasets],
-            },
-            "embedding": {
-                "uid": self.embedding.uid,
-                "name": self.embedding.name,
-            },
-            "oov_policy": {
-                "oov": stringify(self._oov),
-                "oov_buckets": self._oov_buckets,
-            },
-        }
-        dump_json(path=info_path, data=info)
-
     def _init_data_dict(self, mode):
         data_dict_attr = "_{mode}_dict".format(mode=mode)
         data_dict_file = "_{mode}_dict.pkl".format(mode=mode)
@@ -151,7 +142,7 @@ class FeatureProvider:
             data_dicts = (
                 getattr(dataset, data_dict_attr) for dataset in self.datasets
             )
-            data_dict = merge_dicts(*data_dicts)
+            data_dict = accumulate_dicts(*data_dicts)
             pickle_file(path=data_dict_path, data=data_dict)
         class_labels = self._class_labels or []
         class_labels = set(class_labels + data_dict["labels"])
@@ -177,20 +168,22 @@ class FeatureProvider:
         vocab_file = vocab_file_templ.format(ext=".txt")
         vocab_file_path = join(self._gen_dir, vocab_file)
         self._vocab_file = vocab_file_path
-        train_vocab = corpora_vocab(self._train_corpus)
         if exists(self._vocab_file):
             self._vocab = read_vocab_file(vocab_file_path)
         else:
             self._vocab = self._embedding.vocab
-            if self._oov:
-                train_oov_vocab = set(train_vocab) - set(self._vocab)
-                self._vocab += list(train_oov_vocab)
+            if self._oov_fn and not self._num_oov_buckets:
+                train_vocab = set(corpora_vocab(self._train_corpus))
+                train_oov_vocab = list(train_vocab - set(self._vocab))
+                train_oov_vocab.sort()
+                self._vocab += train_oov_vocab
             write_vocab_file(vocab_file_path, self._vocab)
-            vocab_tsv_file = vocab_file_templ.format(ext=".tsv")
-            vocab_tsv_path = join(self._gen_dir, vocab_tsv_file)
+        vocab_tsv_file = vocab_file_templ.format(ext=".tsv")
+        vocab_tsv_path = join(self._gen_dir, vocab_tsv_file)
+        if not exists(vocab_tsv_path):
             oov_buckets_tokens = [
                 BUCKET_TOKEN.format(num=n + 1)
-                for n in range(self._oov_buckets)
+                for n in range(self._num_oov_buckets)
             ]
             vocab_tsv = self._vocab + oov_buckets_tokens
             write_vocab_file(vocab_tsv_path, vocab_tsv)
@@ -209,8 +202,11 @@ class FeatureProvider:
                 data_dict = getattr(self, data_dict_attr)
                 to_tokenize[mode] = data_dict
         if to_tokenize:
-            test_vocab = corpora_vocab(self._test_corpus)
-            include = list(set(self._vocab) | set(test_vocab))
+            include = set(self._vocab) | (
+                set(corpora_vocab(self._train_corpus, self._test_corpus))
+                if self._num_oov_buckets
+                else set()
+            )
             include_tokens_path = join(self._gen_dir, "_incl_tokens.pkl")
             pickle_file(path=include_tokens_path, data=include)
             tokens_dict = tokenize_data(include=include, **to_tokenize)
@@ -232,22 +228,32 @@ class FeatureProvider:
                 tokens_list = [value for value in tokens_dict.values()]
                 tokens_lists[mode] = sum(tokens_list, [])
         if tokens_lists:
-            vocab_file_templ = "_vocab{ext}"
-            filtered_vocab_file = vocab_file_templ.format(ext=".filt.txt")
-            filtered_vocab_path = join(self._gen_dir, filtered_vocab_file)
-            if not exists(filtered_vocab_path):
-                train_vocab = corpora_vocab(self._train_corpus)
-                dataset_vocab = train_vocab + corpora_vocab(self._test_corpus)
-                filtered_vocab = list(set(dataset_vocab) & set(self._vocab))
-                indices = [self._vocab.index(word) for word in filtered_vocab]
-                write_vocab_file(filtered_vocab_path, filtered_vocab, indices)
-            lookup_table = ids_lookup_table(
-                filtered_vocab_path, self._oov_buckets
-            )
             fetch_results_path = join(self._gen_dir, "_fetch_results.pkl")
-            fetch_dict = fetch_lookup_ops(lookup_table, **tokens_lists)
-            fetch_results = run_lookups(fetch_dict, metadata_path=self.gen_dir)
-            pickle_file(path=fetch_results_path, data=fetch_results)
+            if not exists(fetch_results_path):
+                vocab_file_templ = "_vocab{ext}"
+                filtered_vocab_file = vocab_file_templ.format(ext=".filt.txt")
+                filtered_vocab_path = join(self._gen_dir, filtered_vocab_file)
+                if not exists(filtered_vocab_path):
+                    filtered_vocab = set(self._vocab) & set(
+                        corpora_vocab(self._train_corpus, self._test_corpus)
+                    )
+                    indices = [
+                        self._vocab.index(word) for word in filtered_vocab
+                    ]
+                    write_vocab_file(
+                        filtered_vocab_path, filtered_vocab, indices
+                    )
+                lookup_table = ids_lookup_table(
+                    filtered_vocab_path, self._num_oov_buckets
+                )
+                fetch_dict = fetch_lookup_ops(lookup_table, **tokens_lists)
+                fetch_results = run_lookups(
+                    fetch_dict, metadata_path=self.gen_dir
+                )
+                pickle_file(path=fetch_results_path, data=fetch_results)
+            else:
+                fetch_results = unpickle_file(fetch_results_path)
+            oov_buckets = {}
             for mode, values in fetch_results.items():
                 data_dict_attr = "_{mode}_dict".format(mode=mode)
                 data_dict = getattr(self, data_dict_attr)
@@ -258,17 +264,39 @@ class FeatureProvider:
                 tfrecord_folder = "_{mode}".format(mode=mode)
                 tfrecord_path = join(self._gen_dir, tfrecord_folder)
                 write_tfrecords(tfrecord_path, tfexamples)
+                if self._num_oov_buckets:
+                    buckets = [
+                        BUCKET_TOKEN.format(num=n + 1)
+                        for n in range(self._num_oov_buckets)
+                    ]
+                    oov_buckets[mode] = tokens_by_assigned_id(
+                        string_features,
+                        int_features,
+                        start=len(self._vocab),
+                        keys=buckets,
+                    )
+            if oov_buckets:
+                accum_oov_buckets = accumulate_dicts(
+                    **oov_buckets,
+                    accum_fn=lambda prev, curr: list(set(prev) | set(curr)),
+                )
+                self._oov_buckets = {
+                    buckets[i]: accum_oov_buckets[buckets[i]]
+                    for i in sorted(
+                        [buckets.index(key) for key in [*accum_oov_buckets]]
+                    )
+                }
 
     def _init_embedding_params(self):
+        np.random.seed(RANDOM_SEED)
         dim_size = self._embedding.dim_size
         vectors = self._embedding.vectors
-        num_oov_words = len(self._vocab) - self._embedding.vocab_size
-        oov_fn = self._oov or DEFAULT_OOV_FN
-        if self._oov:
-            oov_vectors = oov_fn(size=(num_oov_words, dim_size))
+        num_oov_vectors = len(self._vocab) - self._embedding.vocab_size
+        num_oov_vectors += self._num_oov_buckets
+        if num_oov_vectors:
+            oov_fn = self._oov_fn or DEFAULT_OOV_FN
+            oov_vectors = oov_fn(size=(num_oov_vectors, dim_size))
             vectors = np.concatenate([vectors, oov_vectors], axis=0)
-        oov_bucket_vectors = oov_fn(size=(self._oov_buckets, dim_size))
-        vectors = np.concatenate([vectors, oov_bucket_vectors], axis=0)
         vocab_size = len(vectors)
         num_shards = partitioner_num_shards(vocab_size)
         init_fn = embedding_initializer_fn(vectors, num_shards)
@@ -279,3 +307,24 @@ class FeatureProvider:
             "_embedding_init": init_fn,
             "_embedding_num_shards": num_shards,
         }
+
+    def _write_info_file(self):
+        info_path = join(self.gen_dir, "info.json")
+        info = {
+            "uid": self.uid,
+            "name": self.name,
+            "datasets": {
+                "uids": [dataset.uid for dataset in self.datasets],
+                "names": [dataset.name for dataset in self.datasets],
+            },
+            "embedding": {
+                "uid": self.embedding.uid,
+                "name": self.embedding.name,
+            },
+            "oov_policy": {
+                "oov": stringify(self._oov_fn),
+                "num_oov_buckets": self._num_oov_buckets,
+                "oov_buckets": self._oov_buckets,
+            },
+        }
+        dump_json(path=info_path, data=info)

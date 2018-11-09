@@ -1,21 +1,16 @@
 import tensorflow as tf
 from tsaplay.models.tsa_model import TsaModel
-from tsaplay.utils.tf import (
-    sparse_reverse,
-    variable_len_batch_mean,
-    dropout_lstm_cell,
-)
+from tsaplay.utils.tf import sparse_reverse, variable_len_batch_mean, lstm_cell
 from tsaplay.utils.debug import cprnt
 
 
 class TcLstm(TsaModel):
     def set_params(self):
         return {
-            "batch-size": 50,
-            "learning_rate": 0.1,
-            "keep_prob": 0.5,
+            "batch-size": 25,
+            "learning_rate": 0.01,
             "hidden_units": 200,
-            "initializer": tf.initializers.random_uniform(-0.1, 0.1),
+            "initializer": tf.initializers.random_uniform(-0.003, 0.003),
         }
 
     @classmethod
@@ -71,11 +66,7 @@ class TcLstm(TsaModel):
 
         with tf.variable_scope("left_lstm"):
             _, final_states_left = tf.nn.dynamic_rnn(
-                cell=dropout_lstm_cell(
-                    hidden_units=params["hidden_units"],
-                    initializer=params["initializer"],
-                    keep_prob=params["keep_prob"],
-                ),
+                cell=lstm_cell(**params),
                 inputs=features["left_emb"],
                 sequence_length=features["left_len"],
                 dtype=tf.float32,
@@ -83,11 +74,7 @@ class TcLstm(TsaModel):
 
         with tf.variable_scope("right_lstm"):
             _, final_states_right = tf.nn.dynamic_rnn(
-                cell=dropout_lstm_cell(
-                    hidden_units=params["hidden_units"],
-                    initializer=params["initializer"],
-                    keep_prob=params["keep_prob"],
-                ),
+                cell=lstm_cell(**params),
                 inputs=features["right_emb"],
                 sequence_length=features["right_len"],
                 dtype=tf.float32,

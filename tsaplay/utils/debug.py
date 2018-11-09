@@ -21,10 +21,11 @@ def color(key):
 
 def cprnt(*args, **kwargs):
     output = ""
-    indent = " " * int(environ.get("timeit_indent", 0))
     for arg in args:
-        kwargs.update({"row": arg})
+        kwargs.update({"w": arg})
     for (color_key, string) in kwargs.items():
+        if color_key == "end":
+            continue
         if not isinstance(string, str):
             string = pprint.pformat(string)
         col = "".join(filter(str.isalpha, color_key))
@@ -34,7 +35,7 @@ def cprnt(*args, **kwargs):
             output += colored(string, color(txt), "on_" + color(frgnd)) + " "
         else:
             output += colored(string, color(col)) + " "
-    print(indent + output)
+    print(output, end=kwargs.get("end", "\n"))
 
 
 def tf_class_distribution(labels):
@@ -58,28 +59,19 @@ def timeit(pre="", post=""):
     def inner_decorator(func):
         @wraps(func)
         def wrapper(*args, **kw):
-            if environ.get("TIMEIT", "ON").lower() != "off":
-                environ["timeit_indent"] = str(
-                    int(environ.get("timeit_indent", -1)) + 1
-                )
-                name = func.__qualname__ + "():"
-                time_stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                cprnt(c=time_stamp, r=name, g=pre)
-                start_time = time.time()
-                result = func(*args, **kw)
-                end_time = time.time()
-                time_taken = timedelta(seconds=(end_time - start_time))
-                time_stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                cprnt(
-                    c=time_stamp, r=name, g=post + " in", row=str(time_taken)
-                )
-                environ["timeit_indent"] = str(
-                    int(environ["timeit_indent"]) - 1
-                )
-                return result
-            return func(*args, **kw)
+            if environ.get("TIMEIT", "ON").lower() == "off":
+                return func(*args, **kw)
+            name = func.__qualname__ + "():"
+            time_stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            cprnt(c=time_stamp, r=name, g=pre)
+            start_time = time.time()
+            result = func(*args, **kw)
+            end_time = time.time()
+            time_taken = timedelta(seconds=(end_time - start_time))
+            time_stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            cprnt(c=time_stamp, r=name, g=post + " in", row=str(time_taken))
+            return result
 
         return wrapper
 
     return inner_decorator
-

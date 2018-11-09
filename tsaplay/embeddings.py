@@ -1,5 +1,5 @@
 from os import makedirs
-from os.path import join, exists, dirname
+from os.path import join, exists
 import numpy as np
 import gensim.downloader as gensim_data
 from gensim.models import KeyedVectors
@@ -100,7 +100,8 @@ class Embedding:
             )
             report_path = join(gensim_model_dir, "_filter_report.csv")
             details_path = join(gensim_model_dir, "_filter_details.json")
-            write_csv(path=report_path, data=filter_report)
+            if filter_report:
+                write_csv(path=report_path, data=filter_report)
             dump_json(path=details_path, data=filter_details)
             weights = [
                 source_model.get_vector(word) for word in filtered_vocab
