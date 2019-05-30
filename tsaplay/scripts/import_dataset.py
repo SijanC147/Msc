@@ -106,8 +106,8 @@ def generate_dataset_files(args):
     if exists(target_path):
         rmtree(target_path)
     makedirs(target_path)
-    pickle_file(join(target_path, "_train.pkl"), train_dict)
-    pickle_file(join(target_path, "_test.pkl"), test_dict)
+    pickle_file(join(target_path, "_train_dict.pkl"), train_dict)
+    pickle_file(join(target_path, "_test_dict.pkl"), test_dict)
 
 
 def main():
