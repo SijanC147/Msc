@@ -110,6 +110,7 @@ class Embedding:
             filtered_model.add(filtered_vocab, weights)
             self._gensim_model = filtered_model
         else:
+            makedirs(gensim_model_dir, exist_ok=True)
             self._gensim_model = gensim_data.load(self.name)
         self._gensim_model.save(gensim_model_path)
         self._gen_dir = gensim_model_dir
