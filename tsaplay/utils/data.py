@@ -1,5 +1,6 @@
 from contextlib import redirect_stdout
 from io import StringIO
+from re import search
 from collections import defaultdict, Iterable
 from itertools import chain, groupby
 from operator import itemgetter
@@ -155,8 +156,11 @@ def merge_corpora(*corpora):
     return {word: count for word, count in corpus}
 
 
-def corpora_vocab(*corpora):
-    all_vocab = [list(map(str.lower, [*corpus])) for corpus in corpora]
+def corpora_vocab(*corpora, case_insensitive=None):
+    all_vocab = [
+        list(map(str.lower, [*corpus]) if case_insensitive else [*corpus])
+        for corpus in corpora
+    ]
     return list(set(sum(all_vocab, [])))
 
 
@@ -198,6 +202,10 @@ def split_list(data, counts=None, parts=None):
     counts = counts or ([int(len(data) / parts)] * parts)
     offsets = [0] + np.cumsum(counts).tolist()
     return [data[offsets[i] : offsets[i + 1]] for i in range(len(offsets) - 1)]
+
+
+def vocab_case_insensitive(vocab):
+    return not(True in [bool(search("[A-Z]", word)) for word in vocab])
 
 
 def accum_tuple_list_gen(gen, sort=True):
@@ -254,8 +262,12 @@ def hash_data(data):
     return md5(str(data).encode(encoding="utf-8")).hexdigest()
 
 
-def tokenize_data(include=None, **data_dicts):
-    include = set(map(str.lower, include)) if include else None
+def tokenize_data(include=None, case_insensitive=None, **data_dicts):
+    include = (
+        set(map(str.lower, include) if not case_insensitive else include)
+        if include
+        else []
+    )
     docs = [
         sum(
             partition_sentences(
@@ -271,9 +283,13 @@ def tokenize_data(include=None, **data_dicts):
     docs = sum(docs, [])
     tokens = [
         [
-            token.text.lower()
+            (token.text.lower() if case_insensitive else token.text)
             for token in filter(default_token_filter, doc)
-            if token.text.lower() in include or not include
+            if (
+                (token.text.lower() if case_insensitive else token.text)
+                in include
+            )
+            or not include
         ]
         for doc in pipe_docs(docs, pbar_desc="Tokenizing data")
     ]

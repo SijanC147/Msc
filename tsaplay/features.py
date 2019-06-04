@@ -33,6 +33,7 @@ from tsaplay.utils.data import (
     tokenize_data,
     stringify,
     tokens_by_assigned_id,
+    vocab_case_insensitive,
 )
 
 
@@ -173,7 +174,12 @@ class FeatureProvider:
         else:
             self._vocab = self._embedding.vocab
             if self._oov_fn and not self._num_oov_buckets:
-                train_vocab = set(corpora_vocab(self._train_corpus))
+                train_vocab = set(
+                    corpora_vocab(
+                        self._train_corpus,
+                        case_insensitive=self._embedding.case_insensitive,
+                    )
+                )
                 train_oov_vocab = list(train_vocab - set(self._vocab))
                 train_oov_vocab.sort()
                 self._vocab += train_oov_vocab
@@ -203,13 +209,23 @@ class FeatureProvider:
                 to_tokenize[mode] = data_dict
         if to_tokenize:
             include = set(self._vocab) | (
-                set(corpora_vocab(self._train_corpus, self._test_corpus))
+                set(
+                    corpora_vocab(
+                        self._train_corpus,
+                        self._test_corpus,
+                        case_insensitive=self._embedding.case_insensitive,
+                    )
+                )
                 if self._num_oov_buckets
                 else set()
             )
             include_tokens_path = join(self._gen_dir, "_incl_tokens.pkl")
             pickle_file(path=include_tokens_path, data=include)
-            tokens_dict = tokenize_data(include=include, **to_tokenize)
+            tokens_dict = tokenize_data(
+                include=include,
+                case_insensitive=self._embedding.case_insensitive,
+                **to_tokenize,
+            )
             for mode, token_data in tokens_dict.items():
                 token_data_attr = "_{mode}_tokens".format(mode=mode)
                 token_data_file = "_{mode}_tokens.pkl".format(mode=mode)
@@ -235,7 +251,11 @@ class FeatureProvider:
                 filtered_vocab_path = join(self._gen_dir, filtered_vocab_file)
                 if not exists(filtered_vocab_path):
                     filtered_vocab = set(self._vocab) & set(
-                        corpora_vocab(self._train_corpus, self._test_corpus)
+                        corpora_vocab(
+                            self._train_corpus,
+                            self._test_corpus,
+                            case_insensitive=self._embedding.case_insensitive,
+                        )
                     )
                     indices = [
                         self._vocab.index(word) for word in filtered_vocab
