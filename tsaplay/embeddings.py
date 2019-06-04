@@ -9,7 +9,11 @@ from tsaplay.constants import (
     EMBEDDING_SHORTHANDS,
 )
 from tsaplay.utils.io import list_folders, write_csv, dump_json
-from tsaplay.utils.data import hash_data, filter_vocab_list
+from tsaplay.utils.data import (
+    hash_data,
+    filter_vocab_list,
+    vocab_case_insensitive,
+)
 
 
 class Embedding:
@@ -22,6 +26,7 @@ class Embedding:
         self._vocab_size = None
         self._dim_size = None
         self._vectors = None
+        self._case_insensitive = None
 
         self._init_gen_dir(name)
         self._init_gensim_model(filters)
@@ -49,6 +54,10 @@ class Embedding:
     @property
     def vocab_size(self):
         return self._vocab_size
+
+    @property
+    def case_insensitive(self):
+        return self._case_insensitive
 
     @property
     def dim_size(self):
@@ -86,6 +95,16 @@ class Embedding:
         gensim_model_path = join(gensim_model_dir, "_gensim_model.bin")
         if exists(gensim_model_path):
             self._gensim_model = KeyedVectors.load(gensim_model_path)
+            if filters:
+                source_model_path = join(
+                    dir(self.gen_dir), "_gensim_model.bin"
+                )
+                source_vocab = KeyedVectors.load(source_model_path).index2word
+                self._case_insensitive = vocab_case_insensitive(source_vocab)
+            else:
+                self._case_insensitive = vocab_case_insensitive(
+                    self._gensim_model.index2word
+                )
         elif filters:
             makedirs(gensim_model_dir, exist_ok=True)
             source_model_path = join(self.gen_dir, "_gensim_model.bin")
@@ -95,6 +114,12 @@ class Embedding:
                 source_model = gensim_data.load(self.name)
                 source_model.save(source_model_path)
             source_vocab = source_model.index2word
+            self._case_insensitive = vocab_case_insensitive(source_vocab)
+            filters = (
+                list(map(str.lower, filters))
+                if self._case_sensitive
+                else filters
+            )
             filtered_vocab, filter_report, filter_details = filter_vocab_list(
                 source_vocab, filters, incl_report=True
             )
@@ -112,6 +137,9 @@ class Embedding:
         else:
             makedirs(gensim_model_dir, exist_ok=True)
             self._gensim_model = gensim_data.load(self.name)
+            self._case_insensitive = vocab_case_insensitive(
+                self._gensim_model.index2word
+            )
         self._gensim_model.save(gensim_model_path)
         self._gen_dir = gensim_model_dir
         self._dim_size = self._gensim_model.vector_size
