@@ -205,7 +205,7 @@ def split_list(data, counts=None, parts=None):
 
 
 def vocab_case_insensitive(vocab):
-    return not(True in [bool(search("[A-Z]", word)) for word in vocab])
+    return not (True in [bool(search("[A-Z]", word)) for word in vocab])
 
 
 def accum_tuple_list_gen(gen, sort=True):
@@ -307,13 +307,17 @@ def tokenize_data(include=None, case_insensitive=None, **data_dicts):
     }
 
 
-def filter_vocab_list(vocab, filters, incl_report=None):
+def filter_vocab_list(vocab, filters, case_insensitive=None, incl_report=None):
     filtered = vocab
     filter_report = None
     orig_len = len(filtered)
     filter_sets = list(filter(lambda filt: not callable(filt), filters))
     if filter_sets:
-        filter_sets = sum(map(list, filter_sets), [])
+        filter_sets = (
+            list(map(str.lower, sum(map(list, filter_sets), [])))
+            if case_insensitive
+            else sum(map(list, filter_sets), [])
+        )
         filtered = list(set(filtered) & set(filter_sets))
 
     filter_fns = list(filter(callable, filters))

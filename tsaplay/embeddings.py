@@ -115,13 +115,11 @@ class Embedding:
                 source_model.save(source_model_path)
             source_vocab = source_model.index2word
             self._case_insensitive = vocab_case_insensitive(source_vocab)
-            filters = (
-                list(map(str.lower, filters))
-                if self._case_sensitive
-                else filters
-            )
             filtered_vocab, filter_report, filter_details = filter_vocab_list(
-                source_vocab, filters, incl_report=True
+                source_vocab,
+                filters,
+                case_insensitive=self._case_insensitive,
+                incl_report=True,
             )
             report_path = join(gensim_model_dir, "_filter_report.csv")
             details_path = join(gensim_model_dir, "_filter_details.json")
