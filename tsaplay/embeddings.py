@@ -1,5 +1,5 @@
 from os import makedirs
-from os.path import join, exists
+from os.path import join, exists, dirname
 import numpy as np
 import gensim.downloader as gensim_data
 from gensim.models import KeyedVectors
@@ -97,7 +97,7 @@ class Embedding:
             self._gensim_model = KeyedVectors.load(gensim_model_path)
             if filters:
                 source_model_path = join(
-                    dir(self.gen_dir), "_gensim_model.bin"
+                    dirname(gensim_model_dir), "_gensim_model.bin"
                 )
                 source_vocab = KeyedVectors.load(source_model_path).index2word
                 self._case_insensitive = vocab_case_insensitive(source_vocab)
