@@ -137,7 +137,7 @@
 ; # 300 Hidden Units
 ; -em=twitter-200[corpus] -ds=dong -m=lstm -b=25 -s=15000 -mp oov=True hidden_units=300 -aux logging=false -contd=dong_t200_Y0bktsU003_15000s_25b_300hu_001lr_nodrop
 ; -em=twitter-200[corpus] -ds=dong -m=tdlstm -b=25 -s=15000 -mp oov=True hidden_units=300 -aux logging=false -contd=dong_t200_Y0bktsU003_15000s_25b_300hu_001lr_nodrop
--em=twitter-200[corpus] -ds=dong -m=tclstm -b=25 -s=15000 -mp oov=True hidden_units=300 -aux logging=false -contd=dong_t200_Y0bktsU003_15000s_25b_300hu_001lr_nodrop
+; -em=twitter-200[corpus] -ds=dong -m=tclstm -b=25 -s=15000 -mp oov=True hidden_units=300 -aux logging=false -contd=dong_t200_Y0bktsU003_15000s_25b_300hu_001lr_nodrop
 
 ; # 100 OOV Buckets
 ; # 200 Hidden Units
