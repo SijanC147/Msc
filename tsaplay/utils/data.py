@@ -373,7 +373,7 @@ def tokens_by_assigned_id(words, ids, start=None, stop=None, keys=None):
     stop = stop or (start + len(keys)) if keys else max(ids)
     for word, index in zip(words, ids):
         if start <= index <= stop:
-            key = keys[index - start] if keys else str("index")
+            key = keys[index - start] if keys else str(index)
             ids_dict[key] |= (
                 set([str(word, "utf-8")])
                 if isinstance(word, bytes)
