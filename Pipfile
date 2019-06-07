@@ -7,14 +7,14 @@ name = "pypi"
 matplotlib = "*"
 pillow = "*"
 docker = "*"
-tensorflow-serving-api = "*"
+tensorflow-serving-api = "==1.12.0"
 gensim = "*"
 tqdm = "*"
 comet-ml = "*"
 pandas = "*"
-spacy = "*"
-tensorflow = {version="*", sys_platform = "== 'darwin'"}
-tensorflow-gpu = {version=">=1.11.0", sys_platform = "== 'linux'"}
+spacy = "==2.0.18"
+tensorflow = {version="==1.12.2", sys_platform = "== 'darwin'"}
+tensorflow-gpu = {version="==1.12.2", sys_platform = "== 'linux'"}
 
 [dev-packages]
 tox-pipenv = "*"
