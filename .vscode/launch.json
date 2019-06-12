@@ -19,18 +19,19 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "Task",
+            "name": "Embedding-filter-fn-test",
             "type": "python",
             "request": "launch",
             "module": "tsaplay.task",
             "args": [
-                "-em='twitter-50[corpus]'",
-                "-ds=dong",
+                "single",
+                "-em='twitter-50[corpus,only_adjectives]'",
+                "-ds='debug2'",
                 "-m=lstm",
                 "-b=25",
-                "-s=100",
+                "-s=200",
                 "-mp",
-                "num_oov_buckets=500"
+                "num_oov_buckets=100"
             ],
             "console": "integratedTerminal"
         },

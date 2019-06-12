@@ -82,6 +82,13 @@ def dump_json(path, data):
         json.dump(data, json_file, indent=4)
 
 
+def load_json(path):
+    if not exists(path):
+        return None
+    with open(path, "r") as json_file:
+        return json.load(json_file)
+
+
 def export_run_metadata(run_metadata, path):
     file_name = datetime.now().strftime("%Y%m%d-%H%M%S") + ".json"
     time_line = Timeline(run_metadata.step_stats)  # pylint: disable=E1101
@@ -103,6 +110,18 @@ def write_csv(path, data, header=None):
                 writer.writerow(
                     {key: value for key, value in zip(header, values)}
                 )
+
+
+def read_csv(path, _format=None):
+    if not exists(path):
+        return None
+    with open(path, "r", encoding="utf-8") as csvfile:
+        if isinstance(_format, dict):
+            reader = csv.DictReader(csvfile)
+            return {key: value for key, value in reader.items()}
+        else:
+            reader = csv.reader(csvfile)
+            return [row for row in reader]
 
 
 def write_zippped_file(path, data):
@@ -233,7 +252,17 @@ def args_to_dict(args):
     return args_dict
 
 
-def arg_with_info(arg):
+def arg_with_list(arg):
+    pat = re.compile(r"([^\[]*)[\[]?([^\]]*)[\]]?")
+    arg = pat.match(arg).groups()
+    primary_arg = arg[0]
+    additional_info = None
+    if arg[1]:
+        additional_info = arg[1].split(",")
+    return primary_arg, additional_info
+
+
+def arg_with_dict(arg):
     pat = re.compile(r"([^\[]*)[\[]?([^\]]*)[\]]?")
     arg = pat.match(arg).groups()
     primary_arg = arg[0]
@@ -243,6 +272,6 @@ def arg_with_info(arg):
         additional_info = (
             {key: val for key, val in zip(["train", "test"], additional_info)}
             if len(additional_info) == 2
-            else additional_info
+            else {"train": additional_info, "test": additional_info}
         )
     return primary_arg, additional_info

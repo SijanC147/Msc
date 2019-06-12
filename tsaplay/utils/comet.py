@@ -7,6 +7,7 @@ from tensorflow.estimator import ModeKeys  # pylint: disable=E0401
 from tsaplay.utils.tf import scaffold_init_fn_on_spec
 from tsaplay.utils.io import temp_pngs
 from tsaplay.utils.draw import plot_distributions
+from tsaplay.utils.data import class_dist_stats
 
 
 def cometml(model_fn):
@@ -64,7 +65,12 @@ def comet_pretty_log(comet_experiment, data_dict, prefix=None, hparams=False):
 def log_dist_data(comet_experiment, feature_provider, modes):
     if comet_experiment is None:
         return
-    stats = feature_provider.dist_stats
+    stats = {
+        ds.name: class_dist_stats(
+            ds.class_labels, train=ds.train_dict, test=ds.test_dict
+        )
+        for ds in feature_provider.datasets
+    }
     dist_images = [plot_distributions(stats, mode) for mode in modes]
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     dist_image_names = [mode + "_distribution_" + timestamp for mode in modes]
@@ -75,13 +81,14 @@ def log_dist_data(comet_experiment, feature_provider, modes):
 def log_embedding_filter_data(comet_experiment, feature_provider):
     if comet_experiment is None:
         return
-    filter_details = feature_provider.embedding.filter_details
-    if filter_details:
-        comet_experiment.log_other("Filter Hash", filter_details.hash)
-        comet_experiment.log_other(
-            "Filter Reduction", filter_details.reduction
+    filter_info = feature_provider.embedding.filter_info
+    if filter_info:
+        comet_experiment.log_other("Filter Hash", filter_info["hash"])
+        comet_experiment.log_asset_data(
+            json.dumps(filter_info["details"], indent=4),
+            file_name="embedding_filter_details.json",
         )
-        report = filter_details.report
+        report = filter_info.get("report")
         if report:
             header = "".join(
                 ["<th>{}</th>".format(heading) for heading in report[0]]

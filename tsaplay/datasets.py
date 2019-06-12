@@ -126,6 +126,8 @@ class Dataset:
         elif redist:
             source_data_dict_path = join(self.gen_dir, data_dict_file)
             source_data_dict = unpickle_file(source_data_dict_path)
+            redist = [float(dist) for dist in redist]
+            redist = [dist / 100 if dist > 1 else dist for dist in redist]
             data_dict = resample_data_dict(source_data_dict, redist)
             pickle_file(path=data_dict_path, data=data_dict)
         class_labels = self._class_labels or []

@@ -69,6 +69,20 @@ def filter_fn_details(filter_fn, token=None):
     return details
 
 
+def filters_registry(key):
+    return {
+        "no_numbers": no_numbers,
+        "no_urls": no_urls,
+        "no_emails": no_emails,
+        "no_currency": no_currency,
+        "only_ascii": only_ascii,
+        "no_unknown_pos": no_unknown_pos,
+        "no_proper_nouns": no_proper_nouns,
+        "pos_set_one": pos_set_one,
+        "only_adjectives": only_adjectives,
+    }.get(key, False)
+
+
 def _no_pipe_filter(token, attrs=None):
     return True in [
         getattr(token, attr)

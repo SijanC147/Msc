@@ -8,7 +8,7 @@ from datetime import datetime
 import comet_ml  # pylint: disable=W0611
 import tensorflow as tf
 from tsaplay.utils.debug import timeit, cprnt
-from tsaplay.utils.io import args_to_dict, arg_with_info
+from tsaplay.utils.io import args_to_dict, arg_with_list, arg_with_dict
 from tsaplay.utils.data import corpora_vocab
 from tsaplay.datasets import Dataset
 from tsaplay.embeddings import Embedding
@@ -47,7 +47,7 @@ def argument_parser():
     single_task_parser.add_argument(
         "--embedding",
         "-em",
-        type=arg_with_info,
+        type=arg_with_list,
         help="Pre-trained embedding to use, <embedding>[..filters]",
         default="wiki-50",
     )
@@ -55,7 +55,7 @@ def argument_parser():
     single_task_parser.add_argument(
         "--datasets",
         "-ds",
-        type=arg_with_info,
+        type=arg_with_dict,
         help="One or more datasets to use, <dataset>[redist(,test_dist)]+",
         default=["dong"],
         nargs="+",
@@ -146,8 +146,8 @@ def make_feature_provider(args):
 
     embedding_name, filters_arg = args.embedding
 
-    filters = []
-    if filters_arg and "corpus" in filters_arg:
+    filters = [f for f in filters_arg if f != "corpus"] if filters_arg else []
+    if "corpus" in filters_arg:
         corpora = ({**ds.train_corpus, **ds.test_corpus} for ds in datasets)
         filters += [corpora_vocab(*corpora)]
 
@@ -199,6 +199,7 @@ def parse_batch_file(batch_file_path):
             for cmd in batch_file
             if cmd.strip() and cmd[0] not in ["#", ";"]
         ]
+
 
 def run_next_experiment(batch_file_path):
     jobs = parse_batch_file(batch_file_path)

@@ -8,7 +8,13 @@ from tsaplay.constants import (
     PAD_TOKEN,
     EMBEDDING_SHORTHANDS,
 )
-from tsaplay.utils.io import list_folders, write_csv, dump_json
+from tsaplay.utils.io import (
+    list_folders,
+    write_csv,
+    dump_json,
+    load_json,
+    read_csv,
+)
 from tsaplay.utils.data import (
     hash_data,
     filter_vocab_list,
@@ -27,6 +33,7 @@ class Embedding:
         self._dim_size = None
         self._vectors = None
         self._case_insensitive = None
+        self._filter_info = None
 
         self._init_gen_dir(name)
         self._init_gensim_model(filters)
@@ -67,6 +74,10 @@ class Embedding:
     def vectors(self):
         return self._vectors
 
+    @property
+    def filter_info(self):
+        return self._filter_info
+
     def _init_gen_dir(self, name):
         name = EMBEDDING_SHORTHANDS.get(name, name)
         data_root = EMBEDDING_DATA_PATH
@@ -89,8 +100,9 @@ class Embedding:
             self._name = name
 
     def _init_gensim_model(self, filters):
+        filters_uid = hash_data(filters)
         gensim_model_dir = (
-            join(self.gen_dir, hash_data(filters)) if filters else self.gen_dir
+            join(self.gen_dir, filters_uid) if filters_uid else self.gen_dir
         )
         gensim_model_path = join(gensim_model_dir, "_gensim_model.bin")
         if exists(gensim_model_path):
@@ -101,6 +113,7 @@ class Embedding:
                 )
                 source_vocab = KeyedVectors.load(source_model_path).index2word
                 self._case_insensitive = vocab_case_insensitive(source_vocab)
+                self._import_filter_info(filters_uid)
             else:
                 self._case_insensitive = vocab_case_insensitive(
                     self._gensim_model.index2word
@@ -121,11 +134,9 @@ class Embedding:
                 case_insensitive=self._case_insensitive,
                 incl_report=True,
             )
-            report_path = join(gensim_model_dir, "_filter_report.csv")
-            details_path = join(gensim_model_dir, "_filter_details.json")
-            if filter_report:
-                write_csv(path=report_path, data=filter_report)
-            dump_json(path=details_path, data=filter_details)
+            self._export_filter_info(
+                uid=filters_uid, details=filter_details, report=filter_report
+            )
             weights = [
                 source_model.get_vector(word) for word in filtered_vocab
             ]
@@ -145,3 +156,21 @@ class Embedding:
         self._vocab_size = len(self._vocab)
         pad_value = [np.zeros(shape=self._dim_size).astype(np.float32)]
         self._vectors = np.concatenate([pad_value, self._gensim_model.vectors])
+
+    def _export_filter_info(self, uid, details, report=None):
+        filtered_model_dir = join(self.gen_dir, uid)
+        report_path = join(filtered_model_dir, "_filter_report.csv")
+        details_path = join(filtered_model_dir, "_filter_details.json")
+        dump_json(path=details_path, data=details)
+        if report:
+            write_csv(path=report_path, data=report)
+        self._filter_info = {"hash": uid, "details": details, "report": report}
+
+    def _import_filter_info(self, uid):
+        filtered_model_dir = join(self.gen_dir, uid)
+        report_path = join(filtered_model_dir, "_filter_report.csv")
+        details_path = join(filtered_model_dir, "_filter_details.json")
+        details = load_json(details_path)
+        report = read_csv(report_path, _format=[])
+        self._filter_info = {"hash": uid, "details": details, "report": report}
+

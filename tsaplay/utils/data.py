@@ -10,7 +10,11 @@ from functools import partial, wraps
 from tqdm import tqdm
 import numpy as np
 from tsaplay.constants import RANDOM_SEED, DELIMITER
-from tsaplay.utils.filters import default_token_filter, group_filter_fns
+from tsaplay.utils.filters import (
+    default_token_filter,
+    group_filter_fns,
+    filters_registry,
+)
 from tsaplay.utils.spacy import pipe_docs, word_counts, pipe_vocab
 
 
@@ -311,6 +315,12 @@ def filter_vocab_list(vocab, filters, case_insensitive=None, incl_report=None):
     filtered = vocab
     filter_report = None
     orig_len = len(filtered)
+    filters = [
+        filters_registry(f)
+        if isinstance(f, str) and filters_registry(f)
+        else f
+        for f in filters
+    ]
     filter_sets = list(filter(lambda filt: not callable(filt), filters))
     if filter_sets:
         filter_sets = (
@@ -337,7 +347,7 @@ def filter_vocab_list(vocab, filters, case_insensitive=None, incl_report=None):
                 ]
             filter_report = report_str.getvalue().split("\n")
             filter_report = [row.split(DELIMITER) for row in filter_report]
-            filter_report = report_header + filter_report
+            filter_report = [report_header] + filter_report
         else:
             filtered = [
                 [token.text for token in filter(filter_fn, doc)]
