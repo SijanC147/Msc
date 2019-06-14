@@ -8,7 +8,7 @@ from datetime import datetime
 import comet_ml  # pylint: disable=W0611
 import tensorflow as tf
 from tsaplay.utils.debug import timeit, cprnt
-from tsaplay.utils.io import args_to_dict, arg_with_list, arg_with_dict
+from tsaplay.utils.io import args_to_dict, arg_with_list, datasets_cli_arg
 from tsaplay.utils.data import corpora_vocab
 from tsaplay.datasets import Dataset
 from tsaplay.embeddings import Embedding
@@ -55,7 +55,7 @@ def argument_parser():
     single_task_parser.add_argument(
         "--datasets",
         "-ds",
-        type=arg_with_dict,
+        type=datasets_cli_arg,
         help="One or more datasets to use, <dataset>[redist(,test_dist)]+",
         default=["dong"],
         nargs="+",

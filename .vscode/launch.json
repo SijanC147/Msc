@@ -36,6 +36,23 @@
             "console": "integratedTerminal"
         },
         {
+            "name": "Dataset-redist-param-test",
+            "type": "python",
+            "request": "launch",
+            "module": "tsaplay.task",
+            "args": [
+                "single",
+                "-em='twitter-50[corpus,only_adjectives]'",
+                "-ds='debug2[33/34/33,15/70/15]'",
+                "-m=lstm",
+                "-b=25",
+                "-s=200",
+                "-mp",
+                "num_oov_buckets=100"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
             "name": "Python: Current File (Integrated Terminal)",
             "type": "python",
             "request": "launch",

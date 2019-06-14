@@ -65,6 +65,9 @@ def class_dist_info(labels, all_classes=None):
 
 def re_distribute_counts(labels, target_dists):
     target_dists = np.array(target_dists)
+    target_dists = (
+        target_dists / 100 if np.sum(target_dists) == 100 else target_dists
+    )
     unique, counts = np.unique(labels, return_counts=True)
 
     if len(counts) != len(target_dists):

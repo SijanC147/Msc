@@ -262,16 +262,18 @@ def arg_with_list(arg):
     return primary_arg, additional_info
 
 
-def arg_with_dict(arg):
+def datasets_cli_arg(arg):
     pat = re.compile(r"([^\[]*)[\[]?([^\]]*)[\]]?")
     arg = pat.match(arg).groups()
     primary_arg = arg[0]
     additional_info = None
     if arg[1]:
-        additional_info = arg[1].split(",")
+        additional_info = [
+            list(map(float, value.split("/"))) for value in arg[1].split(",")
+        ]
         additional_info = (
             {key: val for key, val in zip(["train", "test"], additional_info)}
             if len(additional_info) == 2
-            else {"train": additional_info, "test": additional_info}
+            else {"train": additional_info[0], "test": additional_info[0]}
         )
     return primary_arg, additional_info
