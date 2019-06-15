@@ -166,7 +166,7 @@ def copy_feature_files(feature_provider):
         tokens_pkl_file = "_{}_tokens.pkl".format(mode)
         tfrecord_src = dirname(getattr(feature_provider, tfrecords_attr))
         tokens_src = join(feature_provider.gen_dir, tokens_pkl_file)
-        copy(tfrecord_src, features_hash_dest, rel=FEATURES_DATA_PATH)
+        copy(tfrecord_src, features_hash_dest)
         copy(tokens_src, features_hash_dest, rel=FEATURES_DATA_PATH)
 
 

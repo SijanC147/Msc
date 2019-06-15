@@ -108,11 +108,6 @@ class Embedding:
         if exists(gensim_model_path):
             self._gensim_model = KeyedVectors.load(gensim_model_path)
             if filters:
-                source_model_path = join(
-                    dirname(gensim_model_dir), "_gensim_model.bin"
-                )
-                source_vocab = KeyedVectors.load(source_model_path).index2word
-                self._case_insensitive = vocab_case_insensitive(source_vocab)
                 self._import_filter_info(filters_uid)
             else:
                 self._case_insensitive = vocab_case_insensitive(
@@ -135,7 +130,10 @@ class Embedding:
                 incl_report=True,
             )
             self._export_filter_info(
-                uid=filters_uid, details=filter_details, report=filter_report
+                uid=filters_uid,
+                details=filter_details,
+                case_insensitive=self._case_insensitive,
+                report=filter_report,
             )
             weights = [
                 source_model.get_vector(word) for word in filtered_vocab
@@ -157,13 +155,17 @@ class Embedding:
         pad_value = [np.zeros(shape=self._dim_size).astype(np.float32)]
         self._vectors = np.concatenate([pad_value, self._gensim_model.vectors])
 
-    def _export_filter_info(self, uid, details, report=None):
+    def _export_filter_info(
+        self, uid, details, report=None, case_insensitive=None
+    ):
         filtered_model_dir = join(self.gen_dir, uid)
         report_path = join(filtered_model_dir, "_filter_report.csv")
         details_path = join(filtered_model_dir, "_filter_details.json")
         dump_json(path=details_path, data=details)
         if report:
             write_csv(path=report_path, data=report)
+        if case_insensitive:
+            open(join(filtered_model_dir, ".CI"), "w")
         self._filter_info = {"hash": uid, "details": details, "report": report}
 
     def _import_filter_info(self, uid):
@@ -173,4 +175,5 @@ class Embedding:
         details = load_json(details_path)
         report = read_csv(report_path, _format=[])
         self._filter_info = {"hash": uid, "details": details, "report": report}
+        self._case_insensitive = exists(join(filtered_model_dir, ".CI"))
 

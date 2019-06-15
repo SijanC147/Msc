@@ -173,9 +173,11 @@ def get_image_from_plt(plt):
 
 def copy(src_path, dst_path, rel=None, force=True):
     if not isfile(src_path):
-        folder_name = basename(normpath(src_path))
+        rel_folder = (
+            relpath(src_path, rel) if rel else basename(normpath(src_path))
+        )
         dst_path = relpath(dst_path, rel) if rel else dst_path
-        dst_path = join(dst_path, folder_name)
+        dst_path = join(dst_path, rel_folder)
         if exists(dst_path) and force:
             rmtree(dst_path, ignore_errors=True)
         copytree(src_path, dst_path)

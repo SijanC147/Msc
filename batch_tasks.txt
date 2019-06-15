@@ -1,5 +1,5 @@
--em=wiki-50 -ds=debug2 -m=lstm -b=25 -s=1000 -mp oov=True -aux logging=false -contd=whatever
--em=wiki-50 -ds=debug2 -m=lstm -b=25 -s=1000 -mp num_oov_buckets=100 -aux logging=false -contd=whatever2
+-em=wiki-50[corpus] -ds=debug2 -m=lstm -b=25 -s=1000 -mp oov=True -aux logging=false -contd=whatever
+-em=wiki-50[corpus,only_adjectives] -ds=debug2 -m=lstm -b=25 -s=1000 -mp num_oov_buckets=100 -aux logging=false -contd=whatever2
 
 # dong, 0.01 Learning Rate, 200 Hidden Units, U(-0.003, 0.003) OOV Init, No Dropout, 15000 Steps
 
