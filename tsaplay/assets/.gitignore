@@ -1,4 +1,6 @@
 # Ignore everything in this directory starting with _
 _*
+# Ignore batch_tasks.txt since it is just temporarily copied
+batch_tasks.txt
 # Except this file
 !.gitignore

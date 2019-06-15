@@ -15,7 +15,7 @@ from tsaplay.embeddings import Embedding
 from tsaplay.features import FeatureProvider
 from tsaplay.experiments import Experiment
 import tsaplay.models as tsa_models
-from tsaplay.constants import EMBEDDING_SHORTHANDS
+from tsaplay.constants import EMBEDDING_SHORTHANDS, ASSETS_PATH
 
 MODELS = {
     "lstm": tsa_models.Lstm,
@@ -36,6 +36,10 @@ def argument_parser():
     batch_task_parser.add_argument(
         "batch_file",
         help="Path to batch file containing list of jobs to run sequentially",
+    )
+    batch_task_parser.add_argument(
+        "--job-dir",
+        help="GCS location to write checkpoints to and export models",
     )
 
     single_task_parser = subparsers.add_parser("single")
@@ -147,7 +151,7 @@ def make_feature_provider(args):
     embedding_name, filters_arg = args.embedding
 
     filters = [f for f in filters_arg if f != "corpus"] if filters_arg else []
-    if "corpus" in filters_arg:
+    if filters_arg and "corpus" in filters_arg:
         corpora = ({**ds.train_corpus, **ds.test_corpus} for ds in datasets)
         filters += [corpora_vocab(*corpora)]
 
@@ -193,7 +197,11 @@ def nvidia_cuda_prof_tools_path_fix():
 
 
 def parse_batch_file(batch_file_path):
-    with open(batch_file_path, "r") as batch_file:
+    try:
+        batch_file = open(batch_file_path, "r")
+    except FileNotFoundError:
+        batch_file = open(join(ASSETS_PATH, batch_file_path), "r")
+    with batch_file:
         return [
             ["single"] + cmd.strip().split()
             for cmd in batch_file
@@ -201,20 +209,25 @@ def parse_batch_file(batch_file_path):
         ]
 
 
-def run_next_experiment(batch_file_path):
-    jobs = parse_batch_file(batch_file_path)
+def run_next_experiment(batch_file_path, job_dir=None):
+    tasks = parse_batch_file(batch_file_path)
+    if job_dir:
+        tasks = [t + ["--job-dir", job_dir] for t in tasks]
     task_index = int(environ.get("TSATASK", 0))
-    if task_index >= len(jobs):
+    if task_index >= len(tasks):
         del environ["TSATASK"]
         return
     task_parser = argument_parser()
     try:
-        task_args = task_parser.parse_args(jobs[task_index])
+        task_args = task_parser.parse_args(tasks[task_index])
         run_experiment(task_args, experiment_index=task_index)
     except Exception:  # pylint: disable=W0703
         traceback.print_exc()
     environ["TSATASK"] = str(task_index + 1)
-    next_cmd = "python3 -m tsaplay.task batch {0}".format(batch_file_path)
+    job_dir_arg = "--job-dir {}".format(job_dir) if job_dir else ""
+    next_cmd = "python3 -m tsaplay.task batch {batch_file} {job_dir}".format(
+        batch_file=batch_file_path, job_dir=job_dir_arg
+    )
     execvpe("python3", next_cmd.split(), environ)
 
 
@@ -222,7 +235,10 @@ def main():
     nvidia_cuda_prof_tools_path_fix()
     args = argument_parser().parse_args()
     try:
-        run_next_experiment(args.batch_file)
+        try:
+            run_next_experiment(args.batch_file, args.job_dir)
+        except AttributeError:
+            run_next_experiment(args.batch_file)
     except AttributeError:
         run_experiment(args)
     pkg.cleanup_resources()

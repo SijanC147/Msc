@@ -106,7 +106,7 @@ class Dataset:
             join(
                 self.gen_dir,
                 "_redists",
-                "_".join(map(str, redist)).replace(".", ""),
+                "_".join(map(str, map(int, redist))).replace(".", ""),
             )
             if redist
             else self.gen_dir

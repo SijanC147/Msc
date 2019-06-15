@@ -1,4 +1,8 @@
+-em=wiki-50 -ds=debug2 -m=lstm -b=25 -s=1000 -mp oov=True -aux logging=false -contd=whatever
+-em=wiki-50 -ds=debug2 -m=lstm -b=25 -s=1000 -mp num_oov_buckets=100 -aux logging=false -contd=whatever2
+
 # dong, 0.01 Learning Rate, 200 Hidden Units, U(-0.003, 0.003) OOV Init, No Dropout, 15000 Steps
+
 
 ; # twitter-50
 
@@ -174,40 +178,40 @@
 
 # Train OOV Only, No Buckets
 # 200 Hidden Units
--em=commoncrawl-42[corpus] -ds=dong -m=lstm -b=25 -s=15000 -mp oov=True -aux logging=false -contd=dong_cc42_Y0bktsU003_15000s_25b_200hu_001lr_nodrop
--em=commoncrawl-42[corpus] -ds=dong -m=tdlstm -b=25 -s=15000 -mp oov=True -aux logging=false -contd=dong_cc42_Y0bktsU003_15000s_25b_200hu_001lr_nodrop
--em=commoncrawl-42[corpus] -ds=dong -m=tclstm -b=25 -s=15000 -mp oov=True -aux logging=false -contd=dong_cc42_Y0bktsU003_15000s_25b_200hu_001lr_nodrop
+; -em=commoncrawl-42[corpus] -ds=dong -m=lstm -b=25 -s=15000 -mp oov=True -aux logging=false -contd=dong_cc42_Y0bktsU003_15000s_25b_200hu_001lr_nodrop
+; -em=commoncrawl-42[corpus] -ds=dong -m=tdlstm -b=25 -s=15000 -mp oov=True -aux logging=false -contd=dong_cc42_Y0bktsU003_15000s_25b_200hu_001lr_nodrop
+; -em=commoncrawl-42[corpus] -ds=dong -m=tclstm -b=25 -s=15000 -mp oov=True -aux logging=false -contd=dong_cc42_Y0bktsU003_15000s_25b_200hu_001lr_nodrop
 # 300 Hidden Units
--em=commoncrawl-42[corpus] -ds=dong -m=lstm -b=25 -s=15000 -mp oov=True hidden_units=300 -aux logging=false -contd=dong_cc42_Y0bktsU003_15000s_25b_300hu_001lr_nodrop
--em=commoncrawl-42[corpus] -ds=dong -m=tdlstm -b=25 -s=15000 -mp oov=True hidden_units=300 -aux logging=false -contd=dong_cc42_Y0bktsU003_15000s_25b_300hu_001lr_nodrop
--em=commoncrawl-42[corpus] -ds=dong -m=tclstm -b=25 -s=15000 -mp oov=True hidden_units=300 -aux logging=false -contd=dong_cc42_Y0bktsU003_15000s_25b_300hu_001lr_nodrop
+; -em=commoncrawl-42[corpus] -ds=dong -m=lstm -b=25 -s=15000 -mp oov=True hidden_units=300 -aux logging=false -contd=dong_cc42_Y0bktsU003_15000s_25b_300hu_001lr_nodrop
+; -em=commoncrawl-42[corpus] -ds=dong -m=tdlstm -b=25 -s=15000 -mp oov=True hidden_units=300 -aux logging=false -contd=dong_cc42_Y0bktsU003_15000s_25b_300hu_001lr_nodrop
+; -em=commoncrawl-42[corpus] -ds=dong -m=tclstm -b=25 -s=15000 -mp oov=True hidden_units=300 -aux logging=false -contd=dong_cc42_Y0bktsU003_15000s_25b_300hu_001lr_nodrop
 
 # 100 OOV Buckets
 # 200 Hidden Units
--em=commoncrawl-42[corpus] -ds=dong -m=lstm -b=25 -s=15000 -mp num_oov_buckets=100 -aux logging=false -contd=dong_cc42_Y100bktsU003_25b_200hu_001lr_nodrop
--em=commoncrawl-42[corpus] -ds=dong -m=tdlstm -b=25 -s=15000 -mp num_oov_buckets=100 -aux logging=false -contd=dong_cc42_Y100bktsU003_25b_200hu_001lr_nodrop
--em=commoncrawl-42[corpus] -ds=dong -m=tclstm -b=25 -s=15000 -mp num_oov_buckets=100 -aux logging=false -contd=dong_cc42_Y100bktsU003_25b_200hu_001lr_nodrop
+; -em=commoncrawl-42[corpus] -ds=dong -m=lstm -b=25 -s=15000 -mp num_oov_buckets=100 -aux logging=false -contd=dong_cc42_Y100bktsU003_25b_200hu_001lr_nodrop
+; -em=commoncrawl-42[corpus] -ds=dong -m=tdlstm -b=25 -s=15000 -mp num_oov_buckets=100 -aux logging=false -contd=dong_cc42_Y100bktsU003_25b_200hu_001lr_nodrop
+; -em=commoncrawl-42[corpus] -ds=dong -m=tclstm -b=25 -s=15000 -mp num_oov_buckets=100 -aux logging=false -contd=dong_cc42_Y100bktsU003_25b_200hu_001lr_nodrop
 # 300 Hidden Units
--em=commoncrawl-42[corpus] -ds=dong -m=lstm -b=25 -s=15000 -mp num_oov_buckets=100 hidden_units=300 -aux logging=false -contd=dong_cc42_Y100bktsU003_25b_300hu_001lr_nodrop
--em=commoncrawl-42[corpus] -ds=dong -m=tdlstm -b=25 -s=15000 -mp num_oov_buckets=100 hidden_units=300 -aux logging=false -contd=dong_cc42_Y100bktsU003_25b_300hu_001lr_nodrop
--em=commoncrawl-42[corpus] -ds=dong -m=tclstm -b=25 -s=15000 -mp num_oov_buckets=100 hidden_units=300 -aux logging=false -contd=dong_cc42_Y100bktsU003_25b_300hu_001lr_nodrop
+; -em=commoncrawl-42[corpus] -ds=dong -m=lstm -b=25 -s=15000 -mp num_oov_buckets=100 hidden_units=300 -aux logging=false -contd=dong_cc42_Y100bktsU003_25b_300hu_001lr_nodrop
+; -em=commoncrawl-42[corpus] -ds=dong -m=tdlstm -b=25 -s=15000 -mp num_oov_buckets=100 hidden_units=300 -aux logging=false -contd=dong_cc42_Y100bktsU003_25b_300hu_001lr_nodrop
+; -em=commoncrawl-42[corpus] -ds=dong -m=tclstm -b=25 -s=15000 -mp num_oov_buckets=100 hidden_units=300 -aux logging=false -contd=dong_cc42_Y100bktsU003_25b_300hu_001lr_nodrop
 
 # 500 OOV Buckets
 # 200 Hidden Units
--em=commoncrawl-42[corpus] -ds=dong -m=lstm -b=25 -s=15000 -mp num_oov_buckets=500 -aux logging=false -contd=dong_cc42_Y500bktsU003_25b_200hu_001lr_nodrop
--em=commoncrawl-42[corpus] -ds=dong -m=tdlstm -b=25 -s=15000 -mp num_oov_buckets=500 -aux logging=false -contd=dong_cc42_Y500bktsU003_25b_200hu_001lr_nodrop
--em=commoncrawl-42[corpus] -ds=dong -m=tclstm -b=25 -s=15000 -mp num_oov_buckets=500 -aux logging=false -contd=dong_cc42_Y500bktsU003_25b_200hu_001lr_nodrop
+; -em=commoncrawl-42[corpus] -ds=dong -m=lstm -b=25 -s=15000 -mp num_oov_buckets=500 -aux logging=false -contd=dong_cc42_Y500bktsU003_25b_200hu_001lr_nodrop
+; -em=commoncrawl-42[corpus] -ds=dong -m=tdlstm -b=25 -s=15000 -mp num_oov_buckets=500 -aux logging=false -contd=dong_cc42_Y500bktsU003_25b_200hu_001lr_nodrop
+; -em=commoncrawl-42[corpus] -ds=dong -m=tclstm -b=25 -s=15000 -mp num_oov_buckets=500 -aux logging=false -contd=dong_cc42_Y500bktsU003_25b_200hu_001lr_nodrop
 # 300 Hidden Units
--em=commoncrawl-42[corpus] -ds=dong -m=lstm -b=25 -s=15000 -mp num_oov_buckets=500 hidden_units=300 -aux logging=false -contd=dong_cc42_Y500bktsU003_25b_300hu_001lr_nodrop
--em=commoncrawl-42[corpus] -ds=dong -m=tdlstm -b=25 -s=15000 -mp num_oov_buckets=500 hidden_units=300 -aux logging=false -contd=dong_cc42_Y500bktsU003_25b_300hu_001lr_nodrop
--em=commoncrawl-42[corpus] -ds=dong -m=tclstm -b=25 -s=15000 -mp num_oov_buckets=500 hidden_units=300 -aux logging=false -contd=dong_cc42_Y500bktsU003_25b_300hu_001lr_nodrop
+; -em=commoncrawl-42[corpus] -ds=dong -m=lstm -b=25 -s=15000 -mp num_oov_buckets=500 hidden_units=300 -aux logging=false -contd=dong_cc42_Y500bktsU003_25b_300hu_001lr_nodrop
+; -em=commoncrawl-42[corpus] -ds=dong -m=tdlstm -b=25 -s=15000 -mp num_oov_buckets=500 hidden_units=300 -aux logging=false -contd=dong_cc42_Y500bktsU003_25b_300hu_001lr_nodrop
+; -em=commoncrawl-42[corpus] -ds=dong -m=tclstm -b=25 -s=15000 -mp num_oov_buckets=500 hidden_units=300 -aux logging=false -contd=dong_cc42_Y500bktsU003_25b_300hu_001lr_nodrop
 
 # 1000 OOV Buckets
 # 200 Hidden Units
--em=commoncrawl-42[corpus] -ds=dong -m=lstm -b=25 -s=15000 -mp num_oov_buckets=1000 -aux logging=false -contd=dong_cc42_Y1000bktsU003_25b_200hu_001lr_nodrop
--em=commoncrawl-42[corpus] -ds=dong -m=tdlstm -b=25 -s=15000 -mp num_oov_buckets=1000 -aux logging=false -contd=dong_cc42_Y1000bktsU003_25b_200hu_001lr_nodrop
--em=commoncrawl-42[corpus] -ds=dong -m=tclstm -b=25 -s=15000 -mp num_oov_buckets=1000 -aux logging=false -contd=dong_cc42_Y1000bktsU003_25b_200hu_001lr_nodrop
+; -em=commoncrawl-42[corpus] -ds=dong -m=lstm -b=25 -s=15000 -mp num_oov_buckets=1000 -aux logging=false -contd=dong_cc42_Y1000bktsU003_25b_200hu_001lr_nodrop
+; -em=commoncrawl-42[corpus] -ds=dong -m=tdlstm -b=25 -s=15000 -mp num_oov_buckets=1000 -aux logging=false -contd=dong_cc42_Y1000bktsU003_25b_200hu_001lr_nodrop
+; -em=commoncrawl-42[corpus] -ds=dong -m=tclstm -b=25 -s=15000 -mp num_oov_buckets=1000 -aux logging=false -contd=dong_cc42_Y1000bktsU003_25b_200hu_001lr_nodrop
 # 300 Hidden Units
--em=commoncrawl-42[corpus] -ds=dong -m=lstm -b=25 -s=15000 -mp num_oov_buckets=1000 hidden_units=300 -aux logging=false -contd=dong_cc42_Y1000bktsU003_25b_300hu_001lr_nodrop
--em=commoncrawl-42[corpus] -ds=dong -m=tdlstm -b=25 -s=15000 -mp num_oov_buckets=1000 hidden_units=300 -aux logging=false -contd=dong_cc42_Y1000bktsU003_25b_300hu_001lr_nodrop
--em=commoncrawl-42[corpus] -ds=dong -m=tclstm -b=25 -s=15000 -mp num_oov_buckets=1000 hidden_units=300 -aux logging=false -contd=dong_cc42_Y1000bktsU003_25b_300hu_001lr_nodrop
+; -em=commoncrawl-42[corpus] -ds=dong -m=lstm -b=25 -s=15000 -mp num_oov_buckets=1000 hidden_units=300 -aux logging=false -contd=dong_cc42_Y1000bktsU003_25b_300hu_001lr_nodrop
+; -em=commoncrawl-42[corpus] -ds=dong -m=tdlstm -b=25 -s=15000 -mp num_oov_buckets=1000 hidden_units=300 -aux logging=false -contd=dong_cc42_Y1000bktsU003_25b_300hu_001lr_nodrop
+; -em=commoncrawl-42[corpus] -ds=dong -m=tclstm -b=25 -s=15000 -mp num_oov_buckets=1000 hidden_units=300 -aux logging=false -contd=dong_cc42_Y1000bktsU003_25b_300hu_001lr_nodrop

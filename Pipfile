@@ -4,7 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-matplotlib = "*"
+matplotlib = "==3.0.3"
 pillow = "*"
 docker = "*"
 tensorflow-serving-api = "==1.12.0"
@@ -13,8 +13,8 @@ tqdm = "*"
 comet-ml = "*"
 pandas = "*"
 spacy = "==2.0.18"
-tensorflow = {version="==1.12.2", sys_platform = "== 'darwin'"}
-tensorflow-gpu = {version="==1.12.2", sys_platform = "== 'linux'"}
+tensorflow = {version = "==1.12.2",sys_platform = "== 'darwin'"}
+tensorflow-gpu = {version = "==1.12.2",sys_platform = "== 'linux'"}
 
 [dev-packages]
 tox-pipenv = "*"

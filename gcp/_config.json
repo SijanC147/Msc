@@ -1,21 +1,15 @@
 {
-    "jobId": "oov_eval_5",
+    "jobId": "b7",
     "labels": {},
     "trainingInput": {
         "scaleTier": "CUSTOM",
         "masterType": "standard",
         "pythonVersion": "3.5",
-        "runtimeVersion": "1.10",
+        "runtimeVersion": "1.12",
         "region": "europe-west1",
         "args": [
-            "-em=wiki-50",
-            "-ds=dong",
-            "-m=lcrrot",
-            "-b=25",
-            "-s=1000",
-            "-mp",
-            "hidden_units=150",
-            "-v=DEBUG"
+            "batch",
+            "batch_tasks.txt"
         ]
     }
 }

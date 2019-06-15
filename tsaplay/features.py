@@ -1,5 +1,5 @@
-from os.path import join, exists
-from os import makedirs
+from os.path import join, exists, dirname
+from os import makedirs, walk
 import numpy as np
 
 from tsaplay.constants import (
@@ -7,6 +7,7 @@ from tsaplay.constants import (
     DEFAULT_OOV_FN,
     BUCKET_TOKEN,
     RANDOM_SEED,
+    ASSETS_PATH,
 )
 from tsaplay.utils.tf import (
     ids_lookup_table,
@@ -23,6 +24,7 @@ from tsaplay.utils.io import (
     write_vocab_file,
     read_vocab_file,
     dump_json,
+    search_dir,
 )
 from tsaplay.utils.data import (
     accumulate_dicts,

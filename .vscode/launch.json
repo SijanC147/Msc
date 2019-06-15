@@ -26,7 +26,7 @@
             "args": [
                 "single",
                 "-em='twitter-50[corpus,only_adjectives]'",
-                "-ds='debug2'",
+                "-ds='dong'",
                 "-m=lstm",
                 "-b=25",
                 "-s=200",
@@ -42,8 +42,8 @@
             "module": "tsaplay.task",
             "args": [
                 "single",
-                "-em='twitter-50[corpus,only_adjectives]'",
-                "-ds='debug2[33/34/33,15/70/15]'",
+                "-em='twitter-50[corpus]'",
+                "-ds='dong[33/34/33,15/70/15]'",
                 "-m=lstm",
                 "-b=25",
                 "-s=200",

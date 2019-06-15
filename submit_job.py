@@ -109,7 +109,7 @@ def fix_requirements_for_machine_types(machine_types):
 
 def write_gcloud_config(args):
     machine_types = args_to_dict(args.machine_types) or {
-        "masterType": "standard_gpu",
+        "masterType": "standard",
         # "workerType": "n1-standard-16",
         # "parameterServerType": "standard_gpu",
         # "workerCount": 5,
@@ -123,7 +123,7 @@ def write_gcloud_config(args):
             "scaleTier": "CUSTOM",
             **machine_types,
             "pythonVersion": "3.5",
-            "runtimeVersion": "1.10",
+            "runtimeVersion": "1.12",
             "region": "europe-west1",
             "args": args.task_args,
         },
@@ -134,14 +134,14 @@ def write_gcloud_config(args):
 
 
 def parse_task_args(task_args):
-    try:
-        jobs = parse_batch_file(task_args.batch_file)
-    except AttributeError:
+    if task_args[0] == "batch":
+        batch_file_path = task_args[1]
+        jobs = parse_batch_file(batch_file_path)
+        copy(batch_file_path, ASSETS_PATH)
+    else:
         jobs = [task_args]
     task_parser = task_argument_parser()
-    return [
-        make_feature_provider(task_parser.parse_args(job)) for job in jobs
-    ]
+    return [make_feature_provider(task_parser.parse_args(job)) for job in jobs]
 
 
 def copy_dataset_files(datasets):
@@ -157,7 +157,7 @@ def copy_embedding_files(embedding):
 
 
 def copy_feature_files(feature_provider):
-    features_hash_dest = join(FEATURES_DEST, feature_provider.uid)
+    features_hash_dest = join(FEATURES_DEST, feature_provider.name)
     makedirs(features_hash_dest, exist_ok=True)
     vocab_file = feature_provider.embedding_params["_vocab_file"]
     copy(vocab_file, features_hash_dest, rel=FEATURES_DATA_PATH)
@@ -185,7 +185,7 @@ def upload_job_to_gcloud(args):
     staging_bucket = "gs://tsaplay-bucket/"
     package = search_dir(abspath("dist"), "tsaplay", kind="files", first=True)
     system(
-        """gcloud ml-engine jobs submit training {job_name} \\
+        """gcloud ai-platform jobs submit training {job_name} \\
             --job-dir={job_dir} \\
             --module-name={module_name} \\
             --staging-bucket={staging_bucket} \\

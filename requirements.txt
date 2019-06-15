@@ -3,9 +3,9 @@ absl-py==0.7.1
 astor==0.8.0
 attrs==19.1.0
 backports.weakref==1.0.post1
-boto3==1.9.163
+boto3==1.9.168
 boto==2.49.0
-botocore==1.12.163
+botocore==1.12.168
 certifi==2019.3.9
 chardet==3.0.4
 comet-git-pure==0.19.11
@@ -30,7 +30,7 @@ keras-applications==1.0.8
 keras-preprocessing==1.1.0
 kiwisolver==1.1.0
 markdown==3.1.1
-matplotlib==3.1.0
+matplotlib==3.0.3
 mock==3.0.5
 msgpack-numpy==0.4.3.2
 msgpack==0.5.6
@@ -55,7 +55,7 @@ six==1.12.0
 smart-open==1.8.4
 spacy==2.0.18
 tensorboard==1.12.2
-tensorflow-gpu==1.12.2 ; sys_platform == 'linux'
+tensorflow==1.12.2 ; sys_platform == 'linux'
 tensorflow-serving-api==1.12.0
 tensorflow==1.12.2 ; sys_platform == 'darwin'
 termcolor==1.1.0
@@ -68,4 +68,4 @@ websocket-client==0.56.0
 werkzeug==0.15.4
 wheel==0.33.4 ; python_version >= '3'
 wrapt==1.10.11
-wurlitzer==1.0.2
+wurlitzer==1.0.3

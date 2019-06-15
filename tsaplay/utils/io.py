@@ -134,6 +134,7 @@ def write_zippped_file(path, data):
 
 
 def search_dir(path, query=None, first=False, kind=None):
+    kind = kind or []
     if "file" in kind:
         results = [f for f in listdir(path) if isfile(join(path, f))]
     elif "folder" in kind:
