@@ -237,7 +237,7 @@ def read_vocab_file(path):
 def args_to_dict(args):
     args_dict = args or {}
     if args_dict:
-        args_dict = [arg.split("=") for arg in args_dict]
+        args_dict = [arg.split('=') for arg in args_dict]
         args_dict = {
             arg[0]: (
                 int(arg[1])

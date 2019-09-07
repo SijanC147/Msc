@@ -50,6 +50,14 @@ def argument_parser():
     )
 
     parser.add_argument(
+        "--staging-bucket",
+        "-bkt",
+        type=str,
+        default="tsaplay-bucket",
+        help="Name of the gCloud staging bucket used to store experiments.",
+    )
+
+    parser.add_argument(
         "--job-dir",
         "-jdir",
         help="GCS location to write checkpoints to and export models",
@@ -66,7 +74,7 @@ def argument_parser():
     parser.add_argument(
         "--machine-types",
         "-mch",
-        help="Specify the gcloud machine types to use",
+        help="Specify the gCloud machine types to use",
         nargs="*",
         required=False,
     )
@@ -74,7 +82,7 @@ def argument_parser():
     parser.add_argument(
         "--stream-logs",
         "-stream",
-        help="Include flag to stream logs in gcloud submit command",
+        help="Include flag to stream logs in gCloud submit command",
         action="store_true",
         required=False,
     )
@@ -101,6 +109,8 @@ def fix_requirements_for_machine_types(machine_types):
         reqs = requirements_file.read()
     reqs = reqs.replace("tensorflow-gpu==", "tensorflow==")
     for value in machine_types.values():
+        if not isinstance(value, str):
+            continue
         if "gpu" in value or "p100" in value or "v100" in value:
             reqs = reqs.replace("tensorflow==", "tensorflow-gpu==")
     with open("requirements.txt", "w") as requirements_file:
@@ -182,7 +192,7 @@ def prepare_job_assets(args):
 
 
 def upload_job_to_gcloud(args):
-    staging_bucket = "gs://tsaplay-bucket/"
+    staging_bucket = "gs://{0}/".format(args.staging_bucket)
     package = search_dir(abspath("dist"), "tsaplay", kind="files", first=True)
     system(
         """gcloud ai-platform jobs submit training {job_name} \\

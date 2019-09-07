@@ -98,7 +98,7 @@ def re_distribute_counts(labels, target_dists):
     return unique, target_counts
 
 
-def resample_data_dict(data_dict, target_dists):
+def resample_data_dict(data_dict, target_dists, seed=None):
     labels = [label for label in data_dict["labels"]]
 
     classes, target_counts = re_distribute_counts(labels, target_dists)
@@ -119,7 +119,7 @@ def resample_data_dict(data_dict, target_dists):
             [s for s in samples if s[labels_index] == _class], numpy_dtype
         )
 
-    np.random.seed(RANDOM_SEED)
+    np.random.seed(seed or RANDOM_SEED)
     resampled = np.concatenate(
         [
             np.random.choice(

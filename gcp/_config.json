@@ -1,6 +1,8 @@
 {
-    "jobId": "b10",
-    "labels": {},
+    "jobId": "\"testing_bucket_param\"",
+    "labels": {
+        "type": "example"
+    },
     "trainingInput": {
         "scaleTier": "CUSTOM",
         "masterType": "standard",

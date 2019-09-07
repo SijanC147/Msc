@@ -79,6 +79,12 @@ def argument_parser():
     )
 
     single_task_parser.add_argument(
+        "--comet-workspace",
+        "-wrk",
+        help="Comet.ml workspace to use, comet-api must be set",
+    )
+
+    single_task_parser.add_argument(
         "--model",
         "-m",
         type=str,
@@ -91,7 +97,7 @@ def argument_parser():
         "--model-params",
         "-mp",
         nargs="*",
-        help="H-Params to forward to model (space-delimted <key>=<value>)",
+        help="H-Params to forward to model (space-delimited <key>=<value>)",
         required=False,
     )
 
@@ -99,7 +105,7 @@ def argument_parser():
         "--aux-config",
         "-aux",
         nargs="*",
-        help="AUX config to forward to model (space-delimted <key>=<value>)",
+        help="AUX config to forward to model (space-delimited <key>=<value>)",
         required=False,
     )
 
@@ -107,7 +113,7 @@ def argument_parser():
         "--run-config",
         "-rc",
         nargs="*",
-        help="Custom run_config parameters (space-delimted <key>=<value>)",
+        help="Custom run_config parameters (space-delimited <key>=<value>)",
         required=False,
     )
 
@@ -181,6 +187,7 @@ def run_experiment(args, experiment_index=None):
         model,
         run_config=run_config,
         comet_api=args.comet_api,
+        comet_workspace=args.comet_workspace,
         contd_tag=args.contd_tag,
         job_dir=args.job_dir,
     )

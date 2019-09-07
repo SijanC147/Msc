@@ -21,6 +21,7 @@ class Experiment:
         model,
         contd_tag=None,
         comet_api=None,
+        comet_workspace=None,
         run_config=None,
         job_dir=None,
     ):
@@ -36,7 +37,9 @@ class Experiment:
             **self.make_default_run_cofig(run_config)
         )
         if self.contd_tag and comet_api:
-            self._setup_comet_ml_experiment(api_key=comet_api)
+            self._setup_comet_ml_experiment(
+                api_key=comet_api, workspace=comet_workspace
+            )
 
     def run(self, job, steps):
         if job == "train":
@@ -155,14 +158,16 @@ class Experiment:
 
         return default_run_config
 
-    def _setup_comet_ml_experiment(self, api_key):
+    def _setup_comet_ml_experiment(self, api_key, workspace=None):
         comet_key_file_path = join(self.experiment_dir, "_cometml.key")
         if exists(comet_key_file_path):
             with open(comet_key_file_path, "r") as comet_key_file:
                 exp_key = comet_key_file.readline().strip()
         else:
             comet_experiment = comet_ml.Experiment(
-                api_key=api_key, project_name=self.model.name, workspace="msc"
+                api_key=api_key,
+                project_name=self.model.name,
+                workspace=(workspace or "msc"),
             )
             comet_experiment.set_name(self.contd_tag)
             exp_key = comet_experiment.get_key()

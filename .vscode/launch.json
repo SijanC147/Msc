@@ -19,6 +19,24 @@
             "console": "integratedTerminal"
         },
         {
+            "name": "GC-Machine-Type-Arg-Test",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/submit_job.py",
+            "args": [
+                "--job-id=\"testing_bucket_param\"",
+                "--job-dir=\"debug-data\"",
+                "--staging-bucket=\"tsaplay-bucket-test\"",
+                "--job-labels", 
+                "type=example",
+                // "--machine-types=\"masterType=complex_model_s workerType=complex_model_s\"", 
+                "--task-args",
+                "batch",
+                "batch_tasks.txt"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
             "name": "GC-Job-Sumission-Test",
             "type": "python",
             "request": "launch",
@@ -56,7 +74,9 @@
             "args": [
                 "single",
                 "-em='twitter-50[corpus]'",
-                "-ds='dong[33/34/33,15/70/15]'",
+                "-ds", 
+                "'dong[33/34/33,15/70/15]'",
+                "nakov",
                 "-m=lstm",
                 "-b=25",
                 "-s=200",

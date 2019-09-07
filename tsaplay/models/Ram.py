@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tensorflow.contrib.rnn import (  # pylint: disable=E0611
-    stack_bidirectional_dynamic_rnn
+    stack_bidirectional_dynamic_rnn,
 )
 from tsaplay.models.tsa_model import TsaModel
 from tsaplay.utils.addons import addon, attn_heatmaps
@@ -160,6 +160,8 @@ class Ram(TsaModel):
             cond=condition, body=attn_layer_run, loop_vars=initial_layer_inputs
         )
 
+        # print(features["sentence"])
+        # this is not a sparse tensor, it's an iterator, which might be breaking models with hops
         literals, attn_snapshots = zip_attn_snapshots_with_sp_literals(
             sp_literals=features["sentence"],
             snapshots=attn_snapshots,

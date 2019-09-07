@@ -136,6 +136,24 @@ def conf_matrix(model, features, labels, spec, params):
                 predictions=spec.predictions["class_ids"],
                 num_classes=params["_n_out_classes"],
             )
+        })
+    eval_metrics.update(
+        {
+            "tp":tf.metrics.true_positives(
+                labels=labels,
+                predictions=spec.predictions["class_ids"],
+                name="tp_op"
+            ),
+            "fp":tf.metrics.false_positives(
+                labels=labels,
+                predictions=spec.predictions["class_ids"],
+                name="fp_op"
+            ),
+            "precision":tf.metrics.precision(
+                labels=labels,
+                predictions=spec.predictions["class_ids"],
+                name="precision_op"
+            )
         }
     )
     eval_hooks += [
