@@ -5,10 +5,10 @@ from functools import wraps, partial
 import tensorflow as tf
 from tensorflow.estimator import ModeKeys  # pylint: disable=E0401
 from tensorflow.saved_model.signature_constants import (  # pylint: disable=E0401
-    DEFAULT_SERVING_SIGNATURE_DEF_KEY
+    DEFAULT_SERVING_SIGNATURE_DEF_KEY,
 )
 from tensorflow.contrib.estimator import (  # pylint: disable=E0611
-    stop_if_no_decrease_hook
+    stop_if_no_decrease_hook,
 )
 from tensorflow.estimator.export import (  # pylint: disable=E0401
     PredictOutput,
@@ -19,6 +19,7 @@ from tsaplay.hooks import (
     SaveConfusionMatrix,
     MetadataHook,
 )
+from tsaplay.utils.tf import tf_f1_score, streaming_counts
 from tsaplay.utils.debug import cprnt
 
 
@@ -136,24 +137,39 @@ def conf_matrix(model, features, labels, spec, params):
                 predictions=spec.predictions["class_ids"],
                 num_classes=params["_n_out_classes"],
             )
-        })
+        }
+    )
     eval_metrics.update(
         {
-            "tp":tf.metrics.true_positives(
-                labels=labels,
-                predictions=spec.predictions["class_ids"],
-                name="tp_op"
-            ),
-            "fp":tf.metrics.false_positives(
-                labels=labels,
-                predictions=spec.predictions["class_ids"],
-                name="fp_op"
-            ),
-            "precision":tf.metrics.precision(
-                labels=labels,
-                predictions=spec.predictions["class_ids"],
-                name="precision_op"
+            "counts": streaming_counts(
+                y_true=tf.one_hot(
+                    indices=labels, depth=params["_n_out_classes"]
+                ),
+                y_pred=tf.one_hot(
+                    indices=spec.predictions["class_ids"],
+                    depth=params["_n_out_classes"],
+                ),
+                num_classes=params["_n_out_classes"],
             )
+            # "macro-f1": tf_f1_score(
+            #     y_true=tf.one_hot(indices=labels, depth=params["_n_out_classes"]),
+            #     y_pred=tf.one_hot(indices=spec.predictions["class_ids"], depth=params["_n_out_classes"])
+            # )[1],
+            # "tp": tf.metrics.true_positives(
+            #     labels=labels,
+            #     predictions=spec.predictions["class_ids"],
+            #     name="tp_op",
+            # ),
+            # "fp": tf.metrics.false_positives(
+            #     labels=labels,
+            #     predictions=spec.predictions["class_ids"],
+            #     name="fp_op",
+            # ),
+            # "precision": tf.metrics.precision(
+            #     labels=labels,
+            #     predictions=spec.predictions["class_ids"],
+            #     name="precision_op",
+            # ),
         }
     )
     eval_hooks += [

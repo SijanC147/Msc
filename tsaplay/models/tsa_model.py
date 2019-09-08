@@ -9,7 +9,7 @@ from tensorflow.estimator import (  # pylint: disable=E0401
     EstimatorSpec,
 )
 from tensorflow.estimator.export import (  # pylint: disable=E0401
-    ServingInputReceiver
+    ServingInputReceiver,
 )
 from tsaplay.utils.tf import (
     make_input_fn,
@@ -32,6 +32,7 @@ from tsaplay.utils.addons import (
     scalars,
     metadata,
 )
+from tsaplay.utils.debug import cprnt
 
 
 class TsaModel(ABC):

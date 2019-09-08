@@ -13,7 +13,7 @@ from tsaplay.utils.tf import (
     generate_attn_heatmap_summary,
     create_snapshots_container,
     append_snapshot,
-    zip_attn_snapshots_with_sp_literals,
+    zip_attn_snapshots_with_literals,
 )
 
 
@@ -162,8 +162,8 @@ class Ram(TsaModel):
 
         # print(features["sentence"])
         # this is not a sparse tensor, it's an iterator, which might be breaking models with hops
-        literals, attn_snapshots = zip_attn_snapshots_with_sp_literals(
-            sp_literals=features["sentence"],
+        literals, attn_snapshots = zip_attn_snapshots_with_literals(
+            literals=features["sentence"],
             snapshots=attn_snapshots,
             num_layers=params["n_hops"],
         )

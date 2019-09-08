@@ -8,7 +8,7 @@ from tsaplay.utils.tf import (
     generate_attn_heatmap_summary,
     append_snapshot,
     create_snapshots_container,
-    zip_attn_snapshots_with_sp_literals,
+    zip_attn_snapshots_with_literals,
 )
 
 
@@ -127,8 +127,8 @@ class MemNet(TsaModel):
             ),
         )
 
-        literals, attn_snapshots = zip_attn_snapshots_with_sp_literals(
-            sp_literals=features["context"],
+        literals, attn_snapshots = zip_attn_snapshots_with_literals(
+            literals=features["context"],
             snapshots=attn_snapshots,
             num_layers=params["n_hops"],
         )
