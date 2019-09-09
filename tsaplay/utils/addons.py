@@ -19,7 +19,7 @@ from tsaplay.hooks import (
     SaveConfusionMatrix,
     MetadataHook,
 )
-from tsaplay.utils.tf import tf_f1_score, streaming_counts
+from tsaplay.utils.tf import streaming_counts
 from tsaplay.utils.debug import cprnt
 
 
@@ -136,11 +136,7 @@ def conf_matrix(model, features, labels, spec, params):
                 labels=labels,
                 predictions=spec.predictions["class_ids"],
                 num_classes=params["_n_out_classes"],
-            )
-        }
-    )
-    eval_metrics.update(
-        {
+            ),
             "counts": streaming_counts(
                 y_true=tf.one_hot(
                     indices=labels, depth=params["_n_out_classes"]

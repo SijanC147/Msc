@@ -596,58 +596,6 @@ def embedding_initializer_fn(vectors, num_shards, structure=None):
         "constant": _init_const,
     }.get(structure, _init_part_var)
 
-def tf_f1_score(y_true, y_pred):
-    """Computes 3 different f1 scores, micro macro
-    weighted.
-    micro: f1 score accross the classes, as 1
-    macro: mean of f1 scores per class
-    weighted: weighted average of f1 scores per class,
-              weighted from the support of each class
-    Args:
-        y_true (Tensor): labels, with shape (batch, num_classes)
-        y_pred (Tensor): model's predictions, same shape as y_true
-    Returns:
-        tupe(Tensor): (micro, macro, weighted)
-                      tuple of the computed f1 scores
-    """
-
-    f1s = [0, 0, 0]
-
-    y_true = tf.cast(y_true, tf.float64)
-    y_pred = tf.cast(y_pred, tf.float64)
-
-    y_true = tf.Print(input_=y_true, data=[y_true], message="T", summarize=100)
-    y_pred = tf.Print(input_=y_pred, data=[y_pred], message="P", summarize=100)
-
-    for i, axis in enumerate([None, 0]):
-        TP = tf.count_nonzero(y_pred * y_true, axis=axis)
-        FP = tf.count_nonzero(y_pred * (y_true - 1), axis=axis)
-        FN = tf.count_nonzero((y_pred - 1) * y_true, axis=axis)
-
-        TP = tf.Print(input_=TP, data=[TP], message="TP")
-        FP = tf.Print(input_=FP, data=[FP], message="FP")
-        FN = tf.Print(input_=FN, data=[FN], message="FN")
-
-        precision = TP / (TP + FP)
-        recall = TP / (TP + FN)
-
-        precision = tf.Print(input_=precision, data=[precision], message="PRE")
-        recall = tf.Print(input_=recall, data=[recall], message="REC")
-
-        f1 = 2 * precision * recall / (precision + recall)
-
-        f1 = tf.Print(input_=f1, data=[f1], message="F1")
-
-        f1s[i] = tf.metrics.mean(f1)
-
-    weights = tf.reduce_sum(y_true, axis=0)
-    weights /= tf.reduce_sum(weights)
-    f1s[2] = tf.reduce_sum(f1 * weights)
-
-    micro, macro, weighted = f1s
-    return micro, macro, weighted
-
-#####################################################
 
 def metric_variable(shape, dtype, validate_shape=True, name=None):
     """Create variable in `GraphKeys.(LOCAL|METRIC_VARIABLES`) collections.
@@ -728,8 +676,8 @@ def streaming_counts(y_true, y_pred, num_classes):
         up_tp_mic, up_fp_mic, up_fn_mic, up_tp_mac, up_fp_mac, up_fn_mac, up_weights
     )
 
-    # return counts, updates
-    return streaming_f1(counts), updates
+    return counts, updates
+    # return streaming_f1(counts), updates
 
 
 def streaming_f1(counts):
