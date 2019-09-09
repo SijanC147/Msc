@@ -147,25 +147,6 @@ def conf_matrix(model, features, labels, spec, params):
                 ),
                 num_classes=params["_n_out_classes"],
             )
-            # "macro-f1": tf_f1_score(
-            #     y_true=tf.one_hot(indices=labels, depth=params["_n_out_classes"]),
-            #     y_pred=tf.one_hot(indices=spec.predictions["class_ids"], depth=params["_n_out_classes"])
-            # )[1],
-            # "tp": tf.metrics.true_positives(
-            #     labels=labels,
-            #     predictions=spec.predictions["class_ids"],
-            #     name="tp_op",
-            # ),
-            # "fp": tf.metrics.false_positives(
-            #     labels=labels,
-            #     predictions=spec.predictions["class_ids"],
-            #     name="fp_op",
-            # ),
-            # "precision": tf.metrics.precision(
-            #     labels=labels,
-            #     predictions=spec.predictions["class_ids"],
-            #     name="precision_op",
-            # ),
         }
     )
     eval_hooks += [
