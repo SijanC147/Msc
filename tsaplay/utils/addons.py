@@ -10,6 +10,7 @@ from tensorflow.saved_model.signature_constants import (  # pylint: disable=E040
 from tensorflow.contrib.estimator import (  # pylint: disable=E0611
     stop_if_no_decrease_hook,
 )
+from tensorflow.contrib.metrics import confusion_matrix as cm
 from tensorflow.estimator.export import (  # pylint: disable=E0401
     PredictOutput,
     ClassificationOutput,
@@ -137,22 +138,21 @@ def conf_matrix(model, features, labels, spec, params):
                 predictions=spec.predictions["class_ids"],
                 num_classes=params["_n_out_classes"],
             ),
+            # "conf": cm(
+            #     labels=labels, predictions=spec.predictions["class_ids"]
+            # ),
             "counts": streaming_counts(
-                y_true=tf.one_hot(
-                    indices=labels, depth=params["_n_out_classes"]
-                ),
-                y_pred=tf.one_hot(
-                    indices=spec.predictions["class_ids"],
-                    depth=params["_n_out_classes"],
-                ),
+                labels=labels,
+                predictions=spec.predictions["class_ids"],
                 num_classes=params["_n_out_classes"],
-            )
+            ),
         }
     )
     eval_hooks += [
         SaveConfusionMatrix(
             class_labels=model.aux_config["class_labels"],
-            tensor_name="mean_iou/total_confusion_matrix",
+            # tensor_name="mean_iou/total_confusion_matrix",
+            tensor_name="conf_mat",
             summary_writer=tf.summary.FileWriterCache.get(
                 join(model.run_config.model_dir, "eval")
             ),

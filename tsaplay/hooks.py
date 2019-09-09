@@ -15,6 +15,8 @@ from tsaplay.utils.draw import (
 )
 from tsaplay.utils.tf import image_to_summary
 from tsaplay.utils.io import temp_pngs, get_image_from_plt, pickle_file
+from tsaplay.utils.debug import cprnt
+from tensorflow.contrib.metrics import confusion_matrix as cm
 
 
 # matplotlib.use("TkAgg")
@@ -158,6 +160,7 @@ class SaveConfusionMatrix(SessionRunHook):
             .eval(session=session)
             .astype(int)
         )
+        cprnt(r=confusion_matrix)
         global_step = tf.train.get_global_step().eval(session=session)
         image = self._plot_confusion_matrix(confusion_matrix)
         if self._comet is not None:
