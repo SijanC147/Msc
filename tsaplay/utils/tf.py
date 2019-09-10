@@ -614,41 +614,32 @@ def metric_variable(shape, dtype, validate_shape=True, name=None):
     )
 
 
-def streaming_counts(labels, predictions, num_classes):
-    """Computes the TP, FP and FN counts for the micro and macro f1 scores.
-    The weighted f1 score can be inferred from the macro f1 score provided
-    we compute the weights also.
-    This function also defines the update ops to these counts
-    
-    Args:
-        y_true (Tensor): 2D Tensor representing the target labels
-        y_pred (Tensor): 2D Tensor representing the predicted labels
-        num_classes (int): number of possible classes
-    Returns:
-        tuple: the first element in the tuple is itself a tuple grouping the counts,
-        the second element is the grouped update op.
-    """
-
-    y_true = tf.one_hot(indices=labels, depth=num_classes)
-    y_pred = tf.one_hot(indices=predictions, depth=num_classes)
-    y_true = tf.cast(y_true, tf.int64)
-    y_pred = tf.cast(y_pred, tf.int64)
-
-    # Weights for the weighted f1 score
+def streaming_conf_matrix(labels, predictions, num_classes):
+    y_true = tf.cast(tf.one_hot(indices=labels, depth=num_classes), dtype=tf.int64)
+    y_pred = tf.cast(tf.one_hot(indices=predictions, depth=num_classes), dtype=tf.int64)
     conf_mat = metric_variable(
         shape=[num_classes, num_classes],
         dtype=tf.int64,
         validate_shape=False,
-        name="conf_mat",
+        name="total_confusion_matrix",
     )
-    # Weights for the weighted f1 score
+    up_conf_mat = tf.assign_add(
+        conf_mat,
+        cm(labels, predictions, dtype=tf.int64, num_classes=num_classes),
+    )
+
+    return conf_mat, up_conf_mat
+
+def streaming_f1_scores(labels, predictions, num_classes):
+    y_true = tf.cast(tf.one_hot(indices=labels, depth=num_classes), dtype=tf.int64)
+    y_pred = tf.cast(tf.one_hot(indices=predictions, depth=num_classes), dtype=tf.int64)
+
     weights = metric_variable(
         shape=[num_classes],
         dtype=tf.int64,
         validate_shape=False,
         name="weights",
     )
-    # Counts for the macro f1 score
     tp_mac = metric_variable(
         shape=[num_classes],
         dtype=tf.int64,
@@ -667,7 +658,6 @@ def streaming_counts(labels, predictions, num_classes):
         validate_shape=False,
         name="fn_mac",
     )
-    # Counts for the micro f1 score
     tp_mic = metric_variable(
         shape=[], dtype=tf.int64, validate_shape=False, name="tp_mic"
     )
@@ -678,8 +668,6 @@ def streaming_counts(labels, predictions, num_classes):
         shape=[], dtype=tf.int64, validate_shape=False, name="fn_mic"
     )
 
-    # Update ops, as in the previous section:
-    #   - Update ops for the macro f1 score
     up_tp_mac = tf.assign_add(
         tp_mac, tf.count_nonzero(y_pred * y_true, axis=0)
     )
@@ -689,8 +677,6 @@ def streaming_counts(labels, predictions, num_classes):
     up_fn_mac = tf.assign_add(
         fn_mac, tf.count_nonzero((y_pred - 1) * y_true, axis=0)
     )
-
-    #   - Update ops for the micro f1 score
     up_tp_mic = tf.assign_add(
         tp_mic, tf.count_nonzero(y_pred * y_true, axis=None)
     )
@@ -700,75 +686,37 @@ def streaming_counts(labels, predictions, num_classes):
     up_fn_mic = tf.assign_add(
         fn_mic, tf.count_nonzero((y_pred - 1) * y_true, axis=None)
     )
-    # Update op for the weights, just summing
     up_weights = tf.assign_add(weights, tf.reduce_sum(y_true, axis=0))
 
-    up_conf_mat = tf.assign_add(
-        conf_mat,
-        cm(labels, predictions, dtype=tf.int64, num_classes=num_classes),
-    )
-
-    # Grouping values
-    counts = (
-        tp_mac,
-        fp_mac,
-        fn_mac,
-        tp_mic,
-        fp_mic,
-        fn_mic,
-        weights,
-        conf_mat,
-    )
     updates = tf.group(
-        up_tp_mic,
-        up_fp_mic,
-        up_fn_mic,
         up_tp_mac,
         up_fp_mac,
         up_fn_mac,
+        up_tp_mic,
+        up_fp_mic,
+        up_fn_mic,
         up_weights,
-        up_conf_mat,
     )
 
-    return counts, updates
-    # return streaming_f1(counts), updates
-
-
-def streaming_f1(counts):
-    """Computes the f1 scores from the TP, FP and FN counts
-    
-    Args:
-        counts (tuple): macro and micro counts, and weights in the end
-    
-    Returns:
-        tuple(Tensor): The 3 tensors representing the micro, macro and weighted
-            f1 score
-    """
-    # unpacking values
-    tp_mac, fp_mac, fn_mac, tp_mic, fp_mic, fn_mic, weights = counts
-
-    # normalize weights
-    weights /= tf.reduce_sum(weights)
-
-    # computing the micro f1 score
+    weights = weights / tf.reduce_sum(weights)
     prec_mic = tp_mic / (tp_mic + fp_mic)
+    prec_mic = tf.where(tf.is_nan(prec_mic), tf.zeros_like(prec_mic), prec_mic)
     rec_mic = tp_mic / (tp_mic + fn_mic)
+    rec_mic = tf.where(tf.is_nan(rec_mic), tf.zeros_like(rec_mic), rec_mic)
     f1_mic = 2 * prec_mic * rec_mic / (prec_mic + rec_mic)
+    f1_mic = tf.where(tf.is_nan(f1_mic), tf.zeros_like(f1_mic), f1_mic)
     f1_mic = tf.reduce_mean(f1_mic)
-
-    # computing the macro
     prec_mac = tp_mac / (tp_mac + fp_mac)
     prec_mac = tf.where(tf.is_nan(prec_mac), tf.zeros_like(prec_mac), prec_mac)
-    # prec_mac = tf.Print(input_=prec_mac, data=[prec_mac], message="Macro Precision")
     rec_mac = tp_mac / (tp_mac + fn_mac)
     rec_mac = tf.where(tf.is_nan(rec_mac), tf.zeros_like(rec_mac), rec_mac)
-    # rec_mac = tf.Print(input_=rec_mac, data=[rec_mac], message="Macro Recall")
     f1_mac = 2 * prec_mac * rec_mac / (prec_mac + rec_mac)
     f1_mac = tf.where(tf.is_nan(f1_mac), tf.zeros_like(f1_mac), f1_mac)
-    # f1_mac = tf.Print(input_=f1_mac, data=[f1_mac], message="Macro f1")
-
-    # computing weighted f1 score
     f1_wei = tf.reduce_sum(f1_mac * weights)
     f1_mac = tf.reduce_mean(f1_mac)
 
-    return f1_mic, f1_mac, f1_wei
+    return {
+        "micro-f1": (f1_mic, updates),
+        "macro-f1": (f1_mac, updates),
+        "weighted-f1": (f1_wei, updates),
+    }
