@@ -159,7 +159,6 @@ class SaveConfusionMatrix(SessionRunHook):
             .eval(session=session)
             .astype(int)
         )
-        cprnt(r=confusion_matrix)
         global_step = tf.train.get_global_step().eval(session=session)
         image = self._plot_confusion_matrix(confusion_matrix)
         if self._comet is not None:

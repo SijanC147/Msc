@@ -1,8 +1,6 @@
 {
-    "jobId": "\"testing_bucket_param\"",
-    "labels": {
-        "type": "example"
-    },
+    "jobId": "f1_metric_tests",
+    "labels": {},
     "trainingInput": {
         "scaleTier": "CUSTOM",
         "masterType": "standard",

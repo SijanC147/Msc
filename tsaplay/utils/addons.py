@@ -19,8 +19,6 @@ from tsaplay.hooks import (
     SaveConfusionMatrix,
     MetadataHook,
 )
-
-# from tsaplay.utils.tf import streaming_counts
 from tsaplay.utils.tf import streaming_f1_scores, streaming_conf_matrix
 from tsaplay.utils.debug import cprnt
 
@@ -156,6 +154,19 @@ def conf_matrix(model, features, labels, spec, params):
     )
 
 
+@only(["EVAL"])
+def f1_scores(model, features, labels, spec, params):
+    eval_metrics = spec.eval_metric_ops or {}
+    eval_metrics.update(
+        streaming_f1_scores(
+            labels=labels,
+            predictions=spec.predictions["class_ids"],
+            num_classes=params["_n_out_classes"],
+        )
+    )
+    return spec._replace(eval_metric_ops=eval_metrics)
+
+
 @only(["TRAIN"])
 def logging(model, features, labels, spec, params):
     std_metrics = {
@@ -163,17 +174,7 @@ def logging(model, features, labels, spec, params):
             labels=labels,
             predictions=spec.predictions["class_ids"],
             name="acc_op",
-        ),
-        "auc": tf.metrics.auc(
-            labels=tf.one_hot(indices=labels, depth=params["_n_out_classes"]),
-            predictions=spec.predictions["probabilities"],
-            name="auc_op",
-        ),
-        **streaming_f1_scores(
-            labels=labels,
-            predictions=spec.predictions["class_ids"],
-            num_classes=params["_n_out_classes"],
-        ),
+        )
     }
     train_hooks = list(spec.training_hooks) or []
     train_hooks += [
@@ -181,10 +182,6 @@ def logging(model, features, labels, spec, params):
             tensors={
                 "loss": spec.loss,
                 "accuracy": std_metrics["accuracy"][1],
-                # "auc": std_metrics["auc"][1],
-                "micro-f1": std_metrics["micro-f1"][0],
-                "macro-f1": std_metrics["macro-f1"][0],
-                "weighted-f1": std_metrics["weighted-f1"][0]
             },
             every_n_iter=model.run_config.save_summary_steps,
         )
@@ -215,28 +212,14 @@ def scalars(model, features, labels, spec, params):
             num_classes=params["_n_out_classes"],
             name="mpc_acc_op",
         ),
-        "auc": tf.metrics.auc(
-            labels=tf.one_hot(indices=labels, depth=params["_n_out_classes"]),
-            predictions=spec.predictions["probabilities"],
-            name="auc_op",
-        ),
-        **streaming_f1_scores(
-            labels=labels,
-            predictions=spec.predictions["class_ids"],
-            num_classes=params["_n_out_classes"],
-        ),
     }
     if spec.mode == ModeKeys.EVAL:
         eval_metrics = spec.eval_metric_ops or {}
         eval_metrics.update(std_metrics)
         spec = spec._replace(eval_metric_ops=eval_metrics)
     else:
-        tf.summary.scalar("loss", spec.loss)
         tf.summary.scalar("accuracy", std_metrics["accuracy"][1])
-        tf.summary.scalar("micro-f1", std_metrics["micro-f1"][0])
-        tf.summary.scalar("macro-f1", std_metrics["macro-f1"][0])
-        tf.summary.scalar("weighted-f1", std_metrics["weighted-f1"][0])
-        # tf.summary.scalar("auc", std_metrics["auc"][1])
+        tf.summary.scalar("mpc_accuracy", std_metrics["mpc_accuracy"][0])
     return spec
 
 

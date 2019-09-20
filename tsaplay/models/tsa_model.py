@@ -27,6 +27,7 @@ from tsaplay.utils.addons import (
     addon,
     prediction_outputs,
     conf_matrix,
+    f1_scores,
     logging,
     histograms,
     scalars,
@@ -202,7 +203,7 @@ class TsaModel(ABC):
 
     @cometml
     @sharded_saver
-    @addon([scalars, logging, metadata, histograms, conf_matrix])
+    @addon([scalars, logging, metadata, histograms, conf_matrix, f1_scores])
     @addon([prediction_outputs])
     @embed_sequences
     def _model_fn(self, features, labels, mode, params):
