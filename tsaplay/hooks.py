@@ -4,7 +4,7 @@ import itertools
 import numpy as np
 import tensorflow as tf
 from warnings import warn
-from tensorflow.train import SessionRunHook, SessionRunArgs
+from tensorflow.train import SessionRunHook, SessionRunArgs  # noqa
 import matplotlib
 from tsaplay.constants import RANDOM_SEED
 from tsaplay.utils.draw import (
@@ -46,7 +46,7 @@ class SaveAttentionWeightVector(SessionRunHook):
         self.freq = freq
 
     def before_run(self, run_context):
-        return SessionRunArgs(
+        return SessionRunArgs(  # noqa
             fetches={
                 "global_step": tf.get_collection(tf.GraphKeys.GLOBAL_STEP),
                 "attention": tf.get_collection("ATTENTION"),
@@ -243,7 +243,7 @@ class MetadataHook(SessionRunHook):
             else None
         )
 
-        return SessionRunArgs(requests, options=options)
+        return SessionRunArgs(requests, options=options)  # noqa
 
     def after_run(self, run_context, run_values):
         global_step = run_values.results["global_step"]

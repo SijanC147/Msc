@@ -19,6 +19,7 @@ from tsaplay.utils.tf import (
 
 class Ram(TsaModel):
     def set_params(self):
+        # Literally almost none of the below are reported in the paper.
         return {
             "batch-size": 25,
             "learning_rate": 0.1,
@@ -27,7 +28,7 @@ class Ram(TsaModel):
             "lstm_hidden_units": 100,
             "gru_hidden_units": 50,
             "n_lstm_layers": 2,
-            "n_hops": 9,
+            "n_hops": 5,  # paper report results up to many layers
             "initializer": tf.initializers.random_uniform(-0.1, 0.1),
             "train_embeddings": False,
         }

@@ -7,9 +7,9 @@ from tsaplay.utils.debug import cprnt
 class TcLstm(TsaModel):
     def set_params(self):
         return {
-            "batch-size": 25,
+            "batch-size": 25,  # Tang never mentions this for their models.
             "learning_rate": 0.01,
-            "hidden_units": 200,
+            "hidden_units": 200,  # Tang never mentions this for their models.
             "initializer": tf.initializers.random_uniform(-0.003, 0.003),
         }
 

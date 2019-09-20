@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tensorflow.contrib.rnn import (  # pylint: disable=E0611
-    stack_bidirectional_dynamic_rnn
+    stack_bidirectional_dynamic_rnn,
 )
 from tsaplay.models.tsa_model import TsaModel
 from tsaplay.utils.tf import (
@@ -22,6 +22,7 @@ class LcrRot(TsaModel):
             "hidden_units": 300,
             "l2_weight": 1e-5,
             "momentum": 0.9,
+            # bias needs to have different init to init to 0
             "initializer": tf.initializers.random_uniform(-0.1, 0.1),
         }
 
