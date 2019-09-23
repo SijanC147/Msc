@@ -69,6 +69,7 @@ class LcrRot(TsaModel):
                 seq_lengths=features["left_len"],
                 attn_focus=r_t,
                 init=params["initializer"],
+                bias_init=params["bias_initializer"],
                 sp_literal=features["left"],
             )
 
@@ -79,6 +80,7 @@ class LcrRot(TsaModel):
                 seq_lengths=features["right_len"],
                 attn_focus=r_t,
                 init=params["initializer"],
+                bias_init=params["bias_initializer"],
                 sp_literal=features["right"],
             )
 
@@ -89,6 +91,7 @@ class LcrRot(TsaModel):
                 seq_lengths=features["target_len"],
                 attn_focus=tf.expand_dims(r_l, axis=1),
                 init=params["initializer"],
+                bias_init=params["bias_initializer"],
                 sp_literal=features["target"],
             )
 
@@ -99,6 +102,7 @@ class LcrRot(TsaModel):
                 seq_lengths=features["target_len"],
                 attn_focus=tf.expand_dims(r_r, axis=1),
                 init=params["initializer"],
+                bias_init=params["bias_initializer"],
                 sp_literal=features["target"],
             )
 
@@ -112,7 +116,10 @@ class LcrRot(TsaModel):
         final_sentence_rep = tf.concat([r_l, r_t_l, r_t_r, r_r], axis=1)
 
         logits = tf.layers.dense(
-            inputs=final_sentence_rep, units=params["_n_out_classes"]
+            inputs=final_sentence_rep,
+            units=params["_n_out_classes"],
+            kernel_initializer=params["initializer"],
+            bias_initializer=params["bias_initializer"],
         )
 
         loss = l2_regularized_loss(

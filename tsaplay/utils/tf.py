@@ -281,11 +281,14 @@ def masked_softmax(logits, mask):
 def gru_cell(**params):
     hidden_units = params.get("gru_hidden_units", params.get("hidden_units"))
     initializer = params.get("gru_initializer", params.get("initializer"))
+    bias_initializer = params.get(
+        "gru_bias_initializer", params.get("bias_initializer")
+    )
     keep_prob = params.get("gru_keep_prob", params.get("keep_prob"))
     gru = tf.nn.rnn_cell.GRUCell(
         num_units=hidden_units,
         kernel_initializer=initializer,
-        bias_initializer=initializer,
+        bias_initializer=(bias_initializer or initializer),
     )
     return (
         gru
@@ -299,9 +302,12 @@ def gru_cell(**params):
 def lstm_cell(**params):
     hidden_units = params.get("lstm_hidden_units", params.get("hidden_units"))
     initializer = params.get("lstm_initializer", params.get("initializer"))
+    initial_bias = params.get("lstm_initial_bias", 1)
     keep_prob = params.get("lstm_keep_prob", params.get("keep_prob"))
     lstm = tf.nn.rnn_cell.LSTMCell(
-        num_units=hidden_units, initializer=initializer
+        num_units=hidden_units,
+        initializer=initializer,
+        forget_bias=initial_bias,
     )
     return (
         lstm
@@ -326,7 +332,13 @@ def l2_regularized_loss(
 
 
 def attention_unit(
-    h_states, hidden_units, seq_lengths, attn_focus, init, sp_literal=None
+    h_states,
+    hidden_units,
+    seq_lengths,
+    attn_focus,
+    init,
+    bias_init=None,
+    sp_literal=None,
 ):
     batch_size = tf.shape(h_states)[0]
     max_seq_len = tf.shape(h_states)[1]
@@ -337,7 +349,10 @@ def attention_unit(
         initializer=init,
     )
     bias = tf.get_variable(
-        name="bias", shape=[1], dtype=tf.float32, initializer=init
+        name="bias",
+        shape=[1],
+        dtype=tf.float32,
+        initializer=(bias_init or init),
     )
 
     weights = tf.expand_dims(input=weights, axis=0)
@@ -615,8 +630,12 @@ def metric_variable(shape, dtype, validate_shape=True, name=None):
 
 
 def streaming_conf_matrix(labels, predictions, num_classes):
-    y_true = tf.cast(tf.one_hot(indices=labels, depth=num_classes), dtype=tf.int64)
-    y_pred = tf.cast(tf.one_hot(indices=predictions, depth=num_classes), dtype=tf.int64)
+    y_true = tf.cast(
+        tf.one_hot(indices=labels, depth=num_classes), dtype=tf.int64
+    )
+    y_pred = tf.cast(
+        tf.one_hot(indices=predictions, depth=num_classes), dtype=tf.int64
+    )
     conf_mat = metric_variable(
         shape=[num_classes, num_classes],
         dtype=tf.int64,
@@ -630,9 +649,14 @@ def streaming_conf_matrix(labels, predictions, num_classes):
 
     return conf_mat, up_conf_mat
 
+
 def streaming_f1_scores(labels, predictions, num_classes):
-    y_true = tf.cast(tf.one_hot(indices=labels, depth=num_classes), dtype=tf.int64)
-    y_pred = tf.cast(tf.one_hot(indices=predictions, depth=num_classes), dtype=tf.int64)
+    y_true = tf.cast(
+        tf.one_hot(indices=labels, depth=num_classes), dtype=tf.int64
+    )
+    y_pred = tf.cast(
+        tf.one_hot(indices=predictions, depth=num_classes), dtype=tf.int64
+    )
 
     weights = metric_variable(
         shape=[num_classes],

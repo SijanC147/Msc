@@ -52,7 +52,10 @@ class TdLstm(TsaModel):
         )
 
         logits = tf.layers.dense(
-            inputs=concatenated_final_states, units=params["_n_out_classes"]
+            inputs=concatenated_final_states,
+            units=params["_n_out_classes"],
+            kernel_initializer=params["initializer"],
+            bias_initializer=params["initializer"],
         )
 
         loss = tf.losses.sparse_softmax_cross_entropy(
