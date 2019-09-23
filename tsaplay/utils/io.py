@@ -176,7 +176,7 @@ def copy(src_path, dst_path, rel=None, force=True):
         rel_folder = (
             relpath(src_path, rel) if rel else basename(normpath(src_path))
         )
-        dst_path = relpath(dst_path, rel) if rel else dst_path
+        # dst_path = relpath(dst_path, rel) if rel else dst_path
         dst_path = join(dst_path, rel_folder)
         if exists(dst_path) and force:
             rmtree(dst_path, ignore_errors=True)
