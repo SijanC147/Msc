@@ -27,9 +27,9 @@ class Ram(TsaModel):
             ###
             ### Paper mention no initialization parameter at all
             ### https://github.com/lpq29743/RAM/blob/master/model.py uses:
-            # tf.contrib.layers.xavier_initializer() for attention
-            # tf.orthogonal_initializer() for lstm and gru
-            # tf.zeros_initializer() for biases
+            # "initializer" : tf.orthogonal_initializer(), # for GRU and LSTM
+            # "attn_initializer": tf.contrib.layers.xavier_initializer(), # for attn units
+            # "bias_initializer" : tf.zeros_initializer(), # for biases
             "initializer": tf.initializers.random_uniform(-0.1, 0.1),
             ###
             "learning_rate": 0.1,
@@ -273,7 +273,7 @@ def var_len_concatenate(seq_lens, memory, v_target, prev_episode):
     return mem_prev_e_v_t
 
 
-def ram_attn_unit(seq_lens, attn_focus, weight_dim, init):
+def ram_attn_unit(seq_lens, attn_focus, weight_dim, init, bias_init=None):
     batch_size = tf.shape(attn_focus)[0]
     max_seq_len = tf.shape(attn_focus)[1]
     w_att = tf.get_variable(
@@ -283,7 +283,10 @@ def ram_attn_unit(seq_lens, attn_focus, weight_dim, init):
         initializer=init,
     )
     b_att = tf.get_variable(
-        name="bias", shape=[1], dtype=tf.float32, initializer=init
+        name="bias",
+        shape=[1],
+        dtype=tf.float32,
+        initializer=(bias_init or init),
     )
 
     w_att_batch_dim = tf.expand_dims(w_att, axis=0)

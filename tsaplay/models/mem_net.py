@@ -268,7 +268,9 @@ def location_vector_model_four(locs, seq_lens, emb_dim, init, hop=None):
     return v_loc
 
 
-def memnet_content_attn_unit(seq_lens, memory, v_aspect, emb_dim, init):
+def memnet_content_attn_unit(
+    seq_lens, memory, v_aspect, emb_dim, init, bias_init=None
+):
     batch_size = tf.shape(memory)[0]
     max_seq_len = tf.shape(memory)[1]
     w_att = tf.get_variable(
@@ -278,7 +280,10 @@ def memnet_content_attn_unit(seq_lens, memory, v_aspect, emb_dim, init):
         initializer=init,
     )
     b_att = tf.get_variable(
-        name="bias", shape=[1], dtype=tf.float32, initializer=init
+        name="bias",
+        shape=[1],
+        dtype=tf.float32,
+        initializer=(bias_init or init),
     )
 
     w_att_batch_dim = tf.expand_dims(w_att, axis=0)
