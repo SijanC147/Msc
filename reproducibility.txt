@@ -1,23 +1,20 @@
 # LSTM
 ; No mention of any approach to OOV tokens 
 ; batch-size(64) and hidden_units(200) taken from https://github.com/jimmyyfeng/TD-LSTM/blob/master/lstm.py
--em=wiki-100[corpus] -ds=dong2 -m=lstm -s=10000 -cmt=T1NrVnn32dXWeOxeQWGArkHwc -mp oov=True -aux logging=true -contd=lstm_100
--em=wiki-200[corpus] -ds=dong2 -m=lstm -s=10000 -cmt=T1NrVnn32dXWeOxeQWGArkHwc -mp oov=True -aux logging=true -contd=lstm_200
--em=wiki-300[corpus] -ds=dong2 -m=lstm -s=10000 -cmt=T1NrVnn32dXWeOxeQWGArkHwc -mp oov=True -aux logging=true -contd=lstm_300
+-em=twitter-100[corpus] -ds=dong2 -m=lstm -s=10000 -cmt=T1NrVnn32dXWeOxeQWGArkHwc -mp oov=True -aux logging=true -contd=lstm_100
+-em=twitter-200[corpus] -ds=dong2 -m=lstm -s=10000 -cmt=T1NrVnn32dXWeOxeQWGArkHwc -mp oov=True -aux logging=true -contd=lstm_200
 
 # TDLSTM
 ; No mention of any approach to OOV tokens 
 ; batch-size(200) and hidden_units(200) taken from https://github.com/jimmyyfeng/TD-LSTM/blob/master/td_lstm.py
--em=wiki-100[corpus] -ds=dong2 -m=tdlstm -s=10000 -cmt=T1NrVnn32dXWeOxeQWGArkHwc -mp oov=True -aux logging=true -contd=tdlstm_100
--em=wiki-200[corpus] -ds=dong2 -m=tdlstm -s=10000 -cmt=T1NrVnn32dXWeOxeQWGArkHwc -mp oov=True -aux logging=true -contd=tdlstm_200
--em=wiki-300[corpus] -ds=dong2 -m=tdlstm -s=10000 -cmt=T1NrVnn32dXWeOxeQWGArkHwc -mp oov=True -aux logging=true -contd=tdlstm_300
+-em=twitter-100[corpus] -ds=dong2 -m=tdlstm -s=10000 -cmt=T1NrVnn32dXWeOxeQWGArkHwc -mp oov=True -aux logging=true -contd=tdlstm_100
+-em=twitter-200[corpus] -ds=dong2 -m=tdlstm -s=10000 -cmt=T1NrVnn32dXWeOxeQWGArkHwc -mp oov=True -aux logging=true -contd=tdlstm_200
 
 # TCLSTM
 ; No mention of any approach to OOV tokens 
 ; batch-size(64) and hidden_units(200) taken from https://github.com/jimmyyfeng/TD-LSTM/blob/master/tc_lstm.py
--em=wiki-100[corpus] -ds=dong2 -m=tclstm -s=10000 -cmt=T1NrVnn32dXWeOxeQWGArkHwc -mp oov=True -aux logging=true -contd=tclstm_100
--em=wiki-200[corpus] -ds=dong2 -m=tclstm -s=10000 -cmt=T1NrVnn32dXWeOxeQWGArkHwc -mp oov=True -aux logging=true -contd=tclstm_200
--em=wiki-300[corpus] -ds=dong2 -m=tclstm -s=10000 -cmt=T1NrVnn32dXWeOxeQWGArkHwc -mp oov=True -aux logging=true -contd=tclstm_300
+-em=twitter-100[corpus] -ds=dong2 -m=tclstm -s=10000 -cmt=T1NrVnn32dXWeOxeQWGArkHwc -mp oov=True -aux logging=true -contd=tclstm_100
+-em=twitter-200[corpus] -ds=dong2 -m=tclstm -s=10000 -cmt=T1NrVnn32dXWeOxeQWGArkHwc -mp oov=True -aux logging=true -contd=tclstm_200
 
 # MemNet
 ; No mention of any approach to OOV tokens 
