@@ -19,17 +19,27 @@ from tsaplay.utils.tf import (
 
 class Ram(TsaModel):
     def set_params(self):
-        # Literally almost none of the below are reported in the paper.
         return {
-            "batch-size": 25,
+            ### Taken from https://github.com/lpq29743/RAM/blob/master/main.py ###
+            "batch-size": 32,
+            "lstm_hidden_units": 300,
+            "gru_hidden_units": 300,
+            ###
+            ### Paper mention no initialization parameter at all
+            ### https://github.com/lpq29743/RAM/blob/master/model.py uses: 
+            # tf.contrib.layers.xavier_initializer() for attention
+            # tf.orthogonal_initializer() for lstm and gru
+            # tf.zeros_initializer() for biases
+            "initializer": tf.initializers.random_uniform(-0.1, 0.1),
+            ###
             "learning_rate": 0.1,
             "l2_weight": 1e-5,
             "keep_prob": 0.5,
-            "lstm_hidden_units": 100,
-            "gru_hidden_units": 50,
+            # TODO: confirm where i am getting this n_lstm_layers parameter
             "n_lstm_layers": 2,
-            "n_hops": 5,  # paper report results up to many layers
-            "initializer": tf.initializers.random_uniform(-0.1, 0.1),
+            # paper reports results up to this many layers
+            "n_hops": 5,
+            # RAM-3AL-NT reports the best results across datasets
             "train_embeddings": False,
         }
 
@@ -161,8 +171,8 @@ class Ram(TsaModel):
             cond=condition, body=attn_layer_run, loop_vars=initial_layer_inputs
         )
 
-        # print(features["sentence"])
-        # this is not a sparse tensor, it's an iterator, which might be breaking models with hops
+        # // print(features["sentence"])
+        # // this is not a sparse tensor, it's an iterator, which might be breaking models with hops
         literals, attn_snapshots = zip_attn_snapshots_with_literals(
             literals=features["sentence"],
             snapshots=attn_snapshots,

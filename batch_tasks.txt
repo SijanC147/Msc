@@ -1,9 +1,10 @@
--em=wiki-50[corpus] -ds=dong2 -m=tclstm -s=3000 -mp oov=True num_oov_buckets=100 -aux -contd=f1_metric_test_50
--em=wiki-300[corpus] -ds=dong2 -m=tclstm -s=3000 -mp oov=True num_oov_buckets=100 -aux -contd=f1_metric_test_300
-;-em=wiki-50[corpus,only_adjectives] -ds=debug2 -m=lstm -b=25 -s=1000 -mp num_oov_buckets=100 -aux logging=false -contd=whatever2
+; # Debug Stuff
+-em=wiki-50[corpus] -ds=dong2 -m=tclstm -s=3000 -cmt=T1NrVnn32dXWeOxeQWGArkHwc -mp oov=True -aux logging=true -contd=trying_tclstm_2
+-em=wiki-50[corpus] -ds=dong2 -m=tdlstm -s=100 -mp oov=True -aux logging=true -contd=trying_tdlstm_2
+; -em=wiki-300[corpus] -ds=dong2 -m=tclstm -s=3000 -mp oov=True num_oov_buckets=100 -aux -contd=f1_metric_test_300
+; -em=wiki-50[corpus,only_adjectives] -ds=debug2 -m=lstm -b=25 -s=1000 -mp num_oov_buckets=100 -aux logging=false -contd=whatever2
 
 # dong, 0.01 Learning Rate, 200 Hidden Units, U(-0.003, 0.003) OOV Init, No Dropout, 15000 Steps
-
 
 ; # twitter-50
 

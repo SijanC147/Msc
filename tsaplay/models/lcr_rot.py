@@ -16,14 +16,16 @@ from tsaplay.utils.addons import addon, attn_heatmaps
 class LcrRot(TsaModel):
     def set_params(self):
         return {
+            ### Taken from quoted default on https://github.com/NUSTM/ABSC/tree/master/models/ABSC_Zozoz ###
             "batch-size": 25,
+            ###
             "learning_rate": 0.1,
             "keep_prob": 0.5,
             "hidden_units": 300,
             "l2_weight": 1e-5,
             "momentum": 0.9,
-            # bias needs to have different init to init to 0
             "initializer": tf.initializers.random_uniform(-0.1, 0.1),
+            "bias_initializer": tf.zeros_initializer(),  # TODO: implement bias_initializer paramter
         }
 
     @addon([attn_heatmaps])

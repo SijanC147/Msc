@@ -162,7 +162,7 @@ def make_feature_provider(args):
         filters += [corpora_vocab(*corpora)]
 
     embedding = Embedding(EMBEDDING_SHORTHANDS.get(embedding_name), filters)
-    params = args_to_dict(args.model_params)
+    params = args_to_dict(args.model_params) # TODO: add parameters for the random_uniform init bounds for oov tokens
 
     return FeatureProvider(datasets, embedding, **params)
 

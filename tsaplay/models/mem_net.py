@@ -15,12 +15,15 @@ from tsaplay.utils.tf import (
 class MemNet(TsaModel):
     def set_params(self):
         return {
-            "batch-size": 25,  # no mention
+            ### Taken from https://github.com/NUSTM/ABSC/blob/master/models/ABSC_Zozoz/model/dmn.py ###
+            "batch-size": 100,
+            ###
             "learning_rate": 0.01,
             "location_model": 2,
             "n_hops": 9,
             "initializer": tf.initializers.random_uniform(-0.01, 0.01),
-            "train_embeddings": False,  # Not explicitly mentioned 'we clamp the word embeddings'
+            # "... we clamp the word embeddings ..."
+            "train_embeddings": False,
         }
 
     @classmethod

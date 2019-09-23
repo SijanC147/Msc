@@ -13,13 +13,16 @@ from tsaplay.utils.addons import addon, attn_heatmaps
 class Ian(TsaModel):
     def set_params(self):
         return {
-            "batch-size": 25,
+            ### Taken from quoted default on https://github.com/songyouwei/ABSA-PyTorch/blob/master/train.py ###
+            "batch-size": 64,
+            ###
+            "hidden_units": 300,
             "learning_rate": 0.1,
             "l2_weight": 1e-5,
             "momentum": 0.9,
             "keep_prob": 0.5,
-            "hidden_units": 50,
             "initializer": tf.initializers.random_uniform(-0.1, 0.1),
+            "bias_initializer": tf.zeros_initializer(),  # TODO: implement bias_initializer paramter
         }
 
     @classmethod
