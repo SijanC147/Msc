@@ -236,6 +236,8 @@ def read_vocab_file(path):
 
 def args_to_dict(args):
     args_flat = []
+    if not args:
+        return {}
     for arg in args:
         if isinstance(arg, str):
             args_flat += arg

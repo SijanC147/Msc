@@ -50,6 +50,20 @@
             "console": "integratedTerminal"
         },
         {
+            "name": "batch-defaults-arg-test",
+            "type": "python",
+            "request": "launch",
+            "module": "tsaplay.task",
+            "args": [
+                "batch",
+                "batch_tasks.txt",
+                "--defaults",
+                "-cmt",
+                "T1NrVnn32dXWeOxeQWGArkHwc"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
             "name": "Embedding-filter-fn-test",
             "type": "python",
             "request": "launch",

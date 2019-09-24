@@ -22,6 +22,31 @@ from tsaplay.utils.debug import cprnt
 import matplotlib.pyplot as plt  # noqa pylint: disable=C0411,C0412,C0413
 
 
+class LogHistogramsToComet(SessionRunHook):
+    def __init__(self, comet, names, trainables, every_n_iter):
+        self.comet = comet
+        self.names = names
+        self.trainables = trainables
+        self.every_n_iter = every_n_iter
+
+    def before_run(self, run_context):
+        return SessionRunArgs(
+            fetches={
+                "global_step": tf.get_collection(tf.GraphKeys.GLOBAL_STEP),
+                "trainables": self.trainables,
+            }
+        )
+
+    def after_run(self, run_context, run_values):
+        global_step = run_values.results["global_step"][0]
+        if global_step % self.every_n_iter == 0:
+            trainables = run_values.results["trainables"]
+            for (name, trainable) in zip(self.names, trainables):
+                self.comet.log_histogram_3d(
+                    trainable, name=name, step=global_step
+                )
+
+
 class SaveAttentionWeightVector(SessionRunHook):
     def __init__(
         self,

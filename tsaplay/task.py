@@ -41,7 +41,11 @@ def argument_parser():
         "--job-dir",
         help="GCS location to write checkpoints to and export models",
     )
-    batch_task_parser.add_argument("--passthrough", nargs=argparse.REMAINDER)
+    batch_task_parser.add_argument(
+        "--defaults",
+        help="Default parameters to forward to all tasks (low precedence)",
+        nargs=argparse.REMAINDER,
+    )
 
     single_task_parser = subparsers.add_parser("single")
     single_task_parser.add_argument(
@@ -209,24 +213,23 @@ def nvidia_cuda_prof_tools_path_fix():
         execvpe("python3", ["python3"] + argv, environ)
 
 
-def parse_batch_file(batch_file_path):
+def parse_batch_file(batch_file_path, defaults=None):
     try:
         batch_file = open(batch_file_path, "r")
     except FileNotFoundError:
         batch_file = open(join(ASSETS_PATH, batch_file_path), "r")
     with batch_file:
         return [
-            ["single"] + cmd.strip().split()
+            ["single"] + (defaults or []) + cmd.strip().split()
             for cmd in batch_file
             if cmd.strip() and cmd[0] not in ["#", ";"]
         ]
 
 
-def run_next_experiment(batch_file_path, job_dir=None, passthrough=None):
-    tasks = parse_batch_file(batch_file_path)
+def run_next_experiment(batch_file_path, job_dir=None, defaults=None):
+    tasks = parse_batch_file(batch_file_path, defaults)
     if job_dir:
         tasks = [t + ["--job-dir", job_dir] for t in tasks]
-    tasks = [t + (passthrough or []) for t in tasks]
     task_index = int(environ.get("TSATASK", 0))
     if task_index >= len(tasks):
         del environ["TSATASK"]
@@ -234,19 +237,17 @@ def run_next_experiment(batch_file_path, job_dir=None, passthrough=None):
     task_parser = argument_parser()
     try:
         task_args = task_parser.parse_args(tasks[task_index])
-        cprnt(ro=task_args)
-        run_experiment(task_args, experiment_index=task_index)
+        cprnt("RUNNING TASK {0}: {1}".format(task_index, task_args))
+        # run_experiment(task_args, experiment_index=task_index)
     except Exception:  # pylint: disable=W0703
         traceback.print_exc()
     environ["TSATASK"] = str(task_index + 1)
     job_dir_arg = "--job-dir {}".format(job_dir) if job_dir else ""
-    passthrough_arg = (
-        "--passthrough {}".format(" ".join(passthrough)) if passthrough else ""
+    defaults_arg = (
+        "--defaults {}".format(" ".join(defaults)) if defaults else ""
     )
-    next_cmd = "python3 -m tsaplay.task batch {batch_file} {job_dir} {passthrough}".format(
-        batch_file=batch_file_path,
-        job_dir=job_dir_arg,
-        passthrough=passthrough_arg,
+    next_cmd = "python3 -m tsaplay.task batch {batch_file} {job_dir} {defaults}".format(
+        batch_file=batch_file_path, job_dir=job_dir_arg, defaults=defaults_arg
     )
     execvpe("python3", next_cmd.split(), environ)
 
@@ -256,11 +257,9 @@ def main():
     args = argument_parser().parse_args()
     try:
         try:
-            run_next_experiment(
-                args.batch_file, args.job_dir, args.passthrough
-            )
+            run_next_experiment(args.batch_file, args.job_dir, args.defaults)
         except AttributeError:
-            run_next_experiment(args.batch_file, passthrough=args.passthrough)
+            run_next_experiment(args.batch_file, defaults=args.defaults)
     except AttributeError:
         run_experiment(args)
     pkg.cleanup_resources()

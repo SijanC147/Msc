@@ -18,6 +18,7 @@ from tsaplay.hooks import (
     SaveAttentionWeightVector,
     SaveConfusionMatrix,
     MetadataHook,
+    LogHistogramsToComet,
 )
 from tsaplay.utils.tf import streaming_f1_scores, streaming_conf_matrix
 from tsaplay.utils.debug import cprnt
@@ -180,6 +181,7 @@ def logging(model, features, labels, spec, params):
     train_hooks += [
         tf.train.LoggingTensorHook(
             tensors={
+                "step": tf.train.get_global_step(),
                 "loss": spec.loss,
                 "accuracy": std_metrics["accuracy"][1],
             },
@@ -191,10 +193,22 @@ def logging(model, features, labels, spec, params):
 
 @only(["TRAIN"])
 def histograms(model, features, labels, spec, params):
-    trainable = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
-    for variable in trainable:
-        histogram_name = variable.name.replace(":", "_")
-        tf.summary.histogram(histogram_name, variable)
+    trainables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
+    names = [variable.name.replace(":", "_") for variable in trainables]
+    for (name, variable) in zip(names, trainables):
+        tf.summary.histogram(name, variable)
+    # TODO: Future work, implement hook that records histograms to comet-ml
+    if model.comet_experiment:
+        train_hooks = list(spec.training_hooks) or []
+        train_hooks += [
+            LogHistogramsToComet(
+                comet=model.comet_experiment,
+                names=names,
+                trainables=trainables,
+                every_n_iter=model.run_config.save_summary_steps,
+            )
+        ]
+        spec = spec._replace(training_hooks=train_hooks)
     return spec
 
 
@@ -219,7 +233,6 @@ def scalars(model, features, labels, spec, params):
         spec = spec._replace(eval_metric_ops=eval_metrics)
     else:
         tf.summary.scalar("accuracy", std_metrics["accuracy"][1])
-        tf.summary.scalar("mpc_accuracy", std_metrics["mpc_accuracy"][0])
     return spec
 
 
