@@ -235,9 +235,16 @@ def read_vocab_file(path):
 
 
 def args_to_dict(args):
-    args_dict = args or {}
+    args_flat = []
+    for arg in args:
+        if isinstance(arg, str):
+            args_flat += arg
+        else:
+            for sub_arg in arg:
+                args_flat.append(sub_arg)
+    args_dict = args_flat or {}
     if args_dict:
-        args_dict = [arg.split('=') for arg in args_dict]
+        args_dict = [arg.split("=") for arg in args_dict]
         args_dict = {
             arg[0]: (
                 int(arg[1])

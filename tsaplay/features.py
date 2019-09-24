@@ -219,6 +219,9 @@ class FeatureProvider:
                     )
                 )
                 if self._num_oov_buckets
+                #! an OOV target that appears only in the test dataset oov_buckets = 0
+                #! will break this system as it will not be included in the tokens,
+                #! resulting in an empty target
                 else set()
             )
             include_tokens_path = join(self._gen_dir, "_incl_tokens.pkl")

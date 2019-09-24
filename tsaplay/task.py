@@ -41,6 +41,7 @@ def argument_parser():
         "--job-dir",
         help="GCS location to write checkpoints to and export models",
     )
+    batch_task_parser.add_argument("--passthrough", nargs=argparse.REMAINDER)
 
     single_task_parser = subparsers.add_parser("single")
     single_task_parser.add_argument(
@@ -97,6 +98,7 @@ def argument_parser():
         "--model-params",
         "-mp",
         nargs="*",
+        action="append",
         help="H-Params to forward to model (space-delimited <key>=<value>)",
         required=False,
     )
@@ -104,6 +106,7 @@ def argument_parser():
     single_task_parser.add_argument(
         "--aux-config",
         "-aux",
+        action="append",
         nargs="*",
         help="AUX config to forward to model (space-delimited <key>=<value>)",
         required=False,
@@ -113,6 +116,7 @@ def argument_parser():
         "--run-config",
         "-rc",
         nargs="*",
+        action="append",
         help="Custom run_config parameters (space-delimited <key>=<value>)",
         required=False,
     )
@@ -162,7 +166,9 @@ def make_feature_provider(args):
         filters += [corpora_vocab(*corpora)]
 
     embedding = Embedding(EMBEDDING_SHORTHANDS.get(embedding_name), filters)
-    params = args_to_dict(args.model_params) # TODO: add parameters for the random_uniform init bounds for oov tokens
+    params = args_to_dict(
+        args.model_params
+    )  # TODO: add parameters for the random_uniform init bounds for oov tokens
 
     return FeatureProvider(datasets, embedding, **params)
 
@@ -216,10 +222,11 @@ def parse_batch_file(batch_file_path):
         ]
 
 
-def run_next_experiment(batch_file_path, job_dir=None):
+def run_next_experiment(batch_file_path, job_dir=None, passthrough=None):
     tasks = parse_batch_file(batch_file_path)
     if job_dir:
         tasks = [t + ["--job-dir", job_dir] for t in tasks]
+    tasks = [t + (passthrough or []) for t in tasks]
     task_index = int(environ.get("TSATASK", 0))
     if task_index >= len(tasks):
         del environ["TSATASK"]
@@ -227,13 +234,19 @@ def run_next_experiment(batch_file_path, job_dir=None):
     task_parser = argument_parser()
     try:
         task_args = task_parser.parse_args(tasks[task_index])
+        cprnt(ro=task_args)
         run_experiment(task_args, experiment_index=task_index)
     except Exception:  # pylint: disable=W0703
         traceback.print_exc()
     environ["TSATASK"] = str(task_index + 1)
     job_dir_arg = "--job-dir {}".format(job_dir) if job_dir else ""
-    next_cmd = "python3 -m tsaplay.task batch {batch_file} {job_dir}".format(
-        batch_file=batch_file_path, job_dir=job_dir_arg
+    passthrough_arg = (
+        "--passthrough {}".format(" ".join(passthrough)) if passthrough else ""
+    )
+    next_cmd = "python3 -m tsaplay.task batch {batch_file} {job_dir} {passthrough}".format(
+        batch_file=batch_file_path,
+        job_dir=job_dir_arg,
+        passthrough=passthrough_arg,
     )
     execvpe("python3", next_cmd.split(), environ)
 
@@ -243,9 +256,11 @@ def main():
     args = argument_parser().parse_args()
     try:
         try:
-            run_next_experiment(args.batch_file, args.job_dir)
+            run_next_experiment(
+                args.batch_file, args.job_dir, args.passthrough
+            )
         except AttributeError:
-            run_next_experiment(args.batch_file)
+            run_next_experiment(args.batch_file, passthrough=args.passthrough)
     except AttributeError:
         run_experiment(args)
     pkg.cleanup_resources()
