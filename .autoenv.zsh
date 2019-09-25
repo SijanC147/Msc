@@ -1,0 +1,8 @@
+if [[ $autoenv_event == 'enter' ]]; then
+    typeset -ax PREVIOUS_LEFT_PROMPT_ELEMENTS 
+    PREVIOUS_LEFT_PROMPT_ELEMENTS=(${(v)POWERLEVEL9K_LEFT_PROMPT_ELEMENTS})
+    POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(time root_indicator virtualenv dir vcs vi_mode)
+else
+    typeset -ax POWERLEVEL9K_LEFT_PROMPT_ELEMENTS 
+    POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(${(v)PREVIOUS_LEFT_PROMPT_ELEMENTS})
+fi

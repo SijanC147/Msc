@@ -64,19 +64,22 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "Embedding-filter-fn-test",
+            "name": "min-1-oov-bucket-fix",
             "type": "python",
             "request": "launch",
             "module": "tsaplay.task",
             "args": [
                 "single",
-                "-em='twitter-50[corpus,only_adjectives]'",
+                "-em='wiki-50[corpus]'",
                 "-ds='dong'",
-                "-m=lstm",
-                "-b=25",
-                "-s=200",
+                "-m=lcrrot",
+                "-b=5",
+                "-s=100",
                 "-mp",
-                "num_oov_buckets=100"
+                "oov=true",
+                "hidden_units=5",
+                "-aux",
+                "attn_heatmaps=false"
             ],
             "console": "integratedTerminal"
         },

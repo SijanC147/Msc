@@ -175,6 +175,7 @@ class FeatureProvider:
             self._vocab = read_vocab_file(vocab_file_path)
         else:
             self._vocab = self._embedding.vocab
+            #! if 0 buckets and oov = true, the train vocab is added, each will be assigned a vector
             if self._oov_fn and not self._num_oov_buckets:
                 train_vocab = set(
                     corpora_vocab(
@@ -210,19 +211,13 @@ class FeatureProvider:
                 data_dict = getattr(self, data_dict_attr)
                 to_tokenize[mode] = data_dict
         if to_tokenize:
-            include = set(self._vocab) | (
-                set(
-                    corpora_vocab(
-                        self._train_corpus,
-                        self._test_corpus,
-                        case_insensitive=self._embedding.case_insensitive,
-                    )
+            #! Regardless of buckets, all vocab must be tokenized, otherwise risk experiment failing with empty target
+            include = set(self._vocab) | set(
+                corpora_vocab(
+                    self._train_corpus,
+                    self._test_corpus,
+                    case_insensitive=self._embedding.case_insensitive,
                 )
-                if self._num_oov_buckets
-                #! an OOV target that appears only in the test dataset oov_buckets = 0
-                #! will break this system as it will not be included in the tokens,
-                #! resulting in an empty target
-                else set()
             )
             include_tokens_path = join(self._gen_dir, "_incl_tokens.pkl")
             pickle_file(path=include_tokens_path, data=include)
@@ -268,8 +263,9 @@ class FeatureProvider:
                     write_vocab_file(
                         filtered_vocab_path, filtered_vocab, indices
                     )
+                #! There has to be at least 1 bucket for any test-time oov tokens (possibly targets)
                 lookup_table = ids_lookup_table(
-                    filtered_vocab_path, self._num_oov_buckets
+                    filtered_vocab_path, max(self._num_oov_buckets, 1)
                 )
                 fetch_dict = fetch_lookup_ops(lookup_table, **tokens_lists)
                 fetch_results = run_lookups(
@@ -289,18 +285,17 @@ class FeatureProvider:
                 tfrecord_folder = "_{mode}".format(mode=mode)
                 tfrecord_path = join(self._gen_dir, tfrecord_folder)
                 write_tfrecords(tfrecord_path, tfexamples)
-                if self._num_oov_buckets:
-                    buckets = [
-                        BUCKET_TOKEN.format(num=n + 1)
-                        for n in range(self._num_oov_buckets)
-                    ]
-                    oov_buckets[mode] = tokens_by_assigned_id(
-                        string_features,
-                        int_features,
-                        start=len(self._vocab),
-                        keys=buckets,
-                    )
-            if oov_buckets:
+                #! There has to be at least 1 bucket for any test-time oov tokens (possibly targets)
+                buckets = [
+                    BUCKET_TOKEN.format(num=n + 1)
+                    for n in range(max(self._num_oov_buckets, 1))
+                ]
+                oov_buckets[mode] = tokens_by_assigned_id(
+                    string_features,
+                    int_features,
+                    start=len(self._vocab),
+                    keys=buckets,
+                )
                 accum_oov_buckets = accumulate_dicts(
                     **oov_buckets,
                     accum_fn=lambda prev, curr: list(set(prev) | set(curr)),
@@ -316,17 +311,19 @@ class FeatureProvider:
         np.random.seed(RANDOM_SEED)
         dim_size = self._embedding.dim_size
         vectors = self._embedding.vectors
-        num_oov_vectors = len(self._vocab) - self._embedding.vocab_size
-        num_oov_vectors += self._num_oov_buckets
-        if num_oov_vectors:
-            oov_fn = self._oov_fn or DEFAULT_OOV_FN
-            oov_vectors = oov_fn(size=(num_oov_vectors, dim_size))
-            vectors = np.concatenate([vectors, oov_vectors], axis=0)
+        #! There has to be at least 1 bucket for any test-time oov tokens (possibly targets)
+        num_oov_vectors = (self._num_oov_buckets or 1) + (
+            len(self._vocab) - self._embedding.vocab_size
+        )
+        oov_fn = self._oov_fn or DEFAULT_OOV_FN
+        oov_vectors = oov_fn(size=(num_oov_vectors, dim_size))
+        vectors = np.concatenate([vectors, oov_vectors], axis=0)
         vocab_size = len(vectors)
         num_shards = partitioner_num_shards(vocab_size)
         init_fn = embedding_initializer_fn(vectors, num_shards)
         self._embedding_params = {
             "_vocab_size": vocab_size,
+            "_num_oov_buckets": max(self._num_oov_buckets, 1),
             "_vocab_file": self._vocab_file,
             "_embedding_dim": dim_size,
             "_embedding_init": init_fn,
@@ -345,6 +342,7 @@ class FeatureProvider:
             "embedding": {
                 "uid": self.embedding.uid,
                 "name": self.embedding.name,
+                "params": {k:stringify(v) for k,v in self._embedding_params.items()}
             },
             "oov_policy": {
                 "oov": stringify(self._oov_fn),

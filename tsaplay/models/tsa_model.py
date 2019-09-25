@@ -184,7 +184,11 @@ class TsaModel(ABC):
         }
         parsed_example = tf.parse_example(inputs_serialized, feature_spec)
 
-        ids_table = ids_lookup_table(self.params["_vocab_file"])
+        # TODO: Why does this function call not have a value for number of OOV buckets?
+        ids_table = ids_lookup_table(
+            self.params["_vocab_file"],
+            oov_buckets=self.params["_num_oov_buckets"],
+        )
         features = {
             "left": parsed_example["left"],
             "target": parsed_example["target"],

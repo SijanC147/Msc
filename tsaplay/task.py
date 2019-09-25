@@ -238,7 +238,7 @@ def run_next_experiment(batch_file_path, job_dir=None, defaults=None):
     try:
         task_args = task_parser.parse_args(tasks[task_index])
         cprnt("RUNNING TASK {0}: {1}".format(task_index, task_args))
-        # run_experiment(task_args, experiment_index=task_index)
+        run_experiment(task_args, experiment_index=task_index)
     except Exception:  # pylint: disable=W0703
         traceback.print_exc()
     environ["TSATASK"] = str(task_index + 1)
