@@ -340,20 +340,25 @@ class FeatureProvider:
             "uid": self.uid,
             "name": self.name,
             "datasets": {
-                "uids": [dataset.uid for dataset in self.datasets],
-                "names": [dataset.name for dataset in self.datasets],
-            },
-            "embedding": {
-                "uid": self.embedding.uid,
-                "name": self.embedding.name,
-                "params": {
-                    k: stringify(v) for k, v in self._embedding_params.items()
-                },
+                dataset.uid: {
+                    "name": dataset.name,
+                    "train": dataset.train_dist,
+                    "test": dataset.test_dist,
+                }
+                for dataset in self.datasets
             },
             "oov_policy": {
                 "oov": stringify(self._oov_fn),
                 "oov_train_threshold": self._oov_train_threshold,
                 "oov_buckets": self._oov_buckets,
+            },
+            "embedding": {
+                "uid": self.embedding.uid,
+                "name": self.embedding.name,
+                "filter_details": self.embedding.filter_info,
+                "internal_params": {
+                    k: stringify(v) for k, v in self._embedding_params.items()
+                },
             },
         }
         dump_json(path=info_path, data=info)

@@ -28,6 +28,8 @@ class Dataset:
         self._test_srcdir = None
         self._train_dist = None
         self._test_dist = None
+        self._train_dist_info = None
+        self._test_dist_info = None
         self._class_labels = None
 
         self._init_gen_dir(name)
@@ -78,6 +80,14 @@ class Dataset:
     @property
     def test_corpus(self):
         return self._test_corpus
+
+    @property
+    def train_dist(self):
+        return self._train_dist_info
+
+    @property
+    def test_dist(self):
+        return self._test_dist_info
 
     @property
     def class_labels(self):
@@ -160,6 +170,10 @@ class Dataset:
         dist_key = "_".join(map(str, dist_info))
         dist_key_attr = "_{mode}_dist".format(mode=mode)
         setattr(self, dist_key_attr, dist_key)
+        data = class_dist_stats(
+            **{"classes": set(data_dict["labels"]), mode: data_dict}
+        )
+        dist_info_attr = "_{mode}_dist_info".format(mode=mode)
+        setattr(self, dist_info_attr, data)
         if not exists(dist_info_path):
-            data = {"classes": set(data_dict["labels"]), mode: data_dict}
-            dump_json(path=dist_info_path, data=class_dist_stats(**data))
+            dump_json(path=dist_info_path, data=data)
