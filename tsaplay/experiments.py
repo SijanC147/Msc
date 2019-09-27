@@ -41,16 +41,16 @@ class Experiment:
                 api_key=comet_api, workspace=comet_workspace
             )
 
-    def run(self, job, steps):
+    def run(self, job, **kwargs):
+        if not kwargs.get("steps") and not kwargs.get("epochs"):
+            raise ValueError("No steps or epochs value provided.")
         if job == "train":
-            self.model.train(
-                feature_provider=self.feature_provider, steps=steps
-            )
+            self.model.train(feature_provider=self.feature_provider, **kwargs)
         elif job == "eval":
             self.model.evaluate(feature_provider=self.feature_provider)
         elif job == "train+eval":
             self.model.train_and_eval(
-                feature_provider=self.feature_provider, steps=steps
+                feature_provider=self.feature_provider, **kwargs
             )
 
     def launch_tensorboard(self, tb_port=6006, debug=False, debug_port=6064):
@@ -146,6 +146,7 @@ class Experiment:
             for key, value in custom_config.items()
             if key.split("_")[0] not in session_config_keywords
         }
+        # TODO: could make the checkpoints steps default to 1 epoch
         default_run_config = {
             "tf_random_seed": RANDOM_SEED,
             "save_summary_steps": SAVE_SUMMARY_STEPS,

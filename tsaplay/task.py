@@ -144,8 +144,16 @@ def argument_parser():
         "--steps",
         "-s",
         type=int,
-        help="Choose how long to train the model",
-        default=300,
+        help="Choose how long to train the model in steps",
+        default=None,
+    )
+
+    single_task_parser.add_argument(
+        "--epochs",
+        "-e",
+        type=int,
+        help="Choose how long to train the model in epochs",
+        default=None,
     )
 
     single_task_parser.add_argument(
@@ -170,9 +178,7 @@ def make_feature_provider(args):
         filters += [corpora_vocab(*corpora)]
 
     embedding = Embedding(EMBEDDING_SHORTHANDS.get(embedding_name), filters)
-    params = args_to_dict(
-        args.model_params
-    )  # TODO: add parameters for the random_uniform init bounds for oov tokens
+    params = args_to_dict(args.model_params)
 
     return FeatureProvider(datasets, embedding, **params)
 
@@ -180,7 +186,7 @@ def make_feature_provider(args):
 @timeit("Starting Experiment", "Experiment complete")
 def run_experiment(args, experiment_index=None):
     if experiment_index is not None:
-        cprnt(y="Running experiment {}".format(experiment_index+1))
+        cprnt(y="Running experiment {}".format(experiment_index + 1))
         cprnt(y="Args: {}".format(args))
 
     tf.logging.set_verbosity(args.verbosity)
@@ -202,7 +208,7 @@ def run_experiment(args, experiment_index=None):
         job_dir=args.job_dir,
     )
 
-    experiment.run(job="train+eval", steps=args.steps)
+    experiment.run(job="train+eval", steps=args.steps, epochs=args.epochs)
 
 
 def nvidia_cuda_prof_tools_path_fix():

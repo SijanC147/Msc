@@ -239,12 +239,20 @@ def early_stopping(model, features, labels, spec, params):
     train_hooks = list(spec.training_hooks) or []
     eval_dir = model.estimator.eval_dir()
     makedirs(eval_dir, exist_ok=True)
+    epoch_steps = params.get("epoch_steps")
+    patience = params.get("patience", model.aux_config.get("patience"))
+    allowance = params.get("allowance", model.aux_config.get("allowance"))
+    metric = params.get(
+        "early_stopping_metric",
+        model.aux_config.get("early_stopping_metric", "loss"),
+    )
     train_hooks += [
         stop_if_no_decrease_hook(
             estimator=model.estimator,
-            metric_name="loss",
-            max_steps_without_decrease=params.get("max_steps", 1000),
-            min_steps=params.get("min_steps", 100),
+            metric_name=metric,
+            max_steps_without_decrease=patience * epoch_steps,
+            min_steps=allowance * epoch_steps,
+            run_every_steps=epoch_steps,
         )
     ]
     return spec._replace(training_hooks=train_hooks)

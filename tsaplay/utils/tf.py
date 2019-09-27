@@ -180,7 +180,7 @@ def prep_dataset(tfrecords, params, processing_fn, mode):
         dataset = dataset.shuffle(buffer_size=shuffle_buffer)
     elif mode == "TRAIN":
         dataset = dataset.apply(
-            tf.contrib.data.shuffle_and_repeat(buffer_size=shuffle_buffer)
+            tf.contrib.data.shuffle_and_repeat(buffer_size=shuffle_buffer, count=params.get("epochs"))
         )
 
     dataset = dataset.apply(

@@ -1,5 +1,6 @@
 import inspect
 import json
+from math import ceil
 from datetime import datetime
 from functools import wraps
 import tensorflow as tf
@@ -24,7 +25,13 @@ def cometml(model_fn):
             if mode == ModeKeys.TRAIN:
                 global_step = tf.train.get_global_step()
                 comet.set_step(global_step)
-                comet.log_current_epoch(global_step)
+                if (
+                    global_step == 1
+                    or global_step % params["epoch_steps"] == 0
+                ):
+                    comet.log_current_epoch(
+                        ceil(global_step / params["epoch_steps"])
+                    )
 
             spec = model_fn(self, features, labels, mode, params)
 
@@ -35,7 +42,14 @@ def cometml(model_fn):
 
                 spec = scaffold_init_fn_on_spec(spec, export_graph_to_comet)
 
-                comet.log_epoch_end(global_step)
+                if (
+                    global_step == 1
+                    or global_step % params["epoch_steps"] == 0
+                ):
+                    comet.log_epoch_end(
+                        ceil(global_step / params["epoch_steps"])
+                    )
+
             return spec
         return model_fn(self, features, labels, mode, params)
 

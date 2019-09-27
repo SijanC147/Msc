@@ -2,6 +2,7 @@ from os.path import join, exists, dirname
 from os import makedirs, walk
 from functools import partial
 from warnings import warn
+from math import ceil
 import re
 import numpy as np
 
@@ -117,6 +118,14 @@ class FeatureProvider:
     @property
     def embedding_params(self):
         return self._embedding_params
+
+    def steps_per_epoch(self, batch_size):
+        train_samples = self._train_dict.get("labels")
+        if not train_samples:
+            raise ValueError(
+                "Cannot get epoch of unintialized Feature Provider"
+            )
+        return ceil(len(train_samples) / batch_size)
 
     def _init_uid(self):
         datasets_uids = [dataset.uid for dataset in self.datasets]

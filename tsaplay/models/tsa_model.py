@@ -113,10 +113,17 @@ class TsaModel(ABC):
             mode, loss=loss, train_op=train_op, predictions=predictions
         )
 
-    def train(self, feature_provider, steps):
+    def train(self, feature_provider, **kwargs):
         log_dist_data(self.comet_experiment, feature_provider, ["train"])
         log_features_asset_data(self.comet_experiment, feature_provider)
         self._initialize_estimator(feature_provider)
+        if kwargs.get("epochs"):
+            self.params["epochs"] = kwargs.get("epochs")
+            steps = self.params["epoch_steps"] * kwargs.get("epochs")
+        elif kwargs.get("steps"):
+            steps = kwargs.get("steps")
+        else:
+            raise ValueError("No steps or epochs specified")
         self._estimator.train(
             input_fn=lambda: self.train_input_fn(
                 tfrecords=feature_provider.train_tfrecords, params=self.params
@@ -136,12 +143,19 @@ class TsaModel(ABC):
             hooks=self._hooks,
         )
 
-    def train_and_eval(self, feature_provider, steps):
+    def train_and_eval(self, feature_provider, **kwargs):
         log_dist_data(
             self.comet_experiment, feature_provider, ["train", "test"]
         )
         log_features_asset_data(self.comet_experiment, feature_provider)
         self._initialize_estimator(feature_provider)
+        if kwargs.get("epochs"):
+            self.params["epochs"] = kwargs.get("epochs")
+            steps = self.params["epoch_steps"] * kwargs.get("epochs")
+        elif kwargs.get("steps"):
+            steps = kwargs.get("steps")
+        else:
+            raise ValueError("No steps or epochs specified")
         train_spec = tf.estimator.TrainSpec(
             input_fn=lambda: self.train_input_fn(
                 tfrecords=feature_provider.train_tfrecords, params=self.params
@@ -180,7 +194,6 @@ class TsaModel(ABC):
         }
         parsed_example = tf.parse_example(inputs_serialized, feature_spec)
 
-        # TODO: Why does this function call not have a value for number of OOV buckets?
         ids_table = ids_lookup_table(
             self.params["_vocab_file"],
             oov_buckets=self.params["_num_oov_buckets"],
@@ -216,6 +229,9 @@ class TsaModel(ABC):
             self.aux_config["class_labels"] = list(class_labels)
         self.params["_n_out_classes"] = len(self.aux_config["class_labels"])
         self.params.update(feature_provider.embedding_params)
+        self.params["epoch_steps"] = feature_provider.steps_per_epoch(
+            batch_size=self.params["batch-size"]
+        )
         self._estimator = Estimator(
             model_fn=self._model_fn, params=self.params, config=self.run_config
         )
