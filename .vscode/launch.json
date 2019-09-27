@@ -37,15 +37,18 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "Redundant Dataset Data being Copied",
+            "name": "Submit Batch Job to GCP with Comet API",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/submit_job.py",
             "args": [
-                "-jid=debug",
+                "-jid=debuging",
                 "-t",
                 "batch",
-                "batch_tasks.txt"
+                "batch_tasks.txt",
+                "--defaults",
+                "-cmt",
+                "T1NrVnn32dXWeOxeQWGArkHwc"
             ],
             "console": "integratedTerminal"
         },

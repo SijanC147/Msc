@@ -78,9 +78,10 @@ def log_dist_data(comet_experiment, feature_provider, modes):
         comet_experiment.log_image(temp_png)
 
 
-def log_embedding_filter_data(comet_experiment, feature_provider):
+def log_features_asset_data(comet_experiment, feature_provider):
     if comet_experiment is None:
         return
+    comet_experiment.log_asset_folder(feature_provider.gen_dir)
     filter_info = feature_provider.embedding.filter_info
     if filter_info:
         comet_experiment.log_other("Filter Hash", filter_info["hash"])

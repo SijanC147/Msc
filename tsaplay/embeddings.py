@@ -176,4 +176,3 @@ class Embedding:
         report = read_csv(report_path, _format=[])
         self._filter_info = {"hash": uid, "details": details, "report": report}
         self._case_insensitive = exists(join(filtered_model_dir, ".CI"))
-

@@ -173,17 +173,12 @@ def copy_embedding_files(embedding):
 
 
 def copy_feature_files(feature_provider):
-    features_hash_dest = join(FEATURES_DEST, feature_provider.name)
-    makedirs(features_hash_dest, exist_ok=True)
-    vocab_file = feature_provider.embedding_params["_vocab_file"]
-    copy(vocab_file, features_hash_dest, rel=FEATURES_DATA_PATH)
-    for mode in ["train", "test"]:
-        tfrecords_attr = "{}_tfrecords".format(mode)
-        tokens_pkl_file = "_{}_tokens.pkl".format(mode)
-        tfrecord_src = dirname(getattr(feature_provider, tfrecords_attr))
-        tokens_src = join(feature_provider.gen_dir, tokens_pkl_file)
-        copy(tfrecord_src, features_hash_dest)
-        copy(tokens_src, features_hash_dest, rel=FEATURES_DATA_PATH)
+    copy(
+        feature_provider.gen_dir,
+        FEATURES_DEST,
+        rel=FEATURES_DATA_PATH,
+        ignore="*.zip",
+    )
 
 
 def prepare_job_assets(args):
@@ -222,7 +217,7 @@ def submit_job(args):
     clean_dirs(FEATURES_DEST, DATASETS_DEST, EMBEDDINGS_DEST)
     write_gcloud_config(args)
     prepare_job_assets(args)
-    # upload_job_to_gcloud(args)
+    upload_job_to_gcloud(args)
 
 
 def main():

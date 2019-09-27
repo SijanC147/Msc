@@ -18,11 +18,7 @@ from tsaplay.utils.tf import (
     embed_sequences,
     sharded_saver,
 )
-from tsaplay.utils.comet import (
-    cometml,
-    log_dist_data,
-    log_embedding_filter_data,
-)
+from tsaplay.utils.comet import cometml, log_dist_data, log_features_asset_data
 from tsaplay.utils.addons import (
     addon,
     prediction_outputs,
@@ -119,7 +115,7 @@ class TsaModel(ABC):
 
     def train(self, feature_provider, steps):
         log_dist_data(self.comet_experiment, feature_provider, ["train"])
-        log_embedding_filter_data(self.comet_experiment, feature_provider)
+        log_features_asset_data(self.comet_experiment, feature_provider)
         self._initialize_estimator(feature_provider)
         self._estimator.train(
             input_fn=lambda: self.train_input_fn(
@@ -131,7 +127,7 @@ class TsaModel(ABC):
 
     def evaluate(self, feature_provider):
         log_dist_data(self.comet_experiment, feature_provider, ["test"])
-        log_embedding_filter_data(self.comet_experiment, feature_provider)
+        log_features_asset_data(self.comet_experiment, feature_provider)
         self._initialize_estimator(feature_provider)
         self._estimator.evaluate(
             input_fn=lambda: self.eval_input_fn(
@@ -144,7 +140,7 @@ class TsaModel(ABC):
         log_dist_data(
             self.comet_experiment, feature_provider, ["train", "test"]
         )
-        log_embedding_filter_data(self.comet_experiment, feature_provider)
+        log_features_asset_data(self.comet_experiment, feature_provider)
         self._initialize_estimator(feature_provider)
         train_spec = tf.estimator.TrainSpec(
             input_fn=lambda: self.train_input_fn(

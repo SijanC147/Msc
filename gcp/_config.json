@@ -1,5 +1,5 @@
 {
-    "jobId": "debug",
+    "jobId": "debuging",
     "labels": {},
     "trainingInput": {
         "scaleTier": "CUSTOM",
@@ -9,7 +9,10 @@
         "region": "europe-west1",
         "args": [
             "batch",
-            "batch_tasks.txt"
+            "batch_tasks.txt",
+            "--defaults",
+            "-cmt",
+            "T1NrVnn32dXWeOxeQWGArkHwc"
         ]
     }
 }

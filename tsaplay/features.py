@@ -355,6 +355,7 @@ class FeatureProvider:
             "embedding": {
                 "uid": self.embedding.uid,
                 "name": self.embedding.name,
+                "case_insensitive": self.embedding.case_insensitive,
                 "filter_details": self.embedding.filter_info,
                 "internal_params": {
                     k: stringify(v) for k, v in self._embedding_params.items()
@@ -389,4 +390,3 @@ class FeatureProvider:
                 return oov_fn
             except TypeError:
                 raise ValueError("Invalid OOV function arguments.")
-
