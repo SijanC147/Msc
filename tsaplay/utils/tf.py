@@ -168,7 +168,7 @@ def prep_dataset(tfrecords, params, processing_fn, mode):
     prefetch_buffer = params.get("prefetch_buffer", 100)
     dataset = tf.data.Dataset.list_files(file_pattern=tfrecords)
     dataset = dataset.apply(
-        tf.data.experimental.parallel_interleave(
+        tf.contrib.data.parallel_interleave(
             tf.data.TFRecordDataset,
             cycle_length=3,
             buffer_output_elements=prefetch_buffer,
@@ -179,11 +179,11 @@ def prep_dataset(tfrecords, params, processing_fn, mode):
         dataset = dataset.shuffle(buffer_size=shuffle_buffer)
     elif mode == "TRAIN":
         dataset = dataset.apply(
-            tf.data.experimental.shuffle_and_repeat(buffer_size=shuffle_buffer)
+            tf.contrib.data.shuffle_and_repeat(buffer_size=shuffle_buffer)
         )
 
     dataset = dataset.apply(
-        tf.data.experimental.map_and_batch(
+        tf.contrib.data.map_and_batch(
             lambda example: processing_fn(*parse_tf_example(example)),
             params["batch-size"],
             num_parallel_batches=parallel_batches,
@@ -325,9 +325,12 @@ def l2_regularized_loss(
     variables=tf.trainable_variables(),
     loss_fn=tf.losses.sparse_softmax_cross_entropy,
 ):
-    loss = loss_fn(labels=labels, logits=logits)
-    l2_reg = tf.reduce_sum([tf.nn.l2_loss(v) for v in variables])
-    loss = loss + l2_weight * l2_reg
+    with tf.name_scope("l2_loss"):
+        loss = loss_fn(labels=labels, logits=logits)
+        l2_reg = tf.reduce_sum(
+            [tf.nn.l2_loss(v) for v in variables], name="l2_reg"
+        )
+        loss = loss + l2_weight * l2_reg
     return loss
 
 

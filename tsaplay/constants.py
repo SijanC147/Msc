@@ -15,7 +15,7 @@ TF_DELIMITER = " "
 PAD_TOKEN = "<PAD>"
 BUCKET_TOKEN = "<BKT-{num}>"
 TF_RECORD_SHARDS = 10
-MAX_EMBEDDING_SHARDS = 10
+MAX_EMBEDDING_SHARDS = 1
 DEFAULT_OOV_FN = partial(np.random.uniform, low=-0.1, high=0.1)
 ASSETS_PATH = pkg.resource_filename(__name__, "assets")
 SPACY_MODEL = join(ASSETS_PATH, "en_core_web_sm")

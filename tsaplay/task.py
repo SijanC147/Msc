@@ -15,7 +15,7 @@ from tsaplay.embeddings import Embedding
 from tsaplay.features import FeatureProvider
 from tsaplay.experiments import Experiment
 import tsaplay.models as tsa_models
-from tsaplay.constants import EMBEDDING_SHORTHANDS, ASSETS_PATH
+from tsaplay.constants import EMBEDDING_SHORTHANDS, ASSETS_PATH, RANDOM_SEED
 
 MODELS = {
     "lstm": tsa_models.Lstm,

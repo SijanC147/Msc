@@ -1,5 +1,8 @@
 from os.path import join, exists, dirname
 from os import makedirs, walk
+from functools import partial
+from warnings import warn
+import re
 import numpy as np
 
 from tsaplay.constants import (
@@ -26,6 +29,7 @@ from tsaplay.utils.io import (
     dump_json,
     search_dir,
 )
+from tsaplay.utils.debug import cprnt
 from tsaplay.utils.data import (
     accumulate_dicts,
     merge_corpora,
@@ -41,14 +45,10 @@ from tsaplay.utils.data import (
 
 class FeatureProvider:
     def __init__(self, datasets, embedding, **kwargs):
-        num_oov_buckets = kwargs.get("num_oov_buckets", 0)
-        oov = kwargs.get("oov")
-        self._num_oov_buckets = max(num_oov_buckets, 0)
-        self._oov_fn = (
-            DEFAULT_OOV_FN
-            if ((oov or self._num_oov_buckets) and not callable(oov))
-            else oov
-        )
+        self._oov_train_threshold = kwargs.get("oov_train", 1)
+        self._num_oov_buckets = max(kwargs.get("oov_buckets", 1), 1)
+        self._oov_fn = self._resolve_oov_fn(kwargs.get("oov_fn"))
+        cprnt(row="Using OOV function: {}".format(stringify(self._oov_fn)))
 
         self._datasets = datasets
         self._embedding = embedding
@@ -121,7 +121,7 @@ class FeatureProvider:
     def _init_uid(self):
         datasets_uids = [dataset.uid for dataset in self.datasets]
         dataset_names = [dataset.name for dataset in self.datasets]
-        oov_policy = [bool(self._oov_fn), self._num_oov_buckets]
+        oov_policy = [self._oov_train_threshold, self._num_oov_buckets]
         uid_data = [self._embedding.uid] + datasets_uids + oov_policy
         print(uid_data)
         self._uid = hash_data(uid_data)
@@ -175,16 +175,23 @@ class FeatureProvider:
             self._vocab = read_vocab_file(vocab_file_path)
         else:
             self._vocab = self._embedding.vocab
-            #! if 0 buckets and oov = true, the train vocab is added, each will be assigned a vector
-            if self._oov_fn and not self._num_oov_buckets:
+            #! include training vocabulary terms above the specified
+            #! occurrance count if 0, all training vocab will be assigned
+            #! buckets
+            if self._oov_train_threshold > 0:
                 train_vocab = set(
                     corpora_vocab(
-                        self._train_corpus,
+                        {
+                            word: count
+                            for word, count in self._train_corpus.items()
+                            if count >= self._oov_train_threshold
+                        },
                         case_insensitive=self._embedding.case_insensitive,
                     )
                 )
                 train_oov_vocab = list(train_vocab - set(self._vocab))
                 train_oov_vocab.sort()
+                pickle_file("./train_oov_vocab.pkl", train_oov_vocab)
                 self._vocab += train_oov_vocab
             write_vocab_file(vocab_file_path, self._vocab)
         vocab_tsv_file = vocab_file_templ.format(ext=".tsv")
@@ -265,7 +272,7 @@ class FeatureProvider:
                     )
                 #! There has to be at least 1 bucket for any test-time oov tokens (possibly targets)
                 lookup_table = ids_lookup_table(
-                    filtered_vocab_path, max(self._num_oov_buckets, 1)
+                    filtered_vocab_path, self._num_oov_buckets
                 )
                 fetch_dict = fetch_lookup_ops(lookup_table, **tokens_lists)
                 fetch_results = run_lookups(
@@ -288,7 +295,7 @@ class FeatureProvider:
                 #! There has to be at least 1 bucket for any test-time oov tokens (possibly targets)
                 buckets = [
                     BUCKET_TOKEN.format(num=n + 1)
-                    for n in range(max(self._num_oov_buckets, 1))
+                    for n in range(self._num_oov_buckets)
                 ]
                 oov_buckets[mode] = tokens_by_assigned_id(
                     string_features,
@@ -308,22 +315,22 @@ class FeatureProvider:
                 }
 
     def _init_embedding_params(self):
-        np.random.seed(RANDOM_SEED)
         dim_size = self._embedding.dim_size
         vectors = self._embedding.vectors
-        #! There has to be at least 1 bucket for any test-time oov tokens (possibly targets)
-        num_oov_vectors = (self._num_oov_buckets or 1) + (
-            len(self._vocab) - self._embedding.vocab_size
-        )
+        num_oov_vectors = len(self._vocab) - self._embedding.vocab_size
+        num_oov_vectors += self._num_oov_buckets
         oov_fn = self._oov_fn or DEFAULT_OOV_FN
+        np.random.seed(RANDOM_SEED)
         oov_vectors = oov_fn(size=(num_oov_vectors, dim_size))
+        cprnt(row=oov_vectors)
+        pickle_file("./oov_vectors.pkl", oov_vectors)
         vectors = np.concatenate([vectors, oov_vectors], axis=0)
         vocab_size = len(vectors)
         num_shards = partitioner_num_shards(vocab_size)
         init_fn = embedding_initializer_fn(vectors, num_shards)
         self._embedding_params = {
             "_vocab_size": vocab_size,
-            "_num_oov_buckets": max(self._num_oov_buckets, 1),
+            "_num_oov_buckets": self._num_oov_buckets,
             "_vocab_file": self._vocab_file,
             "_embedding_dim": dim_size,
             "_embedding_init": init_fn,
@@ -342,12 +349,42 @@ class FeatureProvider:
             "embedding": {
                 "uid": self.embedding.uid,
                 "name": self.embedding.name,
-                "params": {k:stringify(v) for k,v in self._embedding_params.items()}
+                "params": {
+                    k: stringify(v) for k, v in self._embedding_params.items()
+                },
             },
             "oov_policy": {
                 "oov": stringify(self._oov_fn),
-                "num_oov_buckets": self._num_oov_buckets,
+                "oov_train_threshold": self._oov_train_threshold,
                 "oov_buckets": self._oov_buckets,
             },
         }
         dump_json(path=info_path, data=info)
+
+    def _resolve_oov_fn(self, oov_arg):
+        if not oov_arg:
+            return DEFAULT_OOV_FN
+        regexp = re.compile(r"^(?P<fn>[^\[]+)(\[(?P<args>[^\]]+)\])?")
+        oov = regexp.search(oov_arg).groupdict()
+        if oov.get("fn"):
+            try:
+                oov_fn = np.random.__dict__[oov["fn"]]
+            except AttributeError:
+                warn(
+                    "Invalid oov function {}, using default".format(
+                        oov.get("fn")
+                    )
+                )
+                return DEFAULT_OOV_FN
+        else:
+            warn("No oov function provided, using default")
+            return DEFAULT_OOV_FN
+        if oov.get("args"):
+            oov_args = [float(arg) for arg in oov["args"].split(",") if arg]
+            oov_fn = partial(oov_fn, *oov_args)
+            try:
+                oov_fn(size=1)
+                return oov_fn
+            except TypeError:
+                raise ValueError("Invalid OOV function arguments.")
+

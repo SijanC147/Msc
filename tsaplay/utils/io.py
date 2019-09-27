@@ -23,8 +23,9 @@ from io import BytesIO
 from PIL import Image
 import numpy as np
 from tensorflow.python.client.timeline import Timeline  # pylint: disable=E0611
-from tensorflow.python_io import TFRecordWriter
+from tensorflow.python_io import TFRecordWriter  # pyling: disable=import-error
 from tsaplay.constants import RANDOM_SEED, TF_RECORD_SHARDS
+from tsaplay.utils.data import accumulate_dicts
 import docker
 
 
@@ -118,10 +119,12 @@ def read_csv(path, _format=None):
     with open(path, "r", encoding="utf-8") as csvfile:
         if isinstance(_format, dict):
             reader = csv.DictReader(csvfile)
-            return {key: value for key, value in reader.items()}
-        else:
-            reader = csv.reader(csvfile)
-            return [row for row in reader]
+            dicts = tuple(
+                {k: [v] for k, v in dict(row).items()} for row in reader
+            )
+            return accumulate_dicts(*dicts)
+        reader = csv.reader(csvfile)
+        return [row for row in reader]
 
 
 def write_zippped_file(path, data):

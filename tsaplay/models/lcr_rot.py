@@ -25,7 +25,7 @@ class LcrRot(TsaModel):
             "l2_weight": 1e-5,
             "momentum": 0.9,
             "initializer": tf.initializers.random_uniform(-0.1, 0.1),
-            "bias_initializer": tf.zeros_initializer(),  # TODO: implement bias_initializer paramter
+            "bias_initializer": tf.initializers.zeros(),
             "lstm_initial_bias": 0,
         }
 

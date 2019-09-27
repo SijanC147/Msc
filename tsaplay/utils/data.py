@@ -143,7 +143,7 @@ def resample_data_dict(data_dict, target_dists, seed=None):
 def accumulate_dicts(*args, accum_fn=None, default=None, **kwargs):
     dicts = list(args or []) + (list(kwargs.values()) if kwargs else [])
     new_dict = defaultdict(default or list)
-    accum_fn = accum_fn or (lambda prev, curr: prev + curr)
+    accum_fn = accum_fn if callable(accum_fn) else (lambda prev, curr: prev + curr)
     for key, value in chain.from_iterable(map(dict.items, dicts)):
         try:
             new_dict[key] = accum_fn(new_dict[key], value)
@@ -241,10 +241,15 @@ def stringify(list_element):
     if isinstance(list_element, str):
         return list_element
     if isinstance(list_element, partial):
-        function_name = {"func": list_element.func.__qualname__}
         keywords = list_element.keywords
         keywords = {key: val for key, val in sorted(keywords.items())}
-        return str({**function_name, **keywords})
+        return str(
+            {
+                "function": list_element.func.__qualname__,
+                "args": str(list_element.args),
+                "kwargs": keywords,
+            }
+        )
     if callable(list_element):
         return getsource(list_element)
     if hasattr(list_element, "sort"):

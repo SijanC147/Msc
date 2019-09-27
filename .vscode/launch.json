@@ -64,22 +64,30 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "min-1-oov-bucket-fix",
+            "name": "Trying new OOV argument format",
             "type": "python",
             "request": "launch",
             "module": "tsaplay.task",
             "args": [
                 "single",
                 "-em='wiki-50[corpus]'",
-                "-ds='dong'",
-                "-m=lcrrot",
-                "-b=5",
-                "-s=100",
+                "-ds",
+                "dong",
+                "-m",
+                "memnet",
+                "-b",
+                "5",
+                "-s",
+                "300",
                 "-mp",
-                "oov=true",
+                "oov_train=5",
+                // "oov_fn='uniform[-0.1,0.1]'",
                 "hidden_units=5",
                 "-aux",
-                "attn_heatmaps=false"
+                "attn_heatmaps=false",
+                "-rc",
+                "save_checkpoints_steps=4000",
+                "log_step_count_steps=4000"
             ],
             "console": "integratedTerminal"
         },

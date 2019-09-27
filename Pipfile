@@ -21,6 +21,8 @@ tox-pipenv = "*"
 pytest = "*"
 hypothesis = "*"
 matplotlib-venn = "*"
+rope = "*"
+pylint = "*"
 
 [requires]
 python_version = "3.6"

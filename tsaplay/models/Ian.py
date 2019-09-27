@@ -22,7 +22,7 @@ class Ian(TsaModel):
             "momentum": 0.9,
             "keep_prob": 0.5,
             "initializer": tf.initializers.random_uniform(-0.1, 0.1),
-            "bias_initializer": tf.zeros_initializer(),  # TODO: implement bias_initializer paramter
+            "bias_initializer": tf.initializers.zeros(),
             "lstm_initial_bias": 0,
         }
 
@@ -39,7 +39,6 @@ class Ian(TsaModel):
             "target_ids": features["target_ids"],
         }
 
-    # TODO: add a separate initializer for biases, this paper inits them to 0
     @addon([attn_heatmaps])
     def model_fn(self, features, labels, mode, params):
         with tf.variable_scope("context_lstm"):
@@ -88,8 +87,6 @@ class Ian(TsaModel):
                 sp_literal=features["target"],
             )
 
-        # print(features["context"])
-        # this is not a sparse tensor, it's an iterator, still works fine though, so that's not the problem
         generate_attn_heatmap_summary(trg_attn_info, ctxt_attn_info)
 
         final_sentence_rep = tf.concat([t_r, c_r], axis=1)
