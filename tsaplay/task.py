@@ -180,7 +180,7 @@ def make_feature_provider(args):
 @timeit("Starting Experiment", "Experiment complete")
 def run_experiment(args, experiment_index=None):
     if experiment_index is not None:
-        cprnt(y="Running experiment {}".format(experiment_index))
+        cprnt(y="Running experiment {}".format(experiment_index+1))
         cprnt(y="Args: {}".format(args))
 
     tf.logging.set_verbosity(args.verbosity)

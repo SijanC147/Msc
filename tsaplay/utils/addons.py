@@ -197,7 +197,6 @@ def histograms(model, features, labels, spec, params):
     names = [variable.name.replace(":", "_") for variable in trainables]
     for (name, variable) in zip(names, trainables):
         tf.summary.histogram(name, variable)
-    # TODO: Future work, implement hook that records histograms to comet-ml
     if model.comet_experiment:
         train_hooks = list(spec.training_hooks) or []
         train_hooks += [

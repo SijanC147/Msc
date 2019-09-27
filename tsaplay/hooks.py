@@ -39,7 +39,7 @@ class LogHistogramsToComet(SessionRunHook):
 
     def after_run(self, run_context, run_values):
         global_step = run_values.results["global_step"][0]
-        if global_step % self.every_n_iter == 0:
+        if global_step % self.every_n_iter == 0 or global_step == 1:
             trainables = run_values.results["trainables"]
             for (name, trainable) in zip(self.names, trainables):
                 self.comet.log_histogram_3d(
