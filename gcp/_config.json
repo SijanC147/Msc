@@ -1,5 +1,5 @@
 {
-    "jobId": "testingpath",
+    "jobId": "debug",
     "labels": {},
     "trainingInput": {
         "scaleTier": "CUSTOM",

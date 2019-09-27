@@ -1,6 +1,7 @@
 ; # Debug Stuff
--em=wiki-50[corpus] -ds=dong2 -m=tclstm -s=13 -mp oov=True -aux logging=true -contd=trying_tclstm_2_passthrough
--em=wiki-50[corpus] -ds=dong2 -m=tdlstm -s=10 -mp oov=True -aux logging=true -contd=trying_tdlstm_2_passthrough -cmt=XXXXXXXXXXXXXXXXXXXXX
+-em=wiki-50[corpus] -ds=debug2 -m=lstm -s=10 -mp oov_train=1 -aux logging=true  
+-em=wiki-50[corpus] -ds=debug2[45/10/45] -m=tclstm -s=13 -mp oov_train=1 -aux logging=true 
+-em=wiki-50[corpus] -ds=debug2[15/70/15] -m=tdlstm -s=10 -mp oov_train=1 -aux logging=true  
 ; -em=wiki-300[corpus] -ds=dong2 -m=tclstm -s=3000 -mp oov=True num_oov_buckets=100 -aux -contd=f1_metric_test_300
 ; -em=wiki-50[corpus,only_adjectives] -ds=debug2 -m=lstm -b=25 -s=1000 -mp num_oov_buckets=100 -aux logging=false -contd=whatever2
 

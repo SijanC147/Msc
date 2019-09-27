@@ -37,7 +37,7 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "GC-Job-Sumission-Test",
+            "name": "Redundant Dataset Data being Copied",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/submit_job.py",

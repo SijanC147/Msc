@@ -191,7 +191,6 @@ class FeatureProvider:
                 )
                 train_oov_vocab = list(train_vocab - set(self._vocab))
                 train_oov_vocab.sort()
-                pickle_file("./train_oov_vocab.pkl", train_oov_vocab)
                 self._vocab += train_oov_vocab
             write_vocab_file(vocab_file_path, self._vocab)
         vocab_tsv_file = vocab_file_templ.format(ext=".tsv")
@@ -322,8 +321,6 @@ class FeatureProvider:
         oov_fn = self._oov_fn or DEFAULT_OOV_FN
         np.random.seed(RANDOM_SEED)
         oov_vectors = oov_fn(size=(num_oov_vectors, dim_size))
-        cprnt(row=oov_vectors)
-        pickle_file("./oov_vectors.pkl", oov_vectors)
         vectors = np.concatenate([vectors, oov_vectors], axis=0)
         vocab_size = len(vectors)
         num_shards = partitioner_num_shards(vocab_size)

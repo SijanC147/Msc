@@ -18,10 +18,11 @@ from os.path import (
     splitext,
 )
 from tempfile import mkdtemp
-from shutil import rmtree, copytree, copy as _copy
+from shutil import rmtree, copytree, copy as _copy, ignore_patterns
 from io import BytesIO
 from PIL import Image
 import numpy as np
+from warnings import warn
 from tensorflow.python.client.timeline import Timeline  # pylint: disable=E0611
 from tensorflow.python_io import TFRecordWriter  # pyling: disable=import-error
 from tsaplay.constants import RANDOM_SEED, TF_RECORD_SHARDS
@@ -174,16 +175,24 @@ def get_image_from_plt(plt):
     return Image.open(BytesIO(image_bytes))
 
 
-def copy(src_path, dst_path, rel=None, force=True):
+def copy(src_path, dst_path, rel=None, force=True, ignore=None):
     if not isfile(src_path):
         rel_folder = (
             relpath(src_path, rel) if rel else basename(normpath(src_path))
         )
         # dst_path = relpath(dst_path, rel) if rel else dst_path
         dst_path = join(dst_path, rel_folder)
-        if exists(dst_path) and force:
-            rmtree(dst_path, ignore_errors=True)
-        copytree(src_path, dst_path)
+        if exists(dst_path):
+            if force:
+                rmtree(dst_path, ignore_errors=True)
+            warn(
+                "{0} exists, force flag is off, leaving as is.".format(
+                    dst_path
+                )
+            )
+            return dst_path
+        ignore_arg = ignore_patterns(ignore) if ignore else None
+        copytree(src_path, dst_path, ignore=ignore_arg)
     else:
         _copy(src_path, dst_path)
 

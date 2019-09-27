@@ -159,7 +159,13 @@ def copy_dataset_files(datasets):
         for dataset in datasets:
             srcdir_attr = "_{mode}_srcdir".format(mode=mode)
             dataset_srcdir = getattr(dataset, srcdir_attr)
-            copy(dataset_srcdir, DATASETS_DEST, rel=DATASET_DATA_PATH)
+            copy(
+                dataset_srcdir,
+                DATASETS_DEST,
+                rel=DATASET_DATA_PATH,
+                force=False,
+                ignore="_redists",
+            )
 
 
 def copy_embedding_files(embedding):
@@ -216,7 +222,7 @@ def submit_job(args):
     clean_dirs(FEATURES_DEST, DATASETS_DEST, EMBEDDINGS_DEST)
     write_gcloud_config(args)
     prepare_job_assets(args)
-    upload_job_to_gcloud(args)
+    # upload_job_to_gcloud(args)
 
 
 def main():
