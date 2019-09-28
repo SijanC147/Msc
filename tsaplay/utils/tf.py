@@ -1,4 +1,4 @@
-#pylint: disable=no-name-in-module
+# pylint: disable=no-name-in-module
 import io
 from functools import wraps
 from itertools import tee, chain
@@ -169,7 +169,7 @@ def prep_dataset(tfrecords, params, processing_fn, mode):
     prefetch_buffer = params.get("prefetch_buffer", 100)
     dataset = tf.data.Dataset.list_files(file_pattern=tfrecords)
     dataset = dataset.apply(
-        tf.contrib.data.parallel_interleave(
+        tf.data.experimental.parallel_interleave(
             tf.data.TFRecordDataset,
             cycle_length=3,
             buffer_output_elements=prefetch_buffer,
@@ -180,11 +180,13 @@ def prep_dataset(tfrecords, params, processing_fn, mode):
         dataset = dataset.shuffle(buffer_size=shuffle_buffer)
     elif mode == "TRAIN":
         dataset = dataset.apply(
-            tf.contrib.data.shuffle_and_repeat(buffer_size=shuffle_buffer, count=params.get("epochs"))
+            tf.data.experimental.shuffle_and_repeat(
+                buffer_size=shuffle_buffer, count=params.get("epochs")
+            )
         )
 
     dataset = dataset.apply(
-        tf.contrib.data.map_and_batch(
+        tf.data.experimental.map_and_batch(
             lambda example: processing_fn(*parse_tf_example(example)),
             params["batch-size"],
             num_parallel_batches=parallel_batches,

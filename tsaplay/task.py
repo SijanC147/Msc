@@ -137,7 +137,7 @@ def argument_parser():
         "-b",
         type=int,
         help="Size of training and evaluation batches",
-        default=25,
+        default=None,
     )
 
     single_task_parser.add_argument(
@@ -194,10 +194,23 @@ def run_experiment(args, experiment_index=None):
     feature_provider = make_feature_provider(args)
 
     params = args_to_dict(args.model_params)
-    params.update({"batch-size": args.batch_size})
-    model = MODELS.get(args.model)(params, args_to_dict(args.aux_config))
+    aux_config = args_to_dict(args.aux_config)
 
-    run_config = args_to_dict(args.run_config)
+    if args.batch_size:
+        params.update({"batch-size": args.batch_size})
+    model = MODELS.get(args.model)(params, aux_config)
+    if args.epochs or (model.params.get("epochs") and not args.steps):
+        epoch_steps = feature_provider.steps_per_epoch(
+            model.params["batch-size"]
+        )
+        model.params.update({"epoch_steps": epoch_steps})
+        run_config = {
+            "save_summary_steps": epoch_steps,
+            "save_checkpoints_steps": epoch_steps,
+            "log_step_count_steps": epoch_steps,
+        }
+
+    run_config.update(args_to_dict(args.run_config))
     experiment = Experiment(
         feature_provider,
         model,

@@ -1,14 +1,15 @@
 import inspect
 import json
-from math import ceil
+from math import floor
 from datetime import datetime
 from functools import wraps
 import tensorflow as tf
-from tensorflow.estimator import ModeKeys  # pylint: disable=E0401
+from tensorflow.estimator import ModeKeys  # noqa
 from tsaplay.utils.tf import scaffold_init_fn_on_spec
 from tsaplay.utils.io import temp_pngs
 from tsaplay.utils.draw import plot_distributions
 from tsaplay.utils.data import class_dist_stats
+from tsaplay.hooks import LogProgressToComet
 
 
 def cometml(model_fn):
@@ -22,16 +23,6 @@ def cometml(model_fn):
             comet_pretty_log(comet, params, hparams=True)
             comet.set_code(inspect.getsource(self.__class__))
             comet.set_filename(inspect.getfile(self.__class__))
-            if mode == ModeKeys.TRAIN:
-                global_step = tf.train.get_global_step()
-                comet.set_step(global_step)
-                if (
-                    global_step == 1
-                    or global_step % params["epoch_steps"] == 0
-                ):
-                    comet.log_current_epoch(
-                        ceil(global_step / params["epoch_steps"])
-                    )
 
             spec = model_fn(self, features, labels, mode, params)
 
@@ -41,14 +32,26 @@ def cometml(model_fn):
                     comet.set_model_graph(sess.graph)
 
                 spec = scaffold_init_fn_on_spec(spec, export_graph_to_comet)
-
-                if (
-                    global_step == 1
-                    or global_step % params["epoch_steps"] == 0
-                ):
-                    comet.log_epoch_end(
-                        ceil(global_step / params["epoch_steps"])
+                train_hooks = list(spec.training_hooks) or []
+                train_hooks += [
+                    LogProgressToComet(
+                        mode=mode,
+                        comet=comet,
+                        epochs=params.get("epochs"),
+                        epoch_steps=params["epoch_steps"],
                     )
+                ]
+                spec = spec._replace(training_hooks=train_hooks)
+            elif mode == ModeKeys.EVAL:
+                eval_hooks = list(spec.evaluation_hooks) or []
+                eval_hooks += [
+                    LogProgressToComet(
+                        mode=mode,
+                        comet=comet,
+                        epoch_steps=params["epoch_steps"],
+                    )
+                ]
+                spec = spec._replace(evaluation_hooks=eval_hooks)
 
             return spec
         return model_fn(self, features, labels, mode, params)

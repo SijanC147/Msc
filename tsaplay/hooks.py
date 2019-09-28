@@ -1,11 +1,13 @@
 import textwrap
 import re
 import itertools
+from math import ceil
 import numpy as np
 import tensorflow as tf
 from warnings import warn
 from tensorflow.train import SessionRunHook, SessionRunArgs  # noqa
 import matplotlib
+from tensorflow.estimator import ModeKeys  # noqa
 from tsaplay.constants import RANDOM_SEED
 from tsaplay.utils.draw import (
     draw_attention_heatmap,
@@ -20,6 +22,36 @@ from tsaplay.utils.debug import cprnt
 
 # matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt  # noqa pylint: disable=C0411,C0412,C0413
+
+
+class LogProgressToComet(SessionRunHook):
+    def __init__(self, mode, comet, epochs=None, epoch_steps=None):
+        self.mode = mode
+        self.comet = comet
+        self.epoch_steps = epoch_steps
+        self.epochs = epochs
+
+    def before_run(self, run_context):
+        return SessionRunArgs(
+            fetches={
+                "global_step": tf.get_collection(tf.GraphKeys.GLOBAL_STEP)
+            }
+        )
+
+    def after_run(self, run_context, run_values):
+        global_step = run_values.results["global_step"][0]
+        self.comet.set_step(global_step)
+        if self.epoch_steps:
+            epoch = ceil(global_step / self.epoch_steps)
+            self.comet.set_epoch(epoch)
+            if self.mode == ModeKeys.TRAIN:
+                if global_step % self.epoch_steps == 0:
+                    self.comet.log_epoch_end(self.epochs)
+
+    def end(self, session):
+        global_step = session.run(tf.train.get_global_step())
+        if global_step % self.epoch_steps == 0:
+            self.comet.log_epoch_end(self.epochs)
 
 
 class LogHistogramsToComet(SessionRunHook):
@@ -45,6 +77,12 @@ class LogHistogramsToComet(SessionRunHook):
                 self.comet.log_histogram_3d(
                     trainable, name=name, step=global_step
                 )
+
+    def end(self, session):
+        global_step = session.run(tf.train.get_global_step())
+        trainables = session.run(self.trainables)
+        for (name, trainable) in zip(self.names, trainables):
+            self.comet.log_histogram_3d(trainable, name=name, step=global_step)
 
 
 class SaveAttentionWeightVector(SessionRunHook):
@@ -83,7 +121,10 @@ class SaveAttentionWeightVector(SessionRunHook):
 
     def after_run(self, run_context, run_values):
         np.random.seed(RANDOM_SEED)
-        if self.n_picks is None or np.random.random() > self.freq:
+        if (
+            self.n_picks is None
+            or np.random.random() > self.freq  # pylint: disable=no-member
+        ):
             return
         results = run_values.results
         global_step = results["global_step"][0]

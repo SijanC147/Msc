@@ -116,14 +116,7 @@ class TsaModel(ABC):
     def train(self, feature_provider, **kwargs):
         log_dist_data(self.comet_experiment, feature_provider, ["train"])
         log_features_asset_data(self.comet_experiment, feature_provider)
-        self._initialize_estimator(feature_provider)
-        if kwargs.get("epochs"):
-            self.params["epochs"] = kwargs.get("epochs")
-            steps = self.params["epoch_steps"] * kwargs.get("epochs")
-        elif kwargs.get("steps"):
-            steps = kwargs.get("steps")
-        else:
-            raise ValueError("No steps or epochs specified")
+        steps = self._initialize_estimator(feature_provider, **kwargs)
         self._estimator.train(
             input_fn=lambda: self.train_input_fn(
                 tfrecords=feature_provider.train_tfrecords, params=self.params
@@ -148,14 +141,7 @@ class TsaModel(ABC):
             self.comet_experiment, feature_provider, ["train", "test"]
         )
         log_features_asset_data(self.comet_experiment, feature_provider)
-        self._initialize_estimator(feature_provider)
-        if kwargs.get("epochs"):
-            self.params["epochs"] = kwargs.get("epochs")
-            steps = self.params["epoch_steps"] * kwargs.get("epochs")
-        elif kwargs.get("steps"):
-            steps = kwargs.get("steps")
-        else:
-            raise ValueError("No steps or epochs specified")
+        steps = self._initialize_estimator(feature_provider, **kwargs)
         train_spec = tf.estimator.TrainSpec(
             input_fn=lambda: self.train_input_fn(
                 tfrecords=feature_provider.train_tfrecords, params=self.params
@@ -222,16 +208,26 @@ class TsaModel(ABC):
     def _model_fn(self, features, labels, mode, params):
         return self.model_fn(features, labels, mode, params)
 
-    def _initialize_estimator(self, feature_provider):
+    def _initialize_estimator(self, feature_provider, **kwargs):
         self.aux_config["_feature_provider"] = feature_provider.name
         if not self.aux_config.get("class_labels"):
             class_labels = map(str, sorted(feature_provider.class_labels))
             self.aux_config["class_labels"] = list(class_labels)
         self.params["_n_out_classes"] = len(self.aux_config["class_labels"])
         self.params.update(feature_provider.embedding_params)
-        self.params["epoch_steps"] = feature_provider.steps_per_epoch(
-            batch_size=self.params["batch-size"]
+        self.params["epochs"] = kwargs.get("epochs") or self.params.get(
+            "epochs"
         )
+        self.params["epoch_steps"] = self.params.get(
+            "epoch_steps"
+        ) or feature_provider.steps_per_epoch(self.params["batch-size"])
+        if self.params.get("epochs"):
+            steps = self.params["epoch_steps"] * self.params["epochs"]
+        elif kwargs.get("steps") or self.params.get("steps"):
+            steps = kwargs.get("steps") or self.params.get("steps")
+        else:
+            raise ValueError("No steps or epochs specified")
         self._estimator = Estimator(
             model_fn=self._model_fn, params=self.params, config=self.run_config
         )
+        return steps

@@ -1,6 +1,7 @@
 from os import listdir, makedirs
 from os.path import join, isfile, exists
 from shutil import rmtree
+from warnings import warn
 import comet_ml
 from tsaplay.utils.io import start_tensorboard, restart_tf_serve_container
 from tsaplay.constants import (
@@ -42,8 +43,6 @@ class Experiment:
             )
 
     def run(self, job, **kwargs):
-        if not kwargs.get("steps") and not kwargs.get("epochs"):
-            raise ValueError("No steps or epochs value provided.")
         if job == "train":
             self.model.train(feature_provider=self.feature_provider, **kwargs)
         elif job == "eval":
@@ -146,7 +145,6 @@ class Experiment:
             for key, value in custom_config.items()
             if key.split("_")[0] not in session_config_keywords
         }
-        # TODO: could make the checkpoints steps default to 1 epoch
         default_run_config = {
             "tf_random_seed": RANDOM_SEED,
             "save_summary_steps": SAVE_SUMMARY_STEPS,

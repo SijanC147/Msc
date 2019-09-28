@@ -9,7 +9,7 @@ class Lstm(TsaModel):
             ### Taken from https://github.com/jimmyyfeng/TD-LSTM/blob/master/lstm.py ###
             "batch-size": 100,
             "hidden_units": 200,
-            "n_epoch": 10,  # not implemented yet
+            "epochs": 10, 
             ###
             "learning_rate": 0.01,
             "initializer": tf.initializers.random_uniform(-0.003, 0.003),
