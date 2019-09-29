@@ -2,13 +2,13 @@ import textwrap
 import re
 import itertools
 from math import ceil
+from warnings import warn
+import matplotlib
 import numpy as np
 import tensorflow as tf
-from warnings import warn
 from tensorflow.train import SessionRunHook, SessionRunArgs  # noqa
-import matplotlib
 from tensorflow.estimator import ModeKeys  # noqa
-from tsaplay.constants import RANDOM_SEED
+from tsaplay.constants import NP_RANDOM_SEED
 from tsaplay.utils.draw import (
     draw_attention_heatmap,
     draw_prediction_label,
@@ -22,6 +22,37 @@ from tsaplay.utils.debug import cprnt
 
 # matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt  # noqa pylint: disable=C0411,C0412,C0413
+
+
+class ConsoleLoggerHook(SessionRunHook):
+    def __init__(self, mode, tensors, each_steps=None):
+        self.mode = mode
+        self.tensors = tensors
+        self.each_steps = each_steps
+
+    def before_run(self, _):
+        return SessionRunArgs(
+            fetches={
+                "global_step": tf.get_collection(tf.GraphKeys.GLOBAL_STEP),
+                **(self.tensors if self.mode == ModeKeys.TRAIN else {}),
+            }
+        )
+
+    def after_run(self, run_context, run_values):
+        global_step = run_values.results.pop("global_step")[0]
+        if self.mode == ModeKeys.TRAIN:
+            if global_step % self.each_steps == 0 or global_step == 1:
+                cprnt(row="{}: {}".format(self.mode.upper(), global_step))
+                cprnt(run_values.results)
+
+    def end(self, session):
+        if self.mode == ModeKeys.EVAL:
+            global_step = session.run(tf.train.get_global_step())
+            run_values = session.run(self.tensors)
+            cprnt("")
+            cprnt(bow="{}: {}".format(self.mode.upper(), global_step))
+            cprnt(run_values)
+            cprnt("")
 
 
 class LogProgressToComet(SessionRunHook):
@@ -120,7 +151,8 @@ class SaveAttentionWeightVector(SessionRunHook):
         )
 
     def after_run(self, run_context, run_values):
-        np.random.seed(RANDOM_SEED)
+        if NP_RANDOM_SEED is not None:
+            np.random.seed(NP_RANDOM_SEED)
         if (
             self.n_picks is None
             or np.random.random() > self.freq  # pylint: disable=no-member
@@ -273,7 +305,7 @@ class SaveConfusionMatrix(SessionRunHook):
                 verticalalignment="center",
                 color="black",
             )
-        fig.set_tight_layout(True)
+        # fig.set_tight_layout(True)
 
         image = get_image_from_plt(plt)
         return image

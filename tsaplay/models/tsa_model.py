@@ -202,7 +202,7 @@ class TsaModel(ABC):
 
     @cometml
     @sharded_saver
-    @addon([scalars, logging, metadata, histograms, conf_matrix, f1_scores])
+    @addon([scalars, metadata, histograms, conf_matrix, f1_scores, logging])
     @addon([prediction_outputs])
     @embed_sequences
     def _model_fn(self, features, labels, mode, params):
@@ -215,16 +215,31 @@ class TsaModel(ABC):
             self.aux_config["class_labels"] = list(class_labels)
         self.params["_n_out_classes"] = len(self.aux_config["class_labels"])
         self.params.update(feature_provider.embedding_params)
-        self.params["epochs"] = kwargs.get("epochs") or self.params.get(
-            "epochs"
+        #! steps==0 or epochs==0 => repeats indefinitely,
+        #! => Need to perform checks against None type, not falsy values
+        self.params["epochs"] = (
+            kwargs.get("epochs")
+            if kwargs.get("epochs") is not None
+            else self.params.get("epochs")
         )
-        self.params["epoch_steps"] = self.params.get(
-            "epoch_steps"
-        ) or feature_provider.steps_per_epoch(self.params["batch-size"])
-        if self.params.get("epochs"):
-            steps = self.params["epoch_steps"] * self.params["epochs"]
-        elif kwargs.get("steps") or self.params.get("steps"):
-            steps = kwargs.get("steps") or self.params.get("steps")
+        epoch_steps, num_training_samples = feature_provider.steps_per_epoch(
+            self.params["batch-size"]
+        )
+        self.params["epoch_steps"] = (
+            self.params.get("epoch_steps") or epoch_steps
+        )
+        self.params["shuffle_buffer"] = (
+            self.params.get("shuffle_buffer") or num_training_samples
+        )
+        if self.params.get("epochs") is not None:
+            steps = (
+                self.params["epoch_steps"] * self.params["epochs"]
+            ) or None
+        elif (
+            kwargs.get("steps") is not None
+            or self.params.get("steps") is not None
+        ):
+            steps = (kwargs.get("steps") or self.params.get("steps")) or None
         else:
             raise ValueError("No steps or epochs specified")
         self._estimator = Estimator(

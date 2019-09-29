@@ -9,7 +9,7 @@ from hashlib import md5
 from functools import partial, wraps
 from tqdm import tqdm
 import numpy as np
-from tsaplay.constants import RANDOM_SEED, DELIMITER
+from tsaplay.constants import NP_RANDOM_SEED, DELIMITER
 from tsaplay.utils.filters import (
     default_token_filter,
     group_filter_fns,
@@ -98,7 +98,7 @@ def re_distribute_counts(labels, target_dists):
     return unique, target_counts
 
 
-def resample_data_dict(data_dict, target_dists, seed=None):
+def resample_data_dict(data_dict, target_dists):
     labels = [label for label in data_dict["labels"]]
 
     classes, target_counts = re_distribute_counts(labels, target_dists)
@@ -119,7 +119,7 @@ def resample_data_dict(data_dict, target_dists, seed=None):
             [s for s in samples if s[labels_index] == _class], numpy_dtype
         )
 
-    np.random.seed(seed or RANDOM_SEED)
+    np.random.seed(NP_RANDOM_SEED)
     resampled = np.concatenate(
         [
             np.random.choice(

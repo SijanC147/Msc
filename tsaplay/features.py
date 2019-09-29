@@ -10,7 +10,7 @@ from tsaplay.constants import (
     FEATURES_DATA_PATH,
     DEFAULT_OOV_FN,
     BUCKET_TOKEN,
-    RANDOM_SEED,
+    NP_RANDOM_SEED,
     ASSETS_PATH,
 )
 from tsaplay.utils.tf import (
@@ -125,7 +125,7 @@ class FeatureProvider:
             raise ValueError(
                 "Cannot get epoch of unintialized Feature Provider"
             )
-        return ceil(len(train_samples) / batch_size)
+        return ceil(len(train_samples) / batch_size), len(train_samples)
 
     def _init_uid(self):
         datasets_uids = [dataset.uid for dataset in self.datasets]
@@ -226,7 +226,8 @@ class FeatureProvider:
                 data_dict = getattr(self, data_dict_attr)
                 to_tokenize[mode] = data_dict
         if to_tokenize:
-            #! Regardless of buckets, all vocab must be tokenized, otherwise risk experiment failing with empty target
+            #! Regardless of buckets, all vocab must be tokenized,
+            #! otherwise risk experiment failing with empty target
             include = set(self._vocab) | set(
                 corpora_vocab(
                     self._train_corpus,
@@ -278,7 +279,8 @@ class FeatureProvider:
                     write_vocab_file(
                         filtered_vocab_path, filtered_vocab, indices
                     )
-                #! There has to be at least 1 bucket for any test-time oov tokens (possibly targets)
+                #! There has to be at least 1 bucket for any
+                #! test-time oov tokens (possibly targets)
                 lookup_table = ids_lookup_table(
                     filtered_vocab_path, self._num_oov_buckets
                 )
@@ -300,7 +302,8 @@ class FeatureProvider:
                 tfrecord_folder = "_{mode}".format(mode=mode)
                 tfrecord_path = join(self._gen_dir, tfrecord_folder)
                 write_tfrecords(tfrecord_path, tfexamples)
-                #! There has to be at least 1 bucket for any test-time oov tokens (possibly targets)
+                #! There has to be at least 1 bucket for any
+                #! test-time oov tokens (possibly targets)
                 buckets = [
                     BUCKET_TOKEN.format(num=n + 1)
                     for n in range(self._num_oov_buckets)
@@ -328,7 +331,8 @@ class FeatureProvider:
         num_oov_vectors = len(self._vocab) - self._embedding.vocab_size
         num_oov_vectors += self._num_oov_buckets
         oov_fn = self._oov_fn or DEFAULT_OOV_FN
-        np.random.seed(RANDOM_SEED)
+        if NP_RANDOM_SEED is not None:
+            np.random.seed(NP_RANDOM_SEED)
         oov_vectors = oov_fn(size=(num_oov_vectors, dim_size))
         vectors = np.concatenate([vectors, oov_vectors], axis=0)
         vocab_size = len(vectors)

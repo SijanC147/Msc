@@ -1,16 +1,22 @@
 import tensorflow as tf
 from tsaplay.models.tsa_model import TsaModel
 from tsaplay.utils.tf import lstm_cell
+from tsaplay.utils.addons import addon, early_stopping
 
 
 class Lstm(TsaModel):
     def set_params(self):
         return {
-            ### Taken from https://github.com/jimmyyfeng/TD-LSTM/blob/master/lstm.py ###
+            # pylint: disable=line-too-long
+            # ? From https://github.com/jimmyyfeng/TD-LSTM/blob/master/lstm.py
             "batch-size": 100,
             "hidden_units": 200,
-            "epochs": 10, 
-            ###
+            # ? Following approach of Moore et al. 2018, using early stopping
+            "epochs": 0,
+            "early_stopping_patience": 10,
+            "early_stopping_allowance": 300,
+            "early_stopping_metric": "macro-f1",
+            # ? From original paper
             "learning_rate": 0.01,
             "initializer": tf.initializers.random_uniform(-0.003, 0.003),
         }
@@ -28,6 +34,7 @@ class Lstm(TsaModel):
             )
         }
 
+    @addon([early_stopping])
     def model_fn(self, features, labels, mode, params):
         _, final_states = tf.nn.dynamic_rnn(
             cell=lstm_cell(**params),

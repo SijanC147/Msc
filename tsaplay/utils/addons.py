@@ -9,6 +9,7 @@ from tensorflow.saved_model.signature_constants import (  # pylint: disable=E040
 )
 from tensorflow.contrib.estimator import (  # pylint: disable=E0611
     stop_if_no_decrease_hook,
+    stop_if_no_increase_hook,
 )
 from tensorflow.estimator.export import (  # pylint: disable=E0401
     PredictOutput,
@@ -19,6 +20,7 @@ from tsaplay.hooks import (
     SaveConfusionMatrix,
     MetadataHook,
     LogHistogramsToComet,
+    ConsoleLoggerHook,
 )
 from tsaplay.utils.tf import streaming_f1_scores, streaming_conf_matrix
 from tsaplay.utils.debug import cprnt
@@ -168,35 +170,49 @@ def f1_scores(model, features, labels, spec, params):
     return spec._replace(eval_metric_ops=eval_metrics)
 
 
-@only(["TRAIN"])
+@only(["TRAIN", "EVAL"])
 def logging(model, features, labels, spec, params):
-    std_metrics = {
-        "accuracy": tf.metrics.accuracy(
-            labels=labels,
-            predictions=spec.predictions["class_ids"],
-            name="acc_op",
-        )
-    }
-    train_hooks = list(spec.training_hooks) or []
-    train_hooks += [
-        tf.train.LoggingTensorHook(
-            tensors={
-                "epoch": tf.add(
-                    tf.floor(
-                        tf.divide(
-                            tf.train.get_global_step(), params["epoch_steps"]
-                        )
+    if spec.mode == ModeKeys.TRAIN:
+        std_metrics = {
+            "accuracy": tf.metrics.accuracy(
+                labels=labels,
+                predictions=spec.predictions["class_ids"],
+                name="acc_op",
+            )
+        }
+        train_hooks = list(spec.training_hooks) or []
+        train_hooks += [
+            ConsoleLoggerHook(
+                mode=ModeKeys.TRAIN,
+                tensors={
+                    "epoch": tf.add(
+                        tf.floor(
+                            tf.divide(
+                                tf.train.get_global_step(),
+                                params["epoch_steps"],
+                            )
+                        ),
+                        1,
                     ),
-                    1,
-                ),
-                "step": tf.train.get_global_step(),
-                "loss": spec.loss,
-                "accuracy": std_metrics["accuracy"][1],
-            },
-            every_n_iter=model.run_config.save_summary_steps,
-        )
-    ]
-    return spec._replace(training_hooks=train_hooks)
+                    "step": tf.train.get_global_step(),
+                    "loss": spec.loss,
+                    "accuracy": std_metrics["accuracy"][1],
+                },
+                each_steps=model.run_config.save_summary_steps,
+            )
+        ]
+        spec = spec._replace(training_hooks=train_hooks)
+    elif spec.mode == ModeKeys.EVAL:
+        eval_hooks = list(spec.evaluation_hooks) or []
+        eval_hooks += [
+            ConsoleLoggerHook(
+                mode=ModeKeys.EVAL,
+                tensors={k: v[0] for k, v in spec.eval_metric_ops.items()},
+            )
+        ]
+        spec = spec._replace(evaluation_hooks=eval_hooks)
+
+    return spec
 
 
 @only(["TRAIN"])
@@ -243,42 +259,85 @@ def scalars(model, features, labels, spec, params):
     return spec
 
 
+# pylint: disable=too-many-locals
 def early_stopping(model, features, labels, spec, params):
     train_hooks = list(spec.training_hooks) or []
     eval_dir = model.estimator.eval_dir()
     makedirs(eval_dir, exist_ok=True)
-    metric = model.aux_config.get(
-        "early_stopping_metric", params.get("early_stopping_metric", "loss")
+    config = {
+        k.replace("early_stopping_", ""): v
+        for k, v in params.items()
+        if k.startswith("early_stopping_")
+    }
+    config.update(
+        {
+            k.replace("early_stopping_", ""): v
+            for k, v in model.aux_config.items()
+            if k.startswith("early_stopping_")
+        }
     )
-    if params.get("epochs"):
-        run_every_steps = params.get("epoch_steps")
-        patience = (
-            model.aux_config.get("patience") or params.get("patience") or 10
-        ) * params.get("epoch_steps")
-        allowance = (
-            model.aux_config.get("allowance") or params.get("allowance") or 300
-        ) * params.get("epoch_steps")
-    else:
-        run_every_steps = model.aux_config.get(
-            "run_every_steps"
-        ) or params.get("run_every_steps")
-        patience = (
-            model.aux_config.get("patience") or params.get("patience") or 1000
+    metric = config.get("metric", "loss")
+    comparison = (
+        "decrease"
+        if metric == "loss"
+        else "increase"
+        if metric in ["accuracy", "macro-f1", "micro-f1", "weighted-f1"]
+        else config.get("comparison")
+    )
+    epochs = params.get("epochs")
+    run_every_steps = config.get(
+        "run_every_steps", params.get("epoch_steps") or None
+    )
+    run_every_secs = config.get("run_every_secs", 60)
+    patience = config.get("patience", 10 if epochs is not None else 1000)
+    allowance = config.get("allowance", 0)
+    if spec.mode == ModeKeys.TRAIN:
+        cprnt(
+            b="""Using Early Stopping:
+        metric: {metric}
+        mode: {comparison}
+        run every: {run_every_steps}
+        patience: {patience}
+        allowance: {allowance}""".format(
+                metric=metric,
+                comparison=comparison,
+                run_every_steps=(
+                    "1 epoch ({} steps)" if epochs is not None else "{} steps"
+                ).format(run_every_steps)
+                if run_every_steps
+                else "{} secs".format(run_every_secs),
+                patience=(
+                    "{} epoch(s)" if epochs is not None else "{} steps"
+                ).format(patience),
+                allowance=(
+                    "{} epoch(s)" if epochs is not None else "{} steps"
+                ).format(allowance)
+                if allowance > 0
+                else "Indefinite",
+            )
         )
-        allowance = (
-            model.aux_config.get("allowance")
-            or params.get("allowance")
-            or 5000
-        )
-    train_hooks += [
-        stop_if_no_decrease_hook(
-            estimator=model.estimator,
-            metric_name=metric,
-            max_steps_without_decrease=patience,
-            min_steps=allowance,
-            run_every_steps=run_every_steps,
-        )
-    ]
+    early_stopping_hook_fn = (
+        stop_if_no_increase_hook
+        if comparison == "increase"
+        else stop_if_no_decrease_hook
+    )
+    early_stopping_hook_args = {
+        "estimator": model.estimator,
+        "eval_dir": eval_dir,
+        "metric_name": metric,
+        "min_steps": (
+            allowance
+            * (params.get("epoch_steps") if epochs is not None else 1)
+        ),
+        "run_every_steps": run_every_steps,
+        "run_every_secs": (
+            None if run_every_steps is not None else run_every_secs
+        ),
+        ("max_steps_without_{}".format(comparison)): (
+            patience * (params.get("epoch_steps") if epochs is not None else 1)
+        ),
+    }
+    train_hooks += [early_stopping_hook_fn(**early_stopping_hook_args)]
     return spec._replace(training_hooks=train_hooks)
 
 

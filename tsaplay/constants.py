@@ -5,7 +5,8 @@ from pathlib import Path
 import pkg_resources as pkg
 import numpy as np
 
-RANDOM_SEED = 1234
+TF_RANDOM_SEED = 1234
+NP_RANDOM_SEED = 1234
 SAVE_SUMMARY_STEPS = 100
 SAVE_CHECKPOINTS_STEPS = 1000
 LOG_STEP_COUNT_STEPS = 1000

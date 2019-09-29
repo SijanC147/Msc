@@ -7,14 +7,14 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.estimator import ModeKeys  # pylint: disable=E0401
 from tensorflow.train import BytesList, Feature, Features, Example, Int64List
-from tsaplay.constants import TF_DELIMITER, MAX_EMBEDDING_SHARDS
-from tsaplay.utils.io import export_run_metadata
-from tsaplay.utils.data import zero_norm_labels, split_list
-from tsaplay.utils.debug import cprnt, timeit
 from tensorflow.python.ops import variable_scope
 from tensorflow.python.ops import array_ops
 from tensorflow.python.framework import ops
 from tensorflow.contrib.metrics import confusion_matrix as cm
+from tsaplay.constants import TF_DELIMITER, MAX_EMBEDDING_SHARDS
+from tsaplay.utils.io import export_run_metadata
+from tsaplay.utils.data import zero_norm_labels, split_list
+from tsaplay.utils.debug import cprnt, timeit
 
 
 def embed_sequences(model_fn):
@@ -163,7 +163,7 @@ def make_input_fn(mode):
 
 
 def prep_dataset(tfrecords, params, processing_fn, mode):
-    shuffle_buffer = params.get("shuffle-buffer", 30)
+    shuffle_buffer = params.get("shuffle_buffer", 100000)
     parallel_calls = params.get("parallel_calls", 4)
     parallel_batches = params.get("parallel_batches", parallel_calls)
     prefetch_buffer = params.get("prefetch_buffer", 100)
@@ -176,15 +176,7 @@ def prep_dataset(tfrecords, params, processing_fn, mode):
             prefetch_input_elements=parallel_calls,
         )
     )
-    if mode == "EVAL":
-        dataset = dataset.shuffle(buffer_size=shuffle_buffer)
-    elif mode == "TRAIN":
-        dataset = dataset.apply(
-            tf.data.experimental.shuffle_and_repeat(
-                buffer_size=shuffle_buffer, count=params.get("epochs")
-            )
-        )
-
+    dataset = dataset.shuffle(buffer_size=shuffle_buffer)
     dataset = dataset.apply(
         tf.data.experimental.map_and_batch(
             lambda example: processing_fn(*parse_tf_example(example)),
@@ -196,6 +188,10 @@ def prep_dataset(tfrecords, params, processing_fn, mode):
         lambda features, labels: (make_dense_features(features), labels),
         num_parallel_calls=parallel_calls,
     )
+    if mode == "TRAIN":
+        #! epochs==0 => repeat indefinitely
+        dataset = dataset.repeat(count=(params.get("epochs") or None))
+
     dataset = dataset.cache()
 
     return dataset
@@ -655,7 +651,7 @@ def streaming_conf_matrix(labels, predictions, num_classes):
 
     return conf_mat, up_conf_mat
 
-
+# pylint: disable=too-many-local-variables
 def streaming_f1_scores(labels, predictions, num_classes):
     y_true = tf.cast(
         tf.one_hot(indices=labels, depth=num_classes), dtype=tf.int64

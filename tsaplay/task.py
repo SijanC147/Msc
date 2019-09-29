@@ -15,7 +15,7 @@ from tsaplay.embeddings import Embedding
 from tsaplay.features import FeatureProvider
 from tsaplay.experiments import Experiment
 import tsaplay.models as tsa_models
-from tsaplay.constants import EMBEDDING_SHORTHANDS, ASSETS_PATH, RANDOM_SEED
+from tsaplay.constants import EMBEDDING_SHORTHANDS, ASSETS_PATH
 
 MODELS = {
     "lstm": tsa_models.Lstm,
@@ -160,7 +160,7 @@ def argument_parser():
         "--verbosity",
         "-v",
         choices=["DEBUG", "INFO", "WARN", "ERROR", "FATAL"],
-        default="INFO",
+        default="ERROR",
         help="Set logging verbosity",
     )
 
@@ -199,16 +199,28 @@ def run_experiment(args, experiment_index=None):
     if args.batch_size:
         params.update({"batch-size": args.batch_size})
     model = MODELS.get(args.model)(params, aux_config)
-    if args.epochs or (model.params.get("epochs") and not args.steps):
-        epoch_steps = feature_provider.steps_per_epoch(
-            model.params["batch-size"]
-        )
-        model.params.update({"epoch_steps": epoch_steps})
+
+    model.params["steps"] = (
+        args.steps if args.steps is not None else model.params.get("steps")
+    )
+    model.params["epochs"] = (
+        args.epochs if args.epochs is not None else model.params.get("epochs")
+    )
+    epoch_steps, num_training_samples = feature_provider.steps_per_epoch(
+        model.params["batch-size"]
+    )
+    model.params.update(
+        {"epoch_steps": epoch_steps, "shuffle_buffer": num_training_samples}
+    )
+    if args.steps:
+        model.params.pop("epochs", None)
+    if model.params.get("epochs") is not None:
         run_config = {
             "save_summary_steps": epoch_steps,
             "save_checkpoints_steps": epoch_steps,
             "log_step_count_steps": epoch_steps,
         }
+        model.params.pop("steps", None)
 
     run_config.update(args_to_dict(args.run_config))
     experiment = Experiment(

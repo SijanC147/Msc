@@ -1,17 +1,22 @@
 import tensorflow as tf
 from tsaplay.models.tsa_model import TsaModel
 from tsaplay.utils.tf import sparse_reverse, variable_len_batch_mean, lstm_cell
-from tsaplay.utils.debug import cprnt
+from tsaplay.utils.addons import addon, early_stopping
 
 
 class TcLstm(TsaModel):
     def set_params(self):
         return {
-            ### Taken from https://github.com/jimmyyfeng/TD-LSTM/blob/master/tc_lstm.py ###
+            # pylint: disable=line-too-long
+            # ? From https://github.com/jimmyyfeng/TD-LSTM/blob/master/tc_lstm.py
             "batch-size": 64,
             "hidden_units": 200,
-            "epochs": 10,
-            ###
+            # ? Following approach of Moore et al. 2018, using early stopping
+            "epochs": 0,
+            "early_stopping_patience": 10,
+            "early_stopping_allowance": 300,
+            "early_stopping_metric": "macro-f1",
+            # ? From original paper
             "learning_rate": 0.01,
             "initializer": tf.initializers.random_uniform(-0.003, 0.003),
         }
@@ -32,6 +37,7 @@ class TcLstm(TsaModel):
             "target_ids": features["target_ids"],
         }
 
+    @addon([early_stopping])
     def model_fn(self, features, labels, mode, params):
         max_left_len = tf.shape(features["left_emb"])[1]
         max_right_len = tf.shape(features["right_emb"])[1]

@@ -4,10 +4,11 @@ from shutil import rmtree
 from warnings import warn
 import comet_ml
 from tsaplay.utils.io import start_tensorboard, restart_tf_serve_container
+from tsaplay.utils.debug import cprnt
 from tsaplay.constants import (
     EXPERIMENT_DATA_PATH,
     EXPORTS_DATA_PATH,
-    RANDOM_SEED,
+    TF_RANDOM_SEED,
     SAVE_SUMMARY_STEPS,
     SAVE_CHECKPOINTS_STEPS,
     LOG_STEP_COUNT_STEPS,
@@ -146,7 +147,7 @@ class Experiment:
             if key.split("_")[0] not in session_config_keywords
         }
         default_run_config = {
-            "tf_random_seed": RANDOM_SEED,
+            "tf_random_seed": TF_RANDOM_SEED,
             "save_summary_steps": SAVE_SUMMARY_STEPS,
             "save_checkpoints_steps": SAVE_CHECKPOINTS_STEPS,
             "log_step_count_steps": LOG_STEP_COUNT_STEPS,

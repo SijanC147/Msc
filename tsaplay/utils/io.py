@@ -25,7 +25,7 @@ import numpy as np
 from warnings import warn
 from tensorflow.python.client.timeline import Timeline  # pylint: disable=E0611
 from tensorflow.python_io import TFRecordWriter  # pyling: disable=import-error
-from tsaplay.constants import RANDOM_SEED, TF_RECORD_SHARDS
+from tsaplay.constants import NP_RANDOM_SEED, TF_RECORD_SHARDS
 from tsaplay.utils.data import accumulate_dicts
 import docker
 
@@ -211,7 +211,8 @@ def list_folders(path):
 
 
 def write_tfrecords(path, tf_examples, num_shards=TF_RECORD_SHARDS):
-    np.random.seed(RANDOM_SEED)
+    if NP_RANDOM_SEED is not None:
+        np.random.seed(NP_RANDOM_SEED)
     np.random.shuffle(tf_examples)
     tf_examples = [example.SerializeToString() for example in tf_examples]
     num_per_shard = int(math.ceil(len(tf_examples) / float(num_shards)))
