@@ -226,6 +226,8 @@ def run_experiment(args, experiment_index=None):
             "log_step_count_steps": epoch_steps,
         }
         model.params.pop("steps", None)
+    else:
+        run_config = {}
 
     run_config.update(args_to_dict(args.run_config))
     experiment = Experiment(

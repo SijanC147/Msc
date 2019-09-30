@@ -211,20 +211,23 @@ def logging(model, features, labels, spec, params):
                 epoch_steps=params["epoch_steps"],
                 each_steps=model.run_config.save_summary_steps,
                 tensors={
-                    "epoch": tf.add(
-                        tf.floor(
-                            tf.divide(
-                                tf.train.get_global_step(),
-                                params["epoch_steps"],
-                            )
-                        ),
-                        1,
+                    # "epoch": tf.add(
+                    #     tf.floor(
+                    #         tf.divide(
+                    #             tf.train.get_global_step(),
+                    #             params["epoch_steps"],
+                    #         )
+                    #     ),
+                    #     1,
+                    # ),
+                    "epoch": tf.divide(
+                        tf.train.get_global_step(), params["epoch_steps"]
                     ),
                     "step": tf.train.get_global_step(),
                     "loss": spec.loss,
                     "accuracy": std_metrics["accuracy"][1],
                 },
-                template="TRAIN \t STEP: {step} \t EPOCH: {epoch} \t acc: {accuracy:.5f} \t loss: {loss:.5f} \t duration: {duration:.2f}s sec/step: {sec_per_step:.2f}s step/sec: {step_per_sec:.2f}",
+                template="TRAIN \t STEP: {step} \t EPOCH: {epoch:.1f} \t acc: {accuracy:.5f} \t loss: {loss:.5f} \t duration: {duration:.2f}s sec/step: {sec_per_step:.2f}s step/sec: {step_per_sec:.2f}",
             )
         ]
         spec = spec._replace(training_hooks=train_hooks)
@@ -236,7 +239,7 @@ def logging(model, features, labels, spec, params):
                 epoch_steps=params["epoch_steps"],
                 tensors={k: v[0] for k, v in spec.eval_metric_ops.items()},
                 template=(
-                    """EVAL \t STEP: {step} \t EPOCH: {epoch}
+                    """EVAL \t STEP: {step} \t EPOCH: {epoch:.1f}
 acc: {accuracy:.5f} \t mpc_acc: {mpc_accuracy:.5f} \t macro-f1: {macro-f1:.5f} \t weighted-f1: {weighted-f1:.5f}
 {conf-mat}"""
                 ),

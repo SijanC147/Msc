@@ -57,8 +57,14 @@ class ConsoleLoggerHook(SessionRunHook):
                     TRAIN=self.template.format_map(
                         {
                             "duration": duration,
-                            "sec_per_step": float(duration / self.each_steps),
-                            "step_per_sec": float(self.each_steps / duration),
+                            "sec_per_step": float(
+                                duration
+                                / (self.each_steps if global_step != 1 else 1)
+                            ),
+                            "step_per_sec": float(
+                                (self.each_steps if global_step != 1 else 1)
+                                / duration
+                            ),
                             **run_values.results,
                         }
                     )
@@ -70,7 +76,7 @@ class ConsoleLoggerHook(SessionRunHook):
                 {"step": tf.train.get_global_step(), **self.tensors}
             )
             if self.epoch_steps is not None:
-                epoch = int(run_values.get("step") / self.epoch_steps)
+                epoch = run_values.get("step") / self.epoch_steps
                 run_values.update({"epoch": epoch})
             cprnt(EVAL=self.template.format_map(run_values))
 
