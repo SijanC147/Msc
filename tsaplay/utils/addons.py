@@ -3,6 +3,7 @@ from os.path import join
 from os import makedirs
 from functools import wraps, partial
 import tensorflow as tf
+from pprint import pformat
 from tensorflow.estimator import ModeKeys  # pylint: disable=E0401
 from tensorflow.saved_model.signature_constants import (  # pylint: disable=E0401
     DEFAULT_SERVING_SIGNATURE_DEF_KEY,
@@ -23,6 +24,8 @@ from tsaplay.hooks import (
     ConsoleLoggerHook,
 )
 from tsaplay.utils.tf import streaming_f1_scores, streaming_conf_matrix
+
+# from tsaplay.utils.data import stringify
 from tsaplay.utils.io import cprnt
 
 
@@ -173,6 +176,27 @@ def f1_scores(model, features, labels, spec, params):
 @only(["TRAIN", "EVAL"])
 def logging(model, features, labels, spec, params):
     if spec.mode == ModeKeys.TRAIN:
+        cprnt(
+            INFO="""INFO Run Configuration:
+{0}
+            """.format(
+                pformat(model.run_config.__dict__)
+            )
+        )
+        cprnt(
+            INFO="""INFO AUX Configuration:
+{0}
+            """.format(
+                pformat(model.aux_config)
+            )
+        )
+        cprnt(
+            INFO="""INFO Parameters:
+{0}
+            """.format(
+                pformat(model.params)
+            )
+        )
         std_metrics = {
             "accuracy": tf.metrics.accuracy(
                 labels=labels,

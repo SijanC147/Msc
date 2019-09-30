@@ -133,25 +133,20 @@ class FeatureProvider:
         oov_policy = [self._oov_train_threshold, self._num_oov_buckets]
         uid_data = [self._embedding.uid] + datasets_uids + oov_policy
         cprnt(
-            INFO="""INFO Features UID Components:
+            INFO="""INFO Feature Data:
 Embedding: {embedding_uid}
 Dataset(s): {datasets_uids}
 Train OOV Freq: {train_oov_threshold}
 OOV Buckets: {oov_buckets}
+OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
 """.format_map(
                 {
                     "embedding_uid": self._embedding.uid,
                     "datasets_uids": "\t".join(datasets_uids),
                     "train_oov_threshold": self._oov_train_threshold,
                     "oov_buckets": self._num_oov_buckets,
+                    **literal_eval(stringify(self._oov_fn)),
                 }
-            )
-        )
-        cprnt(
-            INFO="""INFO OOV Policy:
-Function: {function} \t Args: {args} \t Kwargs: {kwargs}
-""".format_map(
-                literal_eval(stringify(self._oov_fn))
             )
         )
         self._uid = hash_data(uid_data)
