@@ -4,6 +4,8 @@ import pickle
 import math
 import csv
 import re
+import pprint
+from warnings import warn
 from zipfile import ZipFile, ZIP_DEFLATED
 from datetime import datetime, timedelta
 from os import listdir, system, makedirs
@@ -22,12 +24,47 @@ from shutil import rmtree, copytree, copy as _copy, ignore_patterns
 from io import BytesIO
 from PIL import Image
 import numpy as np
-from warnings import warn
+from termcolor import colored
+import docker
 from tensorflow.python.client.timeline import Timeline  # pylint: disable=E0611
-from tensorflow.python_io import TFRecordWriter  # pyling: disable=import-error
+from tensorflow.python_io import TFRecordWriter  # noqa
 from tsaplay.constants import NP_RANDOM_SEED, TF_RECORD_SHARDS
 from tsaplay.utils.data import accumulate_dicts
-import docker
+
+
+def cprnt(*args, **kwargs):
+    colors = {
+        "r": "red",
+        "g": "green",
+        "y": "yellow",
+        "b": "blue",
+        "m": "magenta",
+        "c": "cyan",
+        "w": "white",
+    }
+    output = ""
+    for arg in args:
+        kwargs.update({"w": arg})
+    for (color_key, string) in kwargs.items():
+        if color_key == "end":
+            continue
+        if not isinstance(string, str):
+            string = pprint.pformat(string)
+        col = "".join(filter(str.isalpha, color_key))
+        index = col.find("o")
+        if index != -1:
+            txt, _, frgnd = col.partition("o")
+            output += (
+                colored(
+                    string,
+                    colors.get(txt, "grey"),
+                    "on_" + colors.get(frgnd, "grey"),
+                )
+                + " "
+            )
+        else:
+            output += colored(string, colors.get(col, "grey")) + " "
+    print(output, end=kwargs.get("end", "\n"))
 
 
 def platform():

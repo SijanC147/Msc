@@ -22,6 +22,7 @@ from tsaplay.utils.tf import (
     embedding_initializer_fn,
 )
 from tsaplay.utils.io import (
+    cprnt,
     pickle_file,
     unpickle_file,
     write_tfrecords,
@@ -30,7 +31,6 @@ from tsaplay.utils.io import (
     dump_json,
     search_dir,
 )
-from tsaplay.utils.debug import cprnt
 from tsaplay.utils.data import (
     accumulate_dicts,
     merge_corpora,

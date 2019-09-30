@@ -23,7 +23,7 @@ from tsaplay.hooks import (
     ConsoleLoggerHook,
 )
 from tsaplay.utils.tf import streaming_f1_scores, streaming_conf_matrix
-from tsaplay.utils.debug import cprnt
+from tsaplay.utils.io import cprnt
 
 
 def attach(addons, modes=None, order="POST"):

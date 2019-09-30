@@ -5,16 +5,16 @@ from itertools import tee, chain
 from tqdm import tqdm
 import numpy as np
 import tensorflow as tf
-from tensorflow.estimator import ModeKeys  # pylint: disable=E0401
-from tensorflow.train import BytesList, Feature, Features, Example, Int64List
+from tensorflow.estimator import ModeKeys  # noqa
+from tensorflow.train import BytesList, Feature, Features, Example, Int64List # noqa
 from tensorflow.python.ops import variable_scope
 from tensorflow.python.ops import array_ops
 from tensorflow.python.framework import ops
 from tensorflow.contrib.metrics import confusion_matrix as cm
 from tsaplay.constants import TF_DELIMITER, MAX_EMBEDDING_SHARDS
-from tsaplay.utils.io import export_run_metadata
+from tsaplay.utils.io import export_run_metadata, cprnt 
 from tsaplay.utils.data import zero_norm_labels, split_list
-from tsaplay.utils.debug import cprnt, timeit
+from tsaplay.utils.debug import timeit
 
 
 def embed_sequences(model_fn):
@@ -176,7 +176,9 @@ def prep_dataset(tfrecords, params, processing_fn, mode):
             prefetch_input_elements=parallel_calls,
         )
     )
-    dataset = dataset.shuffle(buffer_size=shuffle_buffer)
+    dataset = dataset.shuffle(
+        buffer_size=shuffle_buffer, reshuffle_each_iteration=True
+    )
     dataset = dataset.apply(
         tf.data.experimental.map_and_batch(
             lambda example: processing_fn(*parse_tf_example(example)),
@@ -632,12 +634,6 @@ def metric_variable(shape, dtype, validate_shape=True, name=None):
 
 
 def streaming_conf_matrix(labels, predictions, num_classes):
-    y_true = tf.cast(
-        tf.one_hot(indices=labels, depth=num_classes), dtype=tf.int64
-    )
-    y_pred = tf.cast(
-        tf.one_hot(indices=predictions, depth=num_classes), dtype=tf.int64
-    )
     conf_mat = metric_variable(
         shape=[num_classes, num_classes],
         dtype=tf.int64,
@@ -651,7 +647,8 @@ def streaming_conf_matrix(labels, predictions, num_classes):
 
     return conf_mat, up_conf_mat
 
-# pylint: disable=too-many-local-variables
+
+# pylint: disable=too-many-locals
 def streaming_f1_scores(labels, predictions, num_classes):
     y_true = tf.cast(
         tf.one_hot(indices=labels, depth=num_classes), dtype=tf.int64

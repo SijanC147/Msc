@@ -3,8 +3,11 @@ from os.path import join, isfile, exists
 from shutil import rmtree
 from warnings import warn
 import comet_ml
-from tsaplay.utils.io import start_tensorboard, restart_tf_serve_container
-from tsaplay.utils.debug import cprnt
+from tsaplay.utils.io import (
+    start_tensorboard,
+    restart_tf_serve_container,
+    cprnt,
+)
 from tsaplay.constants import (
     EXPERIMENT_DATA_PATH,
     EXPORTS_DATA_PATH,

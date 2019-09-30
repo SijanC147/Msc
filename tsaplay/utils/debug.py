@@ -1,41 +1,9 @@
 import time
-import pprint
 from os import environ
 from functools import wraps
 from datetime import timedelta, datetime
-from termcolor import colored
 import tensorflow as tf
-
-
-def color(key):
-    return {
-        "r": "red",
-        "g": "green",
-        "y": "yellow",
-        "b": "blue",
-        "m": "magenta",
-        "c": "cyan",
-        "w": "white",
-    }.get(key, "grey")
-
-
-def cprnt(*args, **kwargs):
-    output = ""
-    for arg in args:
-        kwargs.update({"w": arg})
-    for (color_key, string) in kwargs.items():
-        if color_key == "end":
-            continue
-        if not isinstance(string, str):
-            string = pprint.pformat(string)
-        col = "".join(filter(str.isalpha, color_key))
-        index = col.find("o")
-        if index != -1:
-            txt, _, frgnd = col.partition("o")
-            output += colored(string, color(txt), "on_" + color(frgnd)) + " "
-        else:
-            output += colored(string, color(col)) + " "
-    print(output, end=kwargs.get("end", "\n"))
+from tsaplay.utils.io import cprnt
 
 
 def tf_class_distribution(labels):

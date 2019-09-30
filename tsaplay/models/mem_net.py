@@ -22,7 +22,7 @@ class MemNet(TsaModel):
             "location_model": 2,
             "n_hops": 9,
             "initializer": tf.initializers.random_uniform(-0.01, 0.01),
-            # "... we clamp the word embeddings ..."
+            # From original paper, "... we clamp the word embeddings ..."
             "train_embeddings": False,
         }
 

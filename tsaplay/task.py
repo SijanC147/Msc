@@ -7,8 +7,13 @@ import pkg_resources as pkg
 from datetime import datetime
 import comet_ml  # pylint: disable=W0611
 import tensorflow as tf
-from tsaplay.utils.debug import timeit, cprnt
-from tsaplay.utils.io import args_to_dict, arg_with_list, datasets_cli_arg
+from tsaplay.utils.debug import timeit
+from tsaplay.utils.io import (
+    args_to_dict,
+    arg_with_list,
+    datasets_cli_arg,
+    cprnt,
+)
 from tsaplay.utils.data import corpora_vocab
 from tsaplay.datasets import Dataset
 from tsaplay.embeddings import Embedding
