@@ -2,6 +2,7 @@ from os.path import join, exists, dirname
 from os import makedirs, walk
 from functools import partial
 from warnings import warn
+from ast import literal_eval
 from math import ceil
 import re
 import numpy as np
@@ -49,7 +50,6 @@ class FeatureProvider:
         self._oov_train_threshold = kwargs.get("oov_train", 1)
         self._num_oov_buckets = max(kwargs.get("oov_buckets", 1), 1)
         self._oov_fn = self._resolve_oov_fn(kwargs.get("oov_fn"))
-        cprnt(row="Using OOV function: {}".format(stringify(self._oov_fn)))
 
         self._datasets = datasets
         self._embedding = embedding
@@ -132,7 +132,28 @@ class FeatureProvider:
         dataset_names = [dataset.name for dataset in self.datasets]
         oov_policy = [self._oov_train_threshold, self._num_oov_buckets]
         uid_data = [self._embedding.uid] + datasets_uids + oov_policy
-        print(uid_data)
+        cprnt(
+            INFO="""INFO Features UID Components:
+Embedding: {embedding_uid}
+Dataset(s): {datasets_uids}
+Train OOV Freq: {train_oov_threshold}
+OOV Buckets: {oov_buckets}
+""".format_map(
+                {
+                    "embedding_uid": self._embedding.uid,
+                    "datasets_uids": "\t".join(datasets_uids),
+                    "train_oov_threshold": self._oov_train_threshold,
+                    "oov_buckets": self._num_oov_buckets,
+                }
+            )
+        )
+        cprnt(
+            INFO="""INFO OOV Policy:
+Function: {function} \t Args: {args} \t Kwargs: {kwargs}
+""".format_map(
+                literal_eval(stringify(self._oov_fn))
+            )
+        )
         self._uid = hash_data(uid_data)
         name_data = [self._embedding.name] + dataset_names + [self._uid]
         self._name = "--".join(name_data)

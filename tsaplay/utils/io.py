@@ -48,6 +48,12 @@ def cprnt(*args, **kwargs):
     for (color_key, string) in kwargs.items():
         if color_key == "end":
             continue
+        color_key = {
+            "info": "c",
+            "train": "b",
+            "eval": "r",
+            "warn": "wor"
+        }.get(color_key.lower(), color_key)
         if not isinstance(string, str):
             string = pprint.pformat(string)
         col = "".join(filter(str.isalpha, color_key))

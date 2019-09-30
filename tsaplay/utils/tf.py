@@ -12,7 +12,7 @@ from tensorflow.python.ops import array_ops
 from tensorflow.python.framework import ops
 from tensorflow.contrib.metrics import confusion_matrix as cm
 from tsaplay.constants import TF_DELIMITER, MAX_EMBEDDING_SHARDS
-from tsaplay.utils.io import export_run_metadata, cprnt 
+from tsaplay.utils.io import export_run_metadata, cprnt
 from tsaplay.utils.data import zero_norm_labels, split_list
 from tsaplay.utils.debug import timeit
 

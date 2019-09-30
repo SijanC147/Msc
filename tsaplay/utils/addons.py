@@ -184,6 +184,8 @@ def logging(model, features, labels, spec, params):
         train_hooks += [
             ConsoleLoggerHook(
                 mode=ModeKeys.TRAIN,
+                epoch_steps=params["epoch_steps"],
+                each_steps=model.run_config.save_summary_steps,
                 tensors={
                     "epoch": tf.add(
                         tf.floor(
@@ -198,7 +200,7 @@ def logging(model, features, labels, spec, params):
                     "loss": spec.loss,
                     "accuracy": std_metrics["accuracy"][1],
                 },
-                each_steps=model.run_config.save_summary_steps,
+                template="TRAIN \t STEP: {step} \t EPOCH: {epoch} \t acc: {accuracy:.5f} \t loss: {loss:.5f} \t duration: {duration:.2f}s sec/step: {sec_per_step:.2f}s step/sec: {step_per_sec:.2f}",
             )
         ]
         spec = spec._replace(training_hooks=train_hooks)
@@ -207,7 +209,13 @@ def logging(model, features, labels, spec, params):
         eval_hooks += [
             ConsoleLoggerHook(
                 mode=ModeKeys.EVAL,
+                epoch_steps=params["epoch_steps"],
                 tensors={k: v[0] for k, v in spec.eval_metric_ops.items()},
+                template=(
+                    """EVAL \t STEP: {step} \t EPOCH: {epoch}
+acc: {accuracy:.5f} \t mpc_acc: {mpc_accuracy:.5f} \t macro-f1: {macro-f1:.5f} \t weighted-f1: {weighted-f1:.5f}
+{conf-mat}"""
+                ),
             )
         ]
         spec = spec._replace(evaluation_hooks=eval_hooks)
@@ -293,12 +301,9 @@ def early_stopping(model, features, labels, spec, params):
     allowance = config.get("allowance", 0)
     if spec.mode == ModeKeys.TRAIN:
         cprnt(
-            b="""Using Early Stopping:
-        metric: {metric}
-        mode: {comparison}
-        run every: {run_every_steps}
-        patience: {patience}
-        allowance: {allowance}""".format(
+            INFO="""INFO Early Stopping:
+metric: {metric} \t mode: {comparison} \t run every: {run_every_steps} \t patience: {patience} \t allowance: {allowance}
+""".format(
                 metric=metric,
                 comparison=comparison,
                 run_every_steps=(

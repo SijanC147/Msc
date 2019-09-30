@@ -3,6 +3,7 @@ import re
 import itertools
 from math import ceil
 from warnings import warn
+import time
 import matplotlib
 import numpy as np
 import tensorflow as tf
@@ -24,10 +25,18 @@ import matplotlib.pyplot as plt  # noqa pylint: disable=C0411,C0412,C0413
 
 
 class ConsoleLoggerHook(SessionRunHook):
-    def __init__(self, mode, tensors, each_steps=None):
+    def __init__(
+        self, mode, tensors, template, each_steps=None, epoch_steps=None
+    ):
         self.mode = mode
         self.tensors = tensors
+        self.template = template
+        self.epoch_steps = epoch_steps
         self.each_steps = each_steps
+        self._start_time = None
+
+    def begin(self):
+        self._start_time = time.time()
 
     def before_run(self, _):
         return SessionRunArgs(
@@ -41,17 +50,29 @@ class ConsoleLoggerHook(SessionRunHook):
         global_step = run_values.results.pop("global_step")[0]
         if self.mode == ModeKeys.TRAIN:
             if global_step % self.each_steps == 0 or global_step == 1:
-                cprnt(row="{}: {}".format(self.mode.upper(), global_step))
-                cprnt(run_values.results)
+                current_time = time.time()
+                duration = current_time - self._start_time
+                self._start_time = time.time()
+                cprnt(
+                    TRAIN=self.template.format_map(
+                        {
+                            "duration": duration,
+                            "sec_per_step": float(duration / self.each_steps),
+                            "step_per_sec": float(self.each_steps / duration),
+                            **run_values.results,
+                        }
+                    )
+                )
 
     def end(self, session):
         if self.mode == ModeKeys.EVAL:
-            global_step = session.run(tf.train.get_global_step())
-            run_values = session.run(self.tensors)
-            cprnt("")
-            cprnt(bow="{}: {}".format(self.mode.upper(), global_step))
-            cprnt(run_values)
-            cprnt("")
+            run_values = session.run(
+                {"step": tf.train.get_global_step(), **self.tensors}
+            )
+            if self.epoch_steps is not None:
+                epoch = int(run_values.get("step") / self.epoch_steps)
+                run_values.update({"epoch": epoch})
+            cprnt(EVAL=self.template.format_map(run_values))
 
 
 class LogProgressToComet(SessionRunHook):
