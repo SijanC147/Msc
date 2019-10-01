@@ -5,6 +5,7 @@ import math
 import csv
 import re
 import pprint
+from math import floor
 from warnings import warn
 from zipfile import ZipFile, ZIP_DEFLATED
 from datetime import datetime, timedelta
@@ -52,7 +53,7 @@ def cprnt(*args, **kwargs):
             "info": "c",
             "train": "b",
             "eval": "r",
-            "warn": "wor"
+            "warn": "wor",
         }.get(color_key.lower(), color_key)
         if not isinstance(string, str):
             string = pprint.pformat(string)
@@ -71,6 +72,27 @@ def cprnt(*args, **kwargs):
         else:
             output += colored(string, colors.get(col, "grey")) + " "
     print(output, end=kwargs.get("end", "\n"))
+
+
+def resolve_frequency_steps(
+    freq, epochs=None, epochs_steps=None, default=None
+):
+    if freq is None:
+        return 1 if epochs is not None else default
+    if epochs is None:
+        try:
+            return int(freq)
+        except ValueError:
+            cprnt(
+                WARN="Invalid step frequency {}, using default {}".format(
+                    freq, default
+                )
+            )
+            return default
+    return floor(
+        epochs_steps
+        * ((1 / int(freq[1:])) if str(freq).startswith("/") else int(freq))
+    )
 
 
 def platform():
