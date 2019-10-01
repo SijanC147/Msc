@@ -1,6 +1,6 @@
 import argparse
 import traceback
-from sys import argv
+from sys import argv, exit
 from os import environ, execvpe
 from os.path import join
 import pkg_resources as pkg
@@ -22,13 +22,7 @@ from tsaplay.embeddings import Embedding
 from tsaplay.features import FeatureProvider
 from tsaplay.experiments import Experiment
 import tsaplay.models as tsa_models
-from tsaplay.constants import (
-    EMBEDDING_SHORTHANDS,
-    ASSETS_PATH,
-    SAVE_SUMMARY_STEPS,
-    SAVE_CHECKPOINTS_STEPS,
-    LOG_STEP_COUNT_STEPS,
-)
+from tsaplay.constants import EMBEDDING_SHORTHANDS, ASSETS_PATH
 
 MODELS = {
     "lstm": tsa_models.Lstm,
@@ -230,45 +224,45 @@ def run_experiment(args, experiment_index=None):
     if model.params.get("epochs") is not None:
         model.params.pop("steps", None)
 
-    run_config_arg = args_to_dict(args.run_config)
-    run_config = {
-        **(
-            {
-                "save_summary_steps": resolve_frequency_steps(
-                    run_config_arg.pop("save_summary_steps", None),
-                    epochs=model.params.get("epochs"),
-                    epochs_steps=model.params.get("epoch_steps"),
-                    default=SAVE_SUMMARY_STEPS,
-                )
-            }
-            if run_config_arg.get("save_summary_secs") is None
-            else {}
-        ),
-        **(
-            {
-                "save_checkpoints_steps": resolve_frequency_steps(
-                    run_config_arg.pop("save_checkpoints_steps", None),
-                    epochs=model.params.get("epochs"),
-                    epochs_steps=model.params.get("epoch_steps"),
-                    default=SAVE_CHECKPOINTS_STEPS,
-                )
-            }
-            if run_config_arg.get("save_checkpoints_secs") is None
-            else {}
-        ),
-        "log_step_count_steps": resolve_frequency_steps(
-            run_config_arg.pop("log_step_count_steps", None),
-            epochs=model.params.get("epochs"),
-            epochs_steps=model.params.get("epoch_steps"),
-            default=LOG_STEP_COUNT_STEPS,
-        ),
-    }
+    # run_config_arg = args_to_dict(args.run_config)
+    # run_config = {
+    #     **(
+    #         {
+    #             "save_summary_steps": resolve_frequency_steps(
+    #                 run_config_arg.pop("save_summary_steps", None),
+    #                 epochs=model.params.get("epochs"),
+    #                 epochs_steps=model.params.get("epoch_steps"),
+    #                 default=SAVE_SUMMARY_STEPS,
+    #             )
+    #         }
+    #         if run_config_arg.get("save_summary_secs") is None
+    #         else {}
+    #     ),
+    #     **(
+    #         {
+    #             "save_checkpoints_steps": resolve_frequency_steps(
+    #                 run_config_arg.pop("save_checkpoints_steps", None),
+    #                 epochs=model.params.get("epochs"),
+    #                 epochs_steps=model.params.get("epoch_steps"),
+    #                 default=SAVE_CHECKPOINTS_STEPS,
+    #             )
+    #         }
+    #         if run_config_arg.get("save_checkpoints_secs") is None
+    #         else {}
+    #     ),
+    #     "log_step_count_steps": resolve_frequency_steps(
+    #         run_config_arg.pop("log_step_count_steps", None),
+    #         epochs=model.params.get("epochs"),
+    #         epochs_steps=model.params.get("epoch_steps"),
+    #         default=LOG_STEP_COUNT_STEPS,
+    #     ),
+    # }
 
-    run_config.update(run_config_arg)
+    # run_config.update(run_config_arg)
     experiment = Experiment(
         feature_provider,
         model,
-        run_config=run_config,
+        run_config=args_to_dict(args.run_config),
         comet_api=args.comet_api,
         comet_workspace=args.comet_workspace,
         contd_tag=args.contd_tag,
@@ -319,7 +313,7 @@ def run_next_experiment(batch_file_path, job_dir=None, defaults=None):
     defaults_arg = (
         "--defaults {}".format(" ".join(defaults)) if defaults else ""
     )
-    next_cmd = "python3 -m tsaplay.task batch {batch_file} {job_dir} {defaults}".format(
+    next_cmd = """python3 -m tsaplay.task batch {batch_file} {job_dir} {defaults}""".format(
         batch_file=batch_file_path, job_dir=job_dir_arg, defaults=defaults_arg
     )
     execvpe("python3", next_cmd.split(), environ)
@@ -336,6 +330,7 @@ def main():
     except AttributeError:
         run_experiment(args)
     pkg.cleanup_resources()
+    exit()
 
 
 if __name__ == "__main__":

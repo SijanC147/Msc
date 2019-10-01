@@ -201,14 +201,15 @@ def upload_job_to_gcloud(args):
             --module-name={module_name} \\
             --staging-bucket={staging_bucket} \\
             --packages={package_name} \\
-            --config={config_path} {stream_logs}""".format(
+            --config={config_path} \\
+            {stream_logs}""".format(
             job_name=args.job_id,
             staging_bucket=staging_bucket,
             job_dir=staging_bucket + (args.job_dir or args.job_id),
             module_name="tsaplay.task",
             package_name=package,
             config_path=abspath(join("gcp", "_config.json")),
-            stream_logs="--stream_logs" if args.stream_logs else "",
+            stream_logs="--stream-logs" if args.stream_logs else "",
         )
     )
 

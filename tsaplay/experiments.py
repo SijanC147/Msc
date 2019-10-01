@@ -6,6 +6,7 @@ import comet_ml
 from tsaplay.utils.io import (
     start_tensorboard,
     restart_tf_serve_container,
+    resolve_frequency_steps,
     cprnt,
 )
 from tsaplay.constants import (
@@ -39,7 +40,12 @@ class Experiment:
             **(run_config or {}),
         }
         self.model.run_config = self.model.run_config.replace(
-            **self.make_default_run_cofig(run_config)
+            **self.make_default_run_cofig(
+                run_config,
+                **model.params
+                # epochs=model.params.get("epochs"),
+                # epoch_steps=model.params.get("epoch_steps"),
+            )
         )
         if self.contd_tag and comet_api:
             self._setup_comet_ml_experiment(
@@ -126,7 +132,7 @@ class Experiment:
             config_file.write(config_file_str)
 
     @classmethod
-    def make_default_run_cofig(cls, custom_config=None):
+    def make_default_run_cofig(cls, custom_config=None, **kwargs):
         custom_config = custom_config or {}
 
         # setting session config anything other than None in distributed
@@ -151,11 +157,38 @@ class Experiment:
         }
         default_run_config = {
             "tf_random_seed": TF_RANDOM_SEED,
-            "save_summary_steps": SAVE_SUMMARY_STEPS,
-            "save_checkpoints_steps": SAVE_CHECKPOINTS_STEPS,
-            "log_step_count_steps": LOG_STEP_COUNT_STEPS,
             "keep_checkpoint_max": KEEP_CHECKPOINT_MAX,
             # "session_config": tf.ConfigProto(**default_session_config),
+            **(
+                {
+                    "save_summary_steps": resolve_frequency_steps(
+                        custom_run_config.pop("save_summary_steps", None),
+                        epochs=kwargs.get("epochs"),
+                        epoch_steps=kwargs.get("epoch_steps"),
+                        default=SAVE_SUMMARY_STEPS,
+                    )
+                }
+                if custom_run_config.get("save_summary_secs") is None
+                else {}
+            ),
+            **(
+                {
+                    "save_checkpoints_steps": resolve_frequency_steps(
+                        custom_run_config.pop("save_checkpoints_steps", None),
+                        epochs=kwargs.get("epochs"),
+                        epoch_steps=kwargs.get("epoch_steps"),
+                        default=SAVE_CHECKPOINTS_STEPS,
+                    )
+                }
+                if custom_run_config.get("save_checkpoints_secs") is None
+                else {}
+            ),
+            "log_step_count_steps": resolve_frequency_steps(
+                custom_run_config.pop("log_step_count_steps", None),
+                epochs=kwargs.get("epochs"),
+                epoch_steps=kwargs.get("epoch_steps"),
+                default=LOG_STEP_COUNT_STEPS,
+            ),
         }
         default_run_config.update(custom_run_config)
 

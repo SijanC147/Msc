@@ -1,5 +1,5 @@
 {
-    "jobId": "debugging_3",
+    "jobId": "debugging_10",
     "labels": {},
     "trainingInput": {
         "scaleTier": "CUSTOM",
@@ -11,8 +11,8 @@
             "batch",
             "batch_tasks.txt",
             "--defaults",
-            "-cmt",
-            "T1NrVnn32dXWeOxeQWGArkHwc"
+            "-b",
+            "50"
         ]
     }
 }

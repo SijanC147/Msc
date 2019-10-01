@@ -74,11 +74,9 @@ def cprnt(*args, **kwargs):
     print(output, end=kwargs.get("end", "\n"))
 
 
-def resolve_frequency_steps(
-    freq, epochs=None, epochs_steps=None, default=None
-):
+def resolve_frequency_steps(freq, epochs=None, epoch_steps=None, default=None):
     if freq is None:
-        return 1 if epochs is not None else default
+        return epoch_steps if epochs is not None else default
     if epochs is None:
         try:
             return int(freq)
@@ -89,9 +87,12 @@ def resolve_frequency_steps(
                 )
             )
             return default
-    return floor(
-        epochs_steps
-        * ((1 / int(freq[1:])) if str(freq).startswith("/") else int(freq))
+    return max(
+        1,
+        floor(
+            epoch_steps
+            * ((1 / int(freq[1:])) if str(freq).startswith("/") else int(freq))
+        ),
     )
 
 
