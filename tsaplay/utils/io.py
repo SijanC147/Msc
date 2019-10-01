@@ -6,7 +6,6 @@ import csv
 import re
 import pprint
 from math import floor
-from warnings import warn
 from zipfile import ZipFile, ZIP_DEFLATED
 from datetime import datetime, timedelta
 from os import listdir, system, makedirs
@@ -26,9 +25,9 @@ from io import BytesIO
 from PIL import Image
 import numpy as np
 from termcolor import colored
-import docker
 from tensorflow.python.client.timeline import Timeline  # pylint: disable=E0611
 from tensorflow.python_io import TFRecordWriter  # noqa
+import docker
 from tsaplay.constants import NP_RANDOM_SEED, TF_RECORD_SHARDS
 from tsaplay.utils.data import accumulate_dicts
 
@@ -251,8 +250,8 @@ def copy(src_path, dst_path, rel=None, force=True, ignore=None):
         if exists(dst_path):
             if force:
                 rmtree(dst_path, ignore_errors=True)
-            warn(
-                "{0} exists, force flag is off, leaving as is.".format(
+            cprnt(
+                warn="COPY: {0} exists, force flag is off so leaving as is.".format(
                     dst_path
                 )
             )
@@ -269,10 +268,10 @@ def clean_dirs(*paths):
         makedirs(path)
 
 
-def list_folders(path):
+def list_folders(path, kind=None):
     return [
         basename(normpath(folder))
-        for folder in search_dir(path, kind="folders")
+        for folder in search_dir(path, kind=(kind or "folders"))
     ]
 
 

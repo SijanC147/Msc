@@ -1,11 +1,11 @@
 import argparse
 import traceback
-from sys import argv, exit
+from inspect import isclass, isabstract, getmembers
+from importlib import import_module
+from sys import argv
 from os import environ, execvpe
 from os.path import join
 import pkg_resources as pkg
-from math import floor
-from datetime import datetime
 import comet_ml  # pylint: disable=W0611
 import tensorflow as tf
 from tsaplay.utils.debug import timeit
@@ -13,26 +13,16 @@ from tsaplay.utils.io import (
     args_to_dict,
     arg_with_list,
     datasets_cli_arg,
+    list_folders,
     cprnt,
-    resolve_frequency_steps,
 )
 from tsaplay.utils.data import corpora_vocab
 from tsaplay.datasets import Dataset
 from tsaplay.embeddings import Embedding
 from tsaplay.features import FeatureProvider
 from tsaplay.experiments import Experiment
-import tsaplay.models as tsa_models
-from tsaplay.constants import EMBEDDING_SHORTHANDS, ASSETS_PATH
-
-MODELS = {
-    "lstm": tsa_models.Lstm,
-    "tdlstm": tsa_models.TdLstm,
-    "tclstm": tsa_models.TcLstm,
-    "lcrrot": tsa_models.LcrRot,
-    "ian": tsa_models.Ian,
-    "memnet": tsa_models.MemNet,
-    "ram": tsa_models.Ram,
-}
+from tsaplay.models.tsa_model import TsaModel
+from tsaplay.constants import EMBEDDING_SHORTHANDS, ASSETS_PATH, MODELS_PATH
 
 
 def argument_parser():
@@ -100,7 +90,11 @@ def argument_parser():
         "--model",
         "-m",
         type=str,
-        choices=[*MODELS],
+        choices=[
+            f.split(".")[0]
+            for f in list_folders(MODELS_PATH, kind="files")
+            if f.endswith(".py") and not f.startswith("__init__")
+        ],
         help="Choose model to train",
         default="lcrrot",
     )
@@ -167,11 +161,36 @@ def argument_parser():
         "--verbosity",
         "-v",
         choices=["DEBUG", "INFO", "WARN", "ERROR", "FATAL"],
-        default="ERROR",
+        default="FATAL",
         help="Set logging verbosity",
     )
 
     return parser
+
+
+def load_model(model_name, container=None):
+    module_name = "{container}.{model_name}".format_map(
+        {
+            "container": (container or "tsaplay.models"),
+            "model_name": model_name,
+        }
+    )
+    try:
+        module = import_module(module_name)
+    except ModuleNotFoundError:
+        raise ValueError("Could not resolve {}".format(module_name))
+
+    model = getmembers(
+        module,
+        predicate=(
+            lambda attr: isclass(attr)
+            and not isabstract(attr)
+            and issubclass(attr, TsaModel)
+        ),
+    )
+    if len(model) == 1:
+        return model[0][1]
+    raise ValueError("Found no valid models in {}".format(module_name))
 
 
 def make_feature_provider(args):
@@ -205,7 +224,7 @@ def run_experiment(args, experiment_index=None):
 
     if args.batch_size:
         params.update({"batch-size": args.batch_size})
-    model = MODELS.get(args.model)(params, aux_config)
+    model = load_model(args.model)(params, aux_config)
 
     model.params["steps"] = (
         args.steps if args.steps is not None else model.params.get("steps")
@@ -224,41 +243,6 @@ def run_experiment(args, experiment_index=None):
     if model.params.get("epochs") is not None:
         model.params.pop("steps", None)
 
-    # run_config_arg = args_to_dict(args.run_config)
-    # run_config = {
-    #     **(
-    #         {
-    #             "save_summary_steps": resolve_frequency_steps(
-    #                 run_config_arg.pop("save_summary_steps", None),
-    #                 epochs=model.params.get("epochs"),
-    #                 epochs_steps=model.params.get("epoch_steps"),
-    #                 default=SAVE_SUMMARY_STEPS,
-    #             )
-    #         }
-    #         if run_config_arg.get("save_summary_secs") is None
-    #         else {}
-    #     ),
-    #     **(
-    #         {
-    #             "save_checkpoints_steps": resolve_frequency_steps(
-    #                 run_config_arg.pop("save_checkpoints_steps", None),
-    #                 epochs=model.params.get("epochs"),
-    #                 epochs_steps=model.params.get("epoch_steps"),
-    #                 default=SAVE_CHECKPOINTS_STEPS,
-    #             )
-    #         }
-    #         if run_config_arg.get("save_checkpoints_secs") is None
-    #         else {}
-    #     ),
-    #     "log_step_count_steps": resolve_frequency_steps(
-    #         run_config_arg.pop("log_step_count_steps", None),
-    #         epochs=model.params.get("epochs"),
-    #         epochs_steps=model.params.get("epoch_steps"),
-    #         default=LOG_STEP_COUNT_STEPS,
-    #     ),
-    # }
-
-    # run_config.update(run_config_arg)
     experiment = Experiment(
         feature_provider,
         model,
@@ -330,7 +314,6 @@ def main():
     except AttributeError:
         run_experiment(args)
     pkg.cleanup_resources()
-    exit()
 
 
 if __name__ == "__main__":

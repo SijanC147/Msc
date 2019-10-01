@@ -1,6 +1,6 @@
 import argparse
-from os import makedirs, system
-from os.path import join, dirname, abspath
+from os import system
+from os.path import join, abspath
 from json import dump
 from setuptools import sandbox
 from tsaplay.task import (
@@ -15,17 +15,18 @@ from tsaplay.constants import (
     EMBEDDING_DATA_PATH,
     FEATURES_DATA_PATH,
 )
-import tsaplay.models as tsa_models
 
-MODELS = {
-    "lstm": tsa_models.Lstm,
-    "tdlstm": tsa_models.TdLstm,
-    "tclstm": tsa_models.TcLstm,
-    "lcrrot": tsa_models.LcrRot,
-    "ian": tsa_models.Ian,
-    "memnet": tsa_models.MemNet,
-    "ram": tsa_models.Ram,
-}
+# import tsaplay.models as tsa_models
+
+# MODELS = {
+#     "lstm": tsa_models.Lstm,
+#     "tdlstm": tsa_models.TdLstm,
+#     "tclstm": tsa_models.TcLstm,
+#     "lcrrot": tsa_models.LcrRot,
+#     "ian": tsa_models.Ian,
+#     "memnet": tsa_models.MemNet,
+#     "ram": tsa_models.Ram,
+# }
 
 DEST_PATH = join(ASSETS_PATH, "_{}")
 DATASETS_DEST = DEST_PATH.format("datasets")

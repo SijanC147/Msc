@@ -13,9 +13,10 @@ from tsaplay.utils.addons import addon, attn_heatmaps
 class Ian(TsaModel):
     def set_params(self):
         return {
-            ### Taken from quoted default on https://github.com/songyouwei/ABSA-PyTorch/blob/master/train.py ###
+            # * Taken from quoted suggestions on https://github.com/songyouwei/ABSA-PyTorch/blob/master/train.py
             "batch-size": 64,
-            ###
+            "epochs": 30,
+            # * From original paper
             "hidden_units": 300,
             "learning_rate": 0.1,
             "l2_weight": 1e-5,
