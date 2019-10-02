@@ -16,18 +16,6 @@ from tsaplay.constants import (
     FEATURES_DATA_PATH,
 )
 
-# import tsaplay.models as tsa_models
-
-# MODELS = {
-#     "lstm": tsa_models.Lstm,
-#     "tdlstm": tsa_models.TdLstm,
-#     "tclstm": tsa_models.TcLstm,
-#     "lcrrot": tsa_models.LcrRot,
-#     "ian": tsa_models.Ian,
-#     "memnet": tsa_models.MemNet,
-#     "ram": tsa_models.Ram,
-# }
-
 DEST_PATH = join(ASSETS_PATH, "_{}")
 DATASETS_DEST = DEST_PATH.format("datasets")
 EMBEDDINGS_DEST = DEST_PATH.format("embeddings")
@@ -119,6 +107,11 @@ def fix_requirements_for_machine_types(machine_types):
 
 
 def write_gcloud_config(args):
+    new_task_args = (
+        (args.task_args[:2] + ["--new"] + args.task_args[2:])
+        if args.task_args[0] == "batch"
+        else args.task_args
+    )
     machine_types = args_to_dict(args.machine_types) or {
         "masterType": "standard",
         # "workerType": "n1-standard-16",
@@ -136,7 +129,7 @@ def write_gcloud_config(args):
             "pythonVersion": "3.5",
             "runtimeVersion": "1.12",
             "region": "europe-west1",
-            "args": args.task_args,
+            "args": new_task_args,
         },
     }
     config_file_path = join("gcp", "_config.json")

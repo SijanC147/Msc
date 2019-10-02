@@ -8,5 +8,9 @@
 # LSTM
 ; No mention of any approach to OOV tokens 
 ; batch-size(64) and hidden_units(200) taken from https://github.com/jimmyyfeng/TD-LSTM/blob/master/lstm.py
--em=twitter-100[corpus] -ds=dong -m=lstm -contd=lstm_100
--em=twitter-200[corpus] -ds=dong -m=lstm -contd=lstm_200
+-em=twitter-100[corpus] -ds=debug -m=lstm -contd=lstm_100_1
+-em=twitter-100[corpus] -ds=debug -m=lstm -contd=lstm_200_2
+-em=twitter-100[corpus] -ds=debug -m=lstm -contd=lstm_200_3
+-em=twitter-100[corpus] -ds=debug -m=lstm -contd=lstm_200_4
+-em=twitter-100[corpus] -ds=debug -m=lstm -contd=lstm_200_5
+-em=twitter-100[corpus] -ds=debug -m=lstm -contd=lstm_200_6

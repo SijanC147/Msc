@@ -1,5 +1,5 @@
 {
-    "jobId": "repro_test_lstm",
+    "jobId": "repro_test_lstm_9",
     "labels": {},
     "trainingInput": {
         "scaleTier": "CUSTOM",
@@ -10,14 +10,14 @@
         "args": [
             "batch",
             "reproducibility-test.txt",
+            "--new",
             "--defaults",
-            "-cmt",
-            "T1NrVnn32dXWeOxeQWGArkHwc",
-            "-wrk",
-            "msc-reproducibility",
+            "-b",
+            "5",
             "-aux",
             "logging=true",
             "-mp",
+            "hidden_units=5",
             "oov_train=1",
             "oov_fn=uniform[-0.1,0.1]"
         ]
