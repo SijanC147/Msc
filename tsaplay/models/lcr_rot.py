@@ -1,3 +1,4 @@
+# pylint: disable=line-too-long
 import tensorflow as tf
 from tensorflow.contrib.rnn import (  # pylint: disable=E0611
     stack_bidirectional_dynamic_rnn,
@@ -16,9 +17,7 @@ from tsaplay.utils.addons import addon, attn_heatmaps
 class LcrRot(TsaModel):
     def set_params(self):
         return {
-            ### Taken from quoted default on https://github.com/NUSTM/ABSC/tree/master/models/ABSC_Zozoz ###
-            "batch-size": 25,
-            ###
+            # * From original paper
             "learning_rate": 0.1,
             "keep_prob": 0.5,
             "hidden_units": 300,
@@ -27,6 +26,9 @@ class LcrRot(TsaModel):
             "initializer": tf.initializers.random_uniform(-0.1, 0.1),
             "bias_initializer": tf.initializers.zeros(),
             "lstm_initial_bias": 0,
+            # ? Suggestions from https://github.com/NUSTM/ABSC/tree/master/models/ABSC_Zozoz
+            "batch-size": 25,
+            "epochs": 50,
         }
 
     @addon([attn_heatmaps])

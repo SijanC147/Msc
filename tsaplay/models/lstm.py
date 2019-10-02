@@ -1,3 +1,4 @@
+# pylint: disable=line-too-long
 import tensorflow as tf
 from tsaplay.models.tsa_model import TsaModel
 from tsaplay.utils.tf import lstm_cell
@@ -7,18 +8,18 @@ from tsaplay.utils.addons import addon, early_stopping
 class Lstm(TsaModel):
     def set_params(self):
         return {
-            # pylint: disable=line-too-long
-            # * From https://github.com/jimmyyfeng/TD-LSTM/blob/master/lstm.py
-            "batch-size": 100,
-            "hidden_units": 200,
-            # * Following approach of Moore et al. 2018, using early stopping
-            "epochs": 0,
-            "early_stopping_patience": 10,
-            "early_stopping_allowance": 300,
-            "early_stopping_metric": "macro-f1",
             # * From original paper
             "learning_rate": 0.01,
             "initializer": tf.initializers.random_uniform(-0.003, 0.003),
+            # ? Suggestions from https://github.com/jimmyyfeng/TD-LSTM/blob/master/lstm.py
+            "hidden_units": 200,
+            # ? Using same batch size to compare LSTM, TDLSTM and TDLSTM
+            "batch-size": 64,
+            # ? Following approach of Moore et al. 2018, using early stopping
+            "epochs": 300,
+            "early_stopping_patience": 10,
+            "early_stopping_minimum_iter": 30,
+            "early_stopping_metric": "macro-f1",
         }
 
     @classmethod

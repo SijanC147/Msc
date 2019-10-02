@@ -156,7 +156,11 @@ class Experiment:
             if key.split("_")[0] not in session_config_keywords
         }
         default_run_config = {
-            "tf_random_seed": TF_RANDOM_SEED,
+            **(
+                {"tf_random_seed": TF_RANDOM_SEED}
+                if TF_RANDOM_SEED is not None
+                else {}
+            ),
             "keep_checkpoint_max": KEEP_CHECKPOINT_MAX,
             # "session_config": tf.ConfigProto(**default_session_config),
             **(

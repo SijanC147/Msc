@@ -1,3 +1,4 @@
+# pylint: disable=line-too-long
 import tensorflow as tf
 from tsaplay.models.tsa_model import TsaModel
 from tsaplay.utils.tf import (
@@ -13,18 +14,19 @@ from tsaplay.utils.addons import addon, attn_heatmaps
 class Ian(TsaModel):
     def set_params(self):
         return {
-            # * Taken from quoted suggestions on https://github.com/songyouwei/ABSA-PyTorch/blob/master/train.py
-            "batch-size": 64,
-            "epochs": 30,
             # * From original paper
             "hidden_units": 300,
-            "learning_rate": 0.1,
             "l2_weight": 1e-5,
-            "momentum": 0.9,
             "keep_prob": 0.5,
             "initializer": tf.initializers.random_uniform(-0.1, 0.1),
             "bias_initializer": tf.initializers.zeros(),
             "lstm_initial_bias": 0,
+            # ! Not quoted paper, using value from LCRROT paper
+            "momentum": 0.9,
+            # ? Suggestions from https://github.com/songyouwei/ABSA-PyTorch/blob/master/train.py
+            "learning_rate": 1e-3,
+            "batch-size": 64,
+            "epochs": 30,
         }
 
     @classmethod

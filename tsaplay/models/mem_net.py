@@ -15,9 +15,6 @@ from tsaplay.utils.tf import (
 class MemNet(TsaModel):
     def set_params(self):
         return {
-            # * Taken from https://github.com/NUSTM/ABSC/blob/master/models/ABSC_Zozoz/model/dmn.py
-            "batch-size": 100,
-            "epochs": 50,
             # * From original paper
             "learning_rate": 0.01,
             "location_model": 2,
@@ -25,6 +22,9 @@ class MemNet(TsaModel):
             "initializer": tf.initializers.random_uniform(-0.01, 0.01),
             # * "... we clamp the word embeddings ..."
             "train_embeddings": False,
+            # ? Suggestions from https://github.com/NUSTM/ABSC/blob/master/models/ABSC_Zozoz/model/dmn.py
+            "batch-size": 100,
+            "epochs": 50,
         }
 
     @classmethod

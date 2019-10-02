@@ -48,7 +48,12 @@
                 "batch_tasks.txt",
                 "--defaults",
                 "-cmt",
-                "T1NrVnn32dXWeOxeQWGArkHwc"
+                "T1NrVnn32dXWeOxeQWGArkHwc",
+                "-wrk",
+                "msc-reproducibility",
+                "-aux",
+                "logging=true",
+                "oov_fn='uniform[-0.1,0.1]'"
             ],
             "console": "integratedTerminal"
         },

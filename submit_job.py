@@ -145,13 +145,15 @@ def write_gcloud_config(args):
 
 
 def parse_task_args(task_args):
-    if task_args[0] == "batch":
-        batch_file_path = task_args[1]
-        jobs = parse_batch_file(batch_file_path)
-        copy(batch_file_path, ASSETS_PATH)
-    else:
-        jobs = [task_args]
     task_parser = task_argument_parser()
+    parsed_args = task_parser.parse_args(task_args)
+    try:
+        jobs = parse_batch_file(
+            parsed_args.batch_file, defaults=parsed_args.defaults
+        )
+        copy(parsed_args.batch_file, ASSETS_PATH)
+    except AttributeError:
+        jobs = [task_args]
     return [make_feature_provider(task_parser.parse_args(job)) for job in jobs]
 
 

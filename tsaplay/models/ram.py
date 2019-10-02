@@ -1,3 +1,4 @@
+# pylint: disable=line-too-long
 import tensorflow as tf
 from tensorflow.contrib.rnn import (  # pylint: disable=E0611
     stack_bidirectional_dynamic_rnn,
@@ -20,27 +21,29 @@ from tsaplay.utils.tf import (
 class Ram(TsaModel):
     def set_params(self):
         return {
-            ### Taken from https://github.com/lpq29743/RAM/blob/master/main.py ###
-            "batch-size": 32,
+            # * "...In our framework, we use 2 layers of BLSTM to build the memory, as
+            # * it generally performs well in NLP tasks (Karpathy et al., 2015)..."
+            "n_lstm_layers": 2,
+            # * paper reports results up to this many layers
+            "n_hops": 5,
+            # * RAM-3AL-NT reports the best results across datasets
+            "train_embeddings": False,
+            # * ... the maximum number of training iterations is 100 ...
+            "epochs": 100,
+            # ? Suggestions from https://github.com/lpq29743/RAM/blob/master/main.py
             "lstm_hidden_units": 300,
             "gru_hidden_units": 300,
-            ###
-            ### Paper mention no initialization parameter at all
-            ### https://github.com/lpq29743/RAM/blob/master/model.py uses:
-            # "initializer" : tf.orthogonal_initializer(), # for GRU and LSTM
-            # "attn_initializer": tf.contrib.layers.xavier_initializer(), # for attn units
-            # "bias_initializer" : tf.zeros_initializer(), # for biases
-            "initializer": tf.initializers.random_uniform(-0.1, 0.1),
-            ###
-            "learning_rate": 0.1,
-            "l2_weight": 1e-5,
+            "learning_rate": 0.005,
+            "l2_weight": 1e-3,
             "keep_prob": 0.5,
-            # TODO: confirm where i am getting this n_lstm_layers parameter
-            "n_lstm_layers": 2,
-            # paper reports results up to this many layers
-            "n_hops": 5,
-            # RAM-3AL-NT reports the best results across datasets
-            "train_embeddings": False,
+            # ! Paper mention no initialization parameter at all
+            "initializer": tf.initializers.random_uniform(-0.1, 0.1),
+            # ? https://github.com/lpq29743/RAM/blob/master/model.py uses
+            # "initializer" : tf.orthogonal_initializer(), # for GRU and LSTM
+            # "bias_initializer" : tf.zeros_initializer(), # for biases
+            # "attn_initializer": tf.contrib.layers.xavier_initializer(), # for attn
+            # ? Suggestions from https://github.com/lpq29743/RAM/blob/master/main.py
+            "batch-size": 32,
         }
 
     @classmethod

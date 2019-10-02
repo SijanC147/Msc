@@ -310,16 +310,17 @@ def early_stopping(model, features, labels, spec, params):
         else config.get("comparison")
     )
     epochs = params.get("epochs")
+    steps = params.get("steps")
     run_every_steps = config.get(
         "run_every_steps", params.get("epoch_steps") or None
     )
     run_every_secs = config.get("run_every_secs", 60)
     patience = config.get("patience", 10 if epochs is not None else 1000)
-    allowance = config.get("allowance", 0)
+    minimum_iter = config.get("minimum_iter", 0)
     if spec.mode == ModeKeys.TRAIN:
         cprnt(
             INFO="""INFO Early Stopping:
-metric: {metric} \t mode: {comparison} \t run every: {run_every_steps} \t patience: {patience} \t allowance: {allowance}
+metric: {metric} \t mode: {comparison} \t run every: {run_every_steps} \t patience: {patience} \t minimum: {minimum_iter} \t maximum: {maximum_iter}
 """.format(
                 metric=metric,
                 comparison=comparison,
@@ -331,11 +332,14 @@ metric: {metric} \t mode: {comparison} \t run every: {run_every_steps} \t patien
                 patience=(
                     "{} epoch(s)" if epochs is not None else "{} steps"
                 ).format(patience),
-                allowance=(
+                minimum_iter=(
                     "{} epoch(s)" if epochs is not None else "{} steps"
-                ).format(allowance)
-                if allowance > 0
+                ).format(minimum_iter)
+                if minimum_iter > 0
                 else "Indefinite",
+                maximum_iter=(
+                    "{} epoch(s)" if epochs is not None else "{} steps"
+                ).format(epochs if epochs is not None else steps),
             )
         )
     early_stopping_hook_fn = (
@@ -348,7 +352,7 @@ metric: {metric} \t mode: {comparison} \t run every: {run_every_steps} \t patien
         "eval_dir": eval_dir,
         "metric_name": metric,
         "min_steps": (
-            allowance
+            minimum_iter
             * (params.get("epoch_steps") if epochs is not None else 1)
         ),
         "run_every_steps": run_every_steps,
