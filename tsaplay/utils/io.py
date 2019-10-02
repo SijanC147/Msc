@@ -247,15 +247,15 @@ def copy(src_path, dst_path, rel=None, force=True, ignore=None):
         )
         # dst_path = relpath(dst_path, rel) if rel else dst_path
         dst_path = join(dst_path, rel_folder)
-        if exists(dst_path):
-            if force:
-                rmtree(dst_path, ignore_errors=True)
+        if exists(dst_path) and not force:
             cprnt(
                 warn="COPY: {0} exists, force flag is off so leaving as is.".format(
                     dst_path
                 )
             )
             return dst_path
+        else:
+            rmtree(dst_path, ignore_errors=True)
         ignore_arg = ignore_patterns(ignore) if ignore else None
         copytree(src_path, dst_path, ignore=ignore_arg)
     else:

@@ -165,7 +165,7 @@ def copy_dataset_files(datasets):
 
 
 def copy_embedding_files(embedding):
-    copy(embedding.gen_dir, EMBEDDINGS_DEST, rel=EMBEDDING_DATA_PATH)
+    copy(embedding.gen_dir, EMBEDDINGS_DEST, rel=EMBEDDING_DATA_PATH, force=False)
 
 
 def copy_feature_files(feature_provider):
@@ -174,6 +174,7 @@ def copy_feature_files(feature_provider):
         FEATURES_DEST,
         rel=FEATURES_DATA_PATH,
         ignore="*.zip",
+        force=False
     )
 
 

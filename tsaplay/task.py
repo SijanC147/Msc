@@ -167,8 +167,8 @@ def argument_parser():
     single_task_parser.add_argument(
         "--verbosity",
         "-v",
-        choices=["DEBUG", "INFO", "WARN", "ERROR", "FATAL"],
-        default="FATAL",
+        choices=["DEBUG", "INFO", "WARN", "ERROR"],
+        default="ERROR",
         help="Set logging verbosity",
     )
 
@@ -286,22 +286,9 @@ def parse_batch_file(batch_file_path, defaults=None):
 
 def run_next_experiment(batch_file_path, job_dir=None, defaults=None):
     task_parser = argument_parser()
-    if defaults:
-        defaults_parsed = (
-            task_parser.parse_args(defaults) if defaults else None
-        )
-        defaults = [
-            d
-            for i, d in enumerate(defaults)
-            if defaults[i] != "--job-dir"
-            and (i > 0 and defaults[i - 1] != "--job-dir")
-        ]
     tasks = parse_batch_file(batch_file_path, defaults)
-    if job_dir or defaults_parsed.job_dir:
-        tasks = [
-            t + ["--job-dir", job_dir or defaults_parsed.job_dir]
-            for t in tasks
-        ]
+    if job_dir:
+        tasks = [t + ["--job-dir", job_dir] for t in tasks]
     task_index = int(environ.get("TSATASK", 0))
     cprnt(warn="TASK INDEX: {0}".format(task_index))
     if task_index >= len(tasks):
@@ -314,11 +301,7 @@ def run_next_experiment(batch_file_path, job_dir=None, defaults=None):
     except Exception:  # pylint: disable=W0703
         traceback.print_exc()
     environ["TSATASK"] = str(task_index + 1)
-    job_dir_arg = (
-        "--job-dir {}".format(job_dir or defaults_parsed.job_dir)
-        if (job_dir or defaults_parsed.job_dir)
-        else ""
-    )
+    job_dir_arg = "--job-dir {}".format(job_dir) if (job_dir) else ""
     defaults_arg = (
         "--defaults {}".format(" ".join(defaults)) if defaults else ""
     )
@@ -332,14 +315,19 @@ def main():
     nvidia_cuda_prof_tools_path_fix()
     args = argument_parser().parse_args()
     if args.new:
-        del environ["TSATASK"]
+        if environ.get("TSATASK") is not None:
+            del environ["TSATASK"]
     try:
-        try:
-            cprnt(warn=args)
+        if args.defaults and "--job-dir" in args.defaults:
+            def_job_dir_index = args.defaults.index("--job-dir")
+            job_dir = args.job_dir or args.defaults[def_job_dir_index + 1]
+            defaults = (
+                args.defaults[:(def_job_dir_index)]
+                + args.defaults[(def_job_dir_index + 2) :]
+            )
+            run_next_experiment(args.batch_file, job_dir, defaults)
+        else:
             run_next_experiment(args.batch_file, args.job_dir, args.defaults)
-        except AttributeError:
-            cprnt(warn="Inner attribute error fired")
-            run_next_experiment(args.batch_file, defaults=args.defaults)
     except AttributeError:
         cprnt(warn="Outer attribute error fired")
         run_experiment(args)
