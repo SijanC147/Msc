@@ -1,5 +1,5 @@
 {
-    "jobId": "repro_test_tdtclstm",
+    "jobId": "debuging",
     "labels": {},
     "trainingInput": {
         "scaleTier": "CUSTOM",
@@ -9,17 +9,11 @@
         "region": "europe-west1",
         "args": [
             "batch",
-            "reproducibility-tdtclsmt.txt",
+            "--defaults",
             "--new",
             "--defaults",
-            "-cmt",
-            "T1NrVnn32dXWeOxeQWGArkHwc",
-            "-wrk",
-            "msc-reproducibility",
             "-aux",
             "logging=true",
-            "-mp",
-            "oov_train=1",
             "oov_fn=uniform[-0.1,0.1]"
         ]
     }

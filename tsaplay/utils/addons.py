@@ -125,7 +125,7 @@ def attn_heatmaps(model, features, labels, spec, params):
                 join(model.run_config.model_dir, "eval")
             ),
             comet=model.comet_experiment,
-            n_picks=model.aux_config.get("n_attn_heatmaps", 5),
+            n_picks=model.aux_config.get("n_attn_heatmaps", 2),
             n_hops=params.get("n_hops"),
         )
     ]

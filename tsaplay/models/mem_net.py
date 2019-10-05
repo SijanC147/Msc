@@ -1,7 +1,7 @@
 from math import ceil
 import tensorflow as tf
 from tsaplay.models.tsa_model import TsaModel
-from tsaplay.utils.addons import addon, attn_heatmaps
+from tsaplay.utils.addons import addon, attn_heatmaps, early_stopping
 from tsaplay.utils.tf import (
     masked_softmax,
     variable_len_batch_mean,
@@ -24,7 +24,11 @@ class MemNet(TsaModel):
             "train_embeddings": False,
             # ? Suggestions from https://github.com/NUSTM/ABSC/blob/master/models/ABSC_Zozoz/model/dmn.py
             "batch-size": 100,
-            "epochs": 50,
+            "early_stopping_minimum_iter": 50,
+            # ? Following approach of Moore et al. 2018, using early stopping
+            "epochs": 300,
+            "early_stopping_patience": 10,
+            "early_stopping_metric": "macro-f1",
         }
 
     @classmethod
@@ -41,7 +45,7 @@ class MemNet(TsaModel):
             "target_offset": features["left"].dense_shape[1] + 1,
         }
 
-    @addon([attn_heatmaps])
+    @addon([attn_heatmaps, early_stopping])
     def model_fn(self, features, labels, mode, params):
         target_offset = tf.cast(features["target_offset"], tf.int32)
 

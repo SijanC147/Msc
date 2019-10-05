@@ -314,9 +314,12 @@ def run_next_experiment(batch_file_path, job_dir=None, defaults=None):
 def main():
     nvidia_cuda_prof_tools_path_fix()
     args = argument_parser().parse_args()
-    if args.new:
-        if environ.get("TSATASK") is not None:
-            del environ["TSATASK"]
+    try:
+        new_batch = args.new
+    except AttributeError: # ? Not running in batch mode.
+        new_batch = False
+    if new_batch and environ.get("TSATASK") is not None:
+        del environ["TSATASK"]
     try:
         if args.defaults and "--job-dir" in args.defaults:
             def_job_dir_index = args.defaults.index("--job-dir")
@@ -328,8 +331,7 @@ def main():
             run_next_experiment(args.batch_file, job_dir, defaults)
         else:
             run_next_experiment(args.batch_file, args.job_dir, args.defaults)
-    except AttributeError:
-        cprnt(warn="Outer attribute error fired")
+    except AttributeError: # ? Not running in batch mode.
         run_experiment(args)
     pkg.cleanup_resources()
 

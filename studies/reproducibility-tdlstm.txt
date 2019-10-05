@@ -1,0 +1,13 @@
+## RUN WITH DEFAULTS: 
+# -cmt T1NrVnn32dXWeOxeQWGArkHwc
+# -wrk MSc-Reproducibility 
+# -aux logging=true 
+# -mp oov_train=1 oov_fn=uniform[-0.1,0.1]
+###
+
+# TDLSTM
+; No mention of any approach to OOV tokens 
+; hidden_units(200) taken from https://github.com/jimmyyfeng/TD-LSTM/blob/master/td_lstm.py
+; batch-size(64) used for comparison with LSTM and TCLSTM 
+-em=twitter-100[corpus] -ds=dong -m=td_lstm -contd=tdlstm_100
+-em=twitter-200[corpus] -ds=dong -m=td_lstm -contd=tdlstm_200

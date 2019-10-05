@@ -18,6 +18,7 @@ from os.path import (
     exists,
     relpath,
     splitext,
+    sep,
 )
 from tempfile import mkdtemp
 from shutil import rmtree, copytree, copy as _copy, ignore_patterns
@@ -49,6 +50,7 @@ def cprnt(*args, **kwargs):
         if color_key == "end":
             continue
         color_key = {
+            "success": "wog",
             "info": "c",
             "train": "b",
             "eval": "r",
@@ -202,7 +204,7 @@ def write_zippped_file(path, data):
         zip_file.writestr(file_name, data=data)
 
 
-def search_dir(path, query=None, first=False, kind=None):
+def search_dir(path, query=None, first=False, kind=None, ci=False):
     kind = kind or []
     if "file" in kind:
         results = [f for f in listdir(path) if isfile(join(path, f))]
@@ -211,7 +213,11 @@ def search_dir(path, query=None, first=False, kind=None):
     else:
         results = [f for f in listdir(path)]
     if query:
-        results = [join(path, f) for f in results if query in f]
+        results = [
+            join(path, f)
+            for f in results
+            if query in f or (ci and query.lower() in f.lower())
+        ]
     return results[0] if first else results
 
 
@@ -240,7 +246,9 @@ def get_image_from_plt(plt):
     return Image.open(BytesIO(image_bytes))
 
 
-def copy(src_path, dst_path, rel=None, force=True, ignore=None):
+def copy(
+    src_path, dst_path, rel=None, force=True, ignore=None, file_tree=False
+):
     if not isfile(src_path):
         rel_folder = (
             relpath(src_path, rel) if rel else basename(normpath(src_path))
@@ -258,8 +266,13 @@ def copy(src_path, dst_path, rel=None, force=True, ignore=None):
             rmtree(dst_path, ignore_errors=True)
         ignore_arg = ignore_patterns(ignore) if ignore else None
         copytree(src_path, dst_path, ignore=ignore_arg)
-    else:
-        _copy(src_path, dst_path)
+        return dst_path
+    if (basename(src_path) != src_path) and file_tree:
+        for subdir in src_path.split(sep)[:-1]:
+            dst_path = join(dst_path, subdir)
+            makedirs(dst_path, exist_ok=force)
+    _copy(src_path, dst_path)
+    return dst_path
 
 
 def clean_dirs(*paths):
@@ -318,7 +331,7 @@ def args_to_dict(args):
         return {}
     for arg in args:
         if isinstance(arg, str):
-            args_flat += arg
+            args_flat.append(arg)
         else:
             for sub_arg in arg:
                 args_flat.append(sub_arg)

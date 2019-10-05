@@ -1,6 +1,6 @@
 import argparse
-from os import system
-from os.path import join, abspath
+from os import system, remove
+from os.path import join, abspath, basename
 from json import dump
 from setuptools import sandbox
 from tsaplay.task import (
@@ -10,16 +10,16 @@ from tsaplay.task import (
 )
 from tsaplay.utils.io import search_dir, copy, clean_dirs, args_to_dict
 from tsaplay.constants import (
-    ASSETS_PATH,
+    ASSETS_PATH as STAGING_DIR,
     DATASET_DATA_PATH,
     EMBEDDING_DATA_PATH,
     FEATURES_DATA_PATH,
 )
 
-DEST_PATH = join(ASSETS_PATH, "_{}")
-DATASETS_DEST = DEST_PATH.format("datasets")
-EMBEDDINGS_DEST = DEST_PATH.format("embeddings")
-FEATURES_DEST = DEST_PATH.format("features")
+STAGING_SUBDIR_TEMPLATE = join(STAGING_DIR, "_{}")
+DATASETS_STAGING = STAGING_SUBDIR_TEMPLATE.format("datasets")
+EMBEDDINGS_STAGING = STAGING_SUBDIR_TEMPLATE.format("embeddings")
+FEATURES_STAGING = STAGING_SUBDIR_TEMPLATE.format("features")
 
 
 def argument_parser():
@@ -108,7 +108,12 @@ def fix_requirements_for_machine_types(machine_types):
 
 def write_gcloud_config(args):
     new_task_args = (
-        (args.task_args[:2] + ["--new"] + args.task_args[2:])
+        (
+            args.task_args[:1]
+            + [basename(args.task_args[1])]
+            + ["--new"]
+            + args.task_args[2:]
+        )
         if args.task_args[0] == "batch"
         else args.task_args
     )
@@ -144,10 +149,13 @@ def parse_task_args(task_args):
         jobs = parse_batch_file(
             parsed_args.batch_file, defaults=parsed_args.defaults
         )
-        copy(parsed_args.batch_file, ASSETS_PATH)
+        copy(parsed_args.batch_file, STAGING_DIR, file_tree=False)
     except AttributeError:
         jobs = [task_args]
-    return [make_feature_provider(task_parser.parse_args(job)) for job in jobs]
+    job_feature_providers = [
+        make_feature_provider(task_parser.parse_args(job)) for job in jobs
+    ]
+    return job_feature_providers
 
 
 def copy_dataset_files(datasets):
@@ -157,7 +165,7 @@ def copy_dataset_files(datasets):
             dataset_srcdir = getattr(dataset, srcdir_attr)
             copy(
                 dataset_srcdir,
-                DATASETS_DEST,
+                DATASETS_STAGING,
                 rel=DATASET_DATA_PATH,
                 force=False,
                 ignore="_redists",
@@ -165,16 +173,21 @@ def copy_dataset_files(datasets):
 
 
 def copy_embedding_files(embedding):
-    copy(embedding.gen_dir, EMBEDDINGS_DEST, rel=EMBEDDING_DATA_PATH, force=False)
+    copy(
+        embedding.gen_dir,
+        EMBEDDINGS_STAGING,
+        rel=EMBEDDING_DATA_PATH,
+        force=False,
+    )
 
 
 def copy_feature_files(feature_provider):
     copy(
         feature_provider.gen_dir,
-        FEATURES_DEST,
+        FEATURES_STAGING,
         rel=FEATURES_DATA_PATH,
         ignore="*.zip",
-        force=False
+        force=False,
     )
 
 
@@ -211,8 +224,14 @@ def upload_job_to_gcloud(args):
     )
 
 
+def clear_staging_area():
+    for redundant_txt in search_dir(path=STAGING_DIR, query=".txt"):
+        remove(redundant_txt)
+    clean_dirs(FEATURES_STAGING, DATASETS_STAGING, EMBEDDINGS_STAGING)
+
+
 def submit_job(args):
-    clean_dirs(FEATURES_DEST, DATASETS_DEST, EMBEDDINGS_DEST)
+    clear_staging_area()
     write_gcloud_config(args)
     prepare_job_assets(args)
     upload_job_to_gcloud(args)

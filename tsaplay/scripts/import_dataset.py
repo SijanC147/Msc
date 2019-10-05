@@ -4,7 +4,7 @@ import inspect
 from shutil import rmtree
 from os import makedirs
 from os.path import join, exists, normpath, basename
-from tsaplay.utils.io import pickle_file, search_dir
+from tsaplay.utils.io import pickle_file, search_dir, cprnt
 from tsaplay.utils.data import wrap_parsing_fn
 from tsaplay.constants import DATASET_DATA_PATH
 
@@ -25,6 +25,13 @@ def argument_parser():
         help="Name of the parsing python script for the dataset",
         default=None,
     )
+    parser.add_argument(
+        "--force",
+        "-f",
+        help="Overwrite dataset if it already exists",
+        action="store_true",
+        default=False,
+    )
 
     return parser
 
@@ -36,8 +43,8 @@ def get_dataset_dicts(train_file, test_file, parsing_fn):
 
 
 def get_raw_file_paths(path):
-    train_file = search_dir(path, "train", first=True, kind="files")
-    test_file = search_dir(path, "test", first=True, kind="files")
+    train_file = search_dir(path, "train", first=True, kind="files", ci=True)
+    test_file = search_dir(path, "test", first=True, kind="files", ci=True)
     return train_file, test_file
 
 
@@ -104,16 +111,29 @@ def generate_dataset_files(args):
     train_dict, test_dict = get_dataset_dicts(ftrain, ftest, parsing_fn)
     target_path = join(DATASET_DATA_PATH, dataset_name)
     if exists(target_path):
+        if not args.force:
+            cprnt(
+                warn="Dataset '{}' already exists, use -f to overwrite".format(
+                    dataset_name
+                )
+            )
+            return
+        cprnt(info="Overwriting previous '{}' dataset".format(dataset_name))
         rmtree(target_path)
     makedirs(target_path)
     pickle_file(join(target_path, "_train_dict.pkl"), train_dict)
     pickle_file(join(target_path, "_test_dict.pkl"), test_dict)
+    return dataset_name
 
 
 def main():
     parser = argument_parser()
     args = parser.parse_args()
-    generate_dataset_files(args)
+    try:
+        ds_name = generate_dataset_files(args)
+        cprnt(success="Imported '{}' successfully.".format(ds_name))
+    except Exception:
+        cprnt(warn="Error importing dataset. {}".format(Exception))
 
 
 if __name__ == "__main__":

@@ -276,7 +276,7 @@ def hash_data(data):
 
 def tokenize_data(include=None, case_insensitive=None, **data_dicts):
     include = (
-        set(map(str.lower, include) if not case_insensitive else include)
+        set(map(str.lower, include) if case_insensitive else include)
         if include
         else []
     )
