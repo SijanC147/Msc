@@ -45,13 +45,6 @@ class Ian(TsaModel):
     @addon([attn_heatmaps])
     def model_fn(self, features, labels, mode, params):
         with tf.variable_scope("context_lstm"):
-            # features["context_emb"] = tf.Print(
-            #     input_=features["context_emb"],
-            #     data=[features["target"], features["target_emb"]],
-            #     message="\n########################################################\n",
-            #     summarize=1e6,
-            #     first_n=1000,
-            # )
             context_hidden_states, _ = tf.nn.dynamic_rnn(
                 cell=lstm_cell(**params),
                 inputs=features["context_emb"],
@@ -109,12 +102,6 @@ class Ian(TsaModel):
             bias_initializer=params["bias_initializer"],
         )
 
-        logits = tf.Print(
-            input_=logits,
-            data=[features["context"], features["target"], logits],
-            message="LOGITS",
-            summarize=1e6,
-        )
         loss = l2_regularized_loss(
             labels=labels, logits=logits, l2_weight=params["l2_weight"]
         )
