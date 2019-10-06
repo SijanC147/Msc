@@ -1,5 +1,5 @@
 {
-    "jobId": "lcr_rot_test_w_earlystopping_proper",
+    "jobId": "ian_same_heatmaps_over_time",
     "labels": {},
     "trainingInput": {
         "scaleTier": "CUSTOM",
@@ -9,18 +9,8 @@
         "region": "europe-west1",
         "args": [
             "batch",
-            "reproducibility-test.txt",
-            "--new",
-            "--defaults",
-            "-cmt",
-            "T1NrVnn32dXWeOxeQWGArkHwc",
-            "-wrk",
-            "msc-reproducibility",
-            "-aux",
-            "logging=true",
-            "-mp",
-            "oov_train=1",
-            "oov_fn=uniform[-0.1,0.1]"
+            "reproducibility-debug.txt",
+            "--new"
         ]
     }
 }

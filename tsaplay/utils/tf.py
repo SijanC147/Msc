@@ -6,7 +6,13 @@ from tqdm import tqdm
 import numpy as np
 import tensorflow as tf
 from tensorflow.estimator import ModeKeys  # noqa
-from tensorflow.train import BytesList, Feature, Features, Example, Int64List # noqa
+from tensorflow.train import (
+    BytesList,
+    Feature,
+    Features,
+    Example,
+    Int64List,
+)  # noqa
 from tensorflow.python.ops import variable_scope
 from tensorflow.python.ops import array_ops
 from tensorflow.python.framework import ops
@@ -167,7 +173,9 @@ def prep_dataset(tfrecords, params, processing_fn, mode):
     parallel_calls = params.get("parallel_calls", 4)
     parallel_batches = params.get("parallel_batches", parallel_calls)
     prefetch_buffer = params.get("prefetch_buffer", 100)
-    dataset = tf.data.Dataset.list_files(file_pattern=tfrecords)
+    dataset = tf.data.Dataset.list_files(
+        file_pattern=tfrecords, shuffle=(mode != "EVAL")
+    )
     dataset = dataset.apply(
         tf.data.experimental.parallel_interleave(
             tf.data.TFRecordDataset,
@@ -192,7 +200,7 @@ def prep_dataset(tfrecords, params, processing_fn, mode):
         num_parallel_calls=parallel_calls,
     )
     if mode == "TRAIN":
-        #! epochs==0 => repeat indefinitely
+        # ? epochs == 0 => repeat indefinitely => count = None
         dataset = dataset.repeat(count=(params.get("epochs") or None))
 
     dataset = dataset.cache()

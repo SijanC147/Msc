@@ -156,7 +156,7 @@ class SaveAttentionWeightVector(SessionRunHook):
         comet=None,
         n_picks=3,
         n_hops=None,
-        freq=0.2,
+        freq=5,
         epoch_steps=None,
     ):
         self.labels = labels
@@ -184,11 +184,15 @@ class SaveAttentionWeightVector(SessionRunHook):
     def after_run(self, run_context, run_values):
         if NP_RANDOM_SEED is not None:
             np.random.seed(NP_RANDOM_SEED)
-        if (
-            self.n_picks is None
-            or np.random.random() > self.freq  # pylint: disable=no-member
-        ):
+        if self.n_picks is None:
             return
+        pick = np.random.random()  # pylint: disable=no-member
+        if isinstance(self.freq, float) and pick > self.freq:
+            return
+        if isinstance(self.freq, int) and self.freq <= 0:
+            return
+        if isinstance(self.freq, int):
+            self.freq = self.freq - 1
         results = run_values.results
         global_step = results["global_step"][0]
         attn_mechs = results["attention"]

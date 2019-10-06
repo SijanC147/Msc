@@ -109,7 +109,9 @@ class Ram(TsaModel):
 
         memory = get_location_weighted_memory(memory_star, w_t, u_t)
 
-        episode_0 = tf.zeros(shape=[batch_size, 1, params["gru_hidden_units"]])
+        episode_0 = tf.zeros(
+            shape=[batch_size, 1, params["gru_hidden_units"]], name="episode"
+        )
 
         target_avg = variable_len_batch_mean(
             input_tensor=features["target_emb"],
@@ -135,6 +137,10 @@ class Ram(TsaModel):
                 v_target=target_avg,
                 prev_episode=episode,
             )
+
+            # mem_prev_ep_v_target = tf.Print(
+            #     input_=mem_prev_ep_v_target, data=[mem_prev_ep_v_target]
+            # )
 
             weight_dim = (
                 (params["lstm_hidden_units"] * 2)
@@ -295,6 +301,8 @@ def ram_attn_unit(seq_lens, attn_focus, weight_dim, init, bias_init=None):
         dtype=tf.float32,
         initializer=(bias_init or init),
     )
+
+    # w_att = tf.Print(input_=w_att, data=[w_att])
 
     w_att_batch_dim = tf.expand_dims(w_att, axis=0)
     w_att_tiled = tf.tile(

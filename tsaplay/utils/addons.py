@@ -126,6 +126,7 @@ def attn_heatmaps(model, features, labels, spec, params):
             epoch_steps=params.get("epoch_steps"),
             n_picks=model.aux_config.get("n_attn_heatmaps", 2),
             n_hops=params.get("n_hops"),
+            freq=10
         )
     ]
     return spec._replace(evaluation_hooks=eval_hooks)
