@@ -1,7 +1,6 @@
-from os import listdir, makedirs
+from os import listdir, makedirs, sys
 from os.path import join, isfile, exists
 from shutil import rmtree
-from warnings import warn
 import comet_ml
 from tsaplay.utils.io import (
     start_tensorboard,
@@ -17,6 +16,7 @@ from tsaplay.constants import (
     SAVE_CHECKPOINTS_STEPS,
     LOG_STEP_COUNT_STEPS,
     KEEP_CHECKPOINT_MAX,
+    DEFAULT_COMET_WORKSPACE,
 )
 
 
@@ -40,12 +40,7 @@ class Experiment:
             **(run_config or {}),
         }
         self.model.run_config = self.model.run_config.replace(
-            **self.make_default_run_cofig(
-                run_config,
-                **model.params
-                # epochs=model.params.get("epochs"),
-                # epoch_steps=model.params.get("epoch_steps"),
-            )
+            **self.make_default_run_cofig(run_config, **model.params)
         )
         if self.contd_tag and comet_api:
             self._setup_comet_ml_experiment(
@@ -207,7 +202,7 @@ class Experiment:
             comet_experiment = comet_ml.Experiment(
                 api_key=api_key,
                 project_name=self.model.name,
-                workspace=(workspace or "msc"),
+                workspace=(workspace or DEFAULT_COMET_WORKSPACE),
             )
             comet_experiment.set_name(self.contd_tag)
             exp_key = comet_experiment.get_key()

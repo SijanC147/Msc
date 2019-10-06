@@ -1,9 +1,7 @@
 import inspect
 import json
-from math import floor
 from datetime import datetime
 from functools import wraps
-import tensorflow as tf
 from tensorflow.estimator import ModeKeys  # noqa
 from tsaplay.utils.tf import scaffold_init_fn_on_spec
 from tsaplay.utils.io import temp_pngs
@@ -17,12 +15,14 @@ def cometml(model_fn):
     def wrapper(self, features, labels, mode, params):
         comet = self.comet_experiment
         if comet is not None and mode in [ModeKeys.TRAIN, ModeKeys.EVAL]:
-            run_config = self.run_config.__dict__
-            comet_pretty_log(comet, self.aux_config, prefix="AUX")
-            comet_pretty_log(comet, run_config, prefix="RUNCONFIG")
-            comet_pretty_log(comet, params, hparams=True)
-            comet.set_code(inspect.getsource(self.__class__))
-            comet.set_filename(inspect.getfile(self.__class__))
+            if mode == ModeKeys.TRAIN:
+                run_config = self.run_config.__dict__
+                comet_pretty_log(comet, self.aux_config, prefix="AUX")
+                comet_pretty_log(comet, run_config, prefix="RUNCONFIG")
+                comet_pretty_log(comet, params, hparams=True)
+                comet.set_code(inspect.getsource(self.__class__))
+                comet.set_filename(inspect.getfile(self.__class__))
+                comet.set_epoch(0)
 
             spec = model_fn(self, features, labels, mode, params)
 

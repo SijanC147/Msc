@@ -176,9 +176,10 @@ def prep_dataset(tfrecords, params, processing_fn, mode):
             prefetch_input_elements=parallel_calls,
         )
     )
-    dataset = dataset.shuffle(
-        buffer_size=shuffle_buffer, reshuffle_each_iteration=True
-    )
+    if mode == "TRAIN":
+        dataset = dataset.shuffle(
+            buffer_size=shuffle_buffer, reshuffle_each_iteration=True
+        )
     dataset = dataset.apply(
         tf.data.experimental.map_and_batch(
             lambda example: processing_fn(*parse_tf_example(example)),

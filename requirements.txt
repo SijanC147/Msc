@@ -9,7 +9,7 @@ botocore==1.12.168
 certifi==2019.3.9
 chardet==3.0.4
 comet-git-pure==0.19.11
-comet-ml==2.0.13
+comet-ml==2.0.14
 configobj==5.0.6
 cycler==0.10.0
 cymem==2.0.2

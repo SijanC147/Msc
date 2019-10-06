@@ -103,12 +103,15 @@ class LogProgressToComet(SessionRunHook):
             self.comet.set_epoch(epoch)
             if self.mode == ModeKeys.TRAIN:
                 if global_step % self.epoch_steps == 0:
-                    self.comet.log_epoch_end(self.epochs)
+                    self.comet.log_epoch_end(epoch)
 
     def end(self, session):
         global_step = session.run(tf.train.get_global_step())
-        if global_step % self.epoch_steps == 0:
-            self.comet.log_epoch_end(self.epochs)
+        if self.epoch_steps:
+            epoch = ceil(global_step / self.epoch_steps)
+            self.comet.log_metric("epoch", epoch, include_context=False)
+            if global_step % self.epoch_steps == 0:
+                self.comet.log_epoch_end(epoch)
 
 
 class LogHistogramsToComet(SessionRunHook):
@@ -154,6 +157,7 @@ class SaveAttentionWeightVector(SessionRunHook):
         n_picks=3,
         n_hops=None,
         freq=0.2,
+        epoch_steps=None,
     ):
         self.labels = labels
         self.predictions = predictions
@@ -161,6 +165,7 @@ class SaveAttentionWeightVector(SessionRunHook):
         self.classes = classes
         self.n_picks = n_picks
         self.n_hops = n_hops
+        self.epoch_steps = epoch_steps
         self._summary_writer = summary_writer
         self._comet = comet
         self.freq = freq
@@ -254,6 +259,13 @@ class SaveAttentionWeightVector(SessionRunHook):
         if self._comet is not None:
             self._comet.set_step(global_step)
             image_names = ["attention_heatmap", "attention_tables"]
+            epoch = (
+                (global_step / self.epoch_steps) if self.epoch_steps else None
+            )
+            image_names = [
+                ("{:.0f}. ".format(epoch) if epoch else "") + n
+                for n in image_names
+            ]
             images = [final_heatmaps, final_tables]
             for temp_png in temp_pngs(images, image_names):
                 self._comet.log_image(temp_png)
@@ -270,9 +282,17 @@ class SaveAttentionWeightVector(SessionRunHook):
 
 
 class SaveConfusionMatrix(SessionRunHook):
-    def __init__(self, class_labels, tensor_name, summary_writer, comet=None):
+    def __init__(
+        self,
+        class_labels,
+        tensor_name,
+        summary_writer,
+        comet=None,
+        epoch_steps=None,
+    ):
         self.tensor_name = tensor_name
         self.class_labels = class_labels
+        self.epoch_steps = epoch_steps
         self._summary_writer = summary_writer
         self._comet = comet
 
@@ -286,7 +306,16 @@ class SaveConfusionMatrix(SessionRunHook):
         global_step = tf.train.get_global_step().eval(session=session)
         image = self._plot_confusion_matrix(confusion_matrix)
         if self._comet is not None:
-            for temp_png in temp_pngs([image], ["confusion_matrix"]):
+            epoch = (
+                (global_step / self.epoch_steps) if self.epoch_steps else None
+            )
+
+            title = (
+                "{:.0f}. confusion_matrix".format(epoch)
+                if epoch
+                else "confusion_matrix"
+            )
+            for temp_png in temp_pngs([image], [title]):
                 self._comet.set_step(global_step)
                 self._comet.log_image(temp_png)
 

@@ -2,8 +2,8 @@
 from os.path import join
 from os import makedirs
 from functools import wraps, partial
-import tensorflow as tf
 from pprint import pformat
+import tensorflow as tf
 from tensorflow.estimator import ModeKeys  # pylint: disable=E0401
 from tensorflow.saved_model.signature_constants import (  # pylint: disable=E0401
     DEFAULT_SERVING_SIGNATURE_DEF_KEY,
@@ -24,8 +24,6 @@ from tsaplay.hooks import (
     ConsoleLoggerHook,
 )
 from tsaplay.utils.tf import streaming_f1_scores, streaming_conf_matrix
-
-# from tsaplay.utils.data import stringify
 from tsaplay.utils.io import cprnt
 
 
@@ -125,6 +123,7 @@ def attn_heatmaps(model, features, labels, spec, params):
                 join(model.run_config.model_dir, "eval")
             ),
             comet=model.comet_experiment,
+            epoch_steps=params.get("epoch_steps"),
             n_picks=model.aux_config.get("n_attn_heatmaps", 2),
             n_hops=params.get("n_hops"),
         )
@@ -153,6 +152,7 @@ def conf_matrix(model, features, labels, spec, params):
                 join(model.run_config.model_dir, "eval")
             ),
             comet=model.comet_experiment,
+            epoch_steps=params.get("epoch_steps"),
         )
     ]
     return spec._replace(

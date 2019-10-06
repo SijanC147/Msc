@@ -8,7 +8,7 @@ from tsaplay.utils.tf import (
     attention_unit,
     generate_attn_heatmap_summary,
 )
-from tsaplay.utils.addons import addon, attn_heatmaps
+from tsaplay.utils.addons import addon, attn_heatmaps, early_stopping
 
 
 class Ian(TsaModel):
@@ -26,7 +26,12 @@ class Ian(TsaModel):
             # ? Suggestions from https://github.com/songyouwei/ABSA-PyTorch/blob/master/train.py
             "learning_rate": 1e-3,
             "batch-size": 64,
-            "epochs": 30,
+            # "epochs": 30,
+            "early_stopping_minimum_iter": 30,
+            # ? Following approach of Moore et al. 2018, using early stopping
+            "epochs": 300,
+            "early_stopping_patience": 10,
+            "early_stopping_metric": "macro-f1",
         }
 
     @classmethod
@@ -42,7 +47,7 @@ class Ian(TsaModel):
             "target_ids": features["target_ids"],
         }
 
-    @addon([attn_heatmaps])
+    @addon([attn_heatmaps, early_stopping])
     def model_fn(self, features, labels, mode, params):
         with tf.variable_scope("context_lstm"):
             context_hidden_states, _ = tf.nn.dynamic_rnn(

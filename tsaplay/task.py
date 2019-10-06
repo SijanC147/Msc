@@ -3,7 +3,7 @@ import traceback
 from inspect import isclass, isabstract, getmembers
 from importlib import import_module
 from sys import argv
-from os import environ, execvpe
+from os import environ, execvpe, sys
 from os.path import join
 import pkg_resources as pkg
 import comet_ml  # pylint: disable=W0611
@@ -222,6 +222,9 @@ def run_experiment(args, experiment_index=None):
         cprnt(y="Running experiment {}".format(experiment_index + 1))
         cprnt(y="Args: {}".format(args))
 
+    if args.comet_api and not args.contd_tag:
+        cprnt(warn="comet api provided without contd-tag.")
+        sys.exit(1)
     tf.logging.set_verbosity(args.verbosity)
 
     feature_provider = make_feature_provider(args)
@@ -272,16 +275,21 @@ def nvidia_cuda_prof_tools_path_fix():
 
 
 def parse_batch_file(batch_file_path, defaults=None):
+    jobs = []
+    defaults = defaults or []
     try:
         batch_file = open(batch_file_path, "r")
     except FileNotFoundError:
         batch_file = open(join(ASSETS_PATH, batch_file_path), "r")
     with batch_file:
-        return [
-            ["single"] + (defaults or []) + cmd.strip().split()
-            for cmd in batch_file
-            if cmd.strip() and cmd[0] not in ["#", ";"]
-        ]
+        for cmd in batch_file:
+            cmd = cmd.strip()
+            if cmd and cmd[0] not in ["#", ";"]:
+                if cmd.startswith("default"):
+                    defaults += cmd.split()[1:]
+                else:
+                    jobs.append(["single"] + defaults + cmd.split())
+    return jobs
 
 
 def run_next_experiment(batch_file_path, job_dir=None, defaults=None):
@@ -316,7 +324,7 @@ def main():
     args = argument_parser().parse_args()
     try:
         new_batch = args.new
-    except AttributeError: # ? Not running in batch mode.
+    except AttributeError:  # ? Not running in batch mode.
         new_batch = False
     if new_batch and environ.get("TSATASK") is not None:
         del environ["TSATASK"]
@@ -331,7 +339,7 @@ def main():
             run_next_experiment(args.batch_file, job_dir, defaults)
         else:
             run_next_experiment(args.batch_file, args.job_dir, args.defaults)
-    except AttributeError: # ? Not running in batch mode.
+    except AttributeError:  # ? Not running in batch mode.
         run_experiment(args)
     pkg.cleanup_resources()
 

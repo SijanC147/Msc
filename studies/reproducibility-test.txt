@@ -1,12 +1,10 @@
 ## RUN WITH DEFAULTS: 
-# -cmt T1NrVnn32dXWeOxeQWGArkHwc
-# -wrk msc-reproducibility 
-# -aux logging=true 
-# -mp oov_train=1 oov_fn=uniform[-0.1,0.1]
-###
+default: -cmt T1NrVnn32dXWeOxeQWGArkHwc
+default: -wrk msc-reproducibility 
+default: -aux logging=true 
+default: -mp oov_train=1 oov_fn=uniform[-0.1,0.1]
 
-# LSTM
-; No mention of any approach to OOV tokens 
-; batch-size(64) and hidden_units(200) taken from https://github.com/jimmyyfeng/TD-LSTM/blob/master/lstm.py
--em=twitter-100[corpus] -ds=dong -m=lstm -contd=lstm_100
--em=twitter-200[corpus] -ds=dong -m=lstm -contd=lstm_200
+-em=twitter-200[corpus] -ds=dong -m=ian -contd=t200-dong-evalnoshuff
+-em=twitter-200[corpus] -ds=restaurants -m=ian -contd=t200-restaurants-evalnoshuff
+-em=commoncrawl-840[corpus] -ds=dong -m=ian -contd=cc840-dong-evalnoshuff
+-em=commoncrawl-42[corpus] -ds=dong -m=ian -contd=cc42-dong-evalnoshuff

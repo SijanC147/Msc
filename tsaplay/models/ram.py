@@ -4,7 +4,7 @@ from tensorflow.contrib.rnn import (  # pylint: disable=E0611
     stack_bidirectional_dynamic_rnn,
 )
 from tsaplay.models.tsa_model import TsaModel
-from tsaplay.utils.addons import addon, attn_heatmaps
+from tsaplay.utils.addons import addon, attn_heatmaps, early_stopping
 from tsaplay.utils.tf import (
     masked_softmax,
     variable_len_batch_mean,
@@ -28,8 +28,8 @@ class Ram(TsaModel):
             "n_hops": 5,
             # * RAM-3AL-NT reports the best results across datasets
             "train_embeddings": False,
-            # * ... the maximum number of training iterations is 100 ...
-            "epochs": 100,
+            # # * ... the maximum number of training iterations is 100 ...
+            # "epochs": 100,
             # ? Suggestions from https://github.com/lpq29743/RAM/blob/master/main.py
             "lstm_hidden_units": 300,
             "gru_hidden_units": 300,
@@ -44,6 +44,11 @@ class Ram(TsaModel):
             # "attn_initializer": tf.contrib.layers.xavier_initializer(), # for attn
             # ? Suggestions from https://github.com/lpq29743/RAM/blob/master/main.py
             "batch-size": 32,
+            "early_stopping_minimum_iter": 50,
+            # ? Following approach of Moore et al. 2018, using early stopping
+            "epochs": 300,
+            "early_stopping_patience": 10,
+            "early_stopping_metric": "macro-f1",
         }
 
     @classmethod
@@ -70,7 +75,7 @@ class Ram(TsaModel):
             "target_offset": features["left"].dense_shape[1] + 1,
         }
 
-    @addon([attn_heatmaps])
+    @addon([attn_heatmaps, early_stopping])
     def model_fn(self, features, labels, mode, params):
         target_offset = tf.cast(features["target_offset"], tf.int32)
         batch_size = tf.shape(features["sentence_emb"])[0]
@@ -174,8 +179,6 @@ class Ram(TsaModel):
             cond=condition, body=attn_layer_run, loop_vars=initial_layer_inputs
         )
 
-        # // print(features["sentence"])
-        # // this is not a sparse tensor, it's an iterator, which might be breaking models with hops
         literals, attn_snapshots = zip_attn_snapshots_with_literals(
             literals=features["sentence"],
             snapshots=attn_snapshots,
@@ -190,6 +193,7 @@ class Ram(TsaModel):
             inputs=final_sentence_rep,
             units=params["_n_out_classes"],
             kernel_initializer=params["initializer"],
+            bias_initializer=params["initializer"],
         )
 
         loss = l2_regularized_loss(

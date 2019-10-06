@@ -11,7 +11,7 @@ from tsaplay.utils.tf import (
     l2_regularized_loss,
     generate_attn_heatmap_summary,
 )
-from tsaplay.utils.addons import addon, attn_heatmaps
+from tsaplay.utils.addons import addon, attn_heatmaps, early_stopping
 
 
 class LcrRot(TsaModel):
@@ -28,10 +28,15 @@ class LcrRot(TsaModel):
             "lstm_initial_bias": 0,
             # ? Suggestions from https://github.com/NUSTM/ABSC/tree/master/models/ABSC_Zozoz
             "batch-size": 25,
-            "epochs": 50,
+            # "epochs": 50,
+            "early_stopping_minimum_iter": 50,
+            # ? Following approach of Moore et al. 2018, using early stopping
+            "epochs": 300,
+            "early_stopping_patience": 10,
+            "early_stopping_metric": "macro-f1",
         }
 
-    @addon([attn_heatmaps])
+    @addon([attn_heatmaps, early_stopping])
     def model_fn(self, features, labels, mode, params):
         with tf.variable_scope("target_bi_lstm"):
             target_hidden_states, _, _ = stack_bidirectional_dynamic_rnn(

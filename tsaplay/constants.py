@@ -5,7 +5,7 @@ from pathlib import Path
 import pkg_resources as pkg
 import numpy as np
 
-TF_RANDOM_SEED = 5678
+TF_RANDOM_SEED = None
 NP_RANDOM_SEED = 1234
 SAVE_SUMMARY_STEPS = 100
 SAVE_CHECKPOINTS_STEPS = 1000
@@ -17,6 +17,7 @@ PAD_TOKEN = "<PAD>"
 BUCKET_TOKEN = "<BKT-{num}>"
 TF_RECORD_SHARDS = 10
 MAX_EMBEDDING_SHARDS = 1
+DEFAULT_COMET_WORKSPACE = "msc"
 DEFAULT_OOV_FN = partial(np.random.uniform, low=-0.1, high=0.1)
 MODELS_PATH = pkg.resource_filename(__name__, "models")
 ASSETS_PATH = pkg.resource_filename(__name__, "assets")

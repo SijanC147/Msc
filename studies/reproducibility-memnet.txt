@@ -11,9 +11,38 @@
 ; Using location model #2 since this reported best results
 ; implies that word embeddings are not trained
 ; batch-size(100) and epochs(50) taken from https://github.com/NUSTM/ABSC/blob/master/models/ABSC_Zozoz/model/dmn.py
--em=commoncrawl-42[corpus] -ds=restaurants -m=mem_net -contd=memnet_restaurants_9hops
--em=commoncrawl-42[corpus] -ds=laptops -m=mem_net -contd=memnet_laptops_9hops
--em=commoncrawl-42[corpus] -ds=restaurants -m=mem_net -mp n_hops=6 -contd=memnet_restaurants_6hops
--em=commoncrawl-42[corpus] -ds=laptops -m=mem_net -mp n_hops=6 -contd=memnet_laptops_6hops
--em=commoncrawl-42[corpus] -ds=restaurants -m=mem_net -mp n_hops=3 -contd=memnet_restaurants_3hops
--em=commoncrawl-42[corpus] -ds=laptops -m=mem_net -mp n_hops=3 -contd=memnet_laptops_3hops
+-em=commoncrawl-42[corpus] -ds=restaurants -m=mem_net -contd=memnet_restaurants_9hops_run_1
+-em=commoncrawl-42[corpus] -ds=restaurants -m=mem_net -contd=memnet_restaurants_9hops_run_2
+-em=commoncrawl-42[corpus] -ds=restaurants -m=mem_net -contd=memnet_restaurants_9hops_run_3
+-em=commoncrawl-42[corpus] -ds=restaurants -m=mem_net -contd=memnet_restaurants_9hops_run_4
+-em=commoncrawl-42[corpus] -ds=restaurants -m=mem_net -contd=memnet_restaurants_9hops_run_5
+
+-em=commoncrawl-42[corpus] -ds=laptops -m=mem_net -contd=memnet_laptops_9hops_run_1
+-em=commoncrawl-42[corpus] -ds=laptops -m=mem_net -contd=memnet_laptops_9hops_run_2
+-em=commoncrawl-42[corpus] -ds=laptops -m=mem_net -contd=memnet_laptops_9hops_run_3
+-em=commoncrawl-42[corpus] -ds=laptops -m=mem_net -contd=memnet_laptops_9hops_run_4
+-em=commoncrawl-42[corpus] -ds=laptops -m=mem_net -contd=memnet_laptops_9hops_run_5
+
+-em=commoncrawl-42[corpus] -ds=restaurants -m=mem_net -mp n_hops=6 -contd=memnet_restaurants_6hops_run_1
+-em=commoncrawl-42[corpus] -ds=restaurants -m=mem_net -mp n_hops=6 -contd=memnet_restaurants_6hops_run_2
+-em=commoncrawl-42[corpus] -ds=restaurants -m=mem_net -mp n_hops=6 -contd=memnet_restaurants_6hops_run_3
+-em=commoncrawl-42[corpus] -ds=restaurants -m=mem_net -mp n_hops=6 -contd=memnet_restaurants_6hops_run_4
+-em=commoncrawl-42[corpus] -ds=restaurants -m=mem_net -mp n_hops=6 -contd=memnet_restaurants_6hops_run_5
+
+-em=commoncrawl-42[corpus] -ds=laptops -m=mem_net -mp n_hops=6 -contd=memnet_laptops_6hops_run_1
+-em=commoncrawl-42[corpus] -ds=laptops -m=mem_net -mp n_hops=6 -contd=memnet_laptops_6hops_run_2
+-em=commoncrawl-42[corpus] -ds=laptops -m=mem_net -mp n_hops=6 -contd=memnet_laptops_6hops_run_3
+-em=commoncrawl-42[corpus] -ds=laptops -m=mem_net -mp n_hops=6 -contd=memnet_laptops_6hops_run_4
+-em=commoncrawl-42[corpus] -ds=laptops -m=mem_net -mp n_hops=6 -contd=memnet_laptops_6hops_run_5
+
+-em=commoncrawl-42[corpus] -ds=restaurants -m=mem_net -mp n_hops=3 -contd=memnet_restaurants_3hops_run_1
+-em=commoncrawl-42[corpus] -ds=restaurants -m=mem_net -mp n_hops=3 -contd=memnet_restaurants_3hops_run_2
+-em=commoncrawl-42[corpus] -ds=restaurants -m=mem_net -mp n_hops=3 -contd=memnet_restaurants_3hops_run_3
+-em=commoncrawl-42[corpus] -ds=restaurants -m=mem_net -mp n_hops=3 -contd=memnet_restaurants_3hops_run_4
+-em=commoncrawl-42[corpus] -ds=restaurants -m=mem_net -mp n_hops=3 -contd=memnet_restaurants_3hops_run_5
+
+-em=commoncrawl-42[corpus] -ds=laptops -m=mem_net -mp n_hops=3 -contd=memnet_laptops_3hops_run_1
+-em=commoncrawl-42[corpus] -ds=laptops -m=mem_net -mp n_hops=3 -contd=memnet_laptops_3hops_run_2
+-em=commoncrawl-42[corpus] -ds=laptops -m=mem_net -mp n_hops=3 -contd=memnet_laptops_3hops_run_3
+-em=commoncrawl-42[corpus] -ds=laptops -m=mem_net -mp n_hops=3 -contd=memnet_laptops_3hops_run_4
+-em=commoncrawl-42[corpus] -ds=laptops -m=mem_net -mp n_hops=3 -contd=memnet_laptops_3hops_run_5

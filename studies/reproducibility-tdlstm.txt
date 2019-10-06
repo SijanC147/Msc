@@ -9,5 +9,14 @@
 ; No mention of any approach to OOV tokens 
 ; hidden_units(200) taken from https://github.com/jimmyyfeng/TD-LSTM/blob/master/td_lstm.py
 ; batch-size(64) used for comparison with LSTM and TCLSTM 
--em=twitter-100[corpus] -ds=dong -m=td_lstm -contd=tdlstm_100
--em=twitter-200[corpus] -ds=dong -m=td_lstm -contd=tdlstm_200
+-em=twitter-100[corpus] -ds=dong -m=td_lstm -contd=tdlstm_100_run_1
+-em=twitter-100[corpus] -ds=dong -m=td_lstm -contd=tdlstm_100_run_2
+-em=twitter-100[corpus] -ds=dong -m=td_lstm -contd=tdlstm_100_run_3
+-em=twitter-100[corpus] -ds=dong -m=td_lstm -contd=tdlstm_100_run_4
+-em=twitter-100[corpus] -ds=dong -m=td_lstm -contd=tdlstm_100_run_5
+
+-em=twitter-200[corpus] -ds=dong -m=td_lstm -contd=tdlstm_200_run_1
+-em=twitter-200[corpus] -ds=dong -m=td_lstm -contd=tdlstm_200_run_2
+-em=twitter-200[corpus] -ds=dong -m=td_lstm -contd=tdlstm_200_run_3
+-em=twitter-200[corpus] -ds=dong -m=td_lstm -contd=tdlstm_200_run_4
+-em=twitter-200[corpus] -ds=dong -m=td_lstm -contd=tdlstm_200_run_5
