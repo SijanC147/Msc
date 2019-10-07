@@ -16,6 +16,7 @@ from tsaplay.utils.tf import (
     append_snapshot,
     zip_attn_snapshots_with_literals,
 )
+from tsaplay.utils.io import cprnt
 
 
 class Ram(TsaModel):
@@ -125,6 +126,32 @@ class Ram(TsaModel):
 
         attn_layer_num = tf.constant(1)
 
+        weight_dim = (
+            (params["lstm_hidden_units"] * 2)
+            + 1
+            + params["gru_hidden_units"]
+            + params["_embedding_dim"]
+        )
+
+        attn_weights = tf.TensorArray(dtype=tf.float32, size=params["n_hops"])
+        attn_biases = tf.TensorArray(dtype=tf.float32, size=params["n_hops"])
+        attn_weights = attn_weights.unstack(
+            tf.get_variable(
+                name="weights",
+                shape=[params["n_hops"], 1, weight_dim],
+                dtype=tf.float32,
+                initializer=params["initializer"],
+            )
+        )
+        attn_biases = attn_biases.unstack(
+            tf.get_variable(
+                name="bias",
+                shape=[params["n_hops"], 1],
+                dtype=tf.float32,
+                initializer=params["initializer"],
+            )
+        )
+
         initial_layer_inputs = (attn_layer_num, episode_0, attn_snapshots)
 
         def condition(attn_layer_num, episode, attn_snapshots):
@@ -138,24 +165,15 @@ class Ram(TsaModel):
                 prev_episode=episode,
             )
 
-            # mem_prev_ep_v_target = tf.Print(
-            #     input_=mem_prev_ep_v_target, data=[mem_prev_ep_v_target]
-            # )
 
-            weight_dim = (
-                (params["lstm_hidden_units"] * 2)
-                + 1
-                + params["gru_hidden_units"]
-                + params["_embedding_dim"]
+            # with tf.variable_scope("attention_layer", reuse=tf.AUTO_REUSE):
+            attn_scores = ram_attn_unit(
+                seq_lens=features["sentence_len"],
+                attn_focus=mem_prev_ep_v_target,
+                weight_dim=weight_dim,
+                w_att=attn_weights.read(attn_layer_num - 1),
+                b_att=attn_biases.read(attn_layer_num - 1),
             )
-
-            with tf.variable_scope("attention_layer", reuse=tf.AUTO_REUSE):
-                attn_scores = ram_attn_unit(
-                    seq_lens=features["sentence_len"],
-                    attn_focus=mem_prev_ep_v_target,
-                    weight_dim=weight_dim,
-                    init=params["initializer"],
-                )
 
             content_i_al = tf.reduce_sum(
                 memory * attn_scores, axis=1, keepdims=True
@@ -286,22 +304,11 @@ def var_len_concatenate(seq_lens, memory, v_target, prev_episode):
     return mem_prev_e_v_t
 
 
-def ram_attn_unit(seq_lens, attn_focus, weight_dim, init, bias_init=None):
+def ram_attn_unit(seq_lens, attn_focus, weight_dim, w_att, b_att):
     batch_size = tf.shape(attn_focus)[0]
     max_seq_len = tf.shape(attn_focus)[1]
-    w_att = tf.get_variable(
-        name="weights",
-        shape=[1, weight_dim],
-        dtype=tf.float32,
-        initializer=init,
-    )
-    b_att = tf.get_variable(
-        name="bias",
-        shape=[1],
-        dtype=tf.float32,
-        initializer=(bias_init or init),
-    )
 
+    # cprnt(w_att)
     # w_att = tf.Print(input_=w_att, data=[w_att])
 
     w_att_batch_dim = tf.expand_dims(w_att, axis=0)
