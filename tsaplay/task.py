@@ -165,6 +165,14 @@ def argument_parser():
     )
 
     single_task_parser.add_argument(
+        "--tensorboard-port",
+        "-tb",
+        dest="tb_port",
+        help="Port on which to launch tensorboard after experiment finishes.",
+        default=False,
+    )
+
+    single_task_parser.add_argument(
         "--verbosity",
         "-v",
         choices=["DEBUG", "INFO", "WARN", "ERROR"],
@@ -265,6 +273,13 @@ def run_experiment(args, experiment_index=None):
 
     experiment.run(job="train+eval", steps=args.steps, epochs=args.epochs)
 
+    if args.tb_port:
+        try:
+            tb_port = int(args.tb_port)
+        except ValueError:
+            cprnt(warn="Invalid tensorboard port {}".format(args.tb_port))
+        experiment.launch_tensorboard(tb_port=tb_port)
+
 
 def nvidia_cuda_prof_tools_path_fix():
     ld_lib_path = environ.get("LD_LIBRARY_PATH")
@@ -321,7 +336,8 @@ def run_next_experiment(batch_file_path, job_dir=None, defaults=None):
 
 def main():
     nvidia_cuda_prof_tools_path_fix()
-    args = argument_parser().parse_args()
+    parser = argument_parser()
+    args = parser.parse_args()
     try:
         new_batch = args.new
     except AttributeError:  # ? Not running in batch mode.

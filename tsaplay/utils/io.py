@@ -141,7 +141,8 @@ def unpickle_file(path):
 
 
 def pickle_file(path, data):
-    makedirs(dirname(path), exist_ok=True)
+    if dirname(path) != "":
+        makedirs(dirname(path), exist_ok=True)
     with open(path, "wb") as pkl_file:
         return pickle.dump(data, pkl_file, pickle.HIGHEST_PROTOCOL)
 

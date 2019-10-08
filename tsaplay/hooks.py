@@ -17,10 +17,16 @@ from tsaplay.utils.draw import (
     tabulate_attention_value,
 )
 from tsaplay.utils.tf import image_to_summary
-from tsaplay.utils.io import temp_pngs, get_image_from_plt, pickle_file, cprnt
+from tsaplay.utils.io import (
+    temp_pngs,
+    get_image_from_plt,
+    pickle_file,
+    cprnt,
+    platform,
+)
 
-
-# matplotlib.use("TkAgg")
+if platform() == "MacOS":
+    matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt  # noqa pylint: disable=C0411,C0412,C0413
 
 
@@ -168,6 +174,7 @@ class SaveAttentionWeightVector(SessionRunHook):
         self.epoch_steps = epoch_steps
         self._summary_writer = summary_writer
         self._comet = comet
+        self._counter = 0
         self.freq = freq
 
     def before_run(self, run_context):
@@ -193,6 +200,7 @@ class SaveAttentionWeightVector(SessionRunHook):
             return
         if isinstance(self.freq, int):
             self.freq = self.freq - 1
+        self._counter += 1
         results = run_values.results
         global_step = results["global_step"][0]
         attn_mechs = results["attention"]
@@ -267,8 +275,9 @@ class SaveAttentionWeightVector(SessionRunHook):
                 (global_step / self.epoch_steps) if self.epoch_steps else None
             )
             image_names = [
-                ("{:.0f}. ".format(epoch) if epoch else "") + n
-                for n in image_names
+                ("E{0:02.0f}#{1} ".format(epoch, self._counter) if epoch else "")
+                + name
+                for name in image_names
             ]
             images = [final_heatmaps, final_tables]
             for temp_png in temp_pngs(images, image_names):

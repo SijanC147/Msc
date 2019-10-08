@@ -398,4 +398,3 @@ def tokens_by_assigned_id(words, ids, start=None, stop=None, keys=None):
                 else set([word])
             )
     return {key: list(value) for key, value in ids_dict.items()}
-

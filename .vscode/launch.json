@@ -64,12 +64,12 @@
             "module": "tsaplay.task",
             "args": [
                 "batch",
-                "studies/reproducibility-test.txt",
-                "--defaults",
-                "-b",
-                "5",
-                "--job-dir",
-                "ajobdir"
+                "studies/reproducibility-debug.txt",
+                // "--defaults",
+                // "-b",
+                // "5",
+                // "--job-dir",
+                // "ajobdir"
             ],
             "console": "integratedTerminal"
         },

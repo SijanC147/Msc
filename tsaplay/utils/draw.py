@@ -2,11 +2,13 @@ from decimal import Decimal
 import six
 import pandas as pd
 import numpy as np
+from sklearn.preprocessing import normalize
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 import matplotlib as mpl
 from matplotlib.font_manager import FontProperties
+from scipy.special import softmax
 from tsaplay.constants import DEFAULT_FONT
-from tsaplay.utils.io import get_image_from_plt
+from tsaplay.utils.io import get_image_from_plt, pickle_file
 
 
 mpl.use("TkAgg")
@@ -65,10 +67,14 @@ def join_images(images, v_space=5, border=None, padding=2):
         return joined_image_with_border
 
 
-def draw_attention_heatmap(phrases, attn_vecs):
+def draw_attention_heatmap(phrases, attn_vecs, **kwargs):
     font = ImageFont.truetype(font=DEFAULT_FONT, size=16)
 
     phrases = [[str(t, "utf-8") for t in p if t != b""] for p in phrases]
+    attn_vecs = [
+        np.transpose(normalize(np.transpose(attn_vec), norm="l2"))
+        for attn_vec in attn_vecs
+    ]
     attn_vecs = [a[: len(p)] for a, p in zip(attn_vecs, phrases)]
 
     v_space = 5
@@ -79,7 +85,7 @@ def draw_attention_heatmap(phrases, attn_vecs):
     max_height = font.getsize(text=full_phrase)[1] + h_space
     for phrase, attn_vec in zip(phrases, attn_vecs):
         for token, attn_val in zip(phrase, attn_vec):
-            color = cmap_int(attn_val[0])
+            color = cmap_int(attn_val[0], **kwargs)
             size = font.getsize(text=token)
             img = Image.new(
                 mode="RGBA", size=(size[0] + v_space, max_height), color=color
@@ -103,20 +109,65 @@ def draw_attention_heatmap(phrases, attn_vecs):
 
 
 def tabulate_attention_value(phrases, attn_vecs):
+    """
+    attn_vecs: can have 2 different shape types
+        with hops: (numpy ndarray) [HOP][PHRASE][WORD][VAL]
+        without: 2d numpy array of list [0][PHRASE][list][list] 
+    """
     images = []
     phrases = [[str(t, "utf-8") for t in p if t != b""] for p in phrases]
+    has_hops = len(np.shape(attn_vecs)) == 4
     n_hops = len(attn_vecs)
+    p_ordered_attn_vecs = (
+        attn_vecs[0]
+        if not has_hops
+        else np.transpose(attn_vecs, axes=(1, 0, 2, 3))
+    )
     for index, phrase in enumerate(phrases):
         if not phrase:
             continue
-        df = pd.DataFrame()
-        if n_hops > 1:
-            df["Hop"] = [h + 1 for h in range(n_hops)]
-        for w_index, word in enumerate(phrase):
-            df[word] = np.concatenate(
-                [attn_vecs[h][index][w_index] for h in range(len(attn_vecs))]
+        cols = phrase
+        if has_hops:
+            cols = ["Hop"] + cols
+            shading_data = np.squeeze(
+                [
+                    normalize(np.transpose(hop[: len(phrase)]))
+                    for hop in p_ordered_attn_vecs[index]
+                ]
             )
-        images.append(render_mpl_table(df))
+            shading_data = np.concatenate(
+                (
+                    np.expand_dims(np.array(range(1, n_hops + 1)), axis=1),
+                    shading_data,
+                ),
+                axis=1,
+            )
+            data = np.squeeze(
+                [
+                    softmax(np.transpose(hop[: len(phrase)]))
+                    if np.sum(hop) != 1
+                    else np.transpose(hop[: len(phrase)])
+                    for hop in p_ordered_attn_vecs[index]
+                ]
+            )
+            data = np.concatenate(
+                (np.expand_dims(np.array(range(1, n_hops + 1)), axis=1), data),
+                axis=1,
+            )
+        else:
+            shading_data = normalize(
+                [[el[0] for el in p_ordered_attn_vecs[index][: len(phrase)]]]
+            )
+            data = [
+                softmax(
+                    [el[0] for el in p_ordered_attn_vecs[index][: len(phrase)]]
+                )
+            ]
+        image = render_mpl_table(
+            data=pd.DataFrame(data=data, columns=cols),
+            shade_data=pd.DataFrame(data=shading_data, columns=cols),
+        )
+        images.append(image)
     return join_images(images, v_space=0, padding=0)
 
 
@@ -132,7 +183,7 @@ def draw_prediction_label(target, label, prediction, classes):
 
     images = []
     words = text.split()
-    for i in range(len(words)):
+    for i, word in enumerate(words):
         width, _ = font.getsize(words[i])
         img = Image.new(
             mode="RGBA", size=(width + v_space, max_height + h_space)
@@ -148,7 +199,7 @@ def draw_prediction_label(target, label, prediction, classes):
 
         draw.text(
             xy=(int(v_space / 2), int(h_space / 2)),
-            text=words[i],
+            text=word,
             fill=fill,
             font=font,
         )
@@ -161,6 +212,7 @@ def draw_prediction_label(target, label, prediction, classes):
 
 def render_mpl_table(
     data,
+    shade_data=None,
     col_width=1,
     row_height=0.3,
     header_color="#40466e",
@@ -182,6 +234,7 @@ def render_mpl_table(
         return str(decimal)
 
     data_arr = np.asarray(data)
+    shade_arr = np.asarray(shade_data) if shade_data is not None else data_arr
     n_hops = len(data_arr)
     alpha_inc = 1 / n_hops
     cell_text = [[pretty_print_decimal(i) for i in j] for j in data.values]
@@ -219,7 +272,8 @@ def render_mpl_table(
                 )
                 cell.set_facecolor(col)
         else:
-            cell.set_facecolor(cmap(data_arr[k[0] - 1, k[1]], alpha=0.8))
+            shade_val = shade_arr[k[0] - 1, k[1]]
+            cell.set_facecolor(cmap(shade_val, alpha=0.8))
 
     image = get_image_from_plt(plt)
 
@@ -253,7 +307,7 @@ def plot_distributions(stats, mode):
     def func(pct, allvals):
         if np.ndim(allvals) > 1:
             return "{:.1f}%".format(pct)
-        absolute = int(pct / 100. * np.sum(allvals))
+        absolute = int(pct / 100.0 * np.sum(allvals))
         return "{:.1f}%\n({:d})".format(pct, absolute)
 
     wedges, _, autotexts = ax.pie(

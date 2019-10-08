@@ -165,9 +165,7 @@ class Ram(TsaModel):
                 prev_episode=episode,
             )
 
-
-            # with tf.variable_scope("attention_layer", reuse=tf.AUTO_REUSE):
-            attn_scores = ram_attn_unit(
+            attn_scores, g_scores = ram_attn_unit(
                 seq_lens=features["sentence_len"],
                 attn_focus=mem_prev_ep_v_target,
                 weight_dim=weight_dim,
@@ -191,7 +189,7 @@ class Ram(TsaModel):
 
             attn_snapshots = append_snapshot(
                 container=attn_snapshots,
-                new_snap=attn_scores,
+                new_snap=g_scores,
                 index=attn_layer_num,
             )
 
@@ -308,9 +306,6 @@ def ram_attn_unit(seq_lens, attn_focus, weight_dim, w_att, b_att):
     batch_size = tf.shape(attn_focus)[0]
     max_seq_len = tf.shape(attn_focus)[1]
 
-    # cprnt(w_att)
-    # w_att = tf.Print(input_=w_att, data=[w_att])
-
     w_att_batch_dim = tf.expand_dims(w_att, axis=0)
     w_att_tiled = tf.tile(
         w_att_batch_dim, multiples=[batch_size * max_seq_len, 1, 1]
@@ -335,4 +330,8 @@ def ram_attn_unit(seq_lens, attn_focus, weight_dim, w_att, b_att):
 
     attn_weights = masked_softmax(logits=g_score, mask=softmax_mask)
 
-    return attn_weights
+    return (
+        attn_weights,  # softmaxed attention vector
+        g_score,  # to optionally use for summary heatmaps
+    )
+

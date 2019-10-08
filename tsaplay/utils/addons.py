@@ -124,9 +124,9 @@ def attn_heatmaps(model, features, labels, spec, params):
             ),
             comet=model.comet_experiment,
             epoch_steps=params.get("epoch_steps"),
-            n_picks=model.aux_config.get("n_attn_heatmaps", 2),
             n_hops=params.get("n_hops"),
-            freq=5,
+            n_picks=model.aux_config.get("attn_heatmaps_n", 3),
+            freq=model.aux_config.get("attn_heatmaps_freq", 5),
         )
     ]
     return spec._replace(evaluation_hooks=eval_hooks)

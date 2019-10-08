@@ -18,7 +18,7 @@ class MemNet(TsaModel):
             # * From original paper
             "learning_rate": 0.01,
             "location_model": 2,
-            "n_hops": 9,
+            "n_hops": 6,
             "initializer": tf.initializers.random_uniform(-0.01, 0.01),
             # * "... we clamp the word embeddings ..."
             "train_embeddings": False,
@@ -336,5 +336,6 @@ def memnet_content_attn_unit(
 
     return (
         output_vec,  # dim: [batch_size, embedding_dim]
-        attn_vec,  # to optionally use for summary heatmaps
+        g_score,  # to optionally use for summary heatmaps
+        # attn_vec,  # to optionally use for summary heatmaps
     )
