@@ -1,28 +1,27 @@
 ## RUN WITH DEFAULTS: 
-# -cmt T1NrVnn32dXWeOxeQWGArkHwc
-# -wrk MSc-Reproducibility 
-# -aux logging=true 
-# -mp oov_train=1 oov_fn=uniform[-0.1,0.1]
+default: -cmt T1NrVnn32dXWeOxeQWGArkHwc -wrk reproduction-studies
+default: -aux logging=true 
+default: -mp oov_train=1 oov_fn=uniform[-0.1,0.1]
 ###
 
 # LSTM
 ; No mention of any approach to OOV tokens 
 ; batch-size(64) and hidden_units(200) taken from https://github.com/jimmyyfeng/TD-LSTM/blob/master/lstm.py
--em=twitter-100[corpus] -ds=dong -m=lstm -contd=lstm_100
--em=twitter-200[corpus] -ds=dong -m=lstm -contd=lstm_200
+-em=twitter-100[corpus] -ds=dong -m=lstm -contd=t100-dong-lstm
+-em=twitter-200[corpus] -ds=dong -m=lstm -contd=t200-dong-lstm
 
 # TDLSTM
 ; No mention of any approach to OOV tokens 
 ; hidden_units(200) taken from https://github.com/jimmyyfeng/TD-LSTM/blob/master/td_lstm.py
 ; batch-size(64) used for comparison with LSTM and TCLSTM 
--em=twitter-100[corpus] -ds=dong -m=td_lstm -contd=tdlstm_100
--em=twitter-200[corpus] -ds=dong -m=td_lstm -contd=tdlstm_200
+-em=twitter-100[corpus] -ds=dong -m=td_lstm -contd=t100-dong-tdlstm
+-em=twitter-200[corpus] -ds=dong -m=td_lstm -contd=t200-dong-tdlstm
 
 # TCLSTM
 ; No mention of any approach to OOV tokens 
 ; batch-size(64) and hidden_units(200) taken from https://github.com/jimmyyfeng/TD-LSTM/blob/master/tc_lstm.py
--em=twitter-100[corpus] -ds=dong -m=tc_lstm -contd=tclstm_100
--em=twitter-200[corpus] -ds=dong -m=tc_lstm -contd=tclstm_200
+-em=twitter-100[corpus] -ds=dong -m=tc_lstm -contd=t100-dong-tclstm
+-em=twitter-200[corpus] -ds=dong -m=tc_lstm -contd=t200-dong-tclstm
 
 # MemNet
 ; No mention of any approach to OOV tokens 
@@ -30,19 +29,15 @@
 ; Using location model #2 since this reported best results
 ; implies that word embeddings are not trained
 ; batch-size(100) and epochs(50) taken from https://github.com/NUSTM/ABSC/blob/master/models/ABSC_Zozoz/model/dmn.py
--em=commoncrawl-42[corpus] -ds=restaurants -m=mem_net -contd=memnet_restaurants_9hops
--em=commoncrawl-42[corpus] -ds=laptops -m=mem_net -contd=memnet_laptops_9hops
--em=commoncrawl-42[corpus] -ds=restaurants -m=mem_net -mp n_hops=6 -contd=memnet_restaurants_6hops
--em=commoncrawl-42[corpus] -ds=laptops -m=mem_net -mp n_hops=6 -contd=memnet_laptops_6hops
--em=commoncrawl-42[corpus] -ds=restaurants -m=mem_net -mp n_hops=3 -contd=memnet_restaurants_3hops
--em=commoncrawl-42[corpus] -ds=laptops -m=mem_net -mp n_hops=3 -contd=memnet_laptops_3hops
+-em=commoncrawl-42[corpus] -ds=restaurants -m=mem_net -mp n_hops=9 -contd=cc42-restaurants-9hops-memnet
+-em=commoncrawl-42[corpus] -ds=laptops -m=mem_net -mp n_hops=7 -contd=cc42-laptops-7hops-memnet
 
 # IAN
 ; OOV words initialized to using U(-0.1,0.1) 
 ; batch-size(64) taken from default at https://github.com/songyouwei/ABSA-PyTorch/blob/master/train.py
 ; No mention which version of glove-300d is used, authors cite Wang-ATAE when quoting LSTM hidden units, assuming same GloVe version used. 
--em=commoncrawl-840[corpus] -ds=restaurants -m=ian -contd=ian_restaurants
--em=commoncrawl-840[corpus] -ds=laptops -m=ian -contd=ian_laptops
+-em=commoncrawl-840[corpus] -ds=restaurants -m=ian -contd=cc840-restaurants-ian
+-em=commoncrawl-840[corpus] -ds=laptops -m=ian -contd=cc840-laptops-ian
 
 # RAM
 ; OOV words just mentioned in the end re: experimenting with training embeddings or not, implies oov words are initialized with random vectors
@@ -50,17 +45,14 @@
 ; batch-size, lstm_hidden_units and gru_hidden_units taken from https://github.com/lpq29743/RAM/blob/master/main.py
 ; glove-300d-commoncrawl-42 version is identified by quoting vocab size of 1.9M
 ; trained for maximum 100 iterations
--em=commoncrawl-42[corpus] -ds=dong -m=ram -contd=ram_tweets_5hops
--em=commoncrawl-42[corpus] -ds=restaurants -m=ram -contd=ram_restaurants_5hops
--em=commoncrawl-42[corpus] -ds=laptops -m=ram -contd=ram_laptops_5hops
--em=commoncrawl-42[corpus] -ds=dong -m=ram -mp n_hops=3 -contd=ram_tweets_3hops
--em=commoncrawl-42[corpus] -ds=restaurants -m=ram -mp n_hops=3 -contd=ram_restaurants_3hops
--em=commoncrawl-42[corpus] -ds=laptops -m=ram -mp n_hops=3 -contd=ram_laptops_3hops
+-em=commoncrawl-42[corpus] -ds=dong -m=ram -mp n_hops=3 -contd=cc42-dong-3hops-ram
+-em=commoncrawl-42[corpus] -ds=restaurants -m=ram -mp n_hops=4 -contd=cc42-restaurants-4hops-ram
+-em=commoncrawl-42[corpus] -ds=laptops -m=ram -mp n_hops=2 -contd=cc42-laptops-2hops-ram
 
 # LCR-ROT
 ; OOV words initialized to using U(-0.1,0.1) 
 ; batch-size(25) is taken from example posted on https://github.com/NUSTM/ABSC/tree/master/models/ABSC_Zozoz
 ; Conflicting report says they used same glove-300d as Tang-MemNet(who uses commoncrawl-42) and Wang-ATAE(who uses commoncrawl-840), assuming latter since larger
--em=commoncrawl-840[corpus] -ds=dong -m=lcr_rot -contd=lcrrot_tweets
--em=commoncrawl-840[corpus] -ds=restaurants -m=lcr_rot -contd=lcrrot_restaurants
--em=commoncrawl-840[corpus] -ds=laptops -m=lcr_rot -contd=lcrrot_laptops
+-em=commoncrawl-840[corpus] -ds=dong -m=lcr_rot -contd=cc840-dong-lcrrot
+-em=commoncrawl-840[corpus] -ds=restaurants -m=lcr_rot -contd=cc840-restaurants-lcrrot
+-em=commoncrawl-840[corpus] -ds=laptops -m=lcr_rot -contd=cc840-laptops-lcrrot

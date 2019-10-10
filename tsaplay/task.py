@@ -5,9 +5,14 @@ from importlib import import_module
 from sys import argv
 from os import environ, execvpe, sys
 from os.path import join
+import warnings
 import pkg_resources as pkg
 import comet_ml  # pylint: disable=W0611
-import tensorflow as tf
+
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=FutureWarning)
+    import tensorflow as tf
+
 from tsaplay.utils.debug import timeit
 from tsaplay.utils.io import (
     args_to_dict,

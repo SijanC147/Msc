@@ -64,14 +64,15 @@
             "module": "tsaplay.task",
             "args": [
                 "batch",
-                "studies/reproducibility-debug.txt",
+                "studies/debug.txt",
                 // "--defaults",
                 // "-b",
                 // "5",
                 // "--job-dir",
                 // "ajobdir"
             ],
-            "console": "integratedTerminal"
+            "console": "integratedTerminal",
+            "redirectOutput": false
         },
         {
             "name": "Restaurants offset Exception",

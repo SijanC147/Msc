@@ -11,7 +11,7 @@ from tsaplay.constants import (
     FEATURES_DATA_PATH,
     DEFAULT_OOV_FN,
     BUCKET_TOKEN,
-    NP_RANDOM_SEED,
+    TF_RANDOM_SEED,
     ASSETS_PATH,
 )
 from tsaplay.utils.tf import (
@@ -63,10 +63,12 @@ class FeatureProvider:
         self._test_dict = None
         self._train_corpus = None
         self._test_corpus = None
+        self._train_oov_vocab = None
+        self._test_oov_vocab = None
         self._train_tokens = None
         self._test_tokens = None
-        self._train_tfrecords = None
-        self._test_tfrecords = None
+        # self._train_tfrecords = None
+        # self._test_tfrecords = None
         self._oov_buckets = None
 
         self._init_uid()
@@ -195,10 +197,9 @@ OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
         vocab_file_templ = "_vocab{ext}"
         vocab_file = vocab_file_templ.format(ext=".txt")
         vocab_file_path = join(self._gen_dir, vocab_file)
+        train_oov_file_path = join(self._gen_dir, "_train_oov.txt")
         self._vocab_file = vocab_file_path
-        if exists(self._vocab_file):
-            self._vocab = read_vocab_file(vocab_file_path)
-        else:
+        if not exists(self._vocab_file) or not exists(train_oov_file_path):
             self._vocab = self._embedding.vocab
             #! include training vocabulary terms above the specified
             #! occurrance count if 0, all training vocab will be assigned
@@ -214,10 +215,14 @@ OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
                         case_insensitive=self._embedding.case_insensitive,
                     )
                 )
-                train_oov_vocab = list(train_vocab - set(self._vocab))
-                train_oov_vocab.sort()
-                self._vocab += train_oov_vocab
+                self._train_oov_vocab = list(train_vocab - set(self._vocab))
+                self._train_oov_vocab.sort()
+                self._vocab += self._train_oov_vocab
             write_vocab_file(vocab_file_path, self._vocab)
+            write_vocab_file(train_oov_file_path, self._train_oov_vocab)
+        else:
+            self._vocab = read_vocab_file(vocab_file_path)
+            self._train_oov_vocab = read_vocab_file(train_oov_file_path)
         vocab_tsv_file = vocab_file_templ.format(ext=".tsv")
         vocab_tsv_path = join(self._gen_dir, vocab_tsv_file)
         if not exists(vocab_tsv_path):
@@ -273,73 +278,88 @@ OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
             if not exists(tfrecord_path):
                 tokens_attr = "_{mode}_tokens".format(mode=mode)
                 tokens_dict = getattr(self, tokens_attr)
-                tokens_list = [value for value in tokens_dict.values()]
+                tokens_list = tokens_dict.values()
                 tokens_lists[mode] = sum(tokens_list, [])
-        if tokens_lists:
-            fetch_results_path = join(self._gen_dir, "_fetch_results.pkl")
-            if not exists(fetch_results_path):
-                vocab_file_templ = "_vocab{ext}"
-                filtered_vocab_file = vocab_file_templ.format(ext=".filt.txt")
-                filtered_vocab_path = join(self._gen_dir, filtered_vocab_file)
-                if not exists(filtered_vocab_path):
-                    filtered_vocab = set(self._vocab) & set(
+        fetch_results_path = join(self._gen_dir, "_fetch_results.pkl")
+        if tokens_lists and not exists(fetch_results_path):
+            vocab_file_templ = "_vocab{ext}"
+            filtered_vocab_file = vocab_file_templ.format(ext=".filt.txt")
+            filtered_vocab_path = join(self._gen_dir, filtered_vocab_file)
+            if not exists(filtered_vocab_path):
+                filtered_vocab = list(
+                    set(self._vocab)
+                    & set(
                         corpora_vocab(
                             self._train_corpus,
                             self._test_corpus,
                             case_insensitive=self._embedding.case_insensitive,
                         )
                     )
-                    indices = [
-                        self._vocab.index(word) for word in filtered_vocab
-                    ]
-                    write_vocab_file(
-                        filtered_vocab_path, filtered_vocab, indices
-                    )
-                #! There has to be at least 1 bucket for any
-                #! test-time oov tokens (possibly targets)
-                lookup_table = ids_lookup_table(
-                    filtered_vocab_path, self._num_oov_buckets
                 )
-                fetch_dict = fetch_lookup_ops(lookup_table, **tokens_lists)
-                fetch_results = run_lookups(
-                    fetch_dict, metadata_path=self.gen_dir
-                )
-                pickle_file(path=fetch_results_path, data=fetch_results)
-            else:
-                fetch_results = unpickle_file(fetch_results_path)
-            oov_buckets = {}
-            for mode, values in fetch_results.items():
-                data_dict_attr = "_{mode}_dict".format(mode=mode)
-                data_dict = getattr(self, data_dict_attr)
-                string_features, int_features = split_list(values, parts=2)
-                tfexamples = make_tf_examples(
-                    string_features, int_features, data_dict["labels"]
-                )
-                tfrecord_folder = "_{mode}".format(mode=mode)
-                tfrecord_path = join(self._gen_dir, tfrecord_folder)
+                indices = [self._vocab.index(word) for word in filtered_vocab]
+                write_vocab_file(filtered_vocab_path, filtered_vocab, indices)
+            #! There has to be at least 1 bucket for any
+            #! test-time oov tokens (possibly targets)
+            lookup_table = ids_lookup_table(
+                filtered_vocab_path,
+                self._num_oov_buckets,
+                vocab_size=len(self._vocab),
+            )
+            fetch_dict = fetch_lookup_ops(lookup_table, **tokens_lists)
+            fetch_results = run_lookups(fetch_dict, metadata_path=self.gen_dir)
+            pickle_file(path=fetch_results_path, data=fetch_results)
+        else:
+            fetch_results = unpickle_file(fetch_results_path)
+        oov_buckets = {}
+        for mode, values in fetch_results.items():
+            data_dict_attr = "_{mode}_dict".format(mode=mode)
+            data_dict = getattr(self, data_dict_attr)
+            string_features, int_features = split_list(values, parts=2)
+            tfexamples = make_tf_examples(
+                string_features, int_features, data_dict["labels"]
+            )
+            tfrecord_folder = "_{mode}".format(mode=mode)
+            tfrecord_path = join(self._gen_dir, tfrecord_folder)
+            if not exists(tfrecord_path):
                 write_tfrecords(tfrecord_path, tfexamples)
-                #! There has to be at least 1 bucket for any
-                #! test-time oov tokens (possibly targets)
-                buckets = [
-                    BUCKET_TOKEN.format(num=n + 1)
-                    for n in range(self._num_oov_buckets)
-                ]
-                oov_buckets[mode] = tokens_by_assigned_id(
-                    string_features,
-                    int_features,
-                    start=len(self._vocab),
-                    keys=buckets,
-                )
-                accum_oov_buckets = accumulate_dicts(
-                    **oov_buckets,
-                    accum_fn=lambda prev, curr: list(set(prev) | set(curr)),
-                )
-                self._oov_buckets = {
-                    buckets[i]: accum_oov_buckets[buckets[i]]
-                    for i in sorted(
-                        [buckets.index(key) for key in [*accum_oov_buckets]]
-                    )
-                }
+            #! There has to be at least 1 bucket for any
+            #! test-time oov tokens (possibly targets)
+            buckets = [
+                BUCKET_TOKEN.format(num=n + 1)
+                for n in range(self._num_oov_buckets)
+            ]
+            oov_buckets[mode] = tokens_by_assigned_id(
+                string_features,
+                int_features,
+                start=len(self._vocab),
+                keys=buckets,
+            )
+        accum_oov_buckets = accumulate_dicts(
+            **oov_buckets,
+            accum_fn=lambda prev, curr: list(set(prev) | set(curr)),
+        )
+        self._oov_buckets = {
+            buckets[i]: accum_oov_buckets[buckets[i]]
+            for i in sorted(
+                [buckets.index(key) for key in [*accum_oov_buckets]]
+            )
+        }
+        test_oov_file_path = join(self._gen_dir, "_test_oov.txt")
+        if not exists(test_oov_file_path):
+            self._test_oov_vocab = sum(
+                [
+                    [
+                        word
+                        for word in bucket
+                        if word not in self._train_oov_vocab
+                    ]
+                    for bucket in self._oov_buckets.values()
+                ],
+                [],
+            )
+            write_vocab_file(test_oov_file_path, self._test_oov_vocab)
+        else:
+            self._test_oov_vocab = read_vocab_file(test_oov_file_path)
 
     def _init_embedding_params(self):
         dim_size = self._embedding.dim_size
@@ -347,8 +367,8 @@ OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
         num_oov_vectors = len(self._vocab) - self._embedding.vocab_size
         num_oov_vectors += self._num_oov_buckets
         oov_fn = self._oov_fn or DEFAULT_OOV_FN
-        if NP_RANDOM_SEED is not None:
-            np.random.seed(NP_RANDOM_SEED)
+        if TF_RANDOM_SEED is not None:
+            np.random.seed(TF_RANDOM_SEED)
         oov_vectors = oov_fn(size=(num_oov_vectors, dim_size))
         vectors = np.concatenate([vectors, oov_vectors], axis=0)
         vocab_size = len(vectors)
@@ -364,6 +384,7 @@ OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
         }
 
     def _write_info_file(self):
+        # TODO: check for existence and include a timestamp of last updated
         info_path = join(self.gen_dir, "info.json")
         info = {
             "uid": self.uid,
@@ -381,6 +402,7 @@ OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
                 "oov_train_threshold": self._oov_train_threshold,
                 "oov_buckets": self._oov_buckets,
             },
+            "vocab_coverage": {**self._vocab_coverage()},
             "embedding": {
                 "uid": self.embedding.uid,
                 "name": self.embedding.name,
@@ -392,6 +414,77 @@ OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
             },
         }
         dump_json(path=info_path, data=info)
+
+    def _vocab_coverage(self):
+        orig_vocab = set(self._embedding.vocab)
+        extd_vocab = set(self._vocab)
+        _ci = self._embedding.case_insensitive
+        train_vocab = set(
+            sum(
+                accumulate_dicts(
+                    self._train_tokens,
+                    accum_fn=(lambda prev, curr: list(set(prev) | set(curr))),
+                    default=lambda v=None: set(sum(v, [])) if v else set(),
+                ).values(),
+                [],
+            )
+        )
+        test_vocab = set(
+            sum(
+                accumulate_dicts(
+                    self._test_tokens,
+                    accum_fn=(lambda prev, curr: list(set(prev) | set(curr))),
+                    default=lambda v=None: set(sum(v, [])) if v else set(),
+                ).values(),
+                [],
+            )
+        )
+        total_vocab_size = len(train_vocab | test_vocab)
+
+        n_train_oov = len(train_vocab - orig_vocab)
+        n_train_oov_embd = len(self._train_oov_vocab)
+        n_train_oov_bktd = len(train_vocab - extd_vocab)
+        n_test_oov_bktd = len(test_vocab - extd_vocab)
+        test_oov_size = len(self._test_oov_vocab)
+        total_oov_size = len(
+            set(self._train_oov_vocab) | set(self._test_oov_vocab)
+        )
+        train_bucketed_size = len(set(train_vocab) - set(self._vocab))
+        total_in_vocab = total_vocab_size - total_oov_size
+        portion_templ = "{} ({:.2f}%)"
+        return {
+            "total": {
+                "size": total_vocab_size,
+                "in_vocab": portion_templ.format(
+                    total_in_vocab, (total_in_vocab / total_vocab_size) * 100
+                ),
+                "out_of_vocab": portion_templ.format(
+                    total_oov_size, (total_oov_size / total_vocab_size) * 100
+                ),
+            },
+            "train": {
+                "size": len(train_vocab),
+                "oov_embedded": portion_templ.format(
+                    train_oov_size, (train_oov_size / len(train_vocab)) * 100
+                ),
+                **(
+                    {
+                        "oov_bucketed": portion_templ.format(
+                            train_bucketed_size,
+                            (train_bucketed_size / len(train_vocab)) * 100,
+                        )
+                    }
+                    if train_bucketed_size > 0
+                    else {}
+                ),
+            },
+            "test": {
+                "size": len(test_vocab),
+                "oov_bucketed": portion_templ.format(
+                    test_oov_size, (test_oov_size / len(test_vocab)) * 100
+                ),
+            },
+        }
 
     def _resolve_oov_fn(self, oov_arg):
         if not oov_arg:

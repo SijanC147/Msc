@@ -125,8 +125,8 @@ def attn_heatmaps(model, features, labels, spec, params):
             comet=model.comet_experiment,
             epoch_steps=params.get("epoch_steps"),
             n_hops=params.get("n_hops"),
-            n_picks=model.aux_config.get("attn_heatmaps_n", 3),
-            freq=model.aux_config.get("attn_heatmaps_freq", 5),
+            n_picks=model.aux_config.get("attn_heatmaps_n", 1),
+            freq=model.aux_config.get("attn_heatmaps_freq", 10),
         )
     ]
     return spec._replace(evaluation_hooks=eval_hooks)
@@ -244,6 +244,7 @@ def logging(model, features, labels, spec, params):
 @only(["TRAIN"])
 def histograms(model, features, labels, spec, params):
     trainables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
+    cprnt(trainables)
     names = [variable.name.replace(":", "_") for variable in trainables]
     for (name, variable) in zip(names, trainables):
         tf.summary.histogram(name, variable)

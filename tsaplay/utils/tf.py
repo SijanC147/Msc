@@ -483,9 +483,10 @@ def image_to_summary(name, image):
     return summary
 
 
-def ids_lookup_table(vocab_file_path, oov_buckets=1):
+def ids_lookup_table(vocab_file_path, oov_buckets=1, vocab_size=None):
     return tf.contrib.lookup.index_table_from_file(
         vocabulary_file=vocab_file_path,
+        vocab_size=vocab_size,
         key_column_index=0,
         value_column_index=1,
         num_oov_buckets=oov_buckets,

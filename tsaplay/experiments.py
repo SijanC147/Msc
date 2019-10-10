@@ -34,6 +34,7 @@ class Experiment:
         self.feature_provider = feature_provider
         self.model = model
         self.contd_tag = contd_tag
+        self.model.params.update({"contd_tag": self.contd_tag})
         self.experiment_dir = self._make_experiment_dir(job_dir)
         run_config = {
             "model_dir": join(self.experiment_dir),
@@ -190,6 +191,12 @@ class Experiment:
             ),
         }
         default_run_config.update(custom_run_config)
+        if default_run_config.get("tf_random_seed", False):
+            cprnt(
+                warn="TF Random seed is set to {}".format(
+                    default_run_config.get("tf_random_seed")
+                )
+            )
 
         return default_run_config
 

@@ -29,7 +29,7 @@ from termcolor import colored
 from tensorflow.python.client.timeline import Timeline  # pylint: disable=E0611
 from tensorflow.python_io import TFRecordWriter  # noqa
 import docker
-from tsaplay.constants import NP_RANDOM_SEED, TF_RECORD_SHARDS
+from tsaplay.constants import NP_RANDOM_SEED, TF_RECORD_SHARDS, PAD_TOKEN
 from tsaplay.utils.data import accumulate_dicts
 
 
@@ -311,6 +311,9 @@ def write_tfrecords(path, tf_examples, num_shards=TF_RECORD_SHARDS):
 
 def write_vocab_file(path, vocab, indices=None):
     if indices:
+        if PAD_TOKEN not in vocab:
+            vocab = [PAD_TOKEN] + vocab
+            indices = [0] + indices
         vocab_info = zip(vocab, indices)
         with open(path, "w", encoding="utf-8") as vocab_file:
             for (word, index) in vocab_info:

@@ -1,7 +1,7 @@
 from math import ceil
 import tensorflow as tf
 from tsaplay.models.tsa_model import TsaModel
-from tsaplay.utils.addons import addon, attn_heatmaps, early_stopping
+from tsaplay.utils.addons import addon, attn_heatmaps
 from tsaplay.utils.tf import (
     masked_softmax,
     variable_len_batch_mean,
@@ -24,7 +24,7 @@ class MemNet(TsaModel):
             "train_embeddings": False,
             # ? Suggestions from https://github.com/NUSTM/ABSC/blob/master/models/ABSC_Zozoz/model/dmn.py
             "batch-size": 100,
-            "early_stopping_minimum_iter": 50,
+            "early_stopping_minimum_iter": 30,
             # ? Following approach of Moore et al. 2018, using early stopping
             "epochs": 300,
             "early_stopping_patience": 10,
@@ -45,7 +45,7 @@ class MemNet(TsaModel):
             "target_offset": features["left"].dense_shape[1] + 1,
         }
 
-    @addon([attn_heatmaps, early_stopping])
+    @addon([attn_heatmaps])
     def model_fn(self, features, labels, mode, params):
         target_offset = tf.cast(features["target_offset"], tf.int32)
 
@@ -70,25 +70,6 @@ class MemNet(TsaModel):
         )
 
         hop_number = tf.constant(1)
-
-        attn_weights = tf.TensorArray(dtype=tf.float32, size=params["n_hops"])
-        attn_biases = tf.TensorArray(dtype=tf.float32, size=params["n_hops"])
-        attn_weights = attn_weights.unstack(
-            tf.get_variable(
-                name="weights",
-                shape=[params["n_hops"], 1, 2 * params["_embedding_dim"]],
-                dtype=tf.float32,
-                initializer=params["initializer"],
-            )
-        )
-        attn_biases = attn_biases.unstack(
-            tf.get_variable(
-                name="bias",
-                shape=[params["n_hops"], 1],
-                dtype=tf.float32,
-                initializer=params["initializer"],
-            )
-        )
 
         initial_hop_inputs = (hop_number, memory, v_aspect, attn_snapshots)
 
@@ -122,14 +103,14 @@ class MemNet(TsaModel):
                     bias_initializer=params["initializer"],
                 )
 
-            attn_out, attn_snapshot = memnet_content_attn_unit(
-                seq_lens=features["context_len"],
-                memory=ext_memory,
-                v_aspect=input_vec,
-                emb_dim=params["_embedding_dim"],
-                w_att=attn_weights.read(hop_num - 1),
-                b_att=attn_biases.read(hop_num - 1),
-            )
+            with tf.variable_scope("attention_layer", reuse=tf.AUTO_REUSE):
+                attn_out, attn_snapshot = memnet_content_attn_unit(
+                    seq_lens=features["context_len"],
+                    memory=ext_memory,
+                    v_aspect=input_vec,
+                    emb_dim=params["_embedding_dim"],
+                    init=params["initializer"],
+                )
 
             attn_snapshots = append_snapshot(
                 container=attn_snapshots, new_snap=attn_snapshot, index=hop_num
@@ -293,10 +274,22 @@ def location_vector_model_four(locs, seq_lens, emb_dim, init, hop=None):
 
 
 def memnet_content_attn_unit(
-    seq_lens, memory, v_aspect, emb_dim, w_att, b_att
+    seq_lens, memory, v_aspect, emb_dim, init, bias_init=None, hop=None
 ):
     batch_size = tf.shape(memory)[0]
     max_seq_len = tf.shape(memory)[1]
+    w_att = tf.get_variable(
+        name="weights",
+        shape=[1, 2 * emb_dim],
+        dtype=tf.float32,
+        initializer=init,
+    )
+    b_att = tf.get_variable(
+        name="bias",
+        shape=[1],
+        dtype=tf.float32,
+        initializer=(bias_init or init),
+    )
 
     w_att_batch_dim = tf.expand_dims(w_att, axis=0)
     w_att_tiled = tf.tile(

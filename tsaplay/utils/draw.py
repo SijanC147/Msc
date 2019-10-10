@@ -8,10 +8,11 @@ import matplotlib as mpl
 from matplotlib.font_manager import FontProperties
 from scipy.special import softmax
 from tsaplay.constants import DEFAULT_FONT
-from tsaplay.utils.io import get_image_from_plt, pickle_file
+from tsaplay.utils.io import get_image_from_plt, pickle_file, platform
 
 
-mpl.use("TkAgg")
+if platform() == "MacOS":
+    mpl.use("TkAgg")
 import matplotlib.pyplot as plt  # nopep8
 
 
@@ -60,11 +61,10 @@ def join_images(images, v_space=5, border=None, padding=2):
 
     if border is None:
         return joined_image
-    else:
-        joined_image_with_border = ImageOps.expand(
-            joined_image, border=border, fill="black"
-        )
-        return joined_image_with_border
+    joined_image_with_border = ImageOps.expand(
+        joined_image, border=border, fill="black"
+    )
+    return joined_image_with_border
 
 
 def draw_attention_heatmap(phrases, attn_vecs, **kwargs):

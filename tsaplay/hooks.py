@@ -160,9 +160,9 @@ class SaveAttentionWeightVector(SessionRunHook):
         classes,
         summary_writer,
         comet=None,
-        n_picks=3,
+        n_picks=1,
         n_hops=None,
-        freq=5,
+        freq=10,
         epoch_steps=None,
     ):
         self.labels = labels
@@ -275,7 +275,11 @@ class SaveAttentionWeightVector(SessionRunHook):
                 (global_step / self.epoch_steps) if self.epoch_steps else None
             )
             image_names = [
-                ("E{0:02.0f}#{1} ".format(epoch, self._counter) if epoch else "")
+                (
+                    "E{0:02.0f}#{1:02.0f} ".format(epoch, self._counter)
+                    if epoch
+                    else ""
+                )
                 + name
                 for name in image_names
             ]

@@ -47,7 +47,7 @@ class Ram(TsaModel):
             "batch-size": 32,
             "early_stopping_minimum_iter": 50,
             # ? Following approach of Moore et al. 2018, using early stopping
-            "epochs": 300,
+            "epochs": 100,
             "early_stopping_patience": 10,
             "early_stopping_metric": "macro-f1",
         }

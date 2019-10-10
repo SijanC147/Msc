@@ -4,9 +4,14 @@
 default: -aux logging=true 
 default: -mp oov_train=1 oov_fn=uniform[-0.1,0.1] 
 default: -mp lstm_hidden_units=5 gru_hidden_units=5 hidden_units=5 
+#default: -rc save_summary_steps=/5 
+default: -rc tf_random_seed=1234
 
--em=twitter-200[corpus] -ds=debug -m=lcr_rot -e 1 -b 5 -tb=6006
+-em=wiki-50[corpus] -ds=debug -m=lstm -e 1
+;-em=twitter-200[corpus] -ds=debug -m=mem_net -e 5 -contd=checking_posting-2
 ;-em=twitter-200[corpus] -ds=dong -m=ram -mp n_hops=5
 ;-em=twitter-200[corpus] -ds=restaurants -m=ian -contd=t200-restaurants-evalnoshuff
 ;-em=commoncrawl-840[corpus] -ds=dong -m=ian -contd=cc840-dong-evalnoshuff
 ;-em=commoncrawl-42[corpus] -ds=dong -m=ian -contd=cc42-dong-evalnoshuff
+
+;-em=commoncrawl-42[corpus] -ds=laptops -m=mem_net -mp n_hops=7 train_embeddings=True 
