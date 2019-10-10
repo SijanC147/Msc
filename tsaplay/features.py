@@ -447,9 +447,9 @@ OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
         )
         v_train_oov_over_t = (
             set(
-                corpora_vocab(
-                    self._train_corpus, threshold=self._oov_train_threshold
-                )
+                w
+                for w in v_train
+                if self._train_corpus.get(w) >= self._oov_train_threshold
             )
             - v_orig
         )
