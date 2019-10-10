@@ -143,7 +143,9 @@ def resample_data_dict(data_dict, target_dists):
 def accumulate_dicts(*args, accum_fn=None, default=None, **kwargs):
     dicts = list(args or []) + (list(kwargs.values()) if kwargs else [])
     new_dict = defaultdict(default or list)
-    accum_fn = accum_fn if callable(accum_fn) else (lambda prev, curr: prev + curr)
+    accum_fn = (
+        accum_fn if callable(accum_fn) else (lambda prev, curr: prev + curr)
+    )
     for key, value in chain.from_iterable(map(dict.items, dicts)):
         try:
             new_dict[key] = accum_fn(new_dict[key], value)
@@ -163,12 +165,27 @@ def merge_corpora(*corpora):
     return {word: count for word, count in corpus}
 
 
-def corpora_vocab(*corpora, case_insensitive=None):
-    all_vocab = [
-        list(map(str.lower, [*corpus]) if case_insensitive else [*corpus])
-        for corpus in corpora
-    ]
-    return list(set(sum(all_vocab, [])))
+def lower_corpus(corpus):
+    corpus_lower = {}
+    for k, v in corpus.items():
+        try:
+            corpus_lower[k.lower()] += v
+        except KeyError:
+            corpus_lower[k.lower()] = v
+    return corpus_lower
+
+
+def corpora_vocab(*corpora, case_insensitive=None, threshold=None):
+    if case_insensitive:
+        corpora = (lower_corpus(corpus) for corpus in corpora)
+    t = threshold or 1
+    if t > 1:
+        corpora = (
+            {w: cnt for w, cnt in corpus.items() if cnt >= t}
+            for corpus in corpora
+        )
+    all_vocab = set(sum([[*corpus] for corpus in corpora], []))
+    return list(all_vocab)
 
 
 def class_dist_stats(classes=None, **data_dicts):

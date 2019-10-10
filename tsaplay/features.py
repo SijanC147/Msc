@@ -4,6 +4,7 @@ from functools import partial
 from warnings import warn
 from ast import literal_eval
 from math import ceil
+from copy import deepcopy
 import re
 import numpy as np
 
@@ -42,6 +43,7 @@ from tsaplay.utils.data import (
     stringify,
     tokens_by_assigned_id,
     vocab_case_insensitive,
+    lower_corpus,
 )
 
 
@@ -187,7 +189,10 @@ OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
             corpus = unpickle_file(corpus_path)
         else:
             corpora = (
-                getattr(dataset, corpus_attr) for dataset in self.datasets
+                lower_corpus(getattr(dataset, corpus_attr))
+                if self._embedding.case_insensitive
+                else getattr(dataset, corpus_attr)
+                for dataset in self.datasets
             )
             corpus = merge_corpora(*corpora)
             pickle_file(path=corpus_path, data=corpus)
@@ -197,32 +202,35 @@ OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
         vocab_file_templ = "_vocab{ext}"
         vocab_file = vocab_file_templ.format(ext=".txt")
         vocab_file_path = join(self._gen_dir, vocab_file)
-        train_oov_file_path = join(self._gen_dir, "_train_oov.txt")
+        # train_oov_file_path = join(self._gen_dir, "_train_oov.txt")
         self._vocab_file = vocab_file_path
-        if not exists(self._vocab_file) or not exists(train_oov_file_path):
-            self._vocab = self._embedding.vocab
+        # if not exists(self._vocab_file) or not exists(train_oov_file_path):
+        if not exists(self._vocab_file):
+            self._vocab = deepcopy(self._embedding.vocab)
             #! include training vocabulary terms above the specified
             #! occurrance count if 0, all training vocab will be assigned
             #! buckets
             if self._oov_train_threshold > 0:
                 train_vocab = set(
                     corpora_vocab(
-                        {
-                            word: count
-                            for word, count in self._train_corpus.items()
-                            if count >= self._oov_train_threshold
-                        },
-                        case_insensitive=self._embedding.case_insensitive,
+                        self._train_corpus,
+                        threshold=self._oov_train_threshold
+                        # {
+                        #     word: count
+                        #     for word, count in self._train_corpus.items()
+                        #     if count >= self._oov_train_threshold
+                        # },
+                        # case_insensitive=self._embedding.case_insensitive,
                     )
                 )
-                self._train_oov_vocab = list(train_vocab - set(self._vocab))
-                self._train_oov_vocab.sort()
-                self._vocab += self._train_oov_vocab
+                train_oov_vocab = list(train_vocab - set(self._vocab))
+                train_oov_vocab.sort()
+                self._vocab += train_oov_vocab
             write_vocab_file(vocab_file_path, self._vocab)
-            write_vocab_file(train_oov_file_path, self._train_oov_vocab)
+            # write_vocab_file(train_oov_file_path, self._train_oov_vocab)
         else:
             self._vocab = read_vocab_file(vocab_file_path)
-            self._train_oov_vocab = read_vocab_file(train_oov_file_path)
+            # self._train_oov_vocab = read_vocab_file(train_oov_file_path)
         vocab_tsv_file = vocab_file_templ.format(ext=".tsv")
         vocab_tsv_path = join(self._gen_dir, vocab_tsv_file)
         if not exists(vocab_tsv_path):
@@ -253,7 +261,7 @@ OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
                 corpora_vocab(
                     self._train_corpus,
                     self._test_corpus,
-                    case_insensitive=self._embedding.case_insensitive,
+                    # case_insensitive=self._embedding.case_insensitive,
                 )
             )
             include_tokens_path = join(self._gen_dir, "_incl_tokens.pkl")
@@ -292,7 +300,7 @@ OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
                         corpora_vocab(
                             self._train_corpus,
                             self._test_corpus,
-                            case_insensitive=self._embedding.case_insensitive,
+                            # case_insensitive=self._embedding.case_insensitive,
                         )
                     )
                 )
@@ -344,22 +352,22 @@ OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
                 [buckets.index(key) for key in [*accum_oov_buckets]]
             )
         }
-        test_oov_file_path = join(self._gen_dir, "_test_oov.txt")
-        if not exists(test_oov_file_path):
-            self._test_oov_vocab = sum(
-                [
-                    [
-                        word
-                        for word in bucket
-                        if word not in self._train_oov_vocab
-                    ]
-                    for bucket in self._oov_buckets.values()
-                ],
-                [],
-            )
-            write_vocab_file(test_oov_file_path, self._test_oov_vocab)
-        else:
-            self._test_oov_vocab = read_vocab_file(test_oov_file_path)
+        # test_oov_file_path = join(self._gen_dir, "_test_oov.txt")
+        # if not exists(test_oov_file_path):
+        #     self._test_oov_vocab = sum(
+        #         [
+        #             [
+        #                 word
+        #                 for word in bucket
+        #                 if word not in self._train_oov_vocab
+        #             ]
+        #             for bucket in self._oov_buckets.values()
+        #         ],
+        #         [],
+        #     )
+        #     write_vocab_file(test_oov_file_path, self._test_oov_vocab)
+        # else:
+        #     self._test_oov_vocab = read_vocab_file(test_oov_file_path)
 
     def _init_embedding_params(self):
         dim_size = self._embedding.dim_size
@@ -416,10 +424,10 @@ OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
         dump_json(path=info_path, data=info)
 
     def _vocab_coverage(self):
-        orig_vocab = set(self._embedding.vocab)
-        extd_vocab = set(self._vocab)
         _ci = self._embedding.case_insensitive
-        train_vocab = set(
+        v_orig = set(self._embedding.vocab)
+        v_extd = set(self._vocab)
+        v_train = set(
             sum(
                 accumulate_dicts(
                     self._train_tokens,
@@ -429,7 +437,7 @@ OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
                 [],
             )
         )
-        test_vocab = set(
+        v_test = set(
             sum(
                 accumulate_dicts(
                     self._test_tokens,
@@ -439,50 +447,59 @@ OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
                 [],
             )
         )
-        total_vocab_size = len(train_vocab | test_vocab)
-
-        n_train_oov = len(train_vocab - orig_vocab)
-        n_train_oov_embd = len(self._train_oov_vocab)
-        n_train_oov_bktd = len(train_vocab - extd_vocab)
-        n_test_oov_bktd = len(test_vocab - extd_vocab)
-        test_oov_size = len(self._test_oov_vocab)
-        total_oov_size = len(
-            set(self._train_oov_vocab) | set(self._test_oov_vocab)
+        v_train_oov_over_t = (
+            set(
+                corpora_vocab(
+                    self._test_corpus, threshold=self._oov_train_threshold
+                )
+            )
+            - v_orig
         )
-        train_bucketed_size = len(set(train_vocab) - set(self._vocab))
-        total_in_vocab = total_vocab_size - total_oov_size
-        portion_templ = "{} ({:.2f}%)"
+        v_tot = v_train | v_test
+        v_oov = v_tot - v_orig
+
+        n_tot = len(v_tot)
+        n_oov = len(v_oov)
+        n_train = len(v_train)
+        n_test = len(v_test)
+        n_train_oov = len(v_train - v_orig)
+        n_train_oov_embd = len(v_train_oov_over_t)
+        n_train_oov_bktd = len(v_train - v_extd)
+        n_test_oov = len(v_test - v_orig)
+        n_test_oov_bktd = len(v_test - v_extd)
+        n_test_oov_excl = len(v_test - (v_extd | v_train))
+        portion = lambda p, tot=None: str(p) + (
+            " ({:.2f}%)".format((p / tot) * 100) if tot else ""
+        )
         return {
             "total": {
-                "size": total_vocab_size,
-                "in_vocab": portion_templ.format(
-                    total_in_vocab, (total_in_vocab / total_vocab_size) * 100
-                ),
-                "out_of_vocab": portion_templ.format(
-                    total_oov_size, (total_oov_size / total_vocab_size) * 100
-                ),
+                "size": n_tot,
+                "in_vocab": portion(n_tot - n_oov, tot=n_tot),
+                "out_of_vocab": portion(n_oov, tot=n_tot),
             },
             "train": {
-                "size": len(train_vocab),
-                "oov_embedded": portion_templ.format(
-                    train_oov_size, (train_oov_size / len(train_vocab)) * 100
-                ),
-                **(
-                    {
-                        "oov_bucketed": portion_templ.format(
-                            train_bucketed_size,
-                            (train_bucketed_size / len(train_vocab)) * 100,
-                        )
-                    }
-                    if train_bucketed_size > 0
-                    else {}
-                ),
+                "size": n_train,
+                "oov": {
+                    "total": portion(n_train_oov, tot=n_train),
+                    "embedded": portion(n_train_oov_embd, tot=n_train),
+                    **(
+                        {"bucketed": portion(n_train_oov_bktd, tot=n_train)}
+                        if n_train_oov_bktd > 0
+                        else {}
+                    ),
+                },
             },
             "test": {
-                "size": len(test_vocab),
-                "oov_bucketed": portion_templ.format(
-                    test_oov_size, (test_oov_size / len(test_vocab)) * 100
-                ),
+                "size": n_test,
+                "oov": {
+                    "total": portion(n_test_oov, tot=n_test),
+                    "bucketed": portion(n_test_oov_bktd, tot=n_test),
+                    **(
+                        {"exclusive": portion(n_test_oov_excl, tot=n_test)}
+                        if n_train_oov_bktd > 0
+                        else {}
+                    ),
+                },
             },
         }
 
