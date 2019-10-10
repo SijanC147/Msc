@@ -65,12 +65,10 @@ class FeatureProvider:
         self._test_dict = None
         self._train_corpus = None
         self._test_corpus = None
-        self._train_oov_vocab = None
-        self._test_oov_vocab = None
+        # self._train_oov_vocab = None
+        # self._test_oov_vocab = None
         self._train_tokens = None
         self._test_tokens = None
-        # self._train_tfrecords = None
-        # self._test_tfrecords = None
         self._oov_buckets = None
 
         self._init_uid()
@@ -450,7 +448,7 @@ OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
         v_train_oov_over_t = (
             set(
                 corpora_vocab(
-                    self._test_corpus, threshold=self._oov_train_threshold
+                    self._train_corpus, threshold=self._oov_train_threshold
                 )
             )
             - v_orig
