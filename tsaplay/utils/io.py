@@ -5,6 +5,7 @@ import math
 import csv
 import re
 import pprint
+import subprocess
 from math import floor
 from zipfile import ZipFile, ZIP_DEFLATED
 from datetime import datetime, timedelta
@@ -106,7 +107,9 @@ def platform():
     }.get(sys.platform, sys.platform)
 
 
-def start_tensorboard(model_dir, port=6006, debug=False, debug_port=6064):
+def start_tensorboard(
+    model_dir, port=6006, debug=False, debug_port=6064, sub=None
+):
     logdir_str = "--logdir {0} --port {1}".format(model_dir, port)
     debug_str = "--debugger_port {0}".format(debug_port) if debug else ""
     start_tb_cmd = "tensorboard {0} {1}".format(logdir_str, debug_str)
@@ -120,7 +123,11 @@ def start_tensorboard(model_dir, port=6006, debug=False, debug_port=6064):
 
     if open_site_cmd is not None:
         system(open_site_cmd)
-    system(start_tb_cmd)
+
+    if sub is not None:
+        subprocess.Popen(start_tb_cmd, shell=True)
+    else:
+        system(start_tb_cmd)
 
 
 def restart_tf_serve_container():

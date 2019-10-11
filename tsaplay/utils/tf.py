@@ -294,38 +294,52 @@ def gru_cell(**params):
     bias_initializer = params.get(
         "gru_bias_initializer", params.get("bias_initializer")
     )
-    keep_prob = params.get("gru_keep_prob", params.get("keep_prob"))
+    keep_prob = (
+        params.get("gru_keep_prob", params.get("keep_prob", 1))
+        if params["mode"] == ModeKeys.TRAIN
+        else 1
+    )
+    # keep_prob = params.get("gru_keep_prob", params.get("keep_prob", 1))
     gru = tf.nn.rnn_cell.GRUCell(
         num_units=hidden_units,
         kernel_initializer=initializer,
         bias_initializer=(bias_initializer or initializer),
     )
-    return (
-        gru
-        if not keep_prob
-        else tf.contrib.rnn.DropoutWrapper(
-            cell=gru, output_keep_prob=keep_prob
-        )
+    gru = tf.contrib.rnn.DropoutWrapper(
+        cell=gru,
+        input_keep_prob=keep_prob,
+        # output_keep_prob=keep_prob,
+        # state_keep_prob=keep_prob,
     )
+    # gru = tf.contrib.rnn.DropoutWrapper(cell=gru, state_keep_prob=keep_prob)
+    return gru
 
 
 def lstm_cell(**params):
     hidden_units = params.get("lstm_hidden_units", params.get("hidden_units"))
     initializer = params.get("lstm_initializer", params.get("initializer"))
     initial_bias = params.get("lstm_initial_bias", 1)
-    keep_prob = params.get("lstm_keep_prob", params.get("keep_prob"))
+    keep_prob = (
+        params.get("lstm_keep_prob", params.get("keep_prob", 1))
+        if params["mode"] == ModeKeys.TRAIN
+        else 1
+    )
+    # keep_prob = params.get("lstm_keep_prob", params.get("keep_prob", 1))
     lstm = tf.nn.rnn_cell.LSTMCell(
         num_units=hidden_units,
         initializer=initializer,
         forget_bias=initial_bias,
     )
-    return (
-        lstm
-        if not keep_prob
-        else tf.contrib.rnn.DropoutWrapper(
-            cell=lstm, output_keep_prob=keep_prob
-        )
+    lstm = tf.contrib.rnn.DropoutWrapper(
+        cell=lstm,
+        input_keep_prob=keep_prob,
+        # output_keep_prob=keep_prob,
+        # state_keep_prob=keep_prob,
     )
+    # lstm = tf.contrib.rnn.DropoutWrapper(
+    #     cell=lstm, state_keep_prob=keep_prob
+    # )
+    return lstm
 
 
 def l2_regularized_loss(
@@ -337,10 +351,10 @@ def l2_regularized_loss(
 ):
     with tf.name_scope("l2_loss"):
         loss = loss_fn(labels=labels, logits=logits)
-        l2_reg = tf.reduce_sum(
+        l2_reg = l2_weight * tf.reduce_sum(
             [tf.nn.l2_loss(v) for v in variables], name="l2_reg"
         )
-        loss = loss + l2_weight * l2_reg
+        loss += l2_reg
     return loss
 
 

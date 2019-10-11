@@ -1,6 +1,7 @@
 # pylint: disable=line-too-long
 import tensorflow as tf
 from tsaplay.models.tsa_model import TsaModel
+from tensorflow.estimator import ModeKeys  # noqa
 from tsaplay.utils.tf import (
     variable_len_batch_mean,
     lstm_cell,
@@ -51,7 +52,7 @@ class Ian(TsaModel):
     def model_fn(self, features, labels, mode, params):
         with tf.variable_scope("context_lstm"):
             context_hidden_states, _ = tf.nn.dynamic_rnn(
-                cell=lstm_cell(**params),
+                cell=lstm_cell(**params, mode=mode),
                 inputs=features["context_emb"],
                 sequence_length=features["context_len"],
                 dtype=tf.float32,
@@ -64,7 +65,7 @@ class Ian(TsaModel):
 
         with tf.variable_scope("target_lstm"):
             target_hidden_states, _ = tf.nn.dynamic_rnn(
-                cell=lstm_cell(**params),
+                cell=lstm_cell(**params, mode=mode),
                 inputs=features["target_emb"],
                 sequence_length=features["target_len"],
                 dtype=tf.float32,

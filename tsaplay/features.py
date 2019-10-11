@@ -5,6 +5,7 @@ from warnings import warn
 from ast import literal_eval
 from math import ceil
 from copy import deepcopy
+from datetime import datetime
 import re
 import numpy as np
 
@@ -65,8 +66,6 @@ class FeatureProvider:
         self._test_dict = None
         self._train_corpus = None
         self._test_corpus = None
-        # self._train_oov_vocab = None
-        # self._test_oov_vocab = None
         self._train_tokens = None
         self._test_tokens = None
         self._oov_buckets = None
@@ -136,14 +135,15 @@ class FeatureProvider:
         uid_data = [self._embedding.uid] + datasets_uids + oov_policy
         cprnt(
             INFO="""INFO Feature Data:
-Embedding: {embedding_uid}
+Embedding: {embedding_uid} \t CASE-{ci}SENSITIVE
 Dataset(s): {datasets_uids}
-Train OOV Freq: {train_oov_threshold}
+OOV Threshold: {train_oov_threshold}
 OOV Buckets: {oov_buckets}
 OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
 """.format_map(
                 {
                     "embedding_uid": self._embedding.uid,
+                    "ci": "IN" if self._embedding.case_insensitive else "",
                     "datasets_uids": "\t".join(datasets_uids),
                     "train_oov_threshold": self._oov_train_threshold,
                     "oov_buckets": self._num_oov_buckets,
@@ -200,9 +200,7 @@ OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
         vocab_file_templ = "_vocab{ext}"
         vocab_file = vocab_file_templ.format(ext=".txt")
         vocab_file_path = join(self._gen_dir, vocab_file)
-        # train_oov_file_path = join(self._gen_dir, "_train_oov.txt")
         self._vocab_file = vocab_file_path
-        # if not exists(self._vocab_file) or not exists(train_oov_file_path):
         if not exists(self._vocab_file):
             self._vocab = deepcopy(self._embedding.vocab)
             #! include training vocabulary terms above the specified
@@ -213,22 +211,14 @@ OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
                     corpora_vocab(
                         self._train_corpus,
                         threshold=self._oov_train_threshold
-                        # {
-                        #     word: count
-                        #     for word, count in self._train_corpus.items()
-                        #     if count >= self._oov_train_threshold
-                        # },
-                        # case_insensitive=self._embedding.case_insensitive,
                     )
                 )
                 train_oov_vocab = list(train_vocab - set(self._vocab))
                 train_oov_vocab.sort()
                 self._vocab += train_oov_vocab
             write_vocab_file(vocab_file_path, self._vocab)
-            # write_vocab_file(train_oov_file_path, self._train_oov_vocab)
         else:
             self._vocab = read_vocab_file(vocab_file_path)
-            # self._train_oov_vocab = read_vocab_file(train_oov_file_path)
         vocab_tsv_file = vocab_file_templ.format(ext=".tsv")
         vocab_tsv_path = join(self._gen_dir, vocab_tsv_file)
         if not exists(vocab_tsv_path):
@@ -259,7 +249,6 @@ OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
                 corpora_vocab(
                     self._train_corpus,
                     self._test_corpus,
-                    # case_insensitive=self._embedding.case_insensitive,
                 )
             )
             include_tokens_path = join(self._gen_dir, "_incl_tokens.pkl")
@@ -298,7 +287,6 @@ OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
                         corpora_vocab(
                             self._train_corpus,
                             self._test_corpus,
-                            # case_insensitive=self._embedding.case_insensitive,
                         )
                     )
                 )
@@ -350,22 +338,6 @@ OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
                 [buckets.index(key) for key in [*accum_oov_buckets]]
             )
         }
-        # test_oov_file_path = join(self._gen_dir, "_test_oov.txt")
-        # if not exists(test_oov_file_path):
-        #     self._test_oov_vocab = sum(
-        #         [
-        #             [
-        #                 word
-        #                 for word in bucket
-        #                 if word not in self._train_oov_vocab
-        #             ]
-        #             for bucket in self._oov_buckets.values()
-        #         ],
-        #         [],
-        #     )
-        #     write_vocab_file(test_oov_file_path, self._test_oov_vocab)
-        # else:
-        #     self._test_oov_vocab = read_vocab_file(test_oov_file_path)
 
     def _init_embedding_params(self):
         dim_size = self._embedding.dim_size
@@ -390,9 +362,9 @@ OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
         }
 
     def _write_info_file(self):
-        # TODO: check for existence and include a timestamp of last updated
         info_path = join(self.gen_dir, "info.json")
         info = {
+            "ts": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
             "uid": self.uid,
             "name": self.name,
             "datasets": {

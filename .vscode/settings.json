@@ -31,8 +31,14 @@
   "peacock.color": "#b1c9e6",
   "python.jediEnabled": false,
   "python.linting.pylintEnabled": true,
-		"python.linting.pylintArgs": [
-			"--max-line-length=79",
-      "--disable=C0330,C0111,import-error,missing-function-docstring", 		
-    ],
+  "python.linting.pylintArgs": [
+    "--max-line-length=79",
+    "--disable=C0330,C0111,import-error,missing-function-docstring", 		
+  ],
+  "editor.formatOnSave": true,
+  "editor.formatOnSaveTimeout": 3000,
+  "python.formatting.blackArgs": [
+    "-l 79",
+    "--fast"
+  ],
 }

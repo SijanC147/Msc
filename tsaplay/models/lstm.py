@@ -38,7 +38,7 @@ class Lstm(TsaModel):
     @addon([early_stopping])
     def model_fn(self, features, labels, mode, params):
         _, final_states = tf.nn.dynamic_rnn(
-            cell=lstm_cell(**params),
+            cell=lstm_cell(**params, mode=mode),
             inputs=features["sentence_emb"],
             sequence_length=features["sentence_len"],
             dtype=tf.float32,

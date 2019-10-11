@@ -1,21 +1,11 @@
 ## RUN WITH DEFAULTS: 
-# -cmt T1NrVnn32dXWeOxeQWGArkHwc
-# -wrk MSc-Reproducibility 
-# -aux logging=true 
-# -mp oov_train=1 oov_fn=uniform[-0.1,0.1]
+default: -cmt T1NrVnn32dXWeOxeQWGArkHwc -wrk reproduction-studies
+default: -aux logging=true 
+default: -mp oov_train=1 oov_fn=uniform[-0.1,0.1]
 ###
 
 # LSTM
 ; No mention of any approach to OOV tokens 
 ; batch-size(64) and hidden_units(200) taken from https://github.com/jimmyyfeng/TD-LSTM/blob/master/lstm.py
--em=twitter-100[corpus] -ds=dong -m=lstm -contd=lstm_100_run_1
--em=twitter-100[corpus] -ds=dong -m=lstm -contd=lstm_100_run_2
--em=twitter-100[corpus] -ds=dong -m=lstm -contd=lstm_100_run_3
--em=twitter-100[corpus] -ds=dong -m=lstm -contd=lstm_100_run_4
--em=twitter-100[corpus] -ds=dong -m=lstm -contd=lstm_100_run_5
-
--em=twitter-200[corpus] -ds=dong -m=lstm -contd=lstm_200_run_1
--em=twitter-200[corpus] -ds=dong -m=lstm -contd=lstm_200_run_2
--em=twitter-200[corpus] -ds=dong -m=lstm -contd=lstm_200_run_3
--em=twitter-200[corpus] -ds=dong -m=lstm -contd=lstm_200_run_4
--em=twitter-200[corpus] -ds=dong -m=lstm -contd=lstm_200_run_5
+;-em=twitter-100[corpus] -ds=dong -m=lstm -contd=lstm-t100-dong-oovt1
+-em=twitter-200[corpus] -ds=dong -m=lstm -contd=t200-dong-lstm-oovt1

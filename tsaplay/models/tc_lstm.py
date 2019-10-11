@@ -76,7 +76,7 @@ class TcLstm(TsaModel):
 
         with tf.variable_scope("left_lstm"):
             _, final_states_left = tf.nn.dynamic_rnn(
-                cell=lstm_cell(**params),
+                cell=lstm_cell(**params, mode=mode),
                 inputs=features["left_emb"],
                 sequence_length=features["left_len"],
                 dtype=tf.float32,
@@ -84,7 +84,7 @@ class TcLstm(TsaModel):
 
         with tf.variable_scope("right_lstm"):
             _, final_states_right = tf.nn.dynamic_rnn(
-                cell=lstm_cell(**params),
+                cell=lstm_cell(**params, mode=mode),
                 inputs=features["right_emb"],
                 sequence_length=features["right_len"],
                 dtype=tf.float32,

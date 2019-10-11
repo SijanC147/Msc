@@ -10,7 +10,7 @@ import pkg_resources as pkg
 import comet_ml  # pylint: disable=W0611
 
 with warnings.catch_warnings():
-    warnings.filterwarnings("ignore", category=FutureWarning)
+    warnings.filterwarnings("ignore", category=FutureWarning)  # noqa
     import tensorflow as tf
 
 from tsaplay.utils.debug import timeit

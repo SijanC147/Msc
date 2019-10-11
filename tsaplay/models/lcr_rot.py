@@ -40,8 +40,8 @@ class LcrRot(TsaModel):
     def model_fn(self, features, labels, mode, params):
         with tf.variable_scope("target_bi_lstm"):
             target_hidden_states, _, _ = stack_bidirectional_dynamic_rnn(
-                cells_fw=[lstm_cell(**params)],
-                cells_bw=[lstm_cell(**params)],
+                cells_fw=[lstm_cell(**params, mode=mode)],
+                cells_bw=[lstm_cell(**params, mode=mode)],
                 inputs=features["target_emb"],
                 sequence_length=features["target_len"],
                 dtype=tf.float32,
@@ -54,8 +54,8 @@ class LcrRot(TsaModel):
 
         with tf.variable_scope("left_bi_lstm"):
             left_hidden_states, _, _ = stack_bidirectional_dynamic_rnn(
-                cells_fw=[lstm_cell(**params)],
-                cells_bw=[lstm_cell(**params)],
+                cells_fw=[lstm_cell(**params, mode=mode)],
+                cells_bw=[lstm_cell(**params, mode=mode)],
                 inputs=features["left_emb"],
                 sequence_length=features["left_len"],
                 dtype=tf.float32,
@@ -63,8 +63,8 @@ class LcrRot(TsaModel):
 
         with tf.variable_scope("right_bi_lstm"):
             right_hidden_states, _, _ = stack_bidirectional_dynamic_rnn(
-                cells_fw=[lstm_cell(**params)],
-                cells_bw=[lstm_cell(**params)],
+                cells_fw=[lstm_cell(**params, mode=mode)],
+                cells_bw=[lstm_cell(**params, mode=mode)],
                 inputs=features["right_emb"],
                 sequence_length=features["right_len"],
                 dtype=tf.float32,

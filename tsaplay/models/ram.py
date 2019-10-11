@@ -4,7 +4,7 @@ from tensorflow.contrib.rnn import (  # pylint: disable=E0611
     stack_bidirectional_dynamic_rnn,
 )
 from tsaplay.models.tsa_model import TsaModel
-from tsaplay.utils.addons import addon, attn_heatmaps, early_stopping
+from tsaplay.utils.addons import addon, attn_heatmaps, early_stopping, beholder
 from tsaplay.utils.tf import (
     masked_softmax,
     variable_len_batch_mean,
@@ -45,7 +45,7 @@ class Ram(TsaModel):
             # "attn_initializer": tf.contrib.layers.xavier_initializer(), # for attn
             # ? Suggestions from https://github.com/lpq29743/RAM/blob/master/main.py
             "batch-size": 32,
-            "early_stopping_minimum_iter": 50,
+            "early_stopping_minimum_iter": 30,
             # ? Following approach of Moore et al. 2018, using early stopping
             "epochs": 100,
             "early_stopping_patience": 10,
@@ -85,8 +85,8 @@ class Ram(TsaModel):
         forward_cells = []
         backward_cells = []
         for _ in range(params["n_lstm_layers"]):
-            forward_cells.append(lstm_cell(**params))
-            backward_cells.append(lstm_cell(**params))
+            forward_cells.append(lstm_cell(**params, mode=mode))
+            backward_cells.append(lstm_cell(**params, mode=mode))
 
         with tf.variable_scope("bi_lstm"):
             memory_star, _, _ = stack_bidirectional_dynamic_rnn(
@@ -179,7 +179,7 @@ class Ram(TsaModel):
 
             with tf.variable_scope("gru_layer", reuse=tf.AUTO_REUSE):
                 _, final_state = tf.nn.dynamic_rnn(
-                    cell=gru_cell(**params),
+                    cell=gru_cell(**params, mode=mode),
                     inputs=content_i_al,
                     sequence_length=features["sentence_len"],
                     dtype=tf.float32,

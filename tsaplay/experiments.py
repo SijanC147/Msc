@@ -49,6 +49,12 @@ class Experiment:
             )
 
     def run(self, job, **kwargs):
+        try:
+            debug_port = int(self.model.aux_config.get("debug"))
+            self.launch_tensorboard(debug=True, debug_port=debug_port)
+        except TypeError:
+            pass
+
         if job == "train":
             self.model.train(feature_provider=self.feature_provider, **kwargs)
         elif job == "eval":
@@ -64,6 +70,7 @@ class Experiment:
             port=tb_port,
             debug=debug,
             debug_port=debug_port,
+            sub=True,
         )
 
     def export_model(self, overwrite=False, restart_tfserve=False):

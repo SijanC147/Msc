@@ -1,5 +1,5 @@
 {
-    "jobId": "memnet_oov_t5_bkt5_training_emb_diffseed",
+    "jobId": "ram_iwrap_eoff",
     "labels": {},
     "trainingInput": {
         "scaleTier": "CUSTOM",
@@ -9,7 +9,7 @@
         "region": "europe-west1",
         "args": [
             "batch",
-            "reproducibility-memnet.txt",
+            "reproducibility-ram.txt",
             "--new"
         ]
     }
