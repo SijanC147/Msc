@@ -52,7 +52,7 @@ class Experiment:
         try:
             debug_port = int(self.model.aux_config.get("debug"))
             self.launch_tensorboard(debug=True, debug_port=debug_port)
-        except TypeError:
+        except (TypeError, ValueError):
             pass
 
         if job == "train":

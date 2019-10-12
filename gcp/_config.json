@@ -1,5 +1,5 @@
 {
-    "jobId": "ram_iwrap_eoff",
+    "jobId": "is_nn_dropout",
     "labels": {},
     "trainingInput": {
         "scaleTier": "CUSTOM",

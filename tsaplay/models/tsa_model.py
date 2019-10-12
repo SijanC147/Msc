@@ -28,7 +28,6 @@ from tsaplay.utils.addons import (
     histograms,
     scalars,
     metadata,
-    beholder,
 )
 from tsaplay.utils.io import cprnt
 
@@ -207,7 +206,6 @@ class TsaModel(ABC):
     @sharded_saver
     @addon([scalars, metadata, histograms, conf_matrix, f1_scores, logging])
     @addon([prediction_outputs])
-    @addon([beholder])
     @embed_sequences
     def _model_fn(self, features, labels, mode, params):
         return self.model_fn(features, labels, mode, params)

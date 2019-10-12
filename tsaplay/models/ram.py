@@ -3,8 +3,9 @@ import tensorflow as tf
 from tensorflow.contrib.rnn import (  # pylint: disable=E0611
     stack_bidirectional_dynamic_rnn,
 )
+from tensorflow.estimator import ModeKeys
 from tsaplay.models.tsa_model import TsaModel
-from tsaplay.utils.addons import addon, attn_heatmaps, early_stopping, beholder
+from tsaplay.utils.addons import addon, attn_heatmaps, early_stopping
 from tsaplay.utils.tf import (
     masked_softmax,
     variable_len_batch_mean,
@@ -92,7 +93,12 @@ class Ram(TsaModel):
             memory_star, _, _ = stack_bidirectional_dynamic_rnn(
                 cells_fw=forward_cells,
                 cells_bw=backward_cells,
-                inputs=features["sentence_emb"],
+                inputs=tf.nn.dropout(
+                    features["sentence_emb"],
+                    keep_prob=(
+                        params["keep_prob"] if mode == ModeKeys.TRAIN else 1
+                    ),
+                ),
                 sequence_length=features["sentence_len"],
                 dtype=tf.float32,
             )
@@ -168,6 +174,12 @@ class Ram(TsaModel):
             attn_scores, g_scores = ram_attn_unit(
                 seq_lens=features["sentence_len"],
                 attn_focus=mem_prev_ep_v_target,
+                # attn_focus=tf.nn.dropout(
+                #     mem_prev_ep_v_target,
+                #     keep_prob=(
+                #         params["keep_prob"] if mode == ModeKeys.TRAIN else 1
+                #     ),
+                # ),
                 weight_dim=weight_dim,
                 w_att=attn_weights.read(attn_layer_num - 1),
                 b_att=attn_biases.read(attn_layer_num - 1),
@@ -181,6 +193,14 @@ class Ram(TsaModel):
                 _, final_state = tf.nn.dynamic_rnn(
                     cell=gru_cell(**params, mode=mode),
                     inputs=content_i_al,
+                    # inputs=tf.nn.dropout(
+                    #     content_i_al,
+                    #     keep_prob=(
+                    #         params["keep_prob"]
+                    #         if mode == ModeKeys.TRAIN
+                    #         else 1
+                    #     ),
+                    # ),
                     sequence_length=features["sentence_len"],
                     dtype=tf.float32,
                 )
@@ -198,7 +218,14 @@ class Ram(TsaModel):
             return (attn_layer_num, final_state, attn_snapshots)
 
         _, final_episode, attn_snapshots = tf.while_loop(
-            cond=condition, body=attn_layer_run, loop_vars=initial_layer_inputs
+            cond=condition,
+            body=attn_layer_run,
+            loop_vars=initial_layer_inputs,
+            shape_invariants=(
+                attn_layer_num.get_shape(),
+                episode_0.get_shape(),
+                tf.TensorShape(dims=[params["n_hops"], None, None, 1]),
+            ),
         )
 
         literals, attn_snapshots = zip_attn_snapshots_with_literals(
@@ -212,7 +239,12 @@ class Ram(TsaModel):
         final_sentence_rep = tf.squeeze(final_episode, axis=1)
 
         logits = tf.layers.dense(
-            inputs=final_sentence_rep,
+            inputs=tf.nn.dropout(
+                final_sentence_rep,
+                keep_prob=(
+                    params["keep_prob"] if mode == ModeKeys.TRAIN else 1
+                ),
+            ),
             units=params["_n_out_classes"],
             kernel_initializer=params["initializer"],
             bias_initializer=params["initializer"],
@@ -334,4 +366,3 @@ def ram_attn_unit(seq_lens, attn_focus, weight_dim, w_att, b_att):
         attn_weights,  # softmaxed attention vector
         g_score,  # to optionally use for summary heatmaps
     )
-

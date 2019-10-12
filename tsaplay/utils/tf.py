@@ -294,24 +294,23 @@ def gru_cell(**params):
     bias_initializer = params.get(
         "gru_bias_initializer", params.get("bias_initializer")
     )
-    keep_prob = (
-        params.get("gru_keep_prob", params.get("keep_prob", 1))
-        if params["mode"] == ModeKeys.TRAIN
-        else 1
-    )
     # keep_prob = params.get("gru_keep_prob", params.get("keep_prob", 1))
+    # keep_prob = (
+    #     params.get("gru_keep_prob", params.get("keep_prob", 1))
+    #     if params["mode"] == ModeKeys.TRAIN
+    #     else 1
+    # )
     gru = tf.nn.rnn_cell.GRUCell(
         num_units=hidden_units,
         kernel_initializer=initializer,
         bias_initializer=(bias_initializer or initializer),
     )
-    gru = tf.contrib.rnn.DropoutWrapper(
-        cell=gru,
-        input_keep_prob=keep_prob,
-        # output_keep_prob=keep_prob,
-        # state_keep_prob=keep_prob,
-    )
-    # gru = tf.contrib.rnn.DropoutWrapper(cell=gru, state_keep_prob=keep_prob)
+    # gru = tf.contrib.rnn.DropoutWrapper(
+    #     cell=gru,
+    #     input_keep_prob=keep_prob,
+    #     output_keep_prob=keep_prob,
+    #     state_keep_prob=keep_prob,
+    # )
     return gru
 
 
@@ -319,25 +318,22 @@ def lstm_cell(**params):
     hidden_units = params.get("lstm_hidden_units", params.get("hidden_units"))
     initializer = params.get("lstm_initializer", params.get("initializer"))
     initial_bias = params.get("lstm_initial_bias", 1)
-    keep_prob = (
-        params.get("lstm_keep_prob", params.get("keep_prob", 1))
-        if params["mode"] == ModeKeys.TRAIN
-        else 1
-    )
-    # keep_prob = params.get("lstm_keep_prob", params.get("keep_prob", 1))
+    # # keep_prob = params.get("lstm_keep_prob", params.get("keep_prob", 1))
+    # keep_prob = (
+    #     params.get("lstm_keep_prob", params.get("keep_prob", 1))
+    #     if params["mode"] == ModeKeys.TRAIN
+    #     else 1
+    # )
     lstm = tf.nn.rnn_cell.LSTMCell(
         num_units=hidden_units,
         initializer=initializer,
         forget_bias=initial_bias,
     )
-    lstm = tf.contrib.rnn.DropoutWrapper(
-        cell=lstm,
-        input_keep_prob=keep_prob,
-        # output_keep_prob=keep_prob,
-        # state_keep_prob=keep_prob,
-    )
     # lstm = tf.contrib.rnn.DropoutWrapper(
-    #     cell=lstm, state_keep_prob=keep_prob
+    #     cell=lstm,
+    #     input_keep_prob=keep_prob,
+    #     # output_keep_prob=keep_prob,
+    #     # state_keep_prob=keep_prob,
     # )
     return lstm
 
@@ -642,7 +638,7 @@ def embedding_initializer_fn(vectors, num_shards, structure=None):
 
 def metric_variable(shape, dtype, validate_shape=True, name=None):
     """Create variable in `GraphKeys.(LOCAL|METRIC_VARIABLES`) collections.
-    from https://github.com/tensorflow/tensorflow/blob/r1.8/tensorflow/python/ops/metrics_impl.py
+    https://github.com/tensorflow/tensorflow/blob/r1.8/tensorflow/python/ops/metrics_impl.py
     """
     return variable_scope.variable(
         lambda: array_ops.zeros(shape, dtype),

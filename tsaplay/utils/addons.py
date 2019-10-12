@@ -4,7 +4,6 @@ from os import makedirs
 from functools import wraps, partial
 from pprint import pformat
 import tensorflow as tf
-from tensorboard.plugins.beholder import BeholderHook
 from tensorflow.estimator import ModeKeys  # pylint: disable=E0401
 from tensorflow.saved_model.signature_constants import (  # pylint: disable=E0401
     DEFAULT_SERVING_SIGNATURE_DEF_KEY,
@@ -25,7 +24,7 @@ from tsaplay.hooks import (
     ConsoleLoggerHook,
 )
 from tsaplay.utils.tf import streaming_f1_scores, streaming_conf_matrix
-from tsaplay.utils.io import cprnt, start_tensorboard
+from tsaplay.utils.io import cprnt
 
 
 def attach(addons, modes=None, order="POST"):
@@ -131,18 +130,6 @@ def attn_heatmaps(model, features, labels, spec, params):
         )
     ]
     return spec._replace(evaluation_hooks=eval_hooks)
-
-
-@only(["TRAIN"])
-def beholder(model, features, labels, spec, params):
-    if not model.aux_config.get("beholder"):
-        return spec
-    model_dir = model.run_config.model_dir
-    if model.aux_config.get("debug") in [None, "cli"]:
-        start_tensorboard(model_dir=model_dir, sub=True)
-    train_hooks = list(spec.training_hooks) or []
-    train_hooks += [BeholderHook(model_dir)]
-    return spec._replace(training_hooks=train_hooks)
 
 
 @only(["EVAL"])
