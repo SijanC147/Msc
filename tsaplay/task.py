@@ -55,6 +55,12 @@ def argument_parser():
         help="Default parameters to forward to all tasks (low precedence)",
         nargs=argparse.REMAINDER,
     )
+    batch_task_parser.add_argument(
+        "--nocolor",
+        help="Turn off colored output in console",
+        action="store_true",
+        default=False,
+    )
 
     single_task_parser = subparsers.add_parser("single")
     single_task_parser.add_argument(
@@ -185,6 +191,13 @@ def argument_parser():
         help="Set logging verbosity",
     )
 
+    single_task_parser.add_argument(
+        "--nocolor",
+        help="Turn off colored output in console",
+        action="store_true",
+        default=False,
+    )
+
     return parser
 
 
@@ -238,7 +251,8 @@ def run_experiment(args, experiment_index=None):
     if args.comet_api and not args.contd_tag:
         cprnt(warn="comet api provided without contd-tag.")
         sys.exit(1)
-    tf.logging.set_verbosity(args.verbosity)
+    # tf.logging.set_verbosity(args.verbosity)
+    tf.logging.set_verbosity(tf.logging.INFO)
 
     feature_provider = make_feature_provider(args)
 
@@ -262,8 +276,10 @@ def run_experiment(args, experiment_index=None):
         {"epoch_steps": epoch_steps, "shuffle_buffer": num_training_samples}
     )
     if args.steps is not None:
+        cprnt("POPPING EPOCHS")
         model.params.pop("epochs", None)
     if model.params.get("epochs") is not None:
+        cprnt("POPPING STEPS")
         model.params.pop("steps", None)
 
     experiment = Experiment(
@@ -317,17 +333,36 @@ def run_next_experiment(batch_file_path, job_dir=None, defaults=None):
     tasks = parse_batch_file(batch_file_path, defaults)
     if job_dir:
         tasks = [t + ["--job-dir", job_dir] for t in tasks]
+    cprnt(
+        """
+TASKS:
+{}""".format(
+            tasks
+        )
+    )
     task_index = int(environ.get("TSATASK", 0))
     cprnt(warn="TASK INDEX: {0}".format(task_index))
     if task_index >= len(tasks):
+        cprnt(
+            """
+Task Index ({}) >= Num of tasks ({})
+Clearing TSATASK ({}) ENV VAR
+""".format(
+                task_index, len(tasks), environ.get("TSATASK")
+            )
+        )
         del environ["TSATASK"]
+        cprnt("TSATASK ENV CLEARED: {}".format(environ.get("TSATASK")))
+        # environ["TSATASK"] = "0"
+        # sys.exit(0)
         return
-    try:
-        task_args = task_parser.parse_args(tasks[task_index])
-        cprnt(info="RUNNING TASK {0}: {1}".format(task_index, task_args))
-        run_experiment(task_args, experiment_index=task_index)
-    except Exception:  # pylint: disable=W0703
-        traceback.print_exc()
+    # try:
+    task_args = task_parser.parse_args(tasks[task_index])
+    cprnt(info="RUNNING TASK {0}: {1}".format(task_index, task_args))
+    run_experiment(task_args, experiment_index=task_index)
+    # except Exception as e:  # pylint: disable=W0703
+    #     cprnt("EXCEPTION!!!!{}".format(e))
+    #     traceback.print_exc()
     environ["TSATASK"] = str(task_index + 1)
     job_dir_arg = "--job-dir {}".format(job_dir) if (job_dir) else ""
     defaults_arg = (
@@ -343,12 +378,29 @@ def main():
     nvidia_cuda_prof_tools_path_fix()
     parser = argument_parser()
     args = parser.parse_args()
+    cprnt(
+        """
+--ARGS--
+{}
+--------""".format(
+            args
+        )
+    )
     try:
-        new_batch = args.new
+        if args.nocolor:
+            environ["TSA_COLORED"] = "OFF"
+    except AttributeError:
+        pass
+    try:
+        if args.new and environ.get("TSATASK") is not None:
+            cprnt(
+                "***** DELETING TSATASK ENV VAR ({})*****".format(
+                    environ.get("TSATASK")
+                )
+            )
+            del environ["TSATASK"]
     except AttributeError:  # ? Not running in batch mode.
-        new_batch = False
-    if new_batch and environ.get("TSATASK") is not None:
-        del environ["TSATASK"]
+        pass
     try:
         if args.defaults and "--job-dir" in args.defaults:
             def_job_dir_index = args.defaults.index("--job-dir")
@@ -361,9 +413,20 @@ def main():
         else:
             run_next_experiment(args.batch_file, args.job_dir, args.defaults)
     except AttributeError:  # ? Not running in batch mode.
+        sys.exit(1)
         run_experiment(args)
     pkg.cleanup_resources()
 
 
 if __name__ == "__main__":
+    tf.logging.set_verbosity(tf.logging.INFO)
+    cprnt(
+        """
+RUNNING __name__ = {}
+ARGS: {}
+ENVIRON: {}
+""".format(
+            __name__, argv, environ
+        )
+    )
     main()

@@ -1,5 +1,5 @@
 {
-    "jobId": "is_nn_dropout",
+    "jobId": "debug_term_44",
     "labels": {},
     "trainingInput": {
         "scaleTier": "CUSTOM",
@@ -9,8 +9,9 @@
         "region": "europe-west1",
         "args": [
             "batch",
-            "reproducibility-ram.txt",
-            "--new"
+            "debug.txt",
+            "--new",
+            "--nocolor"
         ]
     }
 }

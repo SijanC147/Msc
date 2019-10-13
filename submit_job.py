@@ -112,10 +112,11 @@ def write_gcloud_config(args):
             args.task_args[:1]
             + [basename(args.task_args[1])]
             + ["--new"]
+            + ["--nocolor"]
             + args.task_args[2:]
         )
         if args.task_args[0] == "batch"
-        else args.task_args
+        else (args.task_args[:1] + ["--nocolor"] + args.task_args[1:])
     )
     machine_types = args_to_dict(args.machine_types) or {
         "masterType": "standard",

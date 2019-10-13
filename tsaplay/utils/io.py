@@ -9,7 +9,7 @@ import subprocess
 from math import floor
 from zipfile import ZipFile, ZIP_DEFLATED
 from datetime import datetime, timedelta
-from os import listdir, system, makedirs
+from os import listdir, system, makedirs, environ
 from os.path import (
     isfile,
     join,
@@ -59,20 +59,23 @@ def cprnt(*args, **kwargs):
         }.get(color_key.lower(), color_key)
         if not isinstance(string, str):
             string = pprint.pformat(string)
-        col = "".join(filter(str.isalpha, color_key))
-        index = col.find("o")
-        if index != -1:
-            txt, _, frgnd = col.partition("o")
-            output += (
-                colored(
-                    string,
-                    colors.get(txt, "grey"),
-                    "on_" + colors.get(frgnd, "grey"),
-                )
-                + " "
-            )
+        if environ.get("TSA_COLORED") == "OFF":
+            output += string + " "
         else:
-            output += colored(string, colors.get(col, "grey")) + " "
+            col = "".join(filter(str.isalpha, color_key))
+            index = col.find("o")
+            if index != -1:
+                txt, _, frgnd = col.partition("o")
+                output += (
+                    colored(
+                        string,
+                        colors.get(txt, "grey"),
+                        "on_" + colors.get(frgnd, "grey"),
+                    )
+                    + " "
+                )
+            else:
+                output += colored(string, colors.get(col, "grey")) + " "
     print(output, end=kwargs.get("end", "\n"))
 
 

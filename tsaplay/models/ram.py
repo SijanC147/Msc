@@ -31,7 +31,7 @@ class Ram(TsaModel):
             # * RAM-3AL-NT reports the best results across datasets
             "train_embeddings": False,
             # # * ... the maximum number of training iterations is 100 ...
-            # "epochs": 100,
+            "epochs": 100,
             # ? Suggestions from https://github.com/lpq29743/RAM/blob/master/main.py
             "lstm_hidden_units": 300,
             "gru_hidden_units": 300,
@@ -41,14 +41,15 @@ class Ram(TsaModel):
             # ! Paper mention no initialization parameter at all
             "initializer": tf.initializers.random_uniform(-0.1, 0.1),
             # ? https://github.com/lpq29743/RAM/blob/master/model.py uses
-            # "initializer" : tf.orthogonal_initializer(), # for GRU and LSTM
-            # "bias_initializer" : tf.zeros_initializer(), # for biases
-            # "attn_initializer": tf.contrib.layers.xavier_initializer(), # for attn
+            # "initializer": tf.orthogonal_initializer(),  # for GRU and LSTM
+            # "bias_initializer": tf.zeros_initializer(),  # for biases
+            # "lstm_initial_bias": 0,
+            # "attn_initializer": tf.contrib.layers.xavier_initializer(),  # for attn
             # ? Suggestions from https://github.com/lpq29743/RAM/blob/master/main.py
             "batch-size": 32,
             "early_stopping_minimum_iter": 30,
             # ? Following approach of Moore et al. 2018, using early stopping
-            "epochs": 100,
+            # "epochs": 300,
             "early_stopping_patience": 10,
             "early_stopping_metric": "macro-f1",
         }
@@ -86,19 +87,18 @@ class Ram(TsaModel):
         forward_cells = []
         backward_cells = []
         for _ in range(params["n_lstm_layers"]):
-            forward_cells.append(lstm_cell(**params, mode=mode))
-            backward_cells.append(lstm_cell(**params, mode=mode))
+            forward_cells.append(lstm_cell(**params))
+            backward_cells.append(lstm_cell(**params))
+
+        features["sentence_emb"] = tf.nn.dropout(
+            features["sentence_emb"], keep_prob=params["keep_prob"]
+        )
 
         with tf.variable_scope("bi_lstm"):
             memory_star, _, _ = stack_bidirectional_dynamic_rnn(
                 cells_fw=forward_cells,
                 cells_bw=backward_cells,
-                inputs=tf.nn.dropout(
-                    features["sentence_emb"],
-                    keep_prob=(
-                        params["keep_prob"] if mode == ModeKeys.TRAIN else 1
-                    ),
-                ),
+                inputs=features["sentence_emb"],
                 sequence_length=features["sentence_len"],
                 dtype=tf.float32,
             )
@@ -146,7 +146,9 @@ class Ram(TsaModel):
                 name="weights",
                 shape=[params["n_hops"], 1, weight_dim],
                 dtype=tf.float32,
-                initializer=params["initializer"],
+                initializer=params.get(
+                    "attn_initializer", params.get("initializer")
+                ),
             )
         )
         attn_biases = attn_biases.unstack(
@@ -154,7 +156,9 @@ class Ram(TsaModel):
                 name="bias",
                 shape=[params["n_hops"], 1],
                 dtype=tf.float32,
-                initializer=params["initializer"],
+                initializer=params.get(
+                    "bias_initializer", params.get("initializer")
+                ),
             )
         )
 
@@ -171,15 +175,13 @@ class Ram(TsaModel):
                 prev_episode=episode,
             )
 
+            mem_prev_ep_v_target = tf.nn.dropout(
+                mem_prev_ep_v_target, keep_prob=params["keep_prob"]
+            )
+
             attn_scores, g_scores = ram_attn_unit(
                 seq_lens=features["sentence_len"],
                 attn_focus=mem_prev_ep_v_target,
-                # attn_focus=tf.nn.dropout(
-                #     mem_prev_ep_v_target,
-                #     keep_prob=(
-                #         params["keep_prob"] if mode == ModeKeys.TRAIN else 1
-                #     ),
-                # ),
                 weight_dim=weight_dim,
                 w_att=attn_weights.read(attn_layer_num - 1),
                 b_att=attn_biases.read(attn_layer_num - 1),
@@ -189,18 +191,14 @@ class Ram(TsaModel):
                 memory * attn_scores, axis=1, keepdims=True
             )
 
+            content_i_al = tf.nn.dropout(
+                content_i_al, keep_prob=params["keep_prob"]
+            )
+
             with tf.variable_scope("gru_layer", reuse=tf.AUTO_REUSE):
                 _, final_state = tf.nn.dynamic_rnn(
                     cell=gru_cell(**params, mode=mode),
                     inputs=content_i_al,
-                    # inputs=tf.nn.dropout(
-                    #     content_i_al,
-                    #     keep_prob=(
-                    #         params["keep_prob"]
-                    #         if mode == ModeKeys.TRAIN
-                    #         else 1
-                    #     ),
-                    # ),
                     sequence_length=features["sentence_len"],
                     dtype=tf.float32,
                 )
@@ -238,16 +236,17 @@ class Ram(TsaModel):
 
         final_sentence_rep = tf.squeeze(final_episode, axis=1)
 
+        final_sentence_rep = tf.nn.dropout(
+            final_sentence_rep, keep_prob=params["keep_prob"]
+        )
+
         logits = tf.layers.dense(
-            inputs=tf.nn.dropout(
-                final_sentence_rep,
-                keep_prob=(
-                    params["keep_prob"] if mode == ModeKeys.TRAIN else 1
-                ),
-            ),
+            inputs=final_sentence_rep,
             units=params["_n_out_classes"],
-            kernel_initializer=params["initializer"],
-            bias_initializer=params["initializer"],
+            kernel_initializer=params.get["initializer"],
+            bias_initializer=params.get(
+                "bias_initializer", params["initializer"]
+            ),
         )
 
         loss = l2_regularized_loss(

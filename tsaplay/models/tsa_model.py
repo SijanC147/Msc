@@ -208,6 +208,8 @@ class TsaModel(ABC):
     @addon([prediction_outputs])
     @embed_sequences
     def _model_fn(self, features, labels, mode, params):
+        if mode == ModeKeys.EVAL and params.get("keep_prob") is not None:
+            params["keep_prob"] = 1
         return self.model_fn(features, labels, mode, params)
 
     def _initialize_estimator(self, feature_provider, **kwargs):

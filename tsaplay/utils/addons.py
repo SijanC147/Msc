@@ -176,6 +176,14 @@ def f1_scores(model, features, labels, spec, params):
 
 @only(["TRAIN", "EVAL"])
 def logging(model, features, labels, spec, params):
+    contd_tag = (
+        "[{}{}]".format(
+            ("..." if len(params["contd_tag"]) > 6 else ""),
+            params["contd_tag"][-6:],
+        )
+        if params["contd_tag"] is not None
+        else ""
+    )
     if spec.mode == ModeKeys.TRAIN:
         cprnt(
             INFO="""INFO Run Configuration:
@@ -219,7 +227,8 @@ def logging(model, features, labels, spec, params):
                     "loss": spec.loss,
                     "accuracy": std_metrics["accuracy"][1],
                 },
-                template="TRAIN \t STEP: {step} \t EPOCH: {epoch:.1f} \t| acc: {accuracy:.5f} \t loss: {loss:.5f} |\t duration: {duration:.2f}s sec/step: {sec_per_step:.2f}s step/sec: {step_per_sec:.2f}",
+                template=contd_tag
+                + "TRAIN \t STEP: {step} \t EPOCH: {epoch:.1f} \t| acc: {accuracy:.5f} \t loss: {loss:.5f} |\t duration: {duration:.2f}s sec/step: {sec_per_step:.2f}s step/sec: {step_per_sec:.2f}",
             )
         ]
         spec = spec._replace(training_hooks=train_hooks)
@@ -231,7 +240,8 @@ def logging(model, features, labels, spec, params):
                 epoch_steps=params["epoch_steps"],
                 tensors={k: v[0] for k, v in spec.eval_metric_ops.items()},
                 template=(
-                    """EVAL \t STEP: {step} \t EPOCH: {epoch:.1f} \t| acc: {accuracy:.5f} \t mpc_acc: {mpc_accuracy:.5f} \t macro-f1: {macro-f1:.5f} \t weighted-f1: {weighted-f1:.5f}
+                    contd_tag
+                    + """EVAL \t STEP: {step} \t EPOCH: {epoch:.1f} \t| acc: {accuracy:.5f} \t mpc_acc: {mpc_accuracy:.5f} \t macro-f1: {macro-f1:.5f} \t weighted-f1: {weighted-f1:.5f}
 {conf-mat}"""
                 ),
             )

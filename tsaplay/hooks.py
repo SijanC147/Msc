@@ -32,7 +32,13 @@ import matplotlib.pyplot as plt  # noqa pylint: disable=C0411,C0412,C0413
 
 class ConsoleLoggerHook(SessionRunHook):
     def __init__(
-        self, mode, tensors, template, each_steps=None, epoch_steps=None
+        self,
+        mode,
+        tensors,
+        template,
+        each_steps=None,
+        epoch_steps=None,
+        **kwargs
     ):
         self.mode = mode
         self.tensors = tensors
@@ -59,8 +65,9 @@ class ConsoleLoggerHook(SessionRunHook):
                 current_time = time.time()
                 duration = current_time - self._start_time
                 self._start_time = time.time()
-                cprnt(
-                    TRAIN=self.template.format_map(
+                tf.logging.log(
+                    tf.logging.INFO,
+                    self.template.format_map(
                         {
                             "duration": duration,
                             "sec_per_step": float(
@@ -73,8 +80,24 @@ class ConsoleLoggerHook(SessionRunHook):
                             ),
                             **run_values.results,
                         }
-                    )
+                    ),
                 )
+                # cprnt(
+                #     TRAIN=self.template.format_map(
+                #         {
+                #             "duration": duration,
+                #             "sec_per_step": float(
+                #                 duration
+                #                 / (self.each_steps if global_step != 1 else 1)
+                #             ),
+                #             "step_per_sec": float(
+                #                 (self.each_steps if global_step != 1 else 1)
+                #                 / duration
+                #             ),
+                #             **run_values.results,
+                #         }
+                #     )
+                # )
 
     def end(self, session):
         if self.mode == ModeKeys.EVAL:

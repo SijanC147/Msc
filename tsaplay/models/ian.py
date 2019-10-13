@@ -51,8 +51,11 @@ class Ian(TsaModel):
     @addon([attn_heatmaps, early_stopping])
     def model_fn(self, features, labels, mode, params):
         with tf.variable_scope("context_lstm"):
+            features["context_emb"] = tf.nn.dropout(
+                features["context_emb"], keep_prob=params["keep_prob"]
+            )
             context_hidden_states, _ = tf.nn.dynamic_rnn(
-                cell=lstm_cell(**params, mode=mode),
+                cell=lstm_cell(**params),
                 inputs=features["context_emb"],
                 sequence_length=features["context_len"],
                 dtype=tf.float32,
@@ -64,8 +67,11 @@ class Ian(TsaModel):
             )
 
         with tf.variable_scope("target_lstm"):
+            features["target_emb"] = tf.nn.dropout(
+                features["target_emb"], keep_prob=params["keep_prob"]
+            )
             target_hidden_states, _ = tf.nn.dynamic_rnn(
-                cell=lstm_cell(**params, mode=mode),
+                cell=lstm_cell(**params),
                 inputs=features["target_emb"],
                 sequence_length=features["target_len"],
                 dtype=tf.float32,
@@ -77,6 +83,9 @@ class Ian(TsaModel):
             )
 
         with tf.variable_scope("attention_layer", reuse=tf.AUTO_REUSE):
+            context_hidden_states = tf.nn.dropout(
+                context_hidden_states, keep_prob=params["keep_prob"]
+            )
             c_r, ctxt_attn_info = attention_unit(
                 h_states=context_hidden_states,
                 hidden_units=params["hidden_units"],
@@ -85,6 +94,10 @@ class Ian(TsaModel):
                 init=params["initializer"],
                 bias_init=params["bias_initializer"],
                 sp_literal=features["context"],
+            )
+
+            target_hidden_states = tf.nn.dropout(
+                target_hidden_states, keep_prob=params["keep_prob"]
             )
             t_r, trg_attn_info = attention_unit(
                 h_states=target_hidden_states,
@@ -99,13 +112,18 @@ class Ian(TsaModel):
         generate_attn_heatmap_summary(trg_attn_info, ctxt_attn_info)
 
         final_sentence_rep = tf.concat([t_r, c_r], axis=1)
+        final_sentence_rep = tf.nn.dropout(
+            final_sentence_rep, keep_prob=params["keep_prob"]
+        )
 
         logits = tf.layers.dense(
             inputs=final_sentence_rep,
             units=params["_n_out_classes"],
             activation=tf.nn.tanh,
             kernel_initializer=params["initializer"],
-            bias_initializer=params["bias_initializer"],
+            bias_initializer=params.get(
+                "bias_initializer", params["initializer"]
+            ),
         )
 
         loss = l2_regularized_loss(

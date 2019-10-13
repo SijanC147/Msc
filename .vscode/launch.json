@@ -64,7 +64,8 @@
             "module": "tsaplay.task",
             "args": [
                 "batch",
-                "studies/debug.txt",
+                // "studies/debug.txt",
+                "studies/reproduction-models/reproducibility-ram.txt",
                 // "--defaults",
                 // "-b",
                 // "5",

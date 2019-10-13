@@ -217,6 +217,7 @@ class Experiment:
                 api_key=api_key,
                 project_name=self.model.name,
                 workspace=(workspace or DEFAULT_COMET_WORKSPACE),
+                log_env_details=False,
             )
             comet_experiment.set_name(self.contd_tag)
             exp_key = comet_experiment.get_key()

@@ -199,11 +199,10 @@ def prep_dataset(tfrecords, params, processing_fn, mode):
         lambda features, labels: (make_dense_features(features), labels),
         num_parallel_calls=parallel_calls,
     )
+    dataset = dataset.cache()
     if mode == "TRAIN":
         # ? epochs == 0 => repeat indefinitely => count = None
         dataset = dataset.repeat(count=(params.get("epochs") or None))
-
-    dataset = dataset.cache()
 
     return dataset
 
@@ -294,23 +293,11 @@ def gru_cell(**params):
     bias_initializer = params.get(
         "gru_bias_initializer", params.get("bias_initializer")
     )
-    # keep_prob = params.get("gru_keep_prob", params.get("keep_prob", 1))
-    # keep_prob = (
-    #     params.get("gru_keep_prob", params.get("keep_prob", 1))
-    #     if params["mode"] == ModeKeys.TRAIN
-    #     else 1
-    # )
     gru = tf.nn.rnn_cell.GRUCell(
         num_units=hidden_units,
         kernel_initializer=initializer,
         bias_initializer=(bias_initializer or initializer),
     )
-    # gru = tf.contrib.rnn.DropoutWrapper(
-    #     cell=gru,
-    #     input_keep_prob=keep_prob,
-    #     output_keep_prob=keep_prob,
-    #     state_keep_prob=keep_prob,
-    # )
     return gru
 
 
@@ -318,23 +305,11 @@ def lstm_cell(**params):
     hidden_units = params.get("lstm_hidden_units", params.get("hidden_units"))
     initializer = params.get("lstm_initializer", params.get("initializer"))
     initial_bias = params.get("lstm_initial_bias", 1)
-    # # keep_prob = params.get("lstm_keep_prob", params.get("keep_prob", 1))
-    # keep_prob = (
-    #     params.get("lstm_keep_prob", params.get("keep_prob", 1))
-    #     if params["mode"] == ModeKeys.TRAIN
-    #     else 1
-    # )
     lstm = tf.nn.rnn_cell.LSTMCell(
         num_units=hidden_units,
         initializer=initializer,
         forget_bias=initial_bias,
     )
-    # lstm = tf.contrib.rnn.DropoutWrapper(
-    #     cell=lstm,
-    #     input_keep_prob=keep_prob,
-    #     # output_keep_prob=keep_prob,
-    #     # state_keep_prob=keep_prob,
-    # )
     return lstm
 
 

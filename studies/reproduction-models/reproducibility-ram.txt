@@ -1,8 +1,9 @@
 ## RUN WITH DEFAULTS: 
 default: -cmt T1NrVnn32dXWeOxeQWGArkHwc -wrk reproduction-studies
-default: -aux logging=true attn_heatmaps=false
-default: -mp oov_train=1 oov_fn=uniform[-0.1,0.1]
-;default: -rc tf_random_seed=1234
+default: -aux logging=true 
+default: -mp oov_train=5 oov_buckets=5 oov_fn=uniform[-0.1,0.1]
+;default: -rc tf_random_seed=1234 
+default: -rc save_summary_steps=/10
 ###
 
 # RAM
@@ -14,5 +15,5 @@ default: -mp oov_train=1 oov_fn=uniform[-0.1,0.1]
 ;-em=commoncrawl-42[corpus] -ds=dong -m=ram -mp n_hops=3 -contd=ram-cc42-dong-3hops-oovt1
 ;-em=commoncrawl-42[corpus] -ds=restaurants -m=ram -mp n_hops=3 -contd=ram-cc42-restaurants-3hops-oovt1
 
--em=commoncrawl-42[corpus] -ds=dong -m=ram -mp n_hops=3 -contd=is_nn_dropout_rs-eoff
+-em=commoncrawl-42[corpus] -ds=dong -m=ram -mp n_hops=3 -contd=iags_nn_diffinits_ealoss_oovt5b5
 
