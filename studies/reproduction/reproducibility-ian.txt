@@ -1,0 +1,13 @@
+## DEFAULTS: 
+default: -cmt T1NrVnn32dXWeOxeQWGArkHwc -wrk reproduction
+default: -aux logging=true 
+default: -rc save_summary_steps=/3
+default: -mp oov_train=1 oov_buckets=1 oov_fn=uniform[-0.1,0.1]
+###
+
+# IAN
+; OOV words initialized to using U(-0.1,0.1) 
+; batch-size(64) taken from default at https://github.com/songyouwei/ABSA-PyTorch/blob/master/train.py
+; No mention which version of glove-300d is used, authors cite Wang-ATAE when quoting LSTM hidden units, assuming same GloVe version used. 
+-em=commoncrawl-42[corpus] -ds=restaurants -m=ian -contd=ian-cc42-restaurants-oovt1b1
+-em=commoncrawl-42[corpus] -ds=laptops -m=ian -contd=ian-cc42-laptops-oovt1b1

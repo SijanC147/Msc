@@ -1,8 +1,9 @@
-## RUN WITH DEFAULTS: 
-default: -cmt T1NrVnn32dXWeOxeQWGArkHwc
-default: -wrk reproduction-staging
+## DEFAULTS: 
+default: -cmt T1NrVnn32dXWeOxeQWGArkHwc -wrk reproduction-studies
 default: -aux logging=true 
-default: -mp oov_train=1 oov_fn=uniform[-0.1,0.1]
+default: -rc save_summary_steps=/3
+default: -mp oov_train=1 oov_buckets=1 oov_fn=uniform[-0.1,0.1]
+###
 
 # MemNet
 ; No mention of any approach to OOV tokens 

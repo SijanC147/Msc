@@ -3,7 +3,6 @@ import traceback
 from inspect import isclass, isabstract, getmembers
 from importlib import import_module
 from sys import argv
-import os
 from os import environ, execvpe, sys
 from os.path import join
 import warnings
@@ -316,6 +315,7 @@ def nvidia_cuda_prof_tools_path_fix():
 
 def parse_batch_file(batch_file_path, defaults=None):
     jobs = []
+    infile_defaults = []
     defaults = defaults or []
     try:
         batch_file = open(batch_file_path, "r")
@@ -326,9 +326,11 @@ def parse_batch_file(batch_file_path, defaults=None):
             cmd = cmd.strip()
             if cmd and cmd[0] not in ["#", ";"]:
                 if cmd.startswith("default"):
-                    defaults += cmd.split()[1:]
+                    infile_defaults += cmd.split()[1:]
                 else:
-                    jobs.append(["single"] + defaults + cmd.split())
+                    jobs.append(
+                        ["single"] + (infile_defaults + defaults) + cmd.split()
+                    )
     return jobs
 
 

@@ -1,0 +1,14 @@
+default: -cmt T1NrVnn32dXWeOxeQWGArkHwc -wrk reproduction
+default: -aux logging=true 
+default: -rc save_summary_steps=/3
+default: -mp oov_train=1 oov_buckets=1 oov_fn=uniform[-0.1,0.1]
+###
+
+# MemNet
+; No mention of any approach to OOV tokens 
+; glove-300d-commoncrawl-42 version is identified by quoting vocab size of 1.9M
+; Using location model #2 since this reported best results
+; implies that word embeddings are not trained
+; batch-size(100) taken from https://github.com/NUSTM/ABSC/blob/master/models/ABSC_Zozoz/model/dmn.py
+-em=commoncrawl-42[corpus] -ds=restaurants -m=mem_net -mp n_hops=9 -contd=memnet-cc42-restaurants-9hops-oovt1b1
+-em=commoncrawl-42[corpus] -ds=laptops -m=mem_net -mp n_hops=7 -contd=memnet-cc42-laptops-7hops-oovt1b1

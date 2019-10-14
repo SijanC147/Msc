@@ -1,15 +1,17 @@
 {
-    "jobId": "iags_nn_balanced_4",
-    "labels": {},
+    "jobId": "reproduction_lcrrot_run3",
+    "labels": {
+        "model": "lcrrot"
+    },
     "trainingInput": {
         "scaleTier": "CUSTOM",
-        "masterType": "complex_model_s",
+        "masterType": "complex_model_m",
         "pythonVersion": "3.5",
         "runtimeVersion": "1.12",
         "region": "europe-west1",
         "args": [
             "batch",
-            "reproducibility-ram.txt",
+            "reproducibility-lcrrot.txt",
             "--new",
             "--nocolor"
         ]

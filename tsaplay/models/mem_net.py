@@ -24,7 +24,7 @@ class MemNet(TsaModel):
             "train_embeddings": False,
             # ? Suggestions from https://github.com/NUSTM/ABSC/blob/master/models/ABSC_Zozoz/model/dmn.py
             "batch-size": 100,
-            "early_stopping_minimum_iter": 30,
+            "early_stopping_minimum_iter": 50,
             # ? Following approach of Moore et al. 2018, using early stopping
             "epochs": 300,
             "early_stopping_patience": 10,

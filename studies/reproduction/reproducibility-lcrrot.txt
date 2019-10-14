@@ -1,0 +1,14 @@
+## DEFAULTS: 
+default: -cmt T1NrVnn32dXWeOxeQWGArkHwc -wrk reproduction
+default: -aux logging=true attn_heatmaps_freq=5
+default: -rc save_summary_steps=/3
+default: -mp oov_train=1 oov_buckets=1 oov_fn=uniform[-0.1,0.1]
+###
+
+# LCR-ROT
+; OOV words initialized to using U(-0.1,0.1) 
+; batch-size(25) is taken from example posted on https://github.com/NUSTM/ABSC/tree/master/models/ABSC_Zozoz
+; Conflicting report says they used same glove-300d as Tang-MemNet(who uses commoncrawl-42) and Wang-ATAE(who uses commoncrawl-840), assuming latter since larger
+-em=commoncrawl-42[corpus] -ds=dong -m=lcr_rot -contd=lcrrot-cc42-dong-oovt1b1
+-em=commoncrawl-42[corpus] -ds=laptops -m=lcr_rot -contd=lcrrot-cc42-laptops-oovt1b1
+-em=commoncrawl-42[corpus] -ds=restaurants -m=lcr_rot -contd=lcrrot-cc42-restaurants-oovt1b1

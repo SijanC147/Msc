@@ -169,7 +169,7 @@ class SaveAttentionWeightVector(SessionRunHook):
         comet=None,
         n_picks=1,
         n_hops=None,
-        freq=10,
+        freq=5,
         epoch_steps=None,
     ):
         self.labels = labels

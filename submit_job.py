@@ -1,4 +1,5 @@
 import argparse
+import traceback
 from os import system, remove
 from os.path import join, abspath, basename
 from json import dump
@@ -8,7 +9,7 @@ from tsaplay.task import (
     argument_parser as task_argument_parser,
     parse_batch_file,
 )
-from tsaplay.utils.io import search_dir, copy, clean_dirs, args_to_dict
+from tsaplay.utils.io import search_dir, copy, clean_dirs, args_to_dict, cprnt
 from tsaplay.constants import (
     ASSETS_PATH as STAGING_DIR,
     DATASET_DATA_PATH,
@@ -87,7 +88,7 @@ def argument_parser():
         "-t",
         help="Arguments to pass forward to the task module",
         nargs=argparse.REMAINDER,
-        required=True,
+        required=False,
     )
 
     return parser
@@ -243,7 +244,15 @@ def main():
     args = parser.parse_args()
     if args.jobs_file:
         for line in open(args.jobs_file, "r"):
-            submit_job(parser.parse_args(line.split()))
+            if len(line.strip()) > 0:
+                try:
+                    submit_job(parser.parse_args(line.split()))
+                except Exception:  # pylint: disable=W0703
+                    cprnt(WARN="Encountered exception in job: {}".format(line))
+                    traceback.print_exc()
+                    continue
+            else:
+                continue
     else:
         submit_job(args)
 

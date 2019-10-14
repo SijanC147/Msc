@@ -1,0 +1,27 @@
+-jid=reproduction_lstm_run1 -jlab model=lstm -t batch studies/reproduction/reproducibility-lstm.txt
+-jid=reproduction_lstm_run2 -jlab model=lstm -t batch studies/reproduction/reproducibility-lstm.txt
+-jid=reproduction_lstm_run3 -jlab model=lstm -t batch studies/reproduction/reproducibility-lstm.txt
+
+-jid=reproduction_tdlstm_run1 -jlab model=tdlstm -t batch studies/reproduction/reproducibility-tdlstm.txt
+-jid=reproduction_tdlstm_run2 -jlab model=tdlstm -t batch studies/reproduction/reproducibility-tdlstm.txt
+-jid=reproduction_tdlstm_run3 -jlab model=tdlstm -t batch studies/reproduction/reproducibility-tdlstm.txt
+
+-jid=reproduction_tclstm_run1 -jlab model=tclstm -t batch studies/reproduction/reproducibility-tclstm.txt
+-jid=reproduction_tclstm_run2 -jlab model=tclstm -t batch studies/reproduction/reproducibility-tclstm.txt
+-jid=reproduction_tclstm_run3 -jlab model=tclstm -t batch studies/reproduction/reproducibility-tclstm.txt
+
+-jid=reproduction_memnet_run1 -jlab model=memnet -t batch studies/reproduction/reproducibility-memnet.txt
+-jid=reproduction_memnet_run2 -jlab model=memnet -t batch studies/reproduction/reproducibility-memnet.txt
+-jid=reproduction_memnet_run3 -jlab model=memnet -t batch studies/reproduction/reproducibility-memnet.txt
+
+-jid=reproduction_ian_run1 -jlab model=ian -mch masterType=complex_model_s -t batch studies/reproduction/reproducibility-ian.txt
+-jid=reproduction_ian_run2 -jlab model=ian -mch masterType=complex_model_s -t batch studies/reproduction/reproducibility-ian.txt
+-jid=reproduction_ian_run3 -jlab model=ian -mch masterType=complex_model_s -t batch studies/reproduction/reproducibility-ian.txt
+
+-jid=reproduction_ram_run1 -jlab model=ram -mch masterType=complex_model_s -t batch studies/reproduction/reproducibility-ram.txt
+-jid=reproduction_ram_run2 -jlab model=ram -mch masterType=complex_model_s -t batch studies/reproduction/reproducibility-ram.txt
+-jid=reproduction_ram_run3 -jlab model=ram -mch masterType=complex_model_s -t batch studies/reproduction/reproducibility-ram.txt
+
+-jid=reproduction_lcrrot_run1 -jlab model=lcrrot -mch masterType=complex_model_m -t batch studies/reproduction/reproducibility-lcrrot.txt
+-jid=reproduction_lcrrot_run2 -jlab model=lcrrot -mch masterType=complex_model_m -t batch studies/reproduction/reproducibility-lcrrot.txt
+-jid=reproduction_lcrrot_run3 -jlab model=lcrrot -mch masterType=complex_model_m -t batch studies/reproduction/reproducibility-lcrrot.txt
