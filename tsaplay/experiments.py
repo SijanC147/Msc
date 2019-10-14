@@ -200,9 +200,10 @@ class Experiment:
         default_run_config.update(custom_run_config)
         if default_run_config.get("tf_random_seed", False):
             cprnt(
+                tf=True,
                 warn="TF Random seed is set to {}".format(
                     default_run_config.get("tf_random_seed")
-                )
+                ),
             )
 
         return default_run_config

@@ -29,6 +29,7 @@ import numpy as np
 from termcolor import colored
 from tensorflow.python.client.timeline import Timeline  # pylint: disable=E0611
 from tensorflow.python_io import TFRecordWriter  # noqa
+from tensorflow import logging as tf_log
 import docker
 from tsaplay.constants import NP_RANDOM_SEED, TF_RECORD_SHARDS, PAD_TOKEN
 from tsaplay.utils.data import accumulate_dicts
@@ -45,10 +46,11 @@ def cprnt(*args, **kwargs):
         "w": "white",
     }
     output = ""
+    grey_output = ""
     for arg in args:
         kwargs.update({"w": arg})
     for (color_key, string) in kwargs.items():
-        if color_key == "end":
+        if color_key in ["end", "tf"]:
             continue
         color_key = {
             "success": "wog",
@@ -59,24 +61,36 @@ def cprnt(*args, **kwargs):
         }.get(color_key.lower(), color_key)
         if not isinstance(string, str):
             string = pprint.pformat(string)
-        if environ.get("TSA_COLORED") == "OFF":
-            output += string + " "
-        else:
-            col = "".join(filter(str.isalpha, color_key))
-            index = col.find("o")
-            if index != -1:
-                txt, _, frgnd = col.partition("o")
-                output += (
-                    colored(
-                        string,
-                        colors.get(txt, "grey"),
-                        "on_" + colors.get(frgnd, "grey"),
-                    )
-                    + " "
+        grey_output += string + " "
+        col = "".join(filter(str.isalpha, color_key))
+        index = col.find("o")
+        if index != -1:
+            txt, _, frgnd = col.partition("o")
+            output += (
+                colored(
+                    string,
+                    colors.get(txt, "grey"),
+                    "on_" + colors.get(frgnd, "grey"),
                 )
-            else:
-                output += colored(string, colors.get(col, "grey")) + " "
-    print(output, end=kwargs.get("end", "\n"))
+                + " "
+            )
+        else:
+            output += colored(string, colors.get(col, "grey")) + " "
+    if environ.get("TSA_COLORED") == "OFF":
+        print(grey_output, end=kwargs.get("end", "\n"))
+    else:
+        print(output, end=kwargs.get("end", "\n"))
+    if environ.get("CLOUD_ML_JOB_ID") is not None:
+        tf_level = kwargs.get("tf")
+        if tf_level is not None:
+            if tf_level in ["DEBUG", "INFO", "WARN", "ERROR", "FATAL"]:
+                tf_log.log(
+                    getattr(tf_log, kwargs["tf"]),
+                    grey_output + kwargs.get("end", "\n"),
+                )
+            return
+        tf_log.TaskLevelStatusMessage(grey_output + kwargs.get("end", "\n"))
+        return
 
 
 def resolve_frequency_steps(freq, epochs=None, epoch_steps=None, default=None):

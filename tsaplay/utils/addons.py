@@ -186,25 +186,28 @@ def logging(model, features, labels, spec, params):
     )
     if spec.mode == ModeKeys.TRAIN:
         cprnt(
+            tf=True,
             INFO="""INFO Run Configuration:
 {0}
             """.format(
                 pformat(model.run_config.__dict__)
-            )
+            ),
         )
         cprnt(
+            tf=True,
             INFO="""INFO AUX Configuration:
 {0}
             """.format(
                 pformat(model.aux_config)
-            )
+            ),
         )
         cprnt(
+            tf=True,
             INFO="""INFO Parameters:
 {0}
             """.format(
                 pformat(model.params)
-            )
+            ),
         )
         std_metrics = {
             "accuracy": tf.metrics.accuracy(

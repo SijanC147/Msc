@@ -134,6 +134,7 @@ class FeatureProvider:
         oov_policy = [self._oov_train_threshold, self._num_oov_buckets]
         uid_data = [self._embedding.uid] + datasets_uids + oov_policy
         cprnt(
+            tf=True,
             INFO="""INFO Feature Data:
 Embedding: {embedding_uid} \t CASE-{ci}SENSITIVE
 Dataset(s): {datasets_uids}
@@ -149,7 +150,7 @@ OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
                     "oov_buckets": self._num_oov_buckets,
                     **literal_eval(stringify(self._oov_fn)),
                 }
-            )
+            ),
         )
         self._uid = hash_data(uid_data)
         name_data = [self._embedding.name] + dataset_names + [self._uid]
@@ -209,8 +210,7 @@ OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
             if self._oov_train_threshold > 0:
                 train_vocab = set(
                     corpora_vocab(
-                        self._train_corpus,
-                        threshold=self._oov_train_threshold
+                        self._train_corpus, threshold=self._oov_train_threshold
                     )
                 )
                 train_oov_vocab = list(train_vocab - set(self._vocab))
@@ -246,10 +246,7 @@ OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
             #! Regardless of buckets, all vocab must be tokenized,
             #! otherwise risk experiment failing with empty target
             include = set(self._vocab) | set(
-                corpora_vocab(
-                    self._train_corpus,
-                    self._test_corpus,
-                )
+                corpora_vocab(self._train_corpus, self._test_corpus)
             )
             include_tokens_path = join(self._gen_dir, "_incl_tokens.pkl")
             pickle_file(path=include_tokens_path, data=include)
@@ -283,12 +280,7 @@ OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
             if not exists(filtered_vocab_path):
                 filtered_vocab = list(
                     set(self._vocab)
-                    & set(
-                        corpora_vocab(
-                            self._train_corpus,
-                            self._test_corpus,
-                        )
-                    )
+                    & set(corpora_vocab(self._train_corpus, self._test_corpus))
                 )
                 indices = [self._vocab.index(word) for word in filtered_vocab]
                 write_vocab_file(filtered_vocab_path, filtered_vocab, indices)
@@ -427,6 +419,34 @@ OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
         )
         v_tot = v_train | v_test
         v_oov = v_tot - v_orig
+
+        vocab_data = {
+            "_ts": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+            "_threshold": self._oov_train_threshold,
+            "embedding": {"original": v_orig, "extended": v_extd},
+            "datasets": {
+                "total": v_tot,
+                "oov": v_oov,
+                "train": {
+                    "total": v_train,
+                    "oov": {
+                        "total": v_train - v_orig,
+                        "over_t": v_train_oov_over_t,
+                        "bucketed": v_train - v_extd,
+                    },
+                },
+                "test": {
+                    "total": v_test,
+                    "oov": {
+                        "total": v_test - v_orig,
+                        "bucketed": v_test - v_extd,
+                        "exclusive": v_test - (v_extd | v_train),
+                    },
+                },
+            },
+        }
+        vocab_data_path = join(self._gen_dir, "vocab.pkl")
+        pickle_file(path=vocab_data_path, data=vocab_data)
 
         n_tot = len(v_tot)
         n_oov = len(v_oov)

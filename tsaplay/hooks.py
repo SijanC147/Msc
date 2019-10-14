@@ -65,9 +65,9 @@ class ConsoleLoggerHook(SessionRunHook):
                 current_time = time.time()
                 duration = current_time - self._start_time
                 self._start_time = time.time()
-                tf.logging.log(
-                    tf.logging.INFO,
-                    self.template.format_map(
+                cprnt(
+                    tf=True,
+                    TRAIN=self.template.format_map(
                         {
                             "duration": duration,
                             "sec_per_step": float(
@@ -82,22 +82,6 @@ class ConsoleLoggerHook(SessionRunHook):
                         }
                     ),
                 )
-                # cprnt(
-                #     TRAIN=self.template.format_map(
-                #         {
-                #             "duration": duration,
-                #             "sec_per_step": float(
-                #                 duration
-                #                 / (self.each_steps if global_step != 1 else 1)
-                #             ),
-                #             "step_per_sec": float(
-                #                 (self.each_steps if global_step != 1 else 1)
-                #                 / duration
-                #             ),
-                #             **run_values.results,
-                #         }
-                #     )
-                # )
 
     def end(self, session):
         if self.mode == ModeKeys.EVAL:
@@ -107,7 +91,7 @@ class ConsoleLoggerHook(SessionRunHook):
             if self.epoch_steps is not None:
                 epoch = run_values.get("step") / self.epoch_steps
                 run_values.update({"epoch": epoch})
-            cprnt(EVAL=self.template.format_map(run_values))
+                cprnt(tf=True, EVAL=self.template.format_map(run_values))
 
 
 class LogProgressToComet(SessionRunHook):

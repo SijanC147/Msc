@@ -3,6 +3,7 @@ import traceback
 from inspect import isclass, isabstract, getmembers
 from importlib import import_module
 from sys import argv
+import os
 from os import environ, execvpe, sys
 from os.path import join
 import warnings
@@ -186,7 +187,7 @@ def argument_parser():
     single_task_parser.add_argument(
         "--verbosity",
         "-v",
-        choices=["DEBUG", "INFO", "WARN", "ERROR"],
+        choices=["DEBUG", "INFO", "WARN", "ERROR", "FATAL"],
         default="ERROR",
         help="Set logging verbosity",
     )
@@ -244,21 +245,23 @@ def make_feature_provider(args):
 
 @timeit("Starting Experiment", "Experiment complete")
 def run_experiment(args, experiment_index=None):
+    try:
+        tf.logging.set_verbosity(getattr(tf.logging, args.verbosity))
+    except AttributeError:
+        tf.logging.set_verbosity(tf.logging.ERROR)
+
     if experiment_index is not None:
-        cprnt(y="Running experiment {}".format(experiment_index + 1))
-        cprnt(y="Args: {}".format(args))
+        cprnt(tf=True, y="Running experiment {}".format(experiment_index + 1))
+        cprnt(tf=True, y="Args: {}".format(args))
 
     if args.comet_api and not args.contd_tag:
-        cprnt(warn="comet api provided without contd-tag.")
+        cprnt(tf="FATAL", warn="comet api provided without contd-tag.")
         sys.exit(1)
-    # tf.logging.set_verbosity(args.verbosity)
-    tf.logging.set_verbosity(tf.logging.INFO)
 
     feature_provider = make_feature_provider(args)
 
     params = args_to_dict(args.model_params)
     aux_config = args_to_dict(args.aux_config)
-
     if args.batch_size:
         params.update({"batch-size": args.batch_size})
     model = load_model(args.model)(params, aux_config)
@@ -276,10 +279,8 @@ def run_experiment(args, experiment_index=None):
         {"epoch_steps": epoch_steps, "shuffle_buffer": num_training_samples}
     )
     if args.steps is not None:
-        cprnt("POPPING EPOCHS")
         model.params.pop("epochs", None)
     if model.params.get("epochs") is not None:
-        cprnt("POPPING STEPS")
         model.params.pop("steps", None)
 
     experiment = Experiment(
@@ -298,7 +299,10 @@ def run_experiment(args, experiment_index=None):
         try:
             tb_port = int(args.tb_port)
         except ValueError:
-            cprnt(warn="Invalid tensorboard port {}".format(args.tb_port))
+            cprnt(
+                tf="FATAL",
+                warn="Invalid tensorboard port {}".format(args.tb_port),
+            )
         experiment.launch_tensorboard(tb_port=tb_port)
 
 
@@ -333,36 +337,18 @@ def run_next_experiment(batch_file_path, job_dir=None, defaults=None):
     tasks = parse_batch_file(batch_file_path, defaults)
     if job_dir:
         tasks = [t + ["--job-dir", job_dir] for t in tasks]
-    cprnt(
-        """
-TASKS:
-{}""".format(
-            tasks
-        )
-    )
     task_index = int(environ.get("TSATASK", 0))
-    cprnt(warn="TASK INDEX: {0}".format(task_index))
     if task_index >= len(tasks):
-        cprnt(
-            """
-Task Index ({}) >= Num of tasks ({})
-Clearing TSATASK ({}) ENV VAR
-""".format(
-                task_index, len(tasks), environ.get("TSATASK")
-            )
-        )
         del environ["TSATASK"]
-        cprnt("TSATASK ENV CLEARED: {}".format(environ.get("TSATASK")))
-        # environ["TSATASK"] = "0"
-        # sys.exit(0)
         return
-    # try:
-    task_args = task_parser.parse_args(tasks[task_index])
-    cprnt(info="RUNNING TASK {0}: {1}".format(task_index, task_args))
-    run_experiment(task_args, experiment_index=task_index)
-    # except Exception as e:  # pylint: disable=W0703
-    #     cprnt("EXCEPTION!!!!{}".format(e))
-    #     traceback.print_exc()
+    try:
+        task_args = task_parser.parse_args(tasks[task_index])
+        cprnt(
+            tf=True, info="RUNNING TASK {0}: {1}".format(task_index, task_args)
+        )
+        run_experiment(task_args, experiment_index=task_index)
+    except Exception:  # pylint: disable=W0703
+        traceback.print_exc()
     environ["TSATASK"] = str(task_index + 1)
     job_dir_arg = "--job-dir {}".format(job_dir) if (job_dir) else ""
     defaults_arg = (
@@ -378,14 +364,6 @@ def main():
     nvidia_cuda_prof_tools_path_fix()
     parser = argument_parser()
     args = parser.parse_args()
-    cprnt(
-        """
---ARGS--
-{}
---------""".format(
-            args
-        )
-    )
     try:
         if args.nocolor:
             environ["TSA_COLORED"] = "OFF"
@@ -393,11 +371,6 @@ def main():
         pass
     try:
         if args.new and environ.get("TSATASK") is not None:
-            cprnt(
-                "***** DELETING TSATASK ENV VAR ({})*****".format(
-                    environ.get("TSATASK")
-                )
-            )
             del environ["TSATASK"]
     except AttributeError:  # ? Not running in batch mode.
         pass
@@ -413,20 +386,20 @@ def main():
         else:
             run_next_experiment(args.batch_file, args.job_dir, args.defaults)
     except AttributeError:  # ? Not running in batch mode.
-        sys.exit(1)
         run_experiment(args)
-    pkg.cleanup_resources()
 
 
 if __name__ == "__main__":
-    tf.logging.set_verbosity(tf.logging.INFO)
-    cprnt(
-        """
-RUNNING __name__ = {}
-ARGS: {}
-ENVIRON: {}
-""".format(
-            __name__, argv, environ
-        )
-    )
     main()
+    pkg.cleanup_resources()
+    for pid in [pid for pid in os.listdir("/proc") if pid.isdigit()]:
+        try:
+            cprnt(
+                tf="FATAL",
+                r=open(os.path.join("/proc", pid, "cmdline"), "rb")
+                .read()
+                .split("\0"),
+            )
+        except IOError:  # proc has already terminated
+            continue
+    sys.exit(0)

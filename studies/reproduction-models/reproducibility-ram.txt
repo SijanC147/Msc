@@ -15,5 +15,5 @@ default: -rc save_summary_steps=/10
 ;-em=commoncrawl-42[corpus] -ds=dong -m=ram -mp n_hops=3 -contd=ram-cc42-dong-3hops-oovt1
 ;-em=commoncrawl-42[corpus] -ds=restaurants -m=ram -mp n_hops=3 -contd=ram-cc42-restaurants-3hops-oovt1
 
--em=commoncrawl-42[corpus] -ds=dong -m=ram -mp n_hops=3 -contd=iags_nn_diffinits_ealoss_oovt5b5
+-em=commoncrawl-42[corpus] -ds=restaurants[33/33/34] -m=ram -mp n_hops=3 -contd=iags_nn_balanced_restaurants
 

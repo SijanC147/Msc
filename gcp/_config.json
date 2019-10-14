@@ -1,15 +1,15 @@
 {
-    "jobId": "debug_term_44",
+    "jobId": "iags_nn_balanced",
     "labels": {},
     "trainingInput": {
         "scaleTier": "CUSTOM",
-        "masterType": "standard",
+        "masterType": "complex_model_s",
         "pythonVersion": "3.5",
         "runtimeVersion": "1.12",
         "region": "europe-west1",
         "args": [
             "batch",
-            "debug.txt",
+            "reproducibility-ram.txt",
             "--new",
             "--nocolor"
         ]
