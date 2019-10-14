@@ -243,7 +243,7 @@ class Ram(TsaModel):
         logits = tf.layers.dense(
             inputs=final_sentence_rep,
             units=params["_n_out_classes"],
-            kernel_initializer=params.get["initializer"],
+            kernel_initializer=params["initializer"],
             bias_initializer=params.get(
                 "bias_initializer", params["initializer"]
             ),

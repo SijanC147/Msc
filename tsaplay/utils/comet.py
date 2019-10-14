@@ -5,7 +5,7 @@ from functools import wraps
 from tensorflow.estimator import ModeKeys  # noqa
 from tsaplay.utils.tf import scaffold_init_fn_on_spec
 from tsaplay.utils.io import temp_pngs
-from tsaplay.utils.draw import plot_distributions
+from tsaplay.utils.draw import plot_distributions, draw_venn
 from tsaplay.utils.data import class_dist_stats
 from tsaplay.hooks import LogProgressToComet
 
@@ -92,6 +92,40 @@ def log_dist_data(comet_experiment, feature_provider, modes):
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     dist_image_names = [mode + "_distribution_" + timestamp for mode in modes]
     for temp_png in temp_pngs(dist_images, dist_image_names):
+        comet_experiment.log_image(temp_png)
+
+
+def log_vocab_venn(comet_experiment, feature_provider):
+    if comet_experiment is None:
+        return
+    _v = feature_provider.vocab_data
+    threshold = _v["_threshold"]
+    v_orig = _v["embedding"]["original"]
+    v_extd = _v["embedding"]["extended"]
+    v_train = _v["datasets"]["train"]["total"]
+    v_train_oov = _v["datasets"]["train"]["oov"]["total"]
+    v_over_t = _v["datasets"]["train"]["oov"]["over_t"]
+    v_test = _v["datasets"]["test"]["total"]
+    v_test_oov = _v["datasets"]["test"]["oov"]["total"]
+
+    venn_images = {
+        "Original Embedding": draw_venn(
+            "Original Embedding", Embedding=v_orig, Train=v_train, Test=v_test
+        ),
+        "Extended Embedding": draw_venn(
+            "Extended Embedding", Extended=v_extd, Train=v_train, Test=v_test
+        ),
+        "Out of Vocabulary": draw_venn(
+            "Out of Vocabulary",
+            **{
+                "Train": v_train_oov,
+                "Test": v_test_oov,
+                "Over T(={})".format(threshold): v_over_t,
+            }
+        ),
+    }
+
+    for temp_png in temp_pngs(list(venn_images.values()), [*venn_images]):
         comet_experiment.log_image(temp_png)
 
 

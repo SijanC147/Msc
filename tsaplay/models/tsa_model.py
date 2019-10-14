@@ -18,7 +18,12 @@ from tsaplay.utils.tf import (
     embed_sequences,
     sharded_saver,
 )
-from tsaplay.utils.comet import cometml, log_dist_data, log_features_asset_data
+from tsaplay.utils.comet import (
+    cometml,
+    log_dist_data,
+    log_features_asset_data,
+    log_vocab_venn,
+)
 from tsaplay.utils.addons import (
     addon,
     prediction_outputs,
@@ -105,8 +110,6 @@ class TsaModel(ABC):
         if mode == ModeKeys.EVAL:
             return EstimatorSpec(mode, predictions=predictions, loss=loss)
 
-        # loss = tf.Print(input_=loss, data=[tf.train.get_global_step(), loss])
-
         train_op = optimizer.minimize(
             loss, global_step=tf.train.get_global_step()
         )
@@ -118,6 +121,7 @@ class TsaModel(ABC):
     def train(self, feature_provider, **kwargs):
         log_dist_data(self.comet_experiment, feature_provider, ["train"])
         log_features_asset_data(self.comet_experiment, feature_provider)
+        log_vocab_venn(self.comet_experiment, feature_provider)
         steps = self._initialize_estimator(feature_provider, **kwargs)
         self._estimator.train(
             input_fn=lambda: self.train_input_fn(
@@ -143,6 +147,7 @@ class TsaModel(ABC):
             self.comet_experiment, feature_provider, ["train", "test"]
         )
         log_features_asset_data(self.comet_experiment, feature_provider)
+        log_vocab_venn(self.comet_experiment, feature_provider)
         steps = self._initialize_estimator(feature_provider, **kwargs)
         train_spec = tf.estimator.TrainSpec(
             input_fn=lambda: self.train_input_fn(

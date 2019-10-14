@@ -2,12 +2,14 @@
 default: -cmt T1NrVnn32dXWeOxeQWGArkHwc -wrk debugging 
 default: -aux logging=true attn_heatmaps=false 
 ;default: debug=cli
-default: -mp oov_train=1 oov_fn=uniform[-0.1,0.1] 
+;default: -mp oov_train=1 oov_fn=uniform[-0.1,0.1] 
+default: -mp oov_train=5 oov_buckets=5 oov_fn=uniform[-0.1,0.1]
 default: -mp lstm_hidden_units=5 gru_hidden_units=5 hidden_units=5
 #default: -rc save_summary_steps=/5 
 default: -rc tf_random_seed=1234 save_checkpoints_steps=100
 
--em=wiki-50[corpus] -ds=debug-min -m=lstm -s 2 -contd one
+-em=commoncrawl-42[corpus] -ds=restaurants[33/33/34] -m=ram -mp n_hops=3 -e 5 -contd=testing_venn_2
+#-em=wiki-50[corpus] -ds=debug-min -m=lstm -s 2 -contd one
 #-em=wiki-50[corpus] -ds=debug-min -m=lstm -e 20 -contd two
 #-em=wiki-50[corpus] -ds=debug-min -m=lstm -s 150 -contd three 
 #-em=wiki-50[corpus] -ds=debug-min -m=lstm -e 31 -contd 31epochs

@@ -392,14 +392,14 @@ def main():
 if __name__ == "__main__":
     main()
     pkg.cleanup_resources()
-    for pid in [pid for pid in os.listdir("/proc") if pid.isdigit()]:
-        try:
-            cprnt(
-                tf="FATAL",
-                r=open(os.path.join("/proc", pid, "cmdline"), "rb")
-                .read()
-                .split("\0"),
-            )
-        except IOError:  # proc has already terminated
-            continue
+    # for pid in [pid for pid in os.listdir("/proc") if pid.isdigit()]:
+    #     try:
+    #         cprnt(
+    #             tf="FATAL",
+    #             r=open(os.path.join("/proc", pid, "cmdline"), "rb")
+    #             .read()
+    #             .split("\0"),
+    #         )
+    #     except IOError:  # proc has already terminated
+    #         continue
     sys.exit(0)

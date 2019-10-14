@@ -177,9 +177,9 @@ def f1_scores(model, features, labels, spec, params):
 @only(["TRAIN", "EVAL"])
 def logging(model, features, labels, spec, params):
     contd_tag = (
-        "[{}{}]".format(
-            ("..." if len(params["contd_tag"]) > 6 else ""),
-            params["contd_tag"][-6:],
+        "[{}{}] ".format(
+            ("..." if len(params["contd_tag"]) > 10 else ""),
+            params["contd_tag"][-10:],
         )
         if params["contd_tag"] is not None
         else ""

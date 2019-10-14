@@ -69,6 +69,7 @@ class FeatureProvider:
         self._train_tokens = None
         self._test_tokens = None
         self._oov_buckets = None
+        self._vocab_data = None
 
         self._init_uid()
         self._init_gen_dir()
@@ -119,6 +120,10 @@ class FeatureProvider:
     @property
     def embedding_params(self):
         return self._embedding_params
+
+    @property
+    def vocab_data(self):
+        return self._vocab_data
 
     def steps_per_epoch(self, batch_size):
         train_samples = self._train_dict.get("labels")
@@ -420,33 +425,36 @@ OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
         v_tot = v_train | v_test
         v_oov = v_tot - v_orig
 
-        vocab_data = {
-            "_ts": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-            "_threshold": self._oov_train_threshold,
-            "embedding": {"original": v_orig, "extended": v_extd},
-            "datasets": {
-                "total": v_tot,
-                "oov": v_oov,
-                "train": {
-                    "total": v_train,
-                    "oov": {
-                        "total": v_train - v_orig,
-                        "over_t": v_train_oov_over_t,
-                        "bucketed": v_train - v_extd,
-                    },
-                },
-                "test": {
-                    "total": v_test,
-                    "oov": {
-                        "total": v_test - v_orig,
-                        "bucketed": v_test - v_extd,
-                        "exclusive": v_test - (v_extd | v_train),
-                    },
-                },
-            },
-        }
         vocab_data_path = join(self._gen_dir, "vocab.pkl")
-        pickle_file(path=vocab_data_path, data=vocab_data)
+        if exists(vocab_data_path):
+            self._vocab_data = unpickle_file(vocab_data_path)
+        else:
+            self._vocab_data = {
+                "_ts": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+                "_threshold": self._oov_train_threshold,
+                "embedding": {"original": v_orig, "extended": v_extd},
+                "datasets": {
+                    "total": v_tot,
+                    "oov": v_oov,
+                    "train": {
+                        "total": v_train,
+                        "oov": {
+                            "total": v_train - v_orig,
+                            "over_t": v_train_oov_over_t,
+                            "bucketed": v_train - v_extd,
+                        },
+                    },
+                    "test": {
+                        "total": v_test,
+                        "oov": {
+                            "total": v_test - v_orig,
+                            "bucketed": v_test - v_extd,
+                            "exclusive": v_test - (v_extd | v_train),
+                        },
+                    },
+                },
+            }
+            pickle_file(path=vocab_data_path, data=self._vocab_data)
 
         n_tot = len(v_tot)
         n_oov = len(v_oov)

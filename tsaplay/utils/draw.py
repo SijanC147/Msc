@@ -4,22 +4,22 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import normalize
 from PIL import Image, ImageDraw, ImageFont, ImageOps
-import matplotlib as mpl
+import matplotlib
 from matplotlib.font_manager import FontProperties
 from scipy.special import softmax
 from tsaplay.constants import DEFAULT_FONT
 from tsaplay.utils.io import get_image_from_plt, pickle_file, platform
 
-
 if platform() == "MacOS":
-    mpl.use("TkAgg")
-import matplotlib.pyplot as plt  # nopep8
+    matplotlib.use("TkAgg")
+import matplotlib.pyplot as plt
+from matplotlib_venn import venn2, venn2_unweighted, venn3, venn3_unweighted
 
 
 def cmap_int(value, cmap_name="Oranges", alpha=0.8):
     cmap = plt.get_cmap(cmap_name)
     rgba_flt = cmap(value, alpha=alpha)
-    rgba_arr = mpl.colors.to_rgba_array(rgba_flt)[0]
+    rgba_arr = matplotlib.colors.to_rgba_array(rgba_flt)[0]
     rgba_int = np.int32(rgba_arr * 255)
     return tuple(rgba_int)
 
@@ -260,14 +260,14 @@ def render_mpl_table(
                 cell.set_facecolor(header_color)
             else:
                 cell.set_text_props(color="w")
-                col = mpl.colors.to_rgba(header_color, alpha=0.7)
+                col = matplotlib.colors.to_rgba(header_color, alpha=0.7)
                 cell.set_facecolor(col)
         elif k[1] == 0 and n_hops > 1:
             cell.set_text_props(weight="bold", color="w")
             if k[0] == 0:
                 cell.set_facecolor(header_color)
             else:
-                col = mpl.colors.to_rgba(
+                col = matplotlib.colors.to_rgba(
                     header_color, alpha=(0 + alpha_inc * k[0])
                 )
                 cell.set_facecolor(col)
@@ -343,4 +343,21 @@ def plot_distributions(stats, mode):
 
     ax.set_title(mode.capitalize() + " Data Distribution")
 
+    return get_image_from_plt(plt)
+
+
+def draw_venn(title, weighted=False, **kwargs):
+    num_sets = len([*kwargs])
+    if num_sets == 2:
+        venn_fn = venn2 if weighted else venn2_unweighted
+    elif num_sets == 3:
+        venn_fn = venn3 if weighted else venn3_unweighted
+    else:
+        raise ValueError(
+            "Number of sets {} must be either 2 or 3.".format(num_sets)
+        )
+
+    plt.figure(figsize=(4, 4))
+    venn_fn(kwargs.values(), [*kwargs])
+    plt.title(title)
     return get_image_from_plt(plt)
