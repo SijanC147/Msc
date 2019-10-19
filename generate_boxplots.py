@@ -166,9 +166,9 @@ def get_grouped_metric_series(project, workspace=None, metrics=None, **kwargs):
 
 def save_plot(plot, model, plot_metric, **kwargs):
     save_format = kwargs.get("format", "pdf")
-    fname = kwargs.get(
-        "fname",
-        "{}-{}".format(plot_metric, datetime.now().strftime("%d%m%Y_%H%M%S")),
+    fname = "{}-{}".format(
+        plot_metric,
+        kwargs.get("fname", datetime.now().strftime("%d%m%Y_%H%M%S")),
     )
     target_dir = path.join(
         kwargs.get("path", getcwd()),
@@ -292,8 +292,36 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
     return data_frame
 
 
+def group_citations(dataset, metric, model, reported=None):
+    reported = reported or REPORTED
+    cited_results = {
+        citation: cited_datasets.get(dataset.lower(), {}).get(metric)
+        for citation, cited_datasets in REPORTED[model].items()
+        if (
+            dataset.lower() in [*cited_datasets]
+            and metric in [*cited_datasets.get(dataset.lower(), {})]
+        )
+    }
+    cited_results = {
+        "\n".join(list(map(itemgetter(0), v))): k
+        for k, v in groupby(
+            sorted(cited_results.items(), key=itemgetter(1)), itemgetter(1)
+        )
+    }
+    return (
+        {
+            **{k: v for k, v in cited_results.items() if "(Original)" in k},
+            **{
+                k: v for k, v in cited_results.items() if "(Original)" not in k
+            },
+        }
+        if cited_results
+        else None
+    )
+
+
 def draw_boxplot(models, **kwargs):
-    df = comet_to_df("reproduction", projects=models)
+    df = comet_to_df("reproduction", **kwargs)
     plot_metrics = kwargs.get("plot_metrics", ["Macro-F1", "Micro-F1"])
     models_tiled = sum([[model] * len(plot_metrics) for model in models], [])
     for (model, plot_metric) in zip(models_tiled, plot_metrics * len(models)):
@@ -301,13 +329,15 @@ def draw_boxplot(models, **kwargs):
         dss = dfm["Dataset"].unique().tolist()
         num_plots = len(dss)
 
-        handles, labels, colors = [], [], []
-        fig, axes = plt.subplots(1, num_plots, sharey=False, figsize=(12, 7))
+        handles, labels, legends, colors = [], [], dict(), dict()
+        fig, axes = plt.subplots(
+            1, num_plots + 1, sharey=False, figsize=(16, 7)
+        )
         fig.suptitle(
             "{}\n({})".format(model.upper(), plot_metric.replace("f1", "F1")),
-            fontsize=16,
+            fontsize=14,
         )
-        fig.subplots_adjust(top=0.85, wspace=(0.2 + (0.025 * num_plots)))
+        fig.subplots_adjust(top=0.85, wspace=(0.4 + (0.025 * num_plots)))
         for i, dataset_name in enumerate(dss):
             try:
                 this_ax = axes[i % num_plots]
@@ -330,37 +360,44 @@ def draw_boxplot(models, **kwargs):
             this_ax.set_xlabel("")
             this_ax.set_ylabel("")
 
-            original_reported = (
-                REPORTED[model].get(dataset_name.lower(), {}).get(plot_metric)
+            cited_results = group_citations(
+                dataset=dataset_name, model=model, metric=plot_metric
             )
-            if original_reported is not None:
+            if cited_results:
+                cmap_name = kwargs.get("cited_cmap", "Accent")
+                cmap_colors = matplotlib.cm.get_cmap(cmap_name).colors
                 opp_ax = this_ax.twinx()
-                opp_ax.tick_params(direction="in", left=True, length=0)
-                opp_ax.set_yticks([original_reported])
+                opp_ax.tick_params(direction="out", length=0, color="none")
+                opp_ax.set_yticks(list(cited_results.values()))
                 opp_ax.set_yticklabels(
-                    [original_reported], color="red", va="center"
+                    list(cited_results.values()), va="center"
                 )
-                opp_ax.get_shared_y_axes().join(this_ax, opp_ax)
-                this_ax.axhline(
-                    y=original_reported,
-                    color="red",
-                    linestyle="--",
-                    label="Original",
+                this_ax.get_shared_y_axes().join(opp_ax, this_ax)
+                loop_data = zip(
+                    cited_results.items(),
+                    opp_ax.get_yticklabels(),
+                    cmap_colors[: len(cited_results)],
                 )
-                opp_ax.axhline(
-                    y=original_reported,
-                    color="red",
-                    linestyle="--",
-                    label="Original",
-                )
+                for (citation, value), lab, _color in loop_data:
+                    lab.set_color(_color)
+                    this_ax.axhline(
+                        y=value, color=_color, linestyle="--", alpha=0.5
+                    )
+                    opp_ax.axhline(
+                        y=value,
+                        color=_color,
+                        linestyle="--",
+                        label=citation,
+                        alpha=0.5,
+                    )
+                legends[dataset_name] = opp_ax.get_legend_handles_labels()
 
             for handle, label in zip(*bp.get_legend_handles_labels()):
                 if label not in labels:
                     labels += [label]
                     handles += [handle]
                     if hasattr(handle, "get_facecolor"):
-                        colors += [handle.get_facecolor()]
-
+                        colors[label] = handle.get_facecolor()
             bp.get_legend().remove()
 
             cell_text = [
@@ -437,15 +474,29 @@ def draw_boxplot(models, **kwargs):
                     [],
                 ),
             ]
+
             cell_colors = [
-                [
-                    [c[:-1] + tuple([0.5]) for c in colors[: len(cell_group)]]
-                    if len(cell_group) > 0
-                    else ["none"]
-                    for cell_group in cell_row
-                ]
-                for cell_row in cell_text
-            ]
+                sum(
+                    list(
+                        [
+                            ["none"],
+                            [
+                                colors[em][:-1]
+                                + tuple([kwargs.get("table_opacity", 0.7)])
+                                for em in dfmds[(dfmds["Experiment"] == exp)][
+                                    "Embedding"
+                                ]
+                                .unique()
+                                .tolist()
+                            ],
+                        ]
+                        for exp in dfmds["Experiment"].unique().tolist()
+                    )
+                    + [[["none"]]],
+                    [],
+                )
+            ] * len(cell_text)
+
             sep_width = 0.03
             num_sepcols = len([c for c in cell_text[0] if len(c) == 0])
             rem_width = 1 - (sep_width * num_sepcols)
@@ -472,8 +523,9 @@ def draw_boxplot(models, **kwargs):
                 cellLoc="center",
                 loc="bottom",
                 bbox=(0, -0.27, 1, 0.2),
-                **({"rowLabels": ["Mean", "Max", "N="]} if i == 0 else {})
+                rowLabels=["Mean", "Max", "N="],
             )
+            table.auto_set_font_size(False)
             table.set_fontsize(12)
 
             for (y_pos, x_pos), cell in table.get_celld().items():
@@ -486,14 +538,32 @@ def draw_boxplot(models, **kwargs):
 
             this_ax.set(ylabel=("{}(%)".format(plot_metric) if i == 0 else ""))
 
-        plt.legend(
-            handles,
-            labels,
-            loc="center right",
-            title="Legend",
-            ncol=1,
-            bbox_to_anchor=(1 + (0.44 * len(dss)), 0.5),
+        last_axis = axes[i + 1]
+        last_axis.axis("off")
+        legends = {**{"Embeddings": (handles, labels)}, **legends}
+        all_handles = sum(
+            [
+                [matplotlib.patches.Patch(facecolor="none")]
+                + hnds
+                + [matplotlib.patches.Patch(facecolor="none")]
+                for group, (hnds, labs) in legends.items()
+            ],
+            [],
+        )[:-1]
+        all_labels = sum(
+            [[group] + labs + [""] for group, (hnds, labs) in legends.items()],
+            [],
+        )[:-1]
+
+        last_axis.legend(
+            all_handles,
+            all_labels,
+            loc="center left",
+            bbox_to_anchor=(-0.2, 0.5),
+            labelspacing=0.7,
+            borderpad=1,
         )
+
         if kwargs.get("fname", False):
             save_plot(plt, model, plot_metric, **kwargs)
 
@@ -501,7 +571,7 @@ def draw_boxplot(models, **kwargs):
 def main():
     parser = argument_parser()
     args = parser.parse_args()
-    draw_boxplot(args.models)
+    draw_boxplot(args.models, fname="test")
 
 
 if __name__ == "__main__":
