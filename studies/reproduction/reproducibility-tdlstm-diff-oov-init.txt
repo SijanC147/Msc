@@ -1,0 +1,13 @@
+## DEFAULTS: 
+default: -cmt T1NrVnn32dXWeOxeQWGArkHwc -wrk reproduction
+default: -aux logging=true 
+default: -rc save_summary_steps=/3
+default: -mp oov_train=1 oov_buckets=1 oov_fn=uniform[-0.003,0.003]
+###
+
+# TDLSTM
+; No mention of any approach to OOV tokens 
+; hidden_units(200) taken from https://github.com/jimmyyfeng/TD-LSTM/blob/master/td_lstm.py
+; batch-size(64) used for comparison with LSTM and TCLSTM 
+;-em=twitter-100[corpus] -ds=dong -m=td_lstm -contd=tdlstm-t100-dong-oovt1b1U3e-3
+-em=twitter-200[corpus] -ds=dong -m=td_lstm -contd=tdlstm-t200-dong-oovt1b1U3e-3

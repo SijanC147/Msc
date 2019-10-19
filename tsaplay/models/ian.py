@@ -25,7 +25,7 @@ class Ian(TsaModel):
             # ! Not quoted paper, using value from LCRROT paper
             "momentum": 0.9,
             # ? Suggestions from https://github.com/songyouwei/ABSA-PyTorch/blob/master/train.py
-            "learning_rate": 1e-3,
+            "learning_rate": 0.1,
             "batch-size": 64,
             # "epochs": 30,
             "early_stopping_minimum_iter": 30,

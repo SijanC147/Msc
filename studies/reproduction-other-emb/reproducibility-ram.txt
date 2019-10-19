@@ -1,0 +1,18 @@
+## DEFAULTS: 
+default: -cmt T1NrVnn32dXWeOxeQWGArkHwc -wrk reproduction
+default: -aux logging=true 
+default: -rc save_summary_steps=/3
+default: -mp oov_train=1 oov_buckets=1 oov_fn=uniform[-0.1,0.1]
+###
+
+# RAM
+; OOV words just mentioned in the end re: experimenting with training embeddings or not, implies oov words are initialized with random vectors
+; paper simply states "initialized randomly" no specification of random uniform parameters.
+; batch-size, lstm_hidden_units and gru_hidden_units taken from https://github.com/lpq29743/RAM/blob/master/main.py
+; glove-300d-commoncrawl-42 version is identified by quoting vocab size of 1.9M
+; trained for maximum 100 iterations
+-em=commoncrawl-840[corpus] -ds=dong -m=ram -mp n_hops=3 -contd=ram-cc840-dong-3hops-oovt1b1
+-em=commoncrawl-840[corpus] -ds=restaurants -m=ram -mp n_hops=4 -contd=ram-cc840-restaurants-4hops-oovt1b1
+-em=commoncrawl-840[corpus] -ds=laptops -m=ram -mp n_hops=2 -contd=ram-cc840-laptops-2hops-oovt1b1
+-em=twitter-200[corpus] -ds=dong -m=ram -mp n_hops=3 -contd=ram-t200-dong-3hops-oovt1b1
+

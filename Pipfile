@@ -24,6 +24,7 @@ matplotlib-venn = "*"
 rope = "*"
 pylint = "*"
 black = "*"
+seaborn = "*"
 
 [requires]
 python_version = "3.6"

@@ -187,7 +187,7 @@ def argument_parser():
         "--verbosity",
         "-v",
         choices=["DEBUG", "INFO", "WARN", "ERROR", "FATAL"],
-        default="ERROR",
+        default="INFO",
         help="Set logging verbosity",
     )
 
@@ -247,7 +247,7 @@ def run_experiment(args, experiment_index=None):
     try:
         tf.logging.set_verbosity(getattr(tf.logging, args.verbosity))
     except AttributeError:
-        tf.logging.set_verbosity(tf.logging.ERROR)
+        tf.logging.set_verbosity(tf.logging.INFO)
 
     if experiment_index is not None:
         cprnt(tf=True, y="Running experiment {}".format(experiment_index + 1))

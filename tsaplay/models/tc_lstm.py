@@ -19,7 +19,7 @@ class TcLstm(TsaModel):
             "epochs": 300,
             "early_stopping_patience": 10,
             "early_stopping_minimum_iter": 30,
-            "early_stopping_metric": "macro-f1",
+            "early_stopping_metric": "loss",
         }
 
     @classmethod

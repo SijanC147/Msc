@@ -1,17 +1,17 @@
 {
-    "jobId": "reproduction_lcrrot_run3",
+    "jobId": "reproduction_ram_resub_t200dong_run3",
     "labels": {
-        "model": "lcrrot"
+        "model": "ram"
     },
     "trainingInput": {
         "scaleTier": "CUSTOM",
-        "masterType": "complex_model_m",
+        "masterType": "complex_model_s",
         "pythonVersion": "3.5",
         "runtimeVersion": "1.12",
         "region": "europe-west1",
         "args": [
             "batch",
-            "reproducibility-lcrrot.txt",
+            "reproducibility-ram-t200dong.txt",
             "--new",
             "--nocolor"
         ]

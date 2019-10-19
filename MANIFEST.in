@@ -1,4 +1,3 @@
 include requirements.txt
-include batch_tasks.txt
 include tsaplay/fonts/*
 recursive-include tsaplay/assets *
