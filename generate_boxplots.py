@@ -206,7 +206,7 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
         ["Workspace", "Experiment", "Model", "Dataset", "Embedding"]
         + metrics
         + ["Reported {}".format(m) for m in metrics]
-        + ["OOV Threshold", "OOV Buckets", "OOV Fn"]
+        + ["OOV Initialization", "OOV Threshold", "OOV Buckets"]
         + other_params
         + ["Vocab Coverage"]
     )
@@ -236,7 +236,7 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
                             p["name"],
                         )
                     ]
-                    for deet in ["Train", "Buckets", "Fn"]
+                    for deet in ["Fn", "Train", "Buckets"]
                 ],
                 [],
             )
@@ -323,6 +323,7 @@ def group_citations(dataset, metric, model, reported=None):
 def draw_boxplot(models, **kwargs):
     df = comet_to_df("reproduction", **kwargs)
     plot_metrics = kwargs.get("plot_metrics", ["Macro-F1", "Micro-F1"])
+    xlabel_templates = kwargs.get("xlabel_templates", dict())
     models_tiled = sum([[model] * len(plot_metrics) for model in models], [])
     for (model, plot_metric) in zip(models_tiled, plot_metrics * len(models)):
         dfm = df[(df["Model"] == MODELS.get(model))]
@@ -357,6 +358,20 @@ def draw_boxplot(models, **kwargs):
                 linewidth=1.5,
             )
 
+            xlabel_template = xlabel_templates.get(model, "{Experiment}")
+            this_ax.set_xticklabels(
+                [
+                    xlabel_template.format(
+                        **(
+                            dfm[
+                                (dfm["Dataset"] == dataset_name)
+                                & (dfm["Experiment"] == lab.get_text())
+                            ].to_dict("records")[0]
+                        )
+                    )
+                    for lab in this_ax.get_xticklabels()
+                ]
+            )
             this_ax.set_xlabel("")
             this_ax.set_ylabel("")
 
@@ -381,14 +396,14 @@ def draw_boxplot(models, **kwargs):
                 for (citation, value), lab, _color in loop_data:
                     lab.set_color(_color)
                     this_ax.axhline(
-                        y=value, color=_color, linestyle="--", alpha=0.5
+                        y=value, color=_color, linestyle="--", alpha=0.8
                     )
                     opp_ax.axhline(
                         y=value,
                         color=_color,
                         linestyle="--",
                         label=citation,
-                        alpha=0.5,
+                        alpha=0.8,
                     )
                 legends[dataset_name] = opp_ax.get_legend_handles_labels()
 
@@ -571,7 +586,11 @@ def draw_boxplot(models, **kwargs):
 def main():
     parser = argument_parser()
     args = parser.parse_args()
-    draw_boxplot(args.models, fname="test")
+    draw_boxplot(
+        args.models,
+        fname="test",
+        xlabel_templates={"tdlstm": "{Experiment}", "memnet": "{N Hops} Hops"},
+    )
 
 
 if __name__ == "__main__":
