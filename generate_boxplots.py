@@ -20,6 +20,7 @@ import matplotlib.text as mtext
 import pandas as pd
 import seaborn as sns
 
+
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)  # noqa
     from tsaplay.utils.io import pickle_file, unpickle_file
@@ -109,6 +110,27 @@ REPORTED = {
         }
     },
 }
+
+CMT_VALS_MAPPING = {
+    "Hidden Units": "Hidden Units",
+    "LSTM Hidden Units": "Lstm Hidden Units",
+    "GRU Hidden Units": "Gru Hidden Units",
+    "LSTM Layers": "N Lstm Layers",
+    "L2 Weight": "L2 Weight",
+    "Dropout Rate": "Keep Prob",
+    "Train Embeddings": "Train Embeddings",
+    "Number of Hops": "N Hops",
+    "Learning Rate": "Learning Rate",
+    "Batch Size": "Batch Size",
+    "Early Stopping Metric": "Early Stopping Metric",
+    "Patience": "Early Stopping Patience",
+    "Minimum Epochs": "Early Stopping Minimum Iter",
+    "Maximum Epochs": "Epochs",
+    "Momentum": "Momentum",
+    "Initializer": "Initializer",
+    "Bias Initializer": "Bias Initializer",
+}
+
 MODELS = {
     "ian": "IAN",
     "lcrrot": "LCR-Rot",
@@ -197,28 +219,7 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
     workspace = workspace or "reproduction"
     metrics = metrics or ["Macro-F1", "Micro-F1"]
     datasets = kwargs.get("datasets", ["restaurants", "dong", "laptops"])
-    embeddings = kwargs.get("embeddings", ["t200", "t100", "cc42", "cc840"])
-    other_params = {
-        "Hidden Units": "Hidden Units",
-        "LSTM Hidden Units": "Lstm Hidden Units",
-        "GRU Hidden Units": "Gru Hidden Units",
-        "LSTM Layers": "N Lstm Layers",
-        "L2 Weight": "L2 Weight",
-        "Dropout Rate": "Keep Prob",
-        "Train Embeddings": "Train Embeddings",
-        "Number of Hops": "N Hops",
-        "Learning Rate": "Learning Rate",
-        "Batch Size": "Batch Size",
-        "Early Stopping Metric": "Early Stopping Metric",
-        "Patience": "Early Stopping Patience",
-        "Minimum Epochs": "Early Stopping Minimum Iter",
-        "Maximum Epochs": "Epochs",
-        "Momentum": "Momentum",
-    }
-    cmt_others = {
-        "Initializer": "Initializer",
-        "Bias Initializer": "Bias Initializer",
-    }
+    embeddings = kwargs.get("embeddings", [*EMBEDDINGS])
     if models is not None and isinstance(models, str):
         models = [models]
     cols = (
@@ -226,8 +227,7 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
         + metrics
         + ["Reported {}".format(m) for m in metrics]
         + ["OOV Initialization", "OOV Threshold", "OOV Buckets"]
-        + [*other_params]
-        + [*cmt_others]
+        + [*CMT_VALS_MAPPING]
         + ["Vocab Coverage"]
     )
     data = []
@@ -245,13 +245,14 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
             embedding = [em for em in embeddings if em in exp_name_clean][0]
             exp_name_clean = exp_name_clean.replace(embedding, "")
             exp_name_clean = exp_name_clean.replace("-", " ").strip()
-            params_summary = exp.get_parameters_summary()
-            cmt_others_summary = exp.get_others_summary()
+            cmt_params_others_summary = (
+                exp.get_others_summary() + exp.get_parameters_summary()
+            )
             oov_details = sum(
                 [
                     [
                         p["valueCurrent"]
-                        for p in params_summary
+                        for p in cmt_params_others_summary
                         if re.match(
                             r"train_(AUTOPARAM: )?Oov {}".format(deet),
                             p["name"],
@@ -261,36 +262,23 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
                 ],
                 [],
             )
-            other_param_values = [
+            cmt_params_others_values = [
                 [
                     p["valueCurrent"]
-                    for p in params_summary
+                    for p in cmt_params_others_summary
                     if re.match(
-                        r"train_(AUTOPARAM: )?{}".format(other_param),
+                        r"train_(AUTOPARAM: )?{}".format(cmt_param_other),
                         p["name"],
                         re.IGNORECASE,
                     )
                 ]
-                for other_param in other_params.values()
+                for cmt_param_other in CMT_VALS_MAPPING.values()
             ]
-            other_param_values = sum(
-                [v[:1] if len(v) > 0 else [None] for v in other_param_values],
-                [],
-            )
-            cmt_others_values = [
+            cmt_params_others_values = sum(
                 [
-                    o["valueCurrent"]
-                    for o in cmt_others_summary
-                    if re.match(
-                        r"train_(AUTOPARAM: )?{}".format(cmt_other),
-                        o["name"],
-                        re.IGNORECASE,
-                    )
-                ]
-                for cmt_other in cmt_others.values()
-            ]
-            cmt_others_values = sum(
-                [v[:1] if len(v) > 0 else [None] for v in cmt_others_values],
+                    v[:1] if len(v) > 0 else [None]
+                    for v in cmt_params_others_values
+                ],
                 [],
             )
 
@@ -336,8 +324,7 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
                         for m in metrics
                     ]
                     + oov_details
-                    + other_param_values
-                    + cmt_others_values
+                    + cmt_params_others_values
                     + [vocab_coverage]
                 ]
     data_frame = pd.DataFrame(data, columns=cols)
