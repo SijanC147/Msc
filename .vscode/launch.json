@@ -58,6 +58,18 @@
             "console": "integratedTerminal"
         },
         {
+            "name": "generate-plots",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/generate_boxplots.py",
+            "args": [
+                "--models",
+                "memnet"
+            ],
+            "console": "integratedTerminal",
+            "redirectOutput": false
+        },
+        {
             "name": "batch-defaults-arg-test",
             "type": "python",
             "request": "launch",

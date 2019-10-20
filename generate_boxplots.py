@@ -13,6 +13,10 @@ import matplotlib
 
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
+from matplotlib.legend_handler import HandlerBase
+import matplotlib.patches as mpatches
+import matplotlib.lines as mlines
+import matplotlib.text as mtext
 import pandas as pd
 import seaborn as sns
 
@@ -194,12 +198,27 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
     metrics = metrics or ["Macro-F1", "Micro-F1"]
     datasets = kwargs.get("datasets", ["restaurants", "dong", "laptops"])
     embeddings = kwargs.get("embeddings", ["t200", "t100", "cc42", "cc840"])
-    other_params = [
-        "Train Embeddings",
-        "N Hops",
-        "Learning Rate",
-        "Batch Size",
-    ]
+    other_params = {
+        "Hidden Units": "Hidden Units",
+        "LSTM Hidden Units": "Lstm Hidden Units",
+        "GRU Hidden Units": "Gru Hidden Units",
+        "LSTM Layers": "N Lstm Layers",
+        "L2 Weight": "L2 Weight",
+        "Dropout Rate": "Keep Prob",
+        "Train Embeddings": "Train Embeddings",
+        "Number of Hops": "N Hops",
+        "Learning Rate": "Learning Rate",
+        "Batch Size": "Batch Size",
+        "Early Stopping Metric": "Early Stopping Metric",
+        "Patience": "Early Stopping Patience",
+        "Minimum Epochs": "Early Stopping Minimum Iter",
+        "Maximum Epochs": "Epochs",
+        "Momentum": "Momentum",
+    }
+    cmt_others = {
+        "Initializer": "Initializer",
+        "Bias Initializer": "Bias Initializer",
+    }
     if models is not None and isinstance(models, str):
         models = [models]
     cols = (
@@ -207,7 +226,8 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
         + metrics
         + ["Reported {}".format(m) for m in metrics]
         + ["OOV Initialization", "OOV Threshold", "OOV Buckets"]
-        + other_params
+        + [*other_params]
+        + [*cmt_others]
         + ["Vocab Coverage"]
     )
     data = []
@@ -226,6 +246,7 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
             exp_name_clean = exp_name_clean.replace(embedding, "")
             exp_name_clean = exp_name_clean.replace("-", " ").strip()
             params_summary = exp.get_parameters_summary()
+            cmt_others_summary = exp.get_others_summary()
             oov_details = sum(
                 [
                     [
@@ -247,12 +268,30 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
                     if re.match(
                         r"train_(AUTOPARAM: )?{}".format(other_param),
                         p["name"],
+                        re.IGNORECASE,
                     )
                 ]
-                for other_param in other_params
+                for other_param in other_params.values()
             ]
             other_param_values = sum(
-                [v if len(v) > 0 else [None] for v in other_param_values], []
+                [v[:1] if len(v) > 0 else [None] for v in other_param_values],
+                [],
+            )
+            cmt_others_values = [
+                [
+                    o["valueCurrent"]
+                    for o in cmt_others_summary
+                    if re.match(
+                        r"train_(AUTOPARAM: )?{}".format(cmt_other),
+                        o["name"],
+                        re.IGNORECASE,
+                    )
+                ]
+                for cmt_other in cmt_others.values()
+            ]
+            cmt_others_values = sum(
+                [v[:1] if len(v) > 0 else [None] for v in cmt_others_values],
+                [],
             )
 
             vocab_coverage = json.loads(
@@ -280,14 +319,34 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
                         for run_metrics in run
                     ]
                     + [
-                        REPORTED.get(model, {}).get(dataset, {}).get(m)
+                        REPORTED.get(model, {})
+                        .get(
+                            (
+                                [
+                                    k
+                                    for k in [*REPORTED.get(model, {})]
+                                    if "original" in k.lower()
+                                ]
+                                or ["none"]
+                            )[0],
+                            {},
+                        )
+                        .get(dataset, {})
+                        .get(m)
                         for m in metrics
                     ]
                     + oov_details
                     + other_param_values
+                    + cmt_others_values
                     + [vocab_coverage]
                 ]
     data_frame = pd.DataFrame(data, columns=cols)
+    data_frame["Train Embeddings"] = data_frame["Train Embeddings"].map(
+        lambda v: v if v is not None else True
+    )
+    data_frame["OOV Initialization"] = data_frame["OOV Initialization"].map(
+        str.capitalize
+    )
     pickle_file(path=cached_data_path, data=data_frame)
     return data_frame
 
@@ -320,10 +379,33 @@ def group_citations(dataset, metric, model, reported=None):
     )
 
 
+# pylint: disable=abstract-method
+class AnyObjectHandler(HandlerBase):
+    def legend_artist(self, legend, orig_handle, fontsize, handlebox):
+        if isinstance(orig_handle, str):
+            txt = mtext.Text(
+                x=handlebox.xdescent,
+                y=handlebox.ydescent,
+                text=orig_handle,
+                fontsize="large",
+                linespacing=1,
+            )
+            handlebox.add_artist(txt)
+            return txt
+
+
 def draw_boxplot(models, **kwargs):
     df = comet_to_df("reproduction", **kwargs)
     plot_metrics = kwargs.get("plot_metrics", ["Macro-F1", "Micro-F1"])
     xlabel_templates = kwargs.get("xlabel_templates", dict())
+    hparams = [
+        "Learning Rate",
+        "Batch Size",
+        "OOV Initialization",
+        "OOV Threshold",
+        "OOV Buckets",
+    ]
+    hparams += kwargs.get("hparams", [])
     models_tiled = sum([[model] * len(plot_metrics) for model in models], [])
     for (model, plot_metric) in zip(models_tiled, plot_metrics * len(models)):
         dfm = df[(df["Model"] == MODELS.get(model))]
@@ -385,7 +467,11 @@ def draw_boxplot(models, **kwargs):
                 opp_ax.tick_params(direction="out", length=0, color="none")
                 opp_ax.set_yticks(list(cited_results.values()))
                 opp_ax.set_yticklabels(
-                    list(cited_results.values()), va="center"
+                    [
+                        "{}%".format(val)
+                        for val in list(cited_results.values())
+                    ],
+                    va="center",
                 )
                 this_ax.get_shared_y_axes().join(opp_ax, this_ax)
                 loop_data = zip(
@@ -395,15 +481,9 @@ def draw_boxplot(models, **kwargs):
                 )
                 for (citation, value), lab, _color in loop_data:
                     lab.set_color(_color)
-                    this_ax.axhline(
-                        y=value, color=_color, linestyle="--", alpha=0.8
-                    )
+                    this_ax.axhline(y=value, color=_color, linestyle="--")
                     opp_ax.axhline(
-                        y=value,
-                        color=_color,
-                        linestyle="--",
-                        label=citation,
-                        alpha=0.8,
+                        y=value, color=_color, linestyle="--", label=citation
                     )
                 legends[dataset_name] = opp_ax.get_legend_handles_labels()
 
@@ -558,26 +638,48 @@ def draw_boxplot(models, **kwargs):
         legends = {**{"Embeddings": (handles, labels)}, **legends}
         all_handles = sum(
             [
-                [matplotlib.patches.Patch(facecolor="none")]
-                + hnds
-                + [matplotlib.patches.Patch(facecolor="none")]
+                [group] + hnds + [matplotlib.patches.Patch(facecolor="none")]
                 for group, (hnds, labs) in legends.items()
             ],
             [],
         )[:-1]
         all_labels = sum(
-            [[group] + labs + [""] for group, (hnds, labs) in legends.items()],
-            [],
+            [[""] + labs + [""] for group, (hnds, labs) in legends.items()], []
         )[:-1]
 
         last_axis.legend(
             all_handles,
             all_labels,
-            loc="center left",
-            bbox_to_anchor=(-0.2, 0.5),
+            loc="upper left",
+            bbox_to_anchor=(-0.2, 1, 1, 0),
             labelspacing=0.7,
             borderpad=1,
+            handler_map={object: AnyObjectHandler()},
         )
+
+        common_hparams = [
+            (hparam, dfm[hparam].unique().tolist()[0].capitalize())
+            for hparam in hparams
+            if hparam in [*dfm]
+            and len(dfm[hparam].unique().tolist()) == 1
+            and dfm[hparam].unique().tolist()[0] is not None
+        ]
+        draw_boxplot.common_hparams = common_hparams
+        if common_hparams:
+            col_widths = [0.2 * num_plots, 1 - (0.2 * num_plots)]
+            hparam_table = last_axis.table(
+                cellText=[["Hyper-Parameter Configuration\n", ""]]
+                + list(map(list, common_hparams)),
+                colWidths=col_widths,
+                cellLoc="left",
+                bbox=(-0.2, 0, 1, 0.3),
+                edges="open",
+            )
+            hparam_table.auto_set_font_size(False)
+            hparam_table.set_fontsize(10)
+            for (y_pos, x_pos), cell in hparam_table.get_celld().items():
+                if x_pos == 0 and y_pos == 0:
+                    cell.set_text_props(fontsize="large")
 
         if kwargs.get("fname", False):
             save_plot(plt, model, plot_metric, **kwargs)
@@ -590,6 +692,7 @@ def main():
         args.models,
         fname="test",
         xlabel_templates={"tdlstm": "{Experiment}", "memnet": "{N Hops} Hops"},
+        use_cached=False,
     )
 
 

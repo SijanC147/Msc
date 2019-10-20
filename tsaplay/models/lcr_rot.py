@@ -33,7 +33,8 @@ class LcrRot(TsaModel):
             # ? Following approach of Moore et al. 2018, using early stopping
             "epochs": 300,
             "early_stopping_patience": 10,
-            "early_stopping_metric": "macro-f1",
+            # "early_stopping_metric": "macro-f1",
+            "early_stopping_metric": "loss",
         }
 
     @addon([attn_heatmaps, early_stopping])
