@@ -129,6 +129,9 @@ CMT_VALS_MAPPING = {
     "Momentum": "Momentum",
     "Initializer": "Initializer",
     "Bias Initializer": "Bias Initializer",
+    "OOV Initialization": "OOV Fn",
+    "OOV Threshold": "OOV Threshold",
+    "OOV Buckets": "OOV Buckets",
 }
 
 MODELS = {
@@ -226,7 +229,7 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
         ["Workspace", "Experiment", "Model", "Dataset", "Embedding"]
         + metrics
         + ["Reported {}".format(m) for m in metrics]
-        + ["OOV Initialization", "OOV Threshold", "OOV Buckets"]
+        # + ["OOV Initialization", "OOV Threshold", "OOV Buckets"]
         + [*CMT_VALS_MAPPING]
         + ["Vocab Coverage"]
     )
@@ -248,20 +251,20 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
             cmt_params_others_summary = (
                 exp.get_others_summary() + exp.get_parameters_summary()
             )
-            oov_details = sum(
-                [
-                    [
-                        p["valueCurrent"]
-                        for p in cmt_params_others_summary
-                        if re.match(
-                            r"train_(AUTOPARAM: )?Oov {}".format(deet),
-                            p["name"],
-                        )
-                    ]
-                    for deet in ["Fn", "Train", "Buckets"]
-                ],
-                [],
-            )
+            # oov_details = sum(
+            #     [
+            #         [
+            #             p["valueCurrent"]
+            #             for p in cmt_params_others_summary
+            #             if re.match(
+            #                 r"train_(AUTOPARAM: )?Oov {}".format(deet),
+            #                 p["name"],
+            #             )
+            #         ]
+            #         for deet in ["Fn", "Train", "Buckets"]
+            #     ],
+            #     [],
+            # )
             cmt_params_others_values = [
                 [
                     p["valueCurrent"]
@@ -323,7 +326,7 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
                         .get(m)
                         for m in metrics
                     ]
-                    + oov_details
+                    # + oov_details
                     + cmt_params_others_values
                     + [vocab_coverage]
                 ]
@@ -385,14 +388,7 @@ def draw_boxplot(models, **kwargs):
     df = comet_to_df("reproduction", **kwargs)
     plot_metrics = kwargs.get("plot_metrics", ["Macro-F1", "Micro-F1"])
     xlabel_templates = kwargs.get("xlabel_templates", dict())
-    hparams = [
-        "Learning Rate",
-        "Batch Size",
-        "OOV Initialization",
-        "OOV Threshold",
-        "OOV Buckets",
-    ]
-    hparams += kwargs.get("hparams", [])
+    hparams = kwargs.get("hparams", [*CMT_VALS_MAPPING])
     models_tiled = sum([[model] * len(plot_metrics) for model in models], [])
     for (model, plot_metric) in zip(models_tiled, plot_metrics * len(models)):
         dfm = df[(df["Model"] == MODELS.get(model))]
