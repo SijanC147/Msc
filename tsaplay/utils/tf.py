@@ -77,6 +77,15 @@ def embed_sequences(model_fn):
     return wrapper
 
 
+def resolve_optimizer(key):
+    return {
+        "SGD": tf.train.GradientDescentOptimizer,
+        "Adam": tf.train.AdamOptimizer,
+        "Adagrad": tf.train.AdagradOptimizer,
+        "Momentum": tf.train.MomentumOptimizer,
+    }[key]
+
+
 def sharded_saver(model_fn):
     @wraps(model_fn)
     def wrapper(self, features, labels, mode, params):

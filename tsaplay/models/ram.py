@@ -16,6 +16,7 @@ from tsaplay.utils.tf import (
     create_snapshots_container,
     append_snapshot,
     zip_attn_snapshots_with_literals,
+    resolve_optimizer,
 )
 from tsaplay.utils.io import cprnt
 
@@ -45,6 +46,8 @@ class Ram(TsaModel):
             # "bias_initializer": tf.zeros_initializer(),  # for biases
             # "lstm_initial_bias": 0,
             # "attn_initializer": tf.contrib.layers.xavier_initializer(),  # for attn
+            # ! Paper also makes no mention of optimizer used
+            "optimizer": "Adam",
             # ? Suggestions from https://github.com/lpq29743/RAM/blob/master/main.py
             "batch-size": 32,
             "early_stopping_minimum_iter": 30,
@@ -253,7 +256,7 @@ class Ram(TsaModel):
             labels=labels, logits=logits, l2_weight=params["l2_weight"]
         )
 
-        optimizer = tf.train.GradientDescentOptimizer(
+        optimizer = resolve_optimizer(params["optimizer"])(
             learning_rate=params["learning_rate"]
         )
 

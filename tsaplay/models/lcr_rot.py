@@ -10,6 +10,7 @@ from tsaplay.utils.tf import (
     lstm_cell,
     l2_regularized_loss,
     generate_attn_heatmap_summary,
+    resolve_optimizer,
 )
 from tsaplay.utils.addons import addon, attn_heatmaps, early_stopping
 
@@ -22,6 +23,7 @@ class LcrRot(TsaModel):
             "keep_prob": 0.5,
             "hidden_units": 300,
             "l2_weight": 1e-5,
+            "optimizer": "Momentum",
             "momentum": 0.9,
             "initializer": tf.initializers.random_uniform(-0.1, 0.1),
             "bias_initializer": tf.initializers.zeros(),
@@ -157,7 +159,7 @@ class LcrRot(TsaModel):
             labels=labels, logits=logits, l2_weight=params["l2_weight"]
         )
 
-        optimizer = tf.train.MomentumOptimizer(
+        optimizer = resolve_optimizer(params["optimizer"])(
             learning_rate=params["learning_rate"], momentum=params["momentum"]
         )
 

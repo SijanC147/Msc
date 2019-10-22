@@ -1,7 +1,12 @@
 # pylint: disable=line-too-long
 import tensorflow as tf
 from tsaplay.models.tsa_model import TsaModel
-from tsaplay.utils.tf import sparse_reverse, variable_len_batch_mean, lstm_cell
+from tsaplay.utils.tf import (
+    sparse_reverse,
+    variable_len_batch_mean,
+    lstm_cell,
+    resolve_optimizer,
+)
 from tsaplay.utils.addons import addon, early_stopping
 
 
@@ -11,6 +16,7 @@ class TcLstm(TsaModel):
             # * From original paper
             "learning_rate": 0.01,
             "initializer": tf.initializers.random_uniform(-0.003, 0.003),
+            "optimizer": "SGD",
             # ? Suggestions from https://github.com/jimmyyfeng/TD-LSTM/blob/master/tc_lstm.py
             "hidden_units": 200,
             # ? Using same batch size to compare LSTM, TDLSTM and TDLSTM
@@ -105,7 +111,7 @@ class TcLstm(TsaModel):
             labels=labels, logits=logits
         )
 
-        optimizer = tf.train.AdagradOptimizer(
+        optimizer = resolve_optimizer(params["optimizer"])(
             learning_rate=params["learning_rate"]
         )
 

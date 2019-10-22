@@ -14,8 +14,6 @@ import matplotlib
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 from matplotlib.legend_handler import HandlerBase
-import matplotlib.patches as mpatches
-import matplotlib.lines as mlines
 import matplotlib.text as mtext
 import pandas as pd
 import seaborn as sns
@@ -23,7 +21,7 @@ import seaborn as sns
 
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)  # noqa
-    from tsaplay.utils.io import pickle_file, unpickle_file
+    from tsaplay.utils.io import pickle_file, unpickle_file, args_to_dict
 
 REPORTED = {
     "lstm": {
@@ -112,26 +110,44 @@ REPORTED = {
 }
 
 CMT_VALS_MAPPING = {
-    "Hidden Units": "Hidden Units",
-    "LSTM Hidden Units": "Lstm Hidden Units",
-    "GRU Hidden Units": "Gru Hidden Units",
-    "LSTM Layers": "N Lstm Layers",
-    "L2 Weight": "L2 Weight",
-    "Dropout Rate": "Keep Prob",
-    "Train Embeddings": "Train Embeddings",
-    "Number of Hops": "N Hops",
-    "Learning Rate": "Learning Rate",
-    "Batch Size": "Batch Size",
-    "Early Stopping Metric": "Early Stopping Metric",
-    "Patience": "Early Stopping Patience",
-    "Minimum Epochs": "Early Stopping Minimum Iter",
-    "Maximum Epochs": "Epochs",
-    "Momentum": "Momentum",
-    "Initializer": "Initializer",
-    "Bias Initializer": "Bias Initializer",
-    "OOV Initialization": "OOV Fn",
-    "OOV Threshold": "OOV Threshold",
-    "OOV Buckets": "OOV Buckets",
+    "Hidden Units": {"cmt_key": "Hidden Units"},
+    "LSTM Hidden Units": {"cmt_key": "Lstm Hidden Units"},
+    "GRU Hidden Units": {"cmt_key": "Gru Hidden Units"},
+    "LSTM Layers": {"cmt_key": "N Lstm Layers"},
+    "L2 Weight": {"cmt_key": "L2 Weight"},
+    "Dropout Rate": {"cmt_key": "Keep Prob"},
+    "Train Embeddings": {
+        "cmt_key": "Train Embeddings",
+        "df_valfn": lambda v: "WE Trained"
+        if v.lower() == "true"
+        else "WE Not Trained",
+        "default": "WE Trained",
+        "incl_xaxis_label": False,
+    },
+    "Number of Hops": {"cmt_key": "N Hops"},
+    "Learning Rate": {"cmt_key": "Learning Rate"},
+    "Momentum": {"cmt_key": "Momentum"},
+    "Optimizer": {"cmt_key": "Optimizer"},
+    "Kernel Initializer": {"cmt_key": "Initializer"},
+    "Bias Initializer": {"cmt_key": "Bias Initializer"},
+    "OOV Initializer ": {
+        "cmt_key": "OOV Fn",
+        "df_valfn": lambda v: str(v).capitalize(),
+    },
+    "OOV Threshold": {"cmt_key": "OOV Threshold"},
+    "OOV Buckets": {"cmt_key": "OOV Buckets"},
+    "Early Stopping Metric": {
+        "cmt_key": "Early Stopping Metric",
+        "df_valfn": lambda v: str(v).capitalize(),
+        "use_xlabel": False,
+    },
+    "Patience": {"cmt_key": "Early Stopping Patience", "use_xlabel": False},
+    "Minimum Epochs": {
+        "cmt_key": "Early Stopping Minimum Iter",
+        "use_xlabel": False,
+    },
+    "Maximum Epochs": {"cmt_key": "Epochs", "use_xlabel": False},
+    "Batch Size": {"cmt_key": "Batch Size"},
 }
 
 MODELS = {
@@ -143,6 +159,7 @@ MODELS = {
     "memnet": "MemNet",
     "ram": "RAM",
 }
+
 EMBEDDINGS = {
     "cc42": "GloVe CommonCrawl 42b (300d)",
     "cc840": "GloVe CommonCrawl 840b (300d)",
@@ -153,7 +170,12 @@ EMBEDDINGS = {
 
 def argument_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--models", nargs="+", choices=[*MODELS])
+    parser.add_argument(
+        "--models", nargs="+", choices=[*MODELS], required=False, default=None
+    )
+    parser.add_argument(
+        "--params", "-p", nargs="*", required=False, default=None
+    )
     return parser
 
 
@@ -215,7 +237,7 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
     cached_data_path = path.join(
         path.dirname(__file__), "temp", "comet_df.pkl"
     )
-    use_cached = kwargs.get("use_cached", True)
+    use_cached = kwargs.get("use_cached", (models is None))
     if use_cached and path.exists(cached_data_path):
         return unpickle_file(cached_data_path)
     api = get_comet_api(**kwargs)
@@ -229,7 +251,6 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
         ["Workspace", "Experiment", "Model", "Dataset", "Embedding"]
         + metrics
         + ["Reported {}".format(m) for m in metrics]
-        # + ["OOV Initialization", "OOV Threshold", "OOV Buckets"]
         + [*CMT_VALS_MAPPING]
         + ["Vocab Coverage"]
     )
@@ -251,26 +272,16 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
             cmt_params_others_summary = (
                 exp.get_others_summary() + exp.get_parameters_summary()
             )
-            # oov_details = sum(
-            #     [
-            #         [
-            #             p["valueCurrent"]
-            #             for p in cmt_params_others_summary
-            #             if re.match(
-            #                 r"train_(AUTOPARAM: )?Oov {}".format(deet),
-            #                 p["name"],
-            #             )
-            #         ]
-            #         for deet in ["Fn", "Train", "Buckets"]
-            #     ],
-            #     [],
-            # )
             cmt_params_others_values = [
                 [
                     p["valueCurrent"]
+                    if cmt_param_other.get("df_valfn") is None
+                    else cmt_param_other["df_valfn"](p["valueCurrent"])
                     for p in cmt_params_others_summary
                     if re.match(
-                        r"train_(AUTOPARAM: )?{}".format(cmt_param_other),
+                        r"train_(AUTOPARAM: )?{}".format(
+                            cmt_param_other["cmt_key"]
+                        ),
                         p["name"],
                         re.IGNORECASE,
                     )
@@ -326,18 +337,18 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
                         .get(m)
                         for m in metrics
                     ]
-                    # + oov_details
                     + cmt_params_others_values
                     + [vocab_coverage]
                 ]
     data_frame = pd.DataFrame(data, columns=cols)
-    data_frame["Train Embeddings"] = data_frame["Train Embeddings"].map(
-        lambda v: v if v is not None else True
-    )
-    data_frame["OOV Initialization"] = data_frame["OOV Initialization"].map(
-        str.capitalize
-    )
-    pickle_file(path=cached_data_path, data=data_frame)
+    for k, val in CMT_VALS_MAPPING.items():
+        default_value = val.get("default")
+        if default_value:
+            data_frame[k] = data_frame[k].map(
+                lambda el, d=default_value: el if el is not None else d
+            )
+    if models is not None:
+        pickle_file(path=cached_data_path, data=data_frame)
     return data_frame
 
 
@@ -384,16 +395,24 @@ class AnyObjectHandler(HandlerBase):
             return txt
 
 
-def draw_boxplot(models, **kwargs):
-    df = comet_to_df("reproduction", **kwargs)
+def draw_boxplot(models=None, **kwargs):
+    df = comet_to_df("reproduction", models=models, **kwargs)
     plot_metrics = kwargs.get("plot_metrics", ["Macro-F1", "Micro-F1"])
-    xlabel_templates = kwargs.get("xlabel_templates", dict())
+    xticklabel_templates = kwargs.get("xticklabel_templates", dict())
     hparams = kwargs.get("hparams", [*CMT_VALS_MAPPING])
+    models = models or [*MODELS]
     models_tiled = sum([[model] * len(plot_metrics) for model in models], [])
     for (model, plot_metric) in zip(models_tiled, plot_metrics * len(models)):
         dfm = df[(df["Model"] == MODELS.get(model))]
         dss = dfm["Dataset"].unique().tolist()
         num_plots = len(dss)
+        common_hparams = [
+            (hparam, str(dfm[hparam].unique().tolist()[0]))
+            for hparam in hparams
+            if hparam in [*dfm]
+            and len(dfm[hparam].unique().tolist()) == 1
+            and dfm[hparam].unique().tolist()[0] is not None
+        ]
 
         handles, labels, legends, colors = [], [], dict(), dict()
         fig, axes = plt.subplots(
@@ -404,6 +423,31 @@ def draw_boxplot(models, **kwargs):
             fontsize=14,
         )
         fig.subplots_adjust(top=0.85, wspace=(0.4 + (0.025 * num_plots)))
+
+        xticklabel_template = xticklabel_templates.get(model)
+        if not xticklabel_template:
+            xticklabel_factors = [
+                f
+                for f in [
+                    C
+                    for C, V in CMT_VALS_MAPPING.items()
+                    if C not in [*map(itemgetter(0), common_hparams)]
+                    and V.get("use_xlabel", True)
+                ]
+                if dfm[f].unique().tolist()[0] is not None
+            ]
+            xticklabel_template = "\n".join(
+                [
+                    "{{{}}}".format(factor)
+                    if not CMT_VALS_MAPPING[factor].get("xtick_label")
+                    else CMT_VALS_MAPPING[factor].get("xtick_label")
+                    for factor in xticklabel_factors
+                ]
+            )
+        else:
+            xticklabel_factors = re.findall(
+                r"\{([^\}]*)?", xticklabel_template
+            )
         for i, dataset_name in enumerate(dss):
             try:
                 this_ax = axes[i % num_plots]
@@ -423,10 +467,9 @@ def draw_boxplot(models, **kwargs):
                 linewidth=1.5,
             )
 
-            xlabel_template = xlabel_templates.get(model, "{Experiment}")
             this_ax.set_xticklabels(
                 [
-                    xlabel_template.format(
+                    xticklabel_template.format(
                         **(
                             dfm[
                                 (dfm["Dataset"] == dataset_name)
@@ -600,7 +643,7 @@ def draw_boxplot(models, **kwargs):
                 colWidths=sum(subcol_widths, []),
                 cellLoc="center",
                 loc="bottom",
-                bbox=(0, -0.27, 1, 0.2),
+                bbox=(0, -0.35, 1, 0.2),
                 rowLabels=["Mean", "Max", "N="],
             )
             table.auto_set_font_size(False)
@@ -615,6 +658,17 @@ def draw_boxplot(models, **kwargs):
                     cell._loc = "right" if x_pos == -1 else cell._loc
 
             this_ax.set(ylabel=("{}(%)".format(plot_metric) if i == 0 else ""))
+
+        for ax in axes.flat[:-1]:
+            ax.set(
+                xlabel=" ".join(
+                    [
+                        f
+                        for f in xticklabel_factors
+                        if CMT_VALS_MAPPING[f].get("incl_xaxis_label", True)
+                    ]
+                )
+            )
 
         last_axis = axes[i + 1]
         last_axis.axis("off")
@@ -634,20 +688,12 @@ def draw_boxplot(models, **kwargs):
             all_handles,
             all_labels,
             loc="upper left",
-            bbox_to_anchor=(-0.2, 1, 1, 0),
+            bbox_to_anchor=(-0.2, 0.5, 1, 0.5),
             labelspacing=0.7,
             borderpad=1,
             handler_map={object: AnyObjectHandler()},
         )
 
-        common_hparams = [
-            (hparam, dfm[hparam].unique().tolist()[0].capitalize())
-            for hparam in hparams
-            if hparam in [*dfm]
-            and len(dfm[hparam].unique().tolist()) == 1
-            and dfm[hparam].unique().tolist()[0] is not None
-        ]
-        draw_boxplot.common_hparams = common_hparams
         if common_hparams:
             col_widths = [0.2 * num_plots, 1 - (0.2 * num_plots)]
             hparam_table = last_axis.table(
@@ -655,7 +701,7 @@ def draw_boxplot(models, **kwargs):
                 + list(map(list, common_hparams)),
                 colWidths=col_widths,
                 cellLoc="left",
-                bbox=(-0.2, 0, 1, 0.3),
+                bbox=(-0.2, -0.35, 1, 0.5),
                 edges="open",
             )
             hparam_table.auto_set_font_size(False)
@@ -664,19 +710,15 @@ def draw_boxplot(models, **kwargs):
                 if x_pos == 0 and y_pos == 0:
                     cell.set_text_props(fontsize="large")
 
-        if kwargs.get("fname", False):
+        if kwargs.get("fname", False) or kwargs.get("format", False):
             save_plot(plt, model, plot_metric, **kwargs)
 
 
 def main():
     parser = argument_parser()
     args = parser.parse_args()
-    draw_boxplot(
-        args.models,
-        fname="test",
-        xlabel_templates={"tdlstm": "{Experiment}", "memnet": "{N Hops} Hops"},
-        use_cached=False,
-    )
+    params = args_to_dict(args.params)
+    draw_boxplot(models=args.models, **params)
 
 
 if __name__ == "__main__":

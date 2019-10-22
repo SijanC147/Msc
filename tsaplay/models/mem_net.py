@@ -9,6 +9,7 @@ from tsaplay.utils.tf import (
     append_snapshot,
     create_snapshots_container,
     zip_attn_snapshots_with_literals,
+    resolve_optimizer,
 )
 
 
@@ -20,6 +21,7 @@ class MemNet(TsaModel):
             "location_model": 2,
             "n_hops": 6,
             "initializer": tf.initializers.random_uniform(-0.01, 0.01),
+            "optimizer": "SGD",
             # * "... we clamp the word embeddings ..."
             "train_embeddings": False,
             # ? Suggestions from https://github.com/NUSTM/ABSC/blob/master/models/ABSC_Zozoz/model/dmn.py
@@ -156,7 +158,7 @@ class MemNet(TsaModel):
             labels=labels, logits=logits
         )
 
-        optimizer = tf.train.GradientDescentOptimizer(
+        optimizer = resolve_optimizer(params["optimizer"])(
             learning_rate=params["learning_rate"]
         )
 

@@ -8,6 +8,7 @@ from tsaplay.utils.tf import (
     l2_regularized_loss,
     attention_unit,
     generate_attn_heatmap_summary,
+    resolve_optimizer,
 )
 from tsaplay.utils.addons import addon, attn_heatmaps, early_stopping
 
@@ -22,6 +23,7 @@ class Ian(TsaModel):
             "initializer": tf.initializers.random_uniform(-0.1, 0.1),
             "bias_initializer": tf.initializers.zeros(),
             "lstm_initial_bias": 0,
+            "optimizer": "Momentum",
             # ! Not quoted paper, using value from LCRROT paper
             "momentum": 0.9,
             # ? Suggestions from https://github.com/songyouwei/ABSA-PyTorch/blob/master/train.py
@@ -131,7 +133,7 @@ class Ian(TsaModel):
             labels=labels, logits=logits, l2_weight=params["l2_weight"]
         )
 
-        optimizer = tf.train.MomentumOptimizer(
+        optimizer = resolve_optimizer(params["optimizer"])(
             learning_rate=params["learning_rate"], momentum=params["momentum"]
         )
 
