@@ -501,19 +501,26 @@ def draw_boxplot(models=None, **kwargs):
                 linewidth=1.5,
             )
 
-            this_ax.set_xticklabels(
-                [
-                    xticklabel_template.format(
-                        **(
-                            dfm[
-                                (dfm["Dataset"] == dataset_name)
-                                & (dfm["Experiment"] == lab.get_text())
-                            ].to_dict("records")[0]
+            label_xaxis = len(xticklabel_template) > 0
+            if label_xaxis:
+                this_ax.set_xticklabels(
+                    [
+                        xticklabel_template.format(
+                            **(
+                                dfm[
+                                    (dfm["Dataset"] == dataset_name)
+                                    & (dfm["Experiment"] == lab.get_text())
+                                ].to_dict("records")[0]
+                            )
                         )
-                    )
-                    for lab in this_ax.get_xticklabels()
-                ]
-            )
+                        for lab in this_ax.get_xticklabels()
+                    ]
+                )
+                xaxis_labels_height = -0.3
+            else:
+                this_ax.set_xticks([])
+                xaxis_labels_height = -0.25
+
             this_ax.set_xlabel("")
             this_ax.set_ylabel("")
 
@@ -677,7 +684,7 @@ def draw_boxplot(models=None, **kwargs):
                 colWidths=sum(subcol_widths, []),
                 cellLoc="center",
                 loc="bottom",
-                bbox=(0, -0.3, 1, 0.2),
+                bbox=(0, xaxis_labels_height, 1, 0.2),
                 rowLabels=["Mean", "Max", "N="],
             )
             table.auto_set_font_size(False)
@@ -735,7 +742,7 @@ def draw_boxplot(models=None, **kwargs):
                 + list(map(list, common_hparams)),
                 colWidths=col_widths,
                 cellLoc="left",
-                bbox=(-0.2, -0.3, 1, 0.5),
+                bbox=(-0.2, xaxis_labels_height, 1, 0.5),
                 edges="open",
             )
             hparam_table.auto_set_font_size(False)
@@ -746,6 +753,8 @@ def draw_boxplot(models=None, **kwargs):
 
         if kwargs.get("fname", False) or kwargs.get("format", False):
             save_plot(plt, model, plot_metric, **kwargs)
+        else:
+            plt.show(block=False)
 
 
 def main():
