@@ -124,30 +124,30 @@ CMT_VALS_MAPPING = {
         "default": "WE Trained",
         "incl_xaxis_label": False,
     },
-    "Number of Hops": {"cmt_key": "N Hops"},
+    "Number of Hops": {"cmt_key": "N Hops", "xaxis_label": "# Hops"},
     "Learning Rate": {"cmt_key": "Learning Rate"},
     "Momentum": {"cmt_key": "Momentum"},
     "Optimizer": {"cmt_key": "Optimizer"},
     "Kernel Initializer": {"cmt_key": "Initializer"},
     "Bias Initializer": {"cmt_key": "Bias Initializer"},
+    "Batch Size": {"cmt_key": "Batch Size"},
     "OOV Initializer ": {
         "cmt_key": "OOV Fn",
         "df_valfn": lambda v: str(v).capitalize(),
     },
     "OOV Threshold": {"cmt_key": "OOV Threshold"},
     "OOV Buckets": {"cmt_key": "OOV Buckets"},
-    "Early Stopping Metric": {
+    "EA Metric": {
         "cmt_key": "Early Stopping Metric",
         "df_valfn": lambda v: str(v).capitalize(),
         "use_xlabel": False,
     },
-    "Patience": {"cmt_key": "Early Stopping Patience", "use_xlabel": False},
-    "Minimum Epochs": {
+    "EA Patience": {"cmt_key": "Early Stopping Patience", "use_xlabel": False},
+    "EA Min Epochs": {
         "cmt_key": "Early Stopping Minimum Iter",
         "use_xlabel": False,
     },
-    "Maximum Epochs": {"cmt_key": "Epochs", "use_xlabel": False},
-    "Batch Size": {"cmt_key": "Batch Size"},
+    "EA Max Epochs": {"cmt_key": "Epochs", "use_xlabel": False},
 }
 
 MODELS = {
@@ -234,10 +234,15 @@ def save_plot(plot, model, plot_metric, **kwargs):
 
 
 def comet_to_df(workspace, models=None, metrics=None, **kwargs):
+    models = models or [*MODELS]
+    if models is not None and isinstance(models, str):
+        models = [models]
     cached_data_path = path.join(
-        path.dirname(__file__), "temp", "comet_df.pkl"
+        path.dirname(__file__),
+        "temp",
+        f"{'comet_df' if models is None else '_'.join(sorted(models))}.pkl",
     )
-    use_cached = kwargs.get("use_cached", (models is None))
+    use_cached = kwargs.get("use_cached", False)
     if use_cached and path.exists(cached_data_path):
         return unpickle_file(cached_data_path)
     api = get_comet_api(**kwargs)
@@ -245,8 +250,6 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
     metrics = metrics or ["Macro-F1", "Micro-F1"]
     datasets = kwargs.get("datasets", ["restaurants", "dong", "laptops"])
     embeddings = kwargs.get("embeddings", [*EMBEDDINGS])
-    if models is not None and isinstance(models, str):
-        models = [models]
     cols = (
         ["Workspace", "Experiment", "Model", "Dataset", "Embedding"]
         + metrics
@@ -255,9 +258,7 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
         + ["Vocab Coverage"]
     )
     data = []
-    for prj in api.get_projects(workspace):
-        if models is not None and prj not in models and not use_cached:
-            continue
+    for prj in [p for p in api.get_projects(workspace) if p in models]:
         grouped_metrics, _ = get_grouped_metric_series(prj, metrics=metrics)
         for exp_name, metric_series in grouped_metrics.items():
             exp = api.get_experiment(workspace, prj, exp_name)
@@ -347,8 +348,7 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
             data_frame[k] = data_frame[k].map(
                 lambda el, d=default_value: el if el is not None else d
             )
-    if models is not None:
-        pickle_file(path=cached_data_path, data=data_frame)
+    pickle_file(path=cached_data_path, data=data_frame)
     return data_frame
 
 
@@ -402,8 +402,31 @@ def draw_boxplot(models=None, **kwargs):
     hparams = kwargs.get("hparams", [*CMT_VALS_MAPPING])
     models = models or [*MODELS]
     models_tiled = sum([[model] * len(plot_metrics) for model in models], [])
+    xaxis_filters = kwargs.get("xaxis_filters")
     for (model, plot_metric) in zip(models_tiled, plot_metrics * len(models)):
         dfm = df[(df["Model"] == MODELS.get(model))]
+        _xaxis_filters = (
+            xaxis_filters.get(model)
+            if xaxis_filters is not None
+            and isinstance(xaxis_filters, dict)
+            and model in [*xaxis_filters]
+            else xaxis_filters
+        )
+        if _xaxis_filters:
+            dfm = dfm.loc[
+                (
+                    dfm[list(_xaxis_filters)]
+                    == pd.Series(
+                        {
+                            k: (str(v) if not isinstance(v, str) else v)
+                            for k, v in _xaxis_filters.items()
+                        }
+                    )
+                ).all(axis=1)
+            ]
+        if dfm.empty == True:
+            warnings.warn("EMPTY DATAFRAME: {}({})".format(model, plot_metric))
+            continue
         dss = dfm["Dataset"].unique().tolist()
         num_plots = len(dss)
         common_hparams = [
@@ -424,7 +447,14 @@ def draw_boxplot(models=None, **kwargs):
         )
         fig.subplots_adjust(top=0.85, wspace=(0.4 + (0.025 * num_plots)))
 
-        xticklabel_template = xticklabel_templates.get(model)
+        xticklabel_factors = []
+        xticklabel_template = (
+            xticklabel_templates.get(model)
+            if xticklabel_templates is not None
+            and isinstance(xticklabel_templates, dict)
+            and model in [*xticklabel_templates]
+            else xticklabel_templates
+        )
         if not xticklabel_template:
             xticklabel_factors = [
                 f
@@ -433,10 +463,13 @@ def draw_boxplot(models=None, **kwargs):
                     for C, V in CMT_VALS_MAPPING.items()
                     if C not in [*map(itemgetter(0), common_hparams)]
                     and V.get("use_xlabel", True)
+                    and C in [*dfm]
                 ]
                 if dfm[f].unique().tolist()[0] is not None
             ]
-            xticklabel_template = "\n".join(
+            if not xticklabel_factors and _xaxis_filters:
+                xticklabel_factors = [*_xaxis_filters]
+            xticklabel_template = ", ".join(
                 [
                     "{{{}}}".format(factor)
                     if not CMT_VALS_MAPPING[factor].get("xtick_label")
@@ -444,10 +477,11 @@ def draw_boxplot(models=None, **kwargs):
                     for factor in xticklabel_factors
                 ]
             )
-        else:
+        elif xticklabel_template is not None:
             xticklabel_factors = re.findall(
                 r"\{([^\}]*)?", xticklabel_template
             )
+
         for i, dataset_name in enumerate(dss):
             try:
                 this_ax = axes[i % num_plots]
@@ -643,7 +677,7 @@ def draw_boxplot(models=None, **kwargs):
                 colWidths=sum(subcol_widths, []),
                 cellLoc="center",
                 loc="bottom",
-                bbox=(0, -0.35, 1, 0.2),
+                bbox=(0, -0.3, 1, 0.2),
                 rowLabels=["Mean", "Max", "N="],
             )
             table.auto_set_font_size(False)
@@ -661,16 +695,16 @@ def draw_boxplot(models=None, **kwargs):
 
         for ax in axes.flat[:-1]:
             ax.set(
-                xlabel=" ".join(
+                xlabel=", ".join(
                     [
-                        f
+                        CMT_VALS_MAPPING[f].get("xaxis_label", f)
                         for f in xticklabel_factors
                         if CMT_VALS_MAPPING[f].get("incl_xaxis_label", True)
                     ]
                 )
             )
 
-        last_axis = axes[i + 1]
+        last_axis = axes[-1]
         last_axis.axis("off")
         legends = {**{"Embeddings": (handles, labels)}, **legends}
         all_handles = sum(
@@ -701,7 +735,7 @@ def draw_boxplot(models=None, **kwargs):
                 + list(map(list, common_hparams)),
                 colWidths=col_widths,
                 cellLoc="left",
-                bbox=(-0.2, -0.35, 1, 0.5),
+                bbox=(-0.2, -0.3, 1, 0.5),
                 edges="open",
             )
             hparam_table.auto_set_font_size(False)

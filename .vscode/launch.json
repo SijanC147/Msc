@@ -64,7 +64,7 @@
             "program": "${workspaceFolder}/generate_boxplots.py",
             "args": [
                 "--models",
-                "ram"
+                "lstm",
             ],
             "console": "integratedTerminal",
             "redirectOutput": false
