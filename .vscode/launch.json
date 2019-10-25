@@ -42,18 +42,24 @@
             "request": "launch",
             "program": "${workspaceFolder}/submit_job.py",
             "args": [
-                "-jid=debuging",
-                "-t",
-                "batch",
-                "studies/reproducibility-test.txt",
-                "--defaults",
+                "-jf", 
+                "jobs/reproduction-tctdlstm-debug.jobs.txt",
+                "-n",
+                "4",
+                "--run-start",
+                "7"
+                // "-jid=debuging",
+                // "-t",
+                // "batch",
+                // "studies/reproducibility-test.txt",
+                // "--defaults",
                 // "-cmt",
                 // "T1NrVnn32dXWeOxeQWGArkHwc",
                 // "-wrk",
                 // "msc-reproducibility",
-                "-aux",
-                "logging=true",
-                "oov_fn='uniform[-0.1,0.1]'"
+                // "-aux",
+                // "logging=true",
+                // "oov_fn='uniform[-0.1,0.1]'"
             ],
             "console": "integratedTerminal"
         },
@@ -64,7 +70,7 @@
             "program": "${workspaceFolder}/generate_boxplots.py",
             "args": [
                 "--models",
-                "lstm",
+                "tclstm",
             ],
             "console": "integratedTerminal",
             "redirectOutput": false

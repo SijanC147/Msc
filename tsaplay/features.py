@@ -440,7 +440,7 @@ OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
                         "total": v_train,
                         "oov": {
                             "total": v_train - v_orig,
-                            "over_t": v_train_oov_over_t,
+                            "embedded": v_train_oov_over_t,
                             "bucketed": v_train - v_extd,
                         },
                     },

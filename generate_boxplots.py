@@ -35,6 +35,8 @@ REPORTED = {
             "restaurants": {"Micro-F1": 74.3},
             "dong": {"Micro-F1": 66.5},
         },
+        # ! Scores from Reproduction paper
+        "Moore et al. 2018": {"dong": {"Macro-F1": 60.69}},
     },
     "tdlstm": {
         # ! Scores from original paper
@@ -53,12 +55,16 @@ REPORTED = {
             "restaurants": {"Micro-F1": 75.6},
             "dong": {"Micro-F1": 70.8},
         },
+        # ! Scores from Reproduction paper
+        "Moore et al. 2018": {"dong": {"Macro-F1": 65.63}},
     },
     "tclstm": {
         # ! Scores from original paper
         "Tang et al. 2016 (Original)": {
             "dong": {"Micro-F1": 71.5, "Macro-F1": 69.5}
-        }
+        },
+        # ! Scores from Reproduction paper
+        "Moore et al. 2018": {"dong": {"Macro-F1": 65.23}},
     },
     "memnet": {
         # ! Scores from original paper
@@ -127,15 +133,20 @@ CMT_VALS_MAPPING = {
     "Number of Hops": {"cmt_key": "N Hops", "xaxis_label": "# Hops"},
     "Learning Rate": {"cmt_key": "Learning Rate"},
     "Momentum": {"cmt_key": "Momentum"},
-    "Optimizer": {"cmt_key": "Optimizer"},
+    "Optimizer": {
+        "cmt_key": "Optimizer",
+        "df_valfn": lambda v: {"GradientDescent": "SGD"}.get(
+            v.replace("Optimizer", ""), v.replace("Optimizer", "")
+        ),
+    },
     "Kernel Initializer": {"cmt_key": "Initializer"},
     "Bias Initializer": {"cmt_key": "Bias Initializer"},
     "Batch Size": {"cmt_key": "Batch Size"},
-    "OOV Initializer ": {
+    "OOV Initializer": {
         "cmt_key": "OOV Fn",
         "df_valfn": lambda v: str(v).capitalize(),
     },
-    "OOV Threshold": {"cmt_key": "OOV Threshold"},
+    "OOV Threshold": {"cmt_key": "OOV Train"},
     "OOV Buckets": {"cmt_key": "OOV Buckets"},
     "EA Metric": {
         "cmt_key": "Early Stopping Metric",
@@ -181,9 +192,14 @@ def argument_parser():
 
 def get_comet_api(api_key=None, **kwargs):
     api_key = api_key or environ.get("COMET_REST_API_KEY")
-    api = comet_ml.papi.API(rest_api_key=api_key)
-    cached_endpoints = tuple(kwargs.get("cache", ["experiments", "projects"]))
-    api.do_cache(*cached_endpoints)
+    api = comet_ml.papi.API(
+        rest_api_key=api_key, cache=kwargs.get("cmt_cache", False)
+    )
+    if kwargs.get("cmt_cache", False):
+        cached_endpoints = tuple(
+            kwargs.get("cmt_cache_endpoints", ["experiments", "projects"])
+        )
+        api.do_cache(*cached_endpoints)
     return api
 
 
@@ -204,12 +220,15 @@ def get_grouped_metric_series(project, workspace=None, metrics=None, **kwargs):
     unique_experiment_names = np.unique([e.name for e in experiments]).tolist()
     for name in unique_experiment_names:
         grouped_metrics[name] = {
-            m: [
-                get_metric_series(e, "eval_{}".format(m.lower()))
-                for e in experiments
-                if e.name == name
-            ]
-            for m in metrics
+            "experiments": [e for e in experiments if e.name == name],
+            **{
+                m: [
+                    get_metric_series(e, "eval_{}".format(m.lower()))
+                    for e in experiments
+                    if e.name == name
+                ]
+                for m in metrics
+            },
         }
 
     return grouped_metrics, metrics
@@ -255,60 +274,100 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
         + metrics
         + ["Reported {}".format(m) for m in metrics]
         + [*CMT_VALS_MAPPING]
-        + ["Vocab Coverage"]
+        + ["Total Vocabulary Size", "IV Size", "OOV Size"]
+        + [
+            "Train Vocabulary Size",
+            "Train OOV",
+            "Train OOV Embedded",
+            "Train OOV Bucketed",
+        ]
+        + [
+            "Test Vocabulary Size",
+            "Test OOV",
+            "Test OOV Bucketed",
+            "Test Exclusive OOV",
+        ]
     )
     data = []
     for prj in [p for p in api.get_projects(workspace) if p in models]:
-        grouped_metrics, _ = get_grouped_metric_series(prj, metrics=metrics)
-        for exp_name, metric_series in grouped_metrics.items():
-            exp = api.get_experiment(workspace, prj, exp_name)
-            exp_name_clean = exp.name  # pylint: disable=no-member
-            model = exp.project_name  # pylint: disable=no-member
-            exp_name_clean = exp_name_clean.replace(model, "")
-            dataset = [ds for ds in datasets if ds in exp_name_clean][0]
-            exp_name_clean = exp_name_clean.replace(dataset, "")
-            embedding = [em for em in embeddings if em in exp_name_clean][0]
-            exp_name_clean = exp_name_clean.replace(embedding, "")
-            exp_name_clean = exp_name_clean.replace("-", " ").strip()
-            cmt_params_others_summary = (
-                exp.get_others_summary() + exp.get_parameters_summary()
-            )
-            cmt_params_others_values = [
-                [
-                    p["valueCurrent"]
-                    if cmt_param_other.get("df_valfn") is None
-                    else cmt_param_other["df_valfn"](p["valueCurrent"])
-                    for p in cmt_params_others_summary
-                    if re.match(
-                        r"train_(AUTOPARAM: )?{}".format(
-                            cmt_param_other["cmt_key"]
-                        ),
-                        p["name"],
-                        re.IGNORECASE,
-                    )
+        exp_groups, _ = get_grouped_metric_series(prj, metrics=metrics)
+        for _, exp_group_runs in exp_groups.items():
+            # ? (APIExperiment, ([{Epoch: Macro-F1}], [{Epoch: Micro-F1}]))
+            for (exp, *run_metrics) in zip(*exp_group_runs.values()):
+                exp_name_clean = exp.name  # pylint: disable=no-member
+                model = exp.project_name  # pylint: disable=no-member
+                exp_name_clean = exp_name_clean.replace(model, "")
+                dataset = [ds for ds in datasets if ds in exp_name_clean][0]
+                exp_name_clean = exp_name_clean.replace(dataset, "")
+                embedding = [em for em in embeddings if em in exp_name_clean][
+                    0
                 ]
-                for cmt_param_other in CMT_VALS_MAPPING.values()
-            ]
-            cmt_params_others_values = sum(
-                [
-                    v[:1] if len(v) > 0 else [None]
-                    for v in cmt_params_others_values
-                ],
-                [],
-            )
-
-            vocab_coverage = json.loads(
-                exp.get_asset(
-                    asset_id=[
-                        f["assetId"]
-                        for f in exp.get_asset_list()
-                        if f["fileName"] == "info.json"
-                    ][0],
-                    return_type="text",
+                exp_name_clean = exp_name_clean.replace(embedding, "")
+                exp_name_clean = exp_name_clean.replace("-", " ").strip()
+                cmt_params_others_summary = (
+                    exp.get_others_summary() + exp.get_parameters_summary()
                 )
-            ).get("vocab_coverage", {})
+                cmt_params_others_values = [
+                    [
+                        p["valueCurrent"]
+                        if cmt_param_other.get("df_valfn") is None
+                        else cmt_param_other["df_valfn"](p["valueCurrent"])
+                        for p in cmt_params_others_summary
+                        if re.match(
+                            r"train_(AUTOPARAM: )?{}".format(
+                                cmt_param_other["cmt_key"]
+                            ),
+                            p["name"],
+                            re.IGNORECASE,
+                        )
+                    ]
+                    for cmt_param_other in CMT_VALS_MAPPING.values()
+                ]
+                cmt_params_others_values = sum(
+                    [
+                        v[:1] if len(v) > 0 else [None]
+                        for v in cmt_params_others_values
+                    ],
+                    [],
+                )
 
-            for run in zip(*(metric_series[m] for m in metrics)):
+                vocab_coverage = json.loads(
+                    exp.get_asset(
+                        asset_id=[
+                            f["assetId"]
+                            for f in exp.get_asset_list()
+                            if f["fileName"] == "info.json"
+                        ][0],
+                        return_type="text",
+                    )
+                ).get("vocab_coverage", {})
+                get_num = lambda p: int(
+                    re.match(
+                        r"(?P<number>[0-9]+)\s\((?P<percent>[^\%]+)\%\)", p
+                    ).groupdict()["number"]
+                )
+                vocab_data = [
+                    vocab_coverage["total"]["size"],
+                    get_num(vocab_coverage["total"]["in_vocab"]),
+                    get_num(vocab_coverage["total"]["out_of_vocab"]),
+                    vocab_coverage["train"]["size"],
+                    get_num(vocab_coverage["train"]["oov"]["total"]),
+                    get_num(vocab_coverage["train"]["oov"]["embedded"]),
+                    (
+                        get_num(vocab_coverage["train"]["oov"]["bucketed"])
+                        if vocab_coverage["train"]["oov"].get("bucketed")
+                        else 0
+                    ),
+                    vocab_coverage["test"]["size"],
+                    get_num(vocab_coverage["train"]["oov"]["total"]),
+                    get_num(vocab_coverage["train"]["oov"]["bucketed"]),
+                    (
+                        get_num(vocab_coverage["train"]["oov"]["exclusive"])
+                        if vocab_coverage["train"]["oov"].get("exclusive")
+                        else 0
+                    ),
+                ]
+
                 data += [
                     [
                         workspace,
@@ -318,8 +377,8 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
                         EMBEDDINGS.get(embedding, embedding),
                     ]
                     + [
-                        round(max(run_metrics.values()) * 100, 2)
-                        for run_metrics in run
+                        round(max(run_metric.values()) * 100, 2)
+                        for run_metric in run_metrics
                     ]
                     + [
                         REPORTED.get(model, {})
@@ -339,7 +398,7 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
                         for m in metrics
                     ]
                     + cmt_params_others_values
-                    + [vocab_coverage]
+                    + vocab_data
                 ]
     data_frame = pd.DataFrame(data, columns=cols)
     for k, val in CMT_VALS_MAPPING.items():
@@ -412,6 +471,8 @@ def draw_boxplot(models=None, **kwargs):
             and model in [*xaxis_filters]
             else xaxis_filters
         )
+        draw_boxplot.dfm = dfm
+        draw_boxplot.flt = _xaxis_filters
         if _xaxis_filters:
             dfm = dfm.loc[
                 (
@@ -424,9 +485,20 @@ def draw_boxplot(models=None, **kwargs):
                     )
                 ).all(axis=1)
             ]
-        if dfm.empty == True:
+        if dfm.empty:
             warnings.warn("EMPTY DATAFRAME: {}({})".format(model, plot_metric))
             continue
+        filter_by_ds = kwargs.get("datasets")
+        if filter_by_ds:
+            dfm = dfm[
+                (
+                    dfm["Dataset"].isin(
+                        [filter_by_ds]
+                        if isinstance(filter_by_ds, str)
+                        else filter_by_ds
+                    )
+                )
+            ]
         dss = dfm["Dataset"].unique().tolist()
         num_plots = len(dss)
         common_hparams = [
@@ -490,18 +562,37 @@ def draw_boxplot(models=None, **kwargs):
             this_ax.set_title(dataset_name.capitalize())
             this_ax.grid(True, linestyle="dotted", which="both")
             dfmds = dfm[dfm["Dataset"] == dataset_name]
+            box_palette = kwargs.get("box_palette", "muted")
             bp = sns.boxplot(
                 y=plot_metric,
                 x="Experiment",
                 data=dfmds,
-                palette="muted",
+                palette=box_palette,
                 hue="Embedding",
                 width=0.4,
                 ax=this_ax,
                 linewidth=1.5,
+                saturation=kwargs.get("box_sat", 0.75),
+                showmeans=kwargs.get("showmeans", True),
+                meanline=kwargs.get("meanline", False),
+                meanprops=kwargs.get(
+                    "meanprops",
+                    {
+                        "marker": "D",
+                        "markersize": 4,
+                        "markeredgecolor": "none",
+                        "markerfacecolor": kwargs.get(
+                            "mean_facecolor", "aqua"
+                        ),
+                    },
+                ),
             )
 
-            label_xaxis = len(xticklabel_template) > 0
+            label_xaxis = (
+                (len(xticklabel_template) > 0)
+                if kwargs.get("label_xaxis") is None
+                else kwargs.get("label_xaxis")
+            )
             if label_xaxis:
                 this_ax.set_xticklabels(
                     [
@@ -520,7 +611,7 @@ def draw_boxplot(models=None, **kwargs):
             else:
                 this_ax.set_xticks([])
                 xaxis_labels_height = -0.25
-
+                # this_ax.set_xticklabels([])
             this_ax.set_xlabel("")
             this_ax.set_ylabel("")
 
@@ -535,7 +626,7 @@ def draw_boxplot(models=None, **kwargs):
                 opp_ax.set_yticks(list(cited_results.values()))
                 opp_ax.set_yticklabels(
                     [
-                        "{}%".format(val)
+                        "{:.2f}%".format(val)
                         for val in list(cited_results.values())
                     ],
                     va="center",
@@ -568,7 +659,7 @@ def draw_boxplot(models=None, **kwargs):
                         [
                             [],
                             [
-                                "{:.2f}%".format(
+                                "{:.2f}".format(
                                     round(
                                         dfmds[
                                             (dfmds["Embedding"] == em)
@@ -594,7 +685,7 @@ def draw_boxplot(models=None, **kwargs):
                         [
                             [],
                             [
-                                "{:.2f}%".format(
+                                "{:.2f}".format(
                                     dfmds[
                                         (dfmds["Embedding"] == em)
                                         & (dfmds["Experiment"] == exp)
@@ -685,7 +776,7 @@ def draw_boxplot(models=None, **kwargs):
                 cellLoc="center",
                 loc="bottom",
                 bbox=(0, xaxis_labels_height, 1, 0.2),
-                rowLabels=["Mean", "Max", "N="],
+                rowLabels=["Mean(%)", "Max(%)", "N"],
             )
             table.auto_set_font_size(False)
             table.set_fontsize(12)
@@ -700,16 +791,19 @@ def draw_boxplot(models=None, **kwargs):
 
             this_ax.set(ylabel=("{}(%)".format(plot_metric) if i == 0 else ""))
 
-        for ax in axes.flat[:-1]:
-            ax.set(
-                xlabel=", ".join(
-                    [
-                        CMT_VALS_MAPPING[f].get("xaxis_label", f)
-                        for f in xticklabel_factors
-                        if CMT_VALS_MAPPING[f].get("incl_xaxis_label", True)
-                    ]
+        if label_xaxis:
+            for ax in axes.flat[:-1]:
+                ax.set(
+                    xlabel=", ".join(
+                        [
+                            CMT_VALS_MAPPING[f].get("xaxis_label", f)
+                            for f in xticklabel_factors
+                            if CMT_VALS_MAPPING[f].get(
+                                "incl_xaxis_label", True
+                            )
+                        ]
+                    )
                 )
-            )
 
         last_axis = axes[-1]
         last_axis.axis("off")
@@ -754,7 +848,7 @@ def draw_boxplot(models=None, **kwargs):
         if kwargs.get("fname", False) or kwargs.get("format", False):
             save_plot(plt, model, plot_metric, **kwargs)
         else:
-            plt.show(block=False)
+            plt.show()
 
 
 def main():
@@ -765,4 +859,21 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    draw_boxplot(
+        models=["tclstm"],
+        plot_metrics=["Macro-F1"],
+        cited_cmap="Set1",
+        use_cached=False,
+        box_palette="colorblind",
+        mean_facecolor="ghostwhite",
+        xaxis_filters={
+            "Optimizer": "SGD",
+            # "OOV Initializer": "Uniform[-0.1,0.1]"
+        },
+        format="pdf"
+        # label_xaxis=False
+        # xticklabel_templates={
+        #     "ram": "{Number of Hops}"
+        # }
+    )
+    # main()

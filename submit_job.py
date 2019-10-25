@@ -33,6 +33,17 @@ def argument_parser():
     )
 
     parser.add_argument(
+        "--nruns",
+        "-n",
+        help="Number of runs to repeat each job (with varying random seed)",
+    )
+
+    parser.add_argument(
+        "--run-start",
+        help="Index of first run (to avoid conflicts with existing job IDs)",
+    )
+
+    parser.add_argument(
         "--job-id",
         "-jid",
         type=str,
@@ -246,7 +257,18 @@ def main():
         for line in open(args.jobs_file, "r"):
             if len(line.strip()) > 0:
                 try:
-                    submit_job(parser.parse_args(line.split()))
+                    job_args = parser.parse_args(line.split())
+                    nruns = args.nruns
+                    if not nruns:
+                        submit_job(job_args)
+                        continue
+                    orig_job_id = job_args.job_id
+                    start = int(args.run_start) if args.run_start else 1
+                    for run_num in range(start, start + int(nruns)):
+                        job_args.job_id = orig_job_id + (
+                            "_run{:02}".format(run_num)
+                        )
+                        submit_job(job_args)
                 except Exception:  # pylint: disable=W0703
                     cprnt(WARN="Encountered exception in job: {}".format(line))
                     traceback.print_exc()

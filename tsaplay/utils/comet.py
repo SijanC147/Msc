@@ -2,6 +2,7 @@ import inspect
 import json
 from datetime import datetime
 from functools import wraps
+import tensorflow as tf
 from tensorflow.estimator import ModeKeys  # noqa
 from tsaplay.utils.tf import scaffold_init_fn_on_spec
 from tsaplay.utils.io import temp_pngs
@@ -72,7 +73,35 @@ def comet_pretty_log(comet_experiment, data_dict, prefix=None, hparams=False):
         try:
             json.dumps(value)
         except TypeError:
-            value = str(value)
+            _, initializer_type, _ = inspect.getmro(
+                type(tf.initializers.identity())
+            )
+            if isinstance(value, initializer_type):
+                initializer_name = type(value).__name__.replace("Random", "")
+                initializer_args = {
+                    arg: val
+                    for arg, val in value.get_config().items()
+                    if arg not in ["seed", "dtype"]
+                }
+                value = "{}{}".format(
+                    initializer_name,
+                    (
+                        ""
+                        if len(initializer_args) == 0
+                        else "[{minval},{maxval}]".format(**initializer_args)
+                        if len(initializer_args) == 2
+                        and "minval" in initializer_args
+                        and "maxval" in initializer_args
+                        else "[{}]".format(
+                            ",".join(
+                                "{}={}".format(k, v)
+                                for k, v in initializer_args.items()
+                            )
+                        )
+                    ),
+                )
+            else:
+                value = str(value)
         if log_as_param:
             comet_experiment.log_parameter(key, value)
         else:

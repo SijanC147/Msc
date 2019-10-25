@@ -1,17 +1,17 @@
 {
-    "jobId": "reproduction_ram_resub_t200dong_run3",
+    "jobId": "reproduction_sgd_cc42_tclstm_run6",
     "labels": {
-        "model": "ram"
+        "model": "tclstm"
     },
     "trainingInput": {
         "scaleTier": "CUSTOM",
-        "masterType": "complex_model_s",
+        "masterType": "standard",
         "pythonVersion": "3.5",
         "runtimeVersion": "1.12",
         "region": "europe-west1",
         "args": [
             "batch",
-            "reproducibility-ram-t200dong.txt",
+            "reproducibility-tclstm.txt",
             "--new",
             "--nocolor"
         ]
