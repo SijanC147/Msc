@@ -133,7 +133,7 @@ def log_vocab_venn(comet_experiment, feature_provider):
     v_extd = _v["embedding"]["extended"]
     v_train = _v["datasets"]["train"]["total"]
     v_train_oov = _v["datasets"]["train"]["oov"]["total"]
-    v_over_t = _v["datasets"]["train"]["oov"]["over_t"]
+    v_over_t = _v["datasets"]["train"]["oov"]["embedded"]
     v_test = _v["datasets"]["test"]["total"]
     v_test_oov = _v["datasets"]["test"]["oov"]["total"]
 

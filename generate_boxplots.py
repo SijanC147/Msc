@@ -252,6 +252,16 @@ def save_plot(plot, model, plot_metric, **kwargs):
     plot.savefig(target_path, format=save_format, bbox_inches="tight")
 
 
+def is_currently_running(experiment):
+    start = experiment.get_others_summary(other="train_START")
+    end = experiment.get_others_summary(other="train_END")
+    start = float(start[-1]) if len(start) > 0 else None
+    end = float(end[-1]) if len(end) > 0 else None
+    if end is None:
+        return start is not None
+    return start > end
+
+
 def comet_to_df(workspace, models=None, metrics=None, **kwargs):
     models = models or [*MODELS]
     if models is not None and isinstance(models, str):
@@ -294,6 +304,8 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
         for _, exp_group_runs in exp_groups.items():
             # ? (APIExperiment, ([{Epoch: Macro-F1}], [{Epoch: Micro-F1}]))
             for (exp, *run_metrics) in zip(*exp_group_runs.values()):
+                if is_currently_running(exp):
+                    continue
                 exp_name_clean = exp.name  # pylint: disable=no-member
                 model = exp.project_name  # pylint: disable=no-member
                 exp_name_clean = exp_name_clean.replace(model, "")
@@ -359,11 +371,11 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
                         else 0
                     ),
                     vocab_coverage["test"]["size"],
-                    get_num(vocab_coverage["train"]["oov"]["total"]),
-                    get_num(vocab_coverage["train"]["oov"]["bucketed"]),
+                    get_num(vocab_coverage["test"]["oov"]["total"]),
+                    get_num(vocab_coverage["test"]["oov"]["bucketed"]),
                     (
-                        get_num(vocab_coverage["train"]["oov"]["exclusive"])
-                        if vocab_coverage["train"]["oov"].get("exclusive")
+                        get_num(vocab_coverage["test"]["oov"]["exclusive"])
+                        if vocab_coverage["test"]["oov"].get("exclusive")
                         else 0
                     ),
                 ]
@@ -559,6 +571,34 @@ def draw_boxplot(models=None, **kwargs):
                 this_ax = axes[i % num_plots]
             except TypeError:
                 this_ax = axes
+
+            cited_results = group_citations(
+                dataset=dataset_name, model=model, metric=plot_metric
+            )
+            if cited_results:
+                cmap_name = kwargs.get("cited_cmap", "Accent")
+                cmap_colors = matplotlib.cm.get_cmap(cmap_name).colors
+                opp_ax = this_ax.twinx()
+                opp_ax.tick_params(direction="out", length=0, color="none")
+                opp_ax_vals = list(cited_results.values())
+                opp_ax.set_yticks(opp_ax_vals)
+                opp_ax.set_yticklabels(
+                    ["{:.2f}%".format(val) for val in opp_ax_vals], va="center"
+                )
+                opp_ax.get_shared_y_axes().join(opp_ax, this_ax)
+                loop_data = zip(
+                    cited_results.items(),
+                    opp_ax.get_yticklabels(),
+                    cmap_colors[: len(cited_results)],
+                )
+                for (citation, value), lab, _color in loop_data:
+                    lab.set_color(_color)
+                    this_ax.axhline(y=value, color=_color, linestyle="--")
+                    opp_ax.axhline(
+                        y=value, color=_color, linestyle="--", label=citation
+                    )
+                legends[dataset_name] = opp_ax.get_legend_handles_labels()
+
             this_ax.set_title(dataset_name.capitalize())
             this_ax.grid(True, linestyle="dotted", which="both")
             dfmds = dfm[dfm["Dataset"] == dataset_name]
@@ -579,10 +619,9 @@ def draw_boxplot(models=None, **kwargs):
                     "meanprops",
                     {
                         "marker": "D",
-                        "markersize": 4,
-                        "markeredgecolor": "none",
+                        "markeredgecolor": "black",
                         "markerfacecolor": kwargs.get(
-                            "mean_facecolor", "aqua"
+                            "mean_facecolor", "ghostwhite"
                         ),
                     },
                 ),
@@ -611,39 +650,8 @@ def draw_boxplot(models=None, **kwargs):
             else:
                 this_ax.set_xticks([])
                 xaxis_labels_height = -0.25
-                # this_ax.set_xticklabels([])
             this_ax.set_xlabel("")
             this_ax.set_ylabel("")
-
-            cited_results = group_citations(
-                dataset=dataset_name, model=model, metric=plot_metric
-            )
-            if cited_results:
-                cmap_name = kwargs.get("cited_cmap", "Accent")
-                cmap_colors = matplotlib.cm.get_cmap(cmap_name).colors
-                opp_ax = this_ax.twinx()
-                opp_ax.tick_params(direction="out", length=0, color="none")
-                opp_ax.set_yticks(list(cited_results.values()))
-                opp_ax.set_yticklabels(
-                    [
-                        "{:.2f}%".format(val)
-                        for val in list(cited_results.values())
-                    ],
-                    va="center",
-                )
-                this_ax.get_shared_y_axes().join(opp_ax, this_ax)
-                loop_data = zip(
-                    cited_results.items(),
-                    opp_ax.get_yticklabels(),
-                    cmap_colors[: len(cited_results)],
-                )
-                for (citation, value), lab, _color in loop_data:
-                    lab.set_color(_color)
-                    this_ax.axhline(y=value, color=_color, linestyle="--")
-                    opp_ax.axhline(
-                        y=value, color=_color, linestyle="--", label=citation
-                    )
-                legends[dataset_name] = opp_ax.get_legend_handles_labels()
 
             for handle, label in zip(*bp.get_legend_handles_labels()):
                 if label not in labels:
@@ -836,14 +844,14 @@ def draw_boxplot(models=None, **kwargs):
                 + list(map(list, common_hparams)),
                 colWidths=col_widths,
                 cellLoc="left",
-                bbox=(-0.2, xaxis_labels_height, 1, 0.5),
+                bbox=(-0.2, xaxis_labels_height, 1, 0.3),
                 edges="open",
             )
             hparam_table.auto_set_font_size(False)
-            hparam_table.set_fontsize(10)
+            hparam_table.set_fontsize(7)
             for (y_pos, x_pos), cell in hparam_table.get_celld().items():
                 if x_pos == 0 and y_pos == 0:
-                    cell.set_text_props(fontsize="large")
+                    cell.set_text_props(fontsize="x-small")
 
         if kwargs.get("fname", False) or kwargs.get("format", False):
             save_plot(plt, model, plot_metric, **kwargs)
@@ -859,21 +867,4 @@ def main():
 
 
 if __name__ == "__main__":
-    draw_boxplot(
-        models=["tclstm"],
-        plot_metrics=["Macro-F1"],
-        cited_cmap="Set1",
-        use_cached=False,
-        box_palette="colorblind",
-        mean_facecolor="ghostwhite",
-        xaxis_filters={
-            "Optimizer": "SGD",
-            # "OOV Initializer": "Uniform[-0.1,0.1]"
-        },
-        format="pdf"
-        # label_xaxis=False
-        # xticklabel_templates={
-        #     "ram": "{Number of Hops}"
-        # }
-    )
-    # main()
+    main()

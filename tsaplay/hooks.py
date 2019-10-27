@@ -3,6 +3,7 @@ import re
 import itertools
 from math import ceil
 from warnings import warn
+from datetime import datetime
 import time
 import matplotlib
 import numpy as np
@@ -101,6 +102,12 @@ class LogProgressToComet(SessionRunHook):
         self.epoch_steps = epoch_steps
         self.epochs = epochs
 
+    def begin(self):
+        if self.mode == ModeKeys.TRAIN:
+            self.comet.log_other(
+                "START", str(datetime.timestamp(datetime.now()))
+            )
+
     def before_run(self, run_context):
         return SessionRunArgs(
             fetches={
@@ -120,6 +127,10 @@ class LogProgressToComet(SessionRunHook):
 
     def end(self, session):
         global_step = session.run(tf.train.get_global_step())
+        if self.mode == ModeKeys.TRAIN:
+            self.comet.log_other(
+                "END", str(datetime.timestamp(datetime.now()))
+            )
         if self.epoch_steps:
             epoch = ceil(global_step / self.epoch_steps)
             self.comet.log_metric("epoch", epoch, include_context=False)

@@ -1,7 +1,7 @@
 {
-    "jobId": "reproduction_sgd_cc42_tclstm_run6",
+    "jobId": "reproduction_tctdlstm_t200_run04",
     "labels": {
-        "model": "tclstm"
+        "embedding": "twitter200"
     },
     "trainingInput": {
         "scaleTier": "CUSTOM",
@@ -11,7 +11,7 @@
         "region": "europe-west1",
         "args": [
             "batch",
-            "reproducibility-tclstm.txt",
+            "tctdlstm.txt",
             "--new",
             "--nocolor"
         ]

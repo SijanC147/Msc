@@ -1,0 +1,22 @@
+## DEFAULTS: 
+default: -cmt T1NrVnn32dXWeOxeQWGArkHwc -wrk reproduction
+default: -aux logging=true 
+#default: -rc save_summary_steps=/3
+default: -mp oov_train=1 oov_buckets=1 oov_fn=uniform[-0.1,0.1]
+###
+
+# LSTM
+; No mention of any approach to OOV tokens 
+; batch-size(64) and hidden_units(200) taken from https://github.com/jimmyyfeng/TD-LSTM/blob/master/lstm.py
+;-em=twitter-100[corpus] -ds=dong -m=lstm -contd=lstm-sgd-t100-dong-oovt1b1
+;-em=twitter-200[corpus] -ds=dong -m=lstm -contd=lstm-sgd-t200-dong-oovt1b1
+;-em=commoncrawl-840[corpus] -ds=dong -m=lstm -contd=lstm-sgd-cc840-dong-oovt1b1
+-em=commoncrawl-42[corpus] -ds=dong -m=lstm -contd=lstm-sgd-cc42-dong-oovt1b1
+
+# Other papers quote results for laptops and restaurants
+# Not using twitter embeddings since it doesn't make sense, they are from a different domain
+-em=commoncrawl-840[corpus] -ds=laptops -m=lstm -contd=lstm-sgd-cc840-laptops-oovt1b1
+-em=commoncrawl-42[corpus] -ds=laptops -m=lstm -contd=lstm-sgd-cc42-laptops-oovt1b1
+
+;-em=commoncrawl-840[corpus] -ds=restaurants -m=lstm -contd=lstm-sgd-cc840-restaurants-oovt1b1
+;-em=commoncrawl-42[corpus] -ds=restaurants -m=lstm -contd=lstm-sgd-cc42-restaurants-oovt1b1
