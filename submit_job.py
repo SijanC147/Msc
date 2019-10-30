@@ -137,10 +137,14 @@ def write_gcloud_config(args):
         # "workerCount": 5,
         # "parameterServerCount": 2,
     }
+    job_labels = {
+        k: (str(v) if not isinstance(v, str) else v)
+        for k, v in args_to_dict(args.job_labels).items()
+    }
     fix_requirements_for_machine_types(machine_types)
     gcloud_config = {
         "jobId": args.job_id,
-        "labels": args_to_dict(args.job_labels),
+        "labels": job_labels,
         "trainingInput": {
             "scaleTier": "CUSTOM",
             **machine_types,

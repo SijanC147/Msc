@@ -110,9 +110,15 @@ class TsaModel(ABC):
         if mode == ModeKeys.EVAL:
             return EstimatorSpec(mode, predictions=predictions, loss=loss)
 
-        train_op = optimizer.minimize(
-            loss, global_step=tf.train.get_global_step()
+        global_step = tf.train.get_global_step()
+        loss = tf.Print(
+            input_=loss,
+            message="A BATCH HAS BEEN PROCESSED.",
+            data=[global_step, loss],
+            summarize=None,
         )
+
+        train_op = optimizer.minimize(loss, global_step=global_step)
 
         return EstimatorSpec(
             mode, loss=loss, train_op=train_op, predictions=predictions

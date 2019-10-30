@@ -62,7 +62,17 @@ class ConsoleLoggerHook(SessionRunHook):
     def after_run(self, run_context, run_values):
         global_step = run_values.results.pop("global_step")[0]
         if self.mode == ModeKeys.TRAIN:
+            cprnt(
+                warn="AFTER_RUN IS TRIGGERED for GLOBAL STEP: {}".format(
+                    global_step
+                )
+            )
             if global_step % self.each_steps == 0 or global_step == 1:
+                cprnt(
+                    info="ENTERED IF CONDITION (global_step = {})".format(
+                        global_step
+                    )
+                )
                 current_time = time.time()
                 duration = current_time - self._start_time
                 self._start_time = time.time()
@@ -79,10 +89,13 @@ class ConsoleLoggerHook(SessionRunHook):
                                 (self.each_steps if global_step != 1 else 1)
                                 / duration
                             ),
+                            "step": global_step,
+                            "epoch": global_step / self.epoch_steps,
                             **run_values.results,
                         }
                     ),
                 )
+        cprnt(warn="DONE, MOVING ON..")
 
     def end(self, session):
         if self.mode == ModeKeys.EVAL:
@@ -90,9 +103,18 @@ class ConsoleLoggerHook(SessionRunHook):
                 {"step": tf.train.get_global_step(), **self.tensors}
             )
             if self.epoch_steps is not None:
-                epoch = run_values.get("step") / self.epoch_steps
-                run_values.update({"epoch": epoch})
-                cprnt(tf=True, EVAL=self.template.format_map(run_values))
+                cprnt(
+                    tf=True,
+                    EVAL=self.template.format_map(
+                        {
+                            **run_values,
+                            **{
+                                "epoch": run_values.get("step")
+                                / self.epoch_steps
+                            },
+                        }
+                    ),
+                )
 
 
 class LogProgressToComet(SessionRunHook):

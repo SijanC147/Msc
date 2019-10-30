@@ -36,7 +36,8 @@ REPORTED = {
             "dong": {"Micro-F1": 66.5},
         },
         # ! Scores from Reproduction paper
-        "Moore et al. 2018": {"dong": {"Macro-F1": 60.69}},
+        "Moore et al. 2018 (Mean)": {"dong": {"Macro-F1": 60.69}},
+        "Moore et al. 2018 (Max)": {"dong": {"Macro-F1": 64.34}},
     },
     "tdlstm": {
         # ! Scores from original paper
@@ -56,7 +57,8 @@ REPORTED = {
             "dong": {"Micro-F1": 70.8},
         },
         # ! Scores from Reproduction paper
-        "Moore et al. 2018": {"dong": {"Macro-F1": 65.63}},
+        "Moore et al. 2018 (Mean)": {"dong": {"Macro-F1": 65.63}},
+        "Moore et al. 2018 (Max)": {"dong": {"Macro-F1": 67.04}},
     },
     "tclstm": {
         # ! Scores from original paper
@@ -64,7 +66,8 @@ REPORTED = {
             "dong": {"Micro-F1": 71.5, "Macro-F1": 69.5}
         },
         # ! Scores from Reproduction paper
-        "Moore et al. 2018": {"dong": {"Macro-F1": 65.23}},
+        "Moore et al. 2018 (Mean)": {"dong": {"Macro-F1": 65.23}},
+        "Moore et al. 2018 (Max)": {"dong": {"Macro-F1": 67.66}},
     },
     "memnet": {
         # ! Scores from original paper
@@ -142,6 +145,7 @@ CMT_VALS_MAPPING = {
     "Kernel Initializer": {"cmt_key": "Initializer"},
     "Bias Initializer": {"cmt_key": "Bias Initializer"},
     "Batch Size": {"cmt_key": "Batch Size"},
+    "Epochs Trained": {"cmt_key": "curr_epoch", "use_xlabel": False},
     "OOV Initializer": {
         "cmt_key": "OOV Fn",
         "df_valfn": lambda v: str(v).capitalize(),
@@ -178,16 +182,7 @@ EMBEDDINGS = {
     "t100": "GloVe Twitter (100d)",
 }
 
-
-def argument_parser():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--models", nargs="+", choices=[*MODELS], required=False, default=None
-    )
-    parser.add_argument(
-        "--params", "-p", nargs="*", required=False, default=None
-    )
-    return parser
+CACHE_DATA_PATH = path.join(path.dirname(__file__), "temp", "comet_dataframes")
 
 
 def get_comet_api(api_key=None, **kwargs):
@@ -217,7 +212,9 @@ def get_grouped_metric_series(project, workspace=None, metrics=None, **kwargs):
     metrics = metrics or ["macro-f1", "micro-f1"]
     grouped_metrics = {}
     experiments = api.get_experiments(workspace, project_name=project)
-    unique_experiment_names = np.unique([e.name for e in experiments]).tolist()
+    unique_experiment_names = np.unique(
+        [e.name for e in experiments if not e.name.startswith("#")]
+    ).tolist()
     for name in unique_experiment_names:
         grouped_metrics[name] = {
             "experiments": [e for e in experiments if e.name == name],
@@ -236,9 +233,11 @@ def get_grouped_metric_series(project, workspace=None, metrics=None, **kwargs):
 
 def save_plot(plot, model, plot_metric, **kwargs):
     save_format = kwargs.get("format", "pdf")
-    fname = "{}-{}".format(
+    name = kwargs.get("fname")
+    fname = "{}{}-{}".format(
+        (name + "-" if name else ""),
         plot_metric,
-        kwargs.get("fname", datetime.now().strftime("%d%m%Y_%H%M%S")),
+        datetime.now().strftime("%d.%m.%Y_%H.%M.%S"),
     )
     target_dir = path.join(
         kwargs.get("path", getcwd()),
@@ -267,9 +266,8 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
     if models is not None and isinstance(models, str):
         models = [models]
     cached_data_path = path.join(
-        path.dirname(__file__),
-        "temp",
-        f"{'comet_df' if models is None else '_'.join(sorted(models))}.pkl",
+        CACHE_DATA_PATH,
+        f"{'all' if models is None else '_'.join(sorted(models))}.pkl",
     )
     use_cached = kwargs.get("use_cached", False)
     if use_cached and path.exists(cached_data_path):
@@ -606,12 +604,10 @@ def draw_boxplot(models=None, **kwargs):
             bp = sns.boxplot(
                 y=plot_metric,
                 x="Experiment",
+                hue="Embedding",
                 data=dfmds,
                 palette=box_palette,
-                hue="Embedding",
-                width=0.4,
                 ax=this_ax,
-                linewidth=1.5,
                 saturation=kwargs.get("box_sat", 0.75),
                 showmeans=kwargs.get("showmeans", True),
                 meanline=kwargs.get("meanline", False),
@@ -626,6 +622,17 @@ def draw_boxplot(models=None, **kwargs):
                     },
                 ),
             )
+            if kwargs.get("strip", False):
+                bp = sns.stripplot(
+                    y=plot_metric,
+                    x="Experiment",
+                    hue="Embedding",
+                    data=dfmds,
+                    ax=this_ax,
+                    dodge=True,
+                    palette=box_palette,
+                    edgecolor="grey",
+                )
 
             label_xaxis = (
                 (len(xticklabel_template) > 0)
@@ -857,6 +864,15 @@ def draw_boxplot(models=None, **kwargs):
             save_plot(plt, model, plot_metric, **kwargs)
         else:
             plt.show()
+
+
+def argument_parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--models", "-m", nargs="+", choices=[*MODELS], default=None
+    )
+    parser.add_argument("--params", "-p", nargs="*", default=None)
+    return parser
 
 
 def main():

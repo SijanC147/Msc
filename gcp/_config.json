@@ -1,7 +1,8 @@
 {
-    "jobId": "reproduction_tctdlstm_t200_run04",
+    "jobId": "reproduction_lstm_laptops_cc840_run09",
     "labels": {
-        "embedding": "twitter200"
+        "embedding": "commoncrawl840",
+        "miniter": "150"
     },
     "trainingInput": {
         "scaleTier": "CUSTOM",
@@ -11,7 +12,7 @@
         "region": "europe-west1",
         "args": [
             "batch",
-            "tctdlstm.txt",
+            "reproducibility-lstm-cc840.txt",
             "--new",
             "--nocolor"
         ]

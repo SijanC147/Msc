@@ -8,6 +8,6 @@ default: -mp oov_train=1 oov_buckets=1 oov_fn=uniform[-0.1,0.1]
 # LSTM
 ; No mention of any approach to OOV tokens 
 ; batch-size(64) and hidden_units(200) taken from https://github.com/jimmyyfeng/TD-LSTM/blob/master/lstm.py
--em=twitter-200[corpus] -ds=dong -m=lstm -contd=lstm-sgd-t200-dong-oovt1b1
-;-em=twitter-200[corpus] -ds=laptops -m=lstm -contd=lstm-sgd-t200-laptops-oovt1b1
-;-em=twitter-200[corpus] -ds=restaurants -m=lstm -contd=lstm-sgd-t200-restaurants-oovt1b1
+;-em=twitter-200[corpus] -ds=dong -m=lstm -contd=lstm-sgd-t200-dong-oovt1b1
+-em=twitter-200[corpus] -ds=laptops -m=lstm -contd=lstm-sgd-t200-laptops-oovt1b1 -mp early_stopping_minimum_iter=150 
+-em=twitter-200[corpus] -ds=restaurants -m=lstm -contd=lstm-sgd-t200-restaurants-oovt1b1 -mp early_stopping_minimum_iter=150

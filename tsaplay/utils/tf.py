@@ -194,6 +194,7 @@ def prep_dataset(tfrecords, params, processing_fn, mode):
         )
     )
     if mode == "TRAIN":
+        print("Reshuffling each iteration")
         dataset = dataset.shuffle(
             buffer_size=shuffle_buffer, reshuffle_each_iteration=True
         )
@@ -208,7 +209,7 @@ def prep_dataset(tfrecords, params, processing_fn, mode):
         lambda features, labels: (make_dense_features(features), labels),
         num_parallel_calls=parallel_calls,
     )
-    dataset = dataset.cache()
+    # dataset = dataset.cache()
     if mode == "TRAIN":
         # ? epochs == 0 => repeat indefinitely => count = None
         dataset = dataset.repeat(count=(params.get("epochs") or None))

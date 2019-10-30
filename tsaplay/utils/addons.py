@@ -217,22 +217,25 @@ def logging(model, features, labels, spec, params):
             )
         }
         train_hooks = list(spec.training_hooks) or []
+        tensors_to_log = {
+            "step": tf.train.get_global_step(),
+            "loss": spec.loss,
+            "accuracy": std_metrics["accuracy"][1],
+        }
+        old_logging_hook = tf.train.LoggingTensorHook(
+            tensors=tensors_to_log,
+            every_n_iter=model.run_config.save_summary_steps,
+        )
         train_hooks += [
             ConsoleLoggerHook(
                 mode=ModeKeys.TRAIN,
                 epoch_steps=params["epoch_steps"],
                 each_steps=model.run_config.save_summary_steps,
-                tensors={
-                    "epoch": tf.divide(
-                        tf.train.get_global_step(), params["epoch_steps"]
-                    ),
-                    "step": tf.train.get_global_step(),
-                    "loss": spec.loss,
-                    "accuracy": std_metrics["accuracy"][1],
-                },
+                tensors=tensors_to_log,
                 template=contd_tag
-                + "TRAIN \t STEP: {step} \t EPOCH: {epoch:.1f} \t| acc: {accuracy:.5f} \t loss: {loss:.5f} |\t duration: {duration:.2f}s sec/step: {sec_per_step:.2f}s step/sec: {step_per_sec:.2f}",
-            )
+                + "TRAIN \t STEP: {step} \t EPOCH: {epoch:.1f} \t| acc: {accuracy:.5f} \t loss: {loss:.8f} |\t duration: {duration:.2f}s sec/step: {sec_per_step:.2f}s step/sec: {step_per_sec:.2f}",
+            ),
+            old_logging_hook,
         ]
         spec = spec._replace(training_hooks=train_hooks)
     elif spec.mode == ModeKeys.EVAL:
