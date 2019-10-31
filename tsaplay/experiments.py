@@ -165,19 +165,22 @@ class Experiment:
                 else {}
             ),
             "keep_checkpoint_max": KEEP_CHECKPOINT_MAX,
-            # "session_config": tf.ConfigProto(**default_session_config),
-            **(
-                {
-                    "save_summary_steps": resolve_frequency_steps(
-                        custom_run_config.pop("save_summary_steps", None),
-                        epochs=kwargs.get("epochs"),
-                        epoch_steps=kwargs.get("epoch_steps"),
-                        default=SAVE_SUMMARY_STEPS,
-                    )
-                }
-                if custom_run_config.get("save_summary_secs") is None
-                else {}
+            "save_summary_steps": custom_run_config.pop(
+                "save_summary_steps", None
             ),
+            # "session_config": tf.ConfigProto(**default_session_config),
+            # **(
+            #     {
+            #         "save_summary_steps": resolve_frequency_steps(
+            #             custom_run_config.pop("save_summary_steps", None),
+            #             epochs=kwargs.get("epochs"),
+            #             epoch_steps=kwargs.get("epoch_steps"),
+            #             default=SAVE_SUMMARY_STEPS,
+            #         )
+            #     }
+            #     if custom_run_config.get("save_summary_secs") is None
+            #     else {}
+            # ),
             **(
                 {
                     "save_checkpoints_steps": resolve_frequency_steps(

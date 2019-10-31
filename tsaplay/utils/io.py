@@ -115,6 +115,22 @@ def resolve_frequency_steps(freq, epochs=None, epoch_steps=None, default=None):
     )
 
 
+def extract_config_subset(config_objs, keywords):
+    config = {}
+    if isinstance(keywords, str):
+        keywords = [keywords]
+    for config_obj in config_objs:
+        for keyword in keywords:
+            config.update(
+                {
+                    k.replace(f"{keyword}_", ""): v
+                    for k, v in config_obj.items()
+                    if k.startswith(f"{keyword}_")
+                }
+            )
+    return config
+
+
 def platform():
     return {
         "linux1": "Linux",

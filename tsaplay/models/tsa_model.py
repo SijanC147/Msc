@@ -117,7 +117,6 @@ class TsaModel(ABC):
             data=[global_step, loss],
             summarize=None,
         )
-
         train_op = optimizer.minimize(loss, global_step=global_step)
 
         return EstimatorSpec(

@@ -37,42 +37,63 @@ class ConsoleLoggerHook(SessionRunHook):
         mode,
         tensors,
         template,
-        each_steps=None,
+        every_n_iter=None,
         epoch_steps=None,
-        **kwargs
+        summary_writer=None,
+        summary_freq=None,
+        **kwargs,
     ):
         self.mode = mode
         self.tensors = tensors
         self.template = template
         self.epoch_steps = epoch_steps
-        self.each_steps = each_steps
+        self.every_n_iter = every_n_iter or epoch_steps
+        self.summary_freq = summary_freq or self.every_n_iter
+        self._summary_writer = summary_writer
         self._start_time = None
+        self._gs = None
 
     def begin(self):
+        self._gs = 0
         self._start_time = time.time()
 
     def before_run(self, _):
-        return SessionRunArgs(
-            fetches={
-                "global_step": tf.get_collection(tf.GraphKeys.GLOBAL_STEP),
-                **(self.tensors if self.mode == ModeKeys.TRAIN else {}),
-            }
-        )
+        summary_ops = self.tensors.get("summary", None)
+        this_step = self._gs + 1
+        fetches = {
+            "global_step": tf.get_collection(tf.GraphKeys.GLOBAL_STEP),
+            **(
+                {k: v for k, v in self.tensors.items() if k != "summary"}
+                if self.mode == ModeKeys.TRAIN
+                else {}
+            ),
+            **(
+                {"summary": summary_ops}
+                if self.mode == ModeKeys.TRAIN
+                and (this_step % self.summary_freq == 0 or this_step == 1)
+                else {}
+            ),
+        }
+        # if self.mode == ModeKeys.TRAIN and "summary" in [*fetches]:
+        #     cprnt(warn=f"This step: {this_step}")
+        #     cprnt(info=fetches)
+        return SessionRunArgs(fetches=fetches)
 
     def after_run(self, run_context, run_values):
         global_step = run_values.results.pop("global_step")[0]
         if self.mode == ModeKeys.TRAIN:
-            cprnt(
-                warn="AFTER_RUN IS TRIGGERED for GLOBAL STEP: {}".format(
-                    global_step
+            self._gs = global_step
+            # cprnt(
+            #     bow=f"_GS: {self._gs} \n Results: {','.join([*run_values.results])}"
+            # )
+            if "summary" in [*run_values.results]:
+                # cprnt(
+                #     wog=f"SAVING SUMMARY for step {global_step}, _GS: {self._gs}"
+                # )
+                self._summary_writer.add_summary(
+                    run_values.results.pop("summary"), global_step
                 )
-            )
-            if global_step % self.each_steps == 0 or global_step == 1:
-                cprnt(
-                    info="ENTERED IF CONDITION (global_step = {})".format(
-                        global_step
-                    )
-                )
+            if global_step % self.every_n_iter == 0 or global_step == 1:
                 current_time = time.time()
                 duration = current_time - self._start_time
                 self._start_time = time.time()
@@ -83,10 +104,14 @@ class ConsoleLoggerHook(SessionRunHook):
                             "duration": duration,
                             "sec_per_step": float(
                                 duration
-                                / (self.each_steps if global_step != 1 else 1)
+                                / (
+                                    self.every_n_iter
+                                    if global_step != 1
+                                    else 1
+                                )
                             ),
                             "step_per_sec": float(
-                                (self.each_steps if global_step != 1 else 1)
+                                (self.every_n_iter if global_step != 1 else 1)
                                 / duration
                             ),
                             "step": global_step,
@@ -95,7 +120,6 @@ class ConsoleLoggerHook(SessionRunHook):
                         }
                     ),
                 )
-        cprnt(warn="DONE, MOVING ON..")
 
     def end(self, session):
         if self.mode == ModeKeys.EVAL:
@@ -115,6 +139,9 @@ class ConsoleLoggerHook(SessionRunHook):
                         }
                     ),
                 )
+        elif self.mode == ModeKeys.TRAIN:
+            if self._summary_writer is not None:
+                self._summary_writer.flush()
 
 
 class LogProgressToComet(SessionRunHook):

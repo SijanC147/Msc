@@ -24,7 +24,12 @@ from tsaplay.hooks import (
     ConsoleLoggerHook,
 )
 from tsaplay.utils.tf import streaming_f1_scores, streaming_conf_matrix
-from tsaplay.utils.io import cprnt
+from tsaplay.utils.io import (
+    extract_config_subset,
+    resolve_frequency_steps,
+    cprnt,
+)
+from tsaplay.constants import SAVE_SUMMARY_STEPS
 
 
 def attach(addons, modes=None, order="POST"):
@@ -184,6 +189,9 @@ def logging(model, features, labels, spec, params):
         if params["contd_tag"] is not None
         else ""
     )
+    config = extract_config_subset(
+        config_objs=[params, model.aux_config], keywords="logging"
+    )
     if spec.mode == ModeKeys.TRAIN:
         cprnt(
             tf=True,
@@ -216,26 +224,46 @@ def logging(model, features, labels, spec, params):
                 name="acc_op",
             )
         }
-        train_hooks = list(spec.training_hooks) or []
         tensors_to_log = {
             "step": tf.train.get_global_step(),
             "loss": spec.loss,
             "accuracy": std_metrics["accuracy"][1],
         }
-        old_logging_hook = tf.train.LoggingTensorHook(
-            tensors=tensors_to_log,
-            every_n_iter=model.run_config.save_summary_steps,
+        console_template = config.get(
+            "train_template",
+            contd_tag
+            + "TRAIN \t STEP: {step} \t EPOCH: {epoch:.1f} \t|"
+            + "acc: {accuracy:.5f} \t loss: {loss:.8f} |\t "
+            + "duration: {duration:.2f}s"
+            + "sec/step: {sec_per_step:.2f}s step/sec: {step_per_sec:.2f}",
         )
+        summary_freq = resolve_frequency_steps(
+            freq=config.get("summary_freq"),
+            epochs=params.get("epochs"),
+            epoch_steps=params["epoch_steps"],
+            default=SAVE_SUMMARY_STEPS,
+        )
+        train_hooks = list(spec.training_hooks) or []
         train_hooks += [
             ConsoleLoggerHook(
                 mode=ModeKeys.TRAIN,
                 epoch_steps=params["epoch_steps"],
-                each_steps=model.run_config.save_summary_steps,
+                every_n_iter=config.get("every_n_iter"),
+                summary_writer=tf.summary.FileWriterCache.get(
+                    model.run_config.model_dir
+                ),
+                summary_freq=summary_freq,
+                tensors={**tensors_to_log, "summary": tf.summary.merge_all()},
+                template=console_template,
+            )
+        ]
+        #! Debugging with classic TF Logging Hook
+        train_hooks += [
+            tf.train.LoggingTensorHook(
                 tensors=tensors_to_log,
-                template=contd_tag
-                + "TRAIN \t STEP: {step} \t EPOCH: {epoch:.1f} \t| acc: {accuracy:.5f} \t loss: {loss:.8f} |\t duration: {duration:.2f}s sec/step: {sec_per_step:.2f}s step/sec: {step_per_sec:.2f}",
-            ),
-            old_logging_hook,
+                every_n_iter=model.run_config.save_summary_steps
+                or params["epoch_steps"],
+            )
         ]
         spec = spec._replace(training_hooks=train_hooks)
     elif spec.mode == ModeKeys.EVAL:
@@ -247,8 +275,11 @@ def logging(model, features, labels, spec, params):
                 tensors={k: v[0] for k, v in spec.eval_metric_ops.items()},
                 template=(
                     contd_tag
-                    + """EVAL \t STEP: {step} \t EPOCH: {epoch:.1f} \t| acc: {accuracy:.5f} \t mpc_acc: {mpc_accuracy:.5f} \t macro-f1: {macro-f1:.5f} \t weighted-f1: {weighted-f1:.5f}
-{conf-mat}"""
+                    + "EVAL \t STEP: {step} \t EPOCH: {epoch:.1f} \t|"
+                    + "acc: {accuracy:.5f} \t mpc_acc: {mpc_accuracy:.5f} \t "
+                    + "macro-f1: {macro-f1:.5f} \t "
+                    + "weighted-f1: {weighted-f1:.5f} "
+                    + "\n{conf-mat}"
                 ),
             )
         ]
@@ -297,6 +328,7 @@ def scalars(model, features, labels, spec, params):
         eval_metrics.update(std_metrics)
         spec = spec._replace(eval_metric_ops=eval_metrics)
     else:
+        tf.summary.scalar("loss", spec.loss)
         tf.summary.scalar("accuracy", std_metrics["accuracy"][1])
     return spec
 
@@ -306,17 +338,8 @@ def early_stopping(model, features, labels, spec, params):
     train_hooks = list(spec.training_hooks) or []
     eval_dir = model.estimator.eval_dir()
     makedirs(eval_dir, exist_ok=True)
-    config = {
-        k.replace("early_stopping_", ""): v
-        for k, v in params.items()
-        if k.startswith("early_stopping_")
-    }
-    config.update(
-        {
-            k.replace("early_stopping_", ""): v
-            for k, v in model.aux_config.items()
-            if k.startswith("early_stopping_")
-        }
+    config = extract_config_subset(
+        config_objs=[params, model.aux_config], keywords="early_stopping"
     )
     metric = config.get("metric", "loss")
     comparison = (
@@ -400,7 +423,9 @@ def timeline(model, features, labels, spec, params):
 
 @only(["TRAIN", "EVAL"])
 def metadata(model, features, labels, spec, params):
-    summary_steps = model.run_config.save_summary_steps
+    summary_steps = (
+        model.run_config.save_summary_steps or params["epoch_steps"]
+    )
     if spec.mode == ModeKeys.TRAIN:
         train_hooks = list(spec.training_hooks) or []
         metadata_dir = model.run_config.model_dir
