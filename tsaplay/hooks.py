@@ -1,6 +1,8 @@
 import textwrap
 import re
 import itertools
+import os
+from os import path, environ
 from math import ceil
 from warnings import warn
 from datetime import datetime
@@ -8,7 +10,11 @@ import time
 import matplotlib
 import numpy as np
 import tensorflow as tf
-from tensorflow.train import SessionRunHook, SessionRunArgs  # noqa
+from tensorflow.train import (
+    SessionRunHook,
+    SessionRunArgs,
+    CheckpointSaverListener,
+)  # noqa
 from tensorflow.estimator import ModeKeys  # noqa
 from tsaplay.constants import NP_RANDOM_SEED
 from tsaplay.utils.draw import (
@@ -17,18 +23,45 @@ from tsaplay.utils.draw import (
     stack_images,
     tabulate_attention_value,
 )
-from tsaplay.utils.tf import image_to_summary
+from tsaplay.utils.tf import image_to_summary, last_checkpoint_step
 from tsaplay.utils.io import (
     temp_pngs,
     get_image_from_plt,
     pickle_file,
     cprnt,
     platform,
+    search_dir,
 )
 
 if platform() == "MacOS":
     matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt  # noqa pylint: disable=C0411,C0412,C0413
+
+
+class EpochCheckpointListener(CheckpointSaverListener):
+    def __init__(self, model_dir, epoch_steps=None):
+        self.model_dir = model_dir
+        self.epoch_steps = epoch_steps
+
+    def after_save(self, session, global_step_value):
+        if self.epoch_steps and global_step_value % self.epoch_steps != 0:
+            dir_str, query_str = path.split(
+                tf.train.latest_checkpoint(self.model_dir)
+            )
+            if dir_str.startswith("gs://"):
+                file_paths = [
+                    path.join(dir_str, fname)
+                    for fname in tf.gfile.ListDirectory(dir_str)
+                    if fname.startswith(query_str)
+                ]
+                for file_path in file_paths:
+                    tf.gfile.Remove(file_path)
+                    cprnt(tf=True, warn="DEL: {}".format(file_path))
+            else:
+                for file_path in search_dir(dir_str, query=query_str):
+                    os.remove(file_path)
+                    cprnt(tf=True, warn="DEL: {}".format(file_path))
+            return True
 
 
 class ConsoleLoggerHook(SessionRunHook):
@@ -41,7 +74,7 @@ class ConsoleLoggerHook(SessionRunHook):
         epoch_steps=None,
         summary_writer=None,
         summary_freq=None,
-        **kwargs,
+        **kwargs
     ):
         self.mode = mode
         self.tensors = tensors
@@ -49,6 +82,8 @@ class ConsoleLoggerHook(SessionRunHook):
         self.epoch_steps = epoch_steps
         self.every_n_iter = every_n_iter or epoch_steps
         self.summary_freq = summary_freq or self.every_n_iter
+        # self.model_dir = kwargs.get("model_dir")
+        # self._req_stop = False
         self._summary_writer = summary_writer
         self._start_time = None
         self._gs = None
@@ -56,8 +91,13 @@ class ConsoleLoggerHook(SessionRunHook):
     def begin(self):
         self._gs = 0
         self._start_time = time.time()
+        # if self.mode == ModeKeys.EVAL:
+        # last_step = last_checkpoint_step(self.model_dir)
+        # self._req_stop = last_step % self.epoch_steps != 0
 
-    def before_run(self, _):
+    def before_run(self, run_context):
+        # if self.mode == ModeKeys.EVAL and self._req_stop:
+        #     run_context.request_stop()
         summary_ops = self.tensors.get("summary", None)
         this_step = self._gs + 1
         fetches = {
@@ -74,51 +114,41 @@ class ConsoleLoggerHook(SessionRunHook):
                 else {}
             ),
         }
-        # if self.mode == ModeKeys.TRAIN and "summary" in [*fetches]:
-        #     cprnt(warn=f"This step: {this_step}")
-        #     cprnt(info=fetches)
         return SessionRunArgs(fetches=fetches)
 
     def after_run(self, run_context, run_values):
         global_step = run_values.results.pop("global_step")[0]
         if self.mode == ModeKeys.TRAIN:
             self._gs = global_step
-            # cprnt(
-            #     bow=f"_GS: {self._gs} \n Results: {','.join([*run_values.results])}"
-            # )
-            if "summary" in [*run_values.results]:
-                # cprnt(
-                #     wog=f"SAVING SUMMARY for step {global_step}, _GS: {self._gs}"
-                # )
-                self._summary_writer.add_summary(
-                    run_values.results.pop("summary"), global_step
-                )
             if global_step % self.every_n_iter == 0 or global_step == 1:
                 current_time = time.time()
                 duration = current_time - self._start_time
+                sec_per_step = float(
+                    duration / (self.every_n_iter if global_step != 1 else 1)
+                )
+                step_per_sec = float(
+                    (self.every_n_iter if global_step != 1 else 1) / duration
+                )
                 self._start_time = time.time()
                 cprnt(
                     tf=True,
                     TRAIN=self.template.format_map(
                         {
                             "duration": duration,
-                            "sec_per_step": float(
-                                duration
-                                / (
-                                    self.every_n_iter
-                                    if global_step != 1
-                                    else 1
-                                )
-                            ),
-                            "step_per_sec": float(
-                                (self.every_n_iter if global_step != 1 else 1)
-                                / duration
-                            ),
+                            "sec_per_step": sec_per_step,
+                            "step_per_sec": step_per_sec,
                             "step": global_step,
                             "epoch": global_step / self.epoch_steps,
                             **run_values.results,
                         }
                     ),
+                )
+            if "summary" in [*run_values.results]:
+                summary_data = run_values.results.pop("summary")
+                self._summary_writer.add_summary(summary_data, global_step)
+                cprnt(
+                    tf=True,
+                    TRAIN="Saved summary for step {}".format(global_step),
                 )
 
     def end(self, session):

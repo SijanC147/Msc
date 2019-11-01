@@ -22,6 +22,7 @@ from tsaplay.hooks import (
     MetadataHook,
     LogHistogramsToComet,
     ConsoleLoggerHook,
+    EpochCheckpointListener,
 )
 from tsaplay.utils.tf import streaming_f1_scores, streaming_conf_matrix
 from tsaplay.utils.io import (
@@ -135,6 +136,30 @@ def attn_heatmaps(model, features, labels, spec, params):
         )
     ]
     return spec._replace(evaluation_hooks=eval_hooks)
+
+
+@only(["TRAIN"])
+def checkpoint_saver(model, features, labels, spec, params):
+    train_hooks = list(spec.training_hooks) or []
+    checkpoint_listeners = (
+        [
+            EpochCheckpointListener(
+                model_dir=model.run_config.model_dir,
+                epoch_steps=params["epoch_steps"],
+            )
+        ]
+        if params.get("epochs") is not None
+        else []
+    )
+    train_hooks += [
+        tf.train.CheckpointSaverHook(
+            model.run_config.model_dir,
+            save_steps=params["epoch_steps"],
+            listeners=checkpoint_listeners,
+            scaffold=spec.scaffold,
+        )
+    ]
+    return spec._replace(training_hooks=train_hooks)
 
 
 @only(["EVAL"])
@@ -257,14 +282,14 @@ def logging(model, features, labels, spec, params):
                 template=console_template,
             )
         ]
-        #! Debugging with classic TF Logging Hook
-        train_hooks += [
-            tf.train.LoggingTensorHook(
-                tensors=tensors_to_log,
-                every_n_iter=model.run_config.save_summary_steps
-                or params["epoch_steps"],
-            )
-        ]
+        # // Debugging with classic TF Logging Hook
+        # train_hooks += [
+        #     tf.train.LoggingTensorHook(
+        #         tensors=tensors_to_log,
+        #         every_n_iter=model.run_config.save_summary_steps
+        #         or params["epoch_steps"],
+        #     )
+        # ]
         spec = spec._replace(training_hooks=train_hooks)
     elif spec.mode == ModeKeys.EVAL:
         eval_hooks = list(spec.evaluation_hooks) or []
@@ -290,6 +315,16 @@ def logging(model, features, labels, spec, params):
 
 @only(["TRAIN"])
 def histograms(model, features, labels, spec, params):
+    config = extract_config_subset(
+        config_objs=[params, model.aux_config],
+        keywords=["logging", "histograms"],
+    )
+    summary_freq = resolve_frequency_steps(
+        freq=config.get("summary_freq"),
+        epochs=params.get("epochs"),
+        epoch_steps=params["epoch_steps"],
+        default=SAVE_SUMMARY_STEPS,
+    )
     trainables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
     names = [variable.name.replace(":", "_") for variable in trainables]
     for (name, variable) in zip(names, trainables):
@@ -301,7 +336,7 @@ def histograms(model, features, labels, spec, params):
                 comet=model.comet_experiment,
                 names=names,
                 trainables=trainables,
-                every_n_iter=model.run_config.save_summary_steps,
+                every_n_iter=summary_freq,
             )
         ]
         spec = spec._replace(training_hooks=train_hooks)

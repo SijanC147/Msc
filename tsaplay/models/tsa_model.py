@@ -33,8 +33,9 @@ from tsaplay.utils.addons import (
     histograms,
     scalars,
     metadata,
+    checkpoint_saver,
 )
-from tsaplay.utils.io import cprnt
+from tsaplay.utils.io import cprnt, pickle_file
 
 
 class TsaModel(ABC):
@@ -169,11 +170,15 @@ class TsaModel(ABC):
             throttle_secs=0,
             hooks=self._hooks,
         )
-        tf.estimator.train_and_evaluate(
-            estimator=self._estimator,
-            train_spec=train_spec,
-            eval_spec=eval_spec,
-        )
+        try:
+            tf.estimator.train_and_evaluate(
+                estimator=self._estimator,
+                train_spec=train_spec,
+                eval_spec=eval_spec,
+            )
+        except RuntimeError as err:
+            if not str(err).endswith("Eval status: missing checkpoint"):
+                raise err
 
     def export(self, directory, feature_provider):
         self._initialize_estimator(feature_provider)
@@ -216,6 +221,7 @@ class TsaModel(ABC):
     @sharded_saver
     @addon([scalars, metadata, histograms, conf_matrix, f1_scores, logging])
     @addon([prediction_outputs])
+    @addon([checkpoint_saver])
     @embed_sequences
     def _model_fn(self, features, labels, mode, params):
         if mode == ModeKeys.EVAL and params.get("keep_prob") is not None:

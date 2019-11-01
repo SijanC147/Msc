@@ -123,9 +123,9 @@ def extract_config_subset(config_objs, keywords):
         for keyword in keywords:
             config.update(
                 {
-                    k.replace(f"{keyword}_", ""): v
+                    k.replace(keyword + "_", ""): v
                     for k, v in config_obj.items()
-                    if k.startswith(f"{keyword}_")
+                    if k.startswith(keyword + "_")
                 }
             )
     return config

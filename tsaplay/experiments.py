@@ -193,13 +193,15 @@ class Experiment:
                 if custom_run_config.get("save_checkpoints_secs") is None
                 else {}
             ),
-            "log_step_count_steps": resolve_frequency_steps(
-                custom_run_config.pop("log_step_count_steps", None),
-                epochs=kwargs.get("epochs"),
-                epoch_steps=kwargs.get("epoch_steps"),
-                default=LOG_STEP_COUNT_STEPS,
-            ),
+            # "log_step_count_steps": resolve_frequency_steps(
+            #     custom_run_config.pop("log_step_count_steps", None),
+            #     epochs=kwargs.get("epochs"),
+            #     epoch_steps=kwargs.get("epoch_steps"),
+            #     default=LOG_STEP_COUNT_STEPS,
+            # ),
         }
+        custom_run_config["save_checkpoints_steps"] = None
+        custom_run_config["log_step_count_steps"] = None
         default_run_config.update(custom_run_config)
         if default_run_config.get("tf_random_seed", False):
             cprnt(

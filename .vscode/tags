@@ -1,0 +1,952 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.8	//
+ABC	../tsaplay/models/tsa_model.py	/^from abc import ABC, abstractmethod$/;"	kind:namespace	line:1
+ASSETS_PATH	../tsaplay/constants.py	/^ASSETS_PATH = pkg.resource_filename(__name__, "assets")$/;"	kind:variable	line:24
+ASSETS_PATH	../tsaplay/task.py	/^from tsaplay.constants import EMBEDDING_SHORTHANDS, ASSETS_PATH, MODELS_PATH$/;"	kind:namespace	line:30
+AnyObjectHandler	../generate_boxplots.py	/^class AnyObjectHandler(HandlerBase):$/;"	kind:class	line:453
+ArgumentParser	../tsaplay/scripts/client.py	/^from argparse import ArgumentParser$/;"	kind:namespace	line:1
+BUCKET_TOKEN	../tsaplay/constants.py	/^BUCKET_TOKEN = "<BKT-{num}>"$/;"	kind:variable	line:18
+BytesIO	../tsaplay/utils/io.py	/^from io import BytesIO$/;"	kind:namespace	line:26
+BytesList	../tsaplay/scripts/client.py	/^from tensorflow.train import Example, Features, Feature, BytesList$/;"	kind:namespace	line:7
+C0411	../tsaplay/hooks.py	/^import matplotlib.pyplot as plt  # noqa pylint: disable=C0411,C0412,C0413$/;"	kind:namespace	line:31
+C0412	../tsaplay/hooks.py	/^import matplotlib.pyplot as plt  # noqa pylint: disable=C0411,C0412,C0413$/;"	kind:namespace	line:31
+C0413	../tsaplay/hooks.py	/^import matplotlib.pyplot as plt  # noqa pylint: disable=C0411,C0412,C0413$/;"	kind:namespace	line:31
+CACHE_DATA_PATH	../generate_boxplots.py	/^CACHE_DATA_PATH = path.join(path.dirname(__file__), "temp", "comet_dataframes")$/;"	kind:variable	line:185
+CMT_VALS_MAPPING	../generate_boxplots.py	/^CMT_VALS_MAPPING = {$/;"	kind:variable	line:121
+ClassificationRequest	../tsaplay/scripts/client.py	/^from tensorflow_serving.apis.classification_pb2 import ClassificationRequest$/;"	kind:namespace	line:10
+ConsoleLoggerHook	../tsaplay/hooks.py	/^class ConsoleLoggerHook(SessionRunHook):$/;"	kind:class	line:34
+DATASETS_STAGING	../submit_job.py	/^DATASETS_STAGING = STAGING_SUBDIR_TEMPLATE.format("datasets")$/;"	kind:variable	line:21
+DATASET_DATA_PATH	../tsaplay/constants.py	/^DATASET_DATA_PATH = join(DATA_PATH, "_datasets")$/;"	kind:variable	line:49
+DATASET_DATA_PATH	../tsaplay/datasets.py	/^from tsaplay.constants import DATASET_DATA_PATH$/;"	kind:namespace	line:15
+DATASET_DATA_PATH	../tsaplay/scripts/import_dataset.py	/^from tsaplay.constants import DATASET_DATA_PATH$/;"	kind:namespace	line:9
+DATA_PATH	../tsaplay/constants.py	/^    DATA_PATH = ASSETS_PATH$/;"	kind:variable	line:47
+DATA_PATH	../tsaplay/constants.py	/^    DATA_PATH = join(Path.home(), "tsaplay-data")$/;"	kind:variable	line:45
+DEFAULT_COMET_WORKSPACE	../tsaplay/constants.py	/^DEFAULT_COMET_WORKSPACE = "msc"$/;"	kind:variable	line:21
+DEFAULT_FONT	../tsaplay/constants.py	/^DEFAULT_FONT = pkg.resource_filename(__name__, "fonts\/Symbola.ttf")$/;"	kind:variable	line:26
+DEFAULT_FONT	../tsaplay/utils/draw.py	/^from tsaplay.constants import DEFAULT_FONT$/;"	kind:namespace	line:10
+DEFAULT_OOV_FN	../tsaplay/constants.py	/^DEFAULT_OOV_FN = partial(np.random.uniform, low=-0.1, high=0.1)$/;"	kind:variable	line:22
+DELIMITER	../tsaplay/constants.py	/^DELIMITER = "<SEP>"$/;"	kind:variable	line:15
+DELIMITER	../tsaplay/utils/data.py	/^from tsaplay.constants import NP_RANDOM_SEED, DELIMITER$/;"	kind:namespace	line:12
+DELIMITER	../tsaplay/utils/filters.py	/^from tsaplay.constants import DELIMITER$/;"	kind:namespace	line:4
+Dataset	../_debug.py	/^from tsaplay.datasets import Dataset$/;"	kind:namespace	line:3
+Dataset	../tsaplay/datasets.py	/^class Dataset:$/;"	kind:class	line:18
+Dataset	../tsaplay/task.py	/^from tsaplay.datasets import Dataset$/;"	kind:namespace	line:25
+Decimal	../tsaplay/utils/draw.py	/^from decimal import Decimal$/;"	kind:namespace	line:1
+DictReader	../external/Nakov2016/parser.py	/^from csv import DictReader$/;"	kind:namespace	line:1
+DictReader	../external/Rosenthal2015/parser.py	/^from csv import DictReader$/;"	kind:namespace	line:1
+DictReader	../tsaplay/scripts/client.py	/^from csv import DictReader$/;"	kind:namespace	line:2
+Doc	../tsaplay/utils/spacy.py	/^from spacy.tokens import Doc$/;"	kind:namespace	line:5
+E0401	../tsaplay/models/tsa_model.py	/^from tensorflow.estimator import (  # pylint: disable=E0401$/;"	kind:namespace	line:5
+E0401	../tsaplay/models/tsa_model.py	/^from tensorflow.estimator.export import (  # pylint: disable=E0401$/;"	kind:namespace	line:11
+E0401	../tsaplay/utils/addons.py	/^from tensorflow.estimator import ModeKeys  # pylint: disable=E0401$/;"	kind:namespace	line:7
+E0401	../tsaplay/utils/addons.py	/^from tensorflow.estimator.export import (  # pylint: disable=E0401$/;"	kind:namespace	line:15
+E0401	../tsaplay/utils/addons.py	/^from tensorflow.saved_model.signature_constants import (  # pylint: disable=E0401$/;"	kind:namespace	line:8
+E0611	../tsaplay/models/lcr_rot.py	/^from tensorflow.contrib.rnn import (  # pylint: disable=E0611$/;"	kind:namespace	line:3
+E0611	../tsaplay/models/ram.py	/^from tensorflow.contrib.rnn import (  # pylint: disable=E0611$/;"	kind:namespace	line:3
+E0611	../tsaplay/models/tsa_model.py	/^from tensorflow.python import debug as tf_debug  # pylint: disable=E0611$/;"	kind:namespace	line:4
+E0611	../tsaplay/scripts/client.py	/^from tensorflow.contrib.util import make_tensor_proto  # pylint: disable=E0611$/;"	kind:namespace	line:6
+E0611	../tsaplay/utils/addons.py	/^from tensorflow.contrib.estimator import (  # pylint: disable=E0611$/;"	kind:namespace	line:11
+E0611	../tsaplay/utils/io.py	/^from tensorflow.python.client.timeline import Timeline  # pylint: disable=E0611$/;"	kind:namespace	line:30
+EMBEDDINGS	../generate_boxplots.py	/^EMBEDDINGS = {$/;"	kind:variable	line:178
+EMBEDDINGS_STAGING	../submit_job.py	/^EMBEDDINGS_STAGING = STAGING_SUBDIR_TEMPLATE.format("embeddings")$/;"	kind:variable	line:22
+EMBEDDING_DATA_PATH	../tsaplay/constants.py	/^EMBEDDING_DATA_PATH = join(DATA_PATH, "_embeddings")$/;"	kind:variable	line:50
+EMBEDDING_SHORTHANDS	../tsaplay/constants.py	/^EMBEDDING_SHORTHANDS = {$/;"	kind:variable	line:28
+EMBEDDING_SHORTHANDS	../tsaplay/task.py	/^from tsaplay.constants import EMBEDDING_SHORTHANDS, ASSETS_PATH, MODELS_PATH$/;"	kind:namespace	line:30
+EXPERIMENT_DATA_PATH	../tsaplay/constants.py	/^EXPERIMENT_DATA_PATH = join(DATA_PATH, "experiments")$/;"	kind:variable	line:52
+EXPORTS_DATA_PATH	../tsaplay/constants.py	/^EXPORTS_DATA_PATH = join(DATA_PATH, "export")$/;"	kind:variable	line:53
+Embedding	../tsaplay/embeddings.py	/^class Embedding:$/;"	kind:class	line:25
+Embedding	../tsaplay/task.py	/^from tsaplay.embeddings import Embedding$/;"	kind:namespace	line:26
+Example	../tsaplay/scripts/client.py	/^from tensorflow.train import Example, Features, Feature, BytesList$/;"	kind:namespace	line:7
+ExampleList	../tsaplay/scripts/client.py	/^from tensorflow_serving.apis.input_pb2 import Input, ExampleList$/;"	kind:namespace	line:8
+Experiment	../tsaplay/experiments.py	/^class Experiment:$/;"	kind:class	line:23
+Experiment	../tsaplay/task.py	/^from tsaplay.experiments import Experiment$/;"	kind:namespace	line:28
+FEATURES_DATA_PATH	../tsaplay/constants.py	/^FEATURES_DATA_PATH = join(DATA_PATH, "_features")$/;"	kind:variable	line:51
+FEATURES_STAGING	../submit_job.py	/^FEATURES_STAGING = STAGING_SUBDIR_TEMPLATE.format("features")$/;"	kind:variable	line:23
+Feature	../tsaplay/scripts/client.py	/^from tensorflow.train import Example, Features, Feature, BytesList$/;"	kind:namespace	line:7
+FeatureProvider	../tsaplay/features.py	/^class FeatureProvider:$/;"	kind:class	line:51
+FeatureProvider	../tsaplay/scripts/client.py	/^from tsaplay.features import FeatureProvider$/;"	kind:namespace	line:13
+FeatureProvider	../tsaplay/task.py	/^from tsaplay.features import FeatureProvider$/;"	kind:namespace	line:27
+Features	../tsaplay/scripts/client.py	/^from tensorflow.train import Example, Features, Feature, BytesList$/;"	kind:namespace	line:7
+FontProperties	../tsaplay/utils/draw.py	/^from matplotlib.font_manager import FontProperties$/;"	kind:namespace	line:8
+HandlerBase	../generate_boxplots.py	/^from matplotlib.legend_handler import HandlerBase$/;"	kind:namespace	line:16
+IMPORTER_MODULE_NAME	../tsaplay/scripts/import_dataset.py	/^IMPORTER_MODULE_NAME = "tsaplay_dataset_importer"$/;"	kind:variable	line:11
+Ian	../tsaplay/models/ian.py	/^class Ian(TsaModel):$/;"	kind:class	line:16
+Image	../tsaplay/utils/draw.py	/^from PIL import Image, ImageDraw, ImageFont, ImageOps$/;"	kind:namespace	line:6
+Image	../tsaplay/utils/io.py	/^from PIL import Image$/;"	kind:namespace	line:27
+ImageDraw	../tsaplay/utils/draw.py	/^from PIL import Image, ImageDraw, ImageFont, ImageOps$/;"	kind:namespace	line:6
+ImageFont	../tsaplay/utils/draw.py	/^from PIL import Image, ImageDraw, ImageFont, ImageOps$/;"	kind:namespace	line:6
+ImageOps	../tsaplay/utils/draw.py	/^from PIL import Image, ImageDraw, ImageFont, ImageOps$/;"	kind:namespace	line:6
+Input	../tsaplay/scripts/client.py	/^from tensorflow_serving.apis.input_pb2 import Input, ExampleList$/;"	kind:namespace	line:8
+Iterable	../tsaplay/utils/data.py	/^from collections import defaultdict, Iterable$/;"	kind:namespace	line:4
+KEEP_CHECKPOINT_MAX	../tsaplay/constants.py	/^KEEP_CHECKPOINT_MAX = 5$/;"	kind:variable	line:14
+KeyedVectors	../tsaplay/embeddings.py	/^from gensim.models import KeyedVectors$/;"	kind:namespace	line:5
+LOG_STEP_COUNT_STEPS	../tsaplay/constants.py	/^LOG_STEP_COUNT_STEPS = 1000$/;"	kind:variable	line:13
+Language	../tsaplay/utils/spacy.py	/^from spacy.language import Language$/;"	kind:namespace	line:4
+LcrRot	../tsaplay/models/lcr_rot.py	/^class LcrRot(TsaModel):$/;"	kind:class	line:18
+LogHistogramsToComet	../tsaplay/hooks.py	/^class LogHistogramsToComet(SessionRunHook):$/;"	kind:class	line:181
+LogProgressToComet	../tsaplay/hooks.py	/^class LogProgressToComet(SessionRunHook):$/;"	kind:class	line:138
+LogProgressToComet	../tsaplay/utils/comet.py	/^from tsaplay.hooks import LogProgressToComet$/;"	kind:namespace	line:11
+Lstm	../tsaplay/models/lstm.py	/^class Lstm(TsaModel):$/;"	kind:class	line:8
+MAX_EMBEDDING_SHARDS	../tsaplay/constants.py	/^MAX_EMBEDDING_SHARDS = 1$/;"	kind:variable	line:20
+MAX_EMBEDDING_SHARDS	../tsaplay/utils/tf.py	/^from tsaplay.constants import TF_DELIMITER, MAX_EMBEDDING_SHARDS$/;"	kind:namespace	line:20
+MODELS	../generate_boxplots.py	/^MODELS = {$/;"	kind:variable	line:168
+MODELS_PATH	../tsaplay/constants.py	/^MODELS_PATH = pkg.resource_filename(__name__, "models")$/;"	kind:variable	line:23
+MODELS_PATH	../tsaplay/task.py	/^from tsaplay.constants import EMBEDDING_SHORTHANDS, ASSETS_PATH, MODELS_PATH$/;"	kind:namespace	line:30
+MemNet	../tsaplay/models/mem_net.py	/^class MemNet(TsaModel):$/;"	kind:class	line:16
+MetadataHook	../tsaplay/hooks.py	/^class MetadataHook(SessionRunHook):$/;"	kind:class	line:444
+ModeKeys	../tsaplay/hooks.py	/^from tensorflow.estimator import ModeKeys  # noqa$/;"	kind:namespace	line:12
+ModeKeys	../tsaplay/models/ian.py	/^from tensorflow.estimator import ModeKeys  # noqa$/;"	kind:namespace	line:4
+ModeKeys	../tsaplay/models/ram.py	/^from tensorflow.estimator import ModeKeys$/;"	kind:namespace	line:6
+ModeKeys	../tsaplay/utils/addons.py	/^from tensorflow.estimator import ModeKeys  # pylint: disable=E0401$/;"	kind:namespace	line:7
+ModeKeys	../tsaplay/utils/comet.py	/^from tensorflow.estimator import ModeKeys  # noqa$/;"	kind:namespace	line:6
+ModeKeys	../tsaplay/utils/tf.py	/^from tensorflow.estimator import ModeKeys  # noqa$/;"	kind:namespace	line:8
+NP_RANDOM_SEED	../tsaplay/constants.py	/^NP_RANDOM_SEED = 1234$/;"	kind:variable	line:9
+NP_RANDOM_SEED	../tsaplay/hooks.py	/^from tsaplay.constants import NP_RANDOM_SEED$/;"	kind:namespace	line:13
+NP_RANDOM_SEED	../tsaplay/utils/data.py	/^from tsaplay.constants import NP_RANDOM_SEED, DELIMITER$/;"	kind:namespace	line:12
+NP_RANDOM_SEED	../tsaplay/utils/io.py	/^from tsaplay.constants import NP_RANDOM_SEED, TF_RECORD_SHARDS, PAD_TOKEN$/;"	kind:namespace	line:34
+PAD_TOKEN	../tsaplay/constants.py	/^PAD_TOKEN = "<PAD>"$/;"	kind:variable	line:17
+PAD_TOKEN	../tsaplay/utils/io.py	/^from tsaplay.constants import NP_RANDOM_SEED, TF_RECORD_SHARDS, PAD_TOKEN$/;"	kind:namespace	line:34
+Path	../tsaplay/constants.py	/^from pathlib import Path$/;"	kind:namespace	line:4
+PredictRequest	../tsaplay/scripts/client.py	/^from tensorflow_serving.apis.predict_pb2 import PredictRequest$/;"	kind:namespace	line:9
+REPORTED	../generate_boxplots.py	/^REPORTED = {$/;"	kind:variable	line:26
+REQUIREMENTS	../setup.py	/^    REQUIREMENTS = requirements_file.read().splitlines()[1:]$/;"	kind:variable	line:4
+Ram	../tsaplay/models/ram.py	/^class Ram(TsaModel):$/;"	kind:class	line:24
+SAVE_CHECKPOINTS_STEPS	../tsaplay/constants.py	/^SAVE_CHECKPOINTS_STEPS = 1000$/;"	kind:variable	line:12
+SAVE_SUMMARY_STEPS	../tsaplay/constants.py	/^SAVE_SUMMARY_STEPS = 100$/;"	kind:variable	line:11
+SAVE_SUMMARY_STEPS	../tsaplay/utils/addons.py	/^from tsaplay.constants import SAVE_SUMMARY_STEPS$/;"	kind:namespace	line:32
+SPACY_MODEL	../tsaplay/constants.py	/^SPACY_MODEL = join(ASSETS_PATH, "en_core_web_sm")$/;"	kind:variable	line:25
+SPACY_MODEL	../tsaplay/utils/spacy.py	/^from tsaplay.constants import SPACY_MODEL$/;"	kind:namespace	line:6
+STAGING_SUBDIR_TEMPLATE	../submit_job.py	/^STAGING_SUBDIR_TEMPLATE = join(STAGING_DIR, "_{}")$/;"	kind:variable	line:20
+SaveAttentionWeightVector	../tsaplay/hooks.py	/^class SaveAttentionWeightVector(SessionRunHook):$/;"	kind:class	line:212
+SaveConfusionMatrix	../tsaplay/hooks.py	/^class SaveConfusionMatrix(SessionRunHook):$/;"	kind:class	line:359
+SessionRunArgs	../tsaplay/hooks.py	/^from tensorflow.train import SessionRunHook, SessionRunArgs  # noqa$/;"	kind:namespace	line:11
+SessionRunHook	../tsaplay/hooks.py	/^from tensorflow.train import SessionRunHook, SessionRunArgs  # noqa$/;"	kind:namespace	line:11
+StringIO	../tsaplay/utils/data.py	/^from io import StringIO$/;"	kind:namespace	line:2
+TFRecordWriter	../tsaplay/utils/io.py	/^from tensorflow.python_io import TFRecordWriter  # noqa$/;"	kind:namespace	line:31
+TF_DELIMITER	../tsaplay/constants.py	/^TF_DELIMITER = " "$/;"	kind:variable	line:16
+TF_DELIMITER	../tsaplay/utils/tf.py	/^from tsaplay.constants import TF_DELIMITER, MAX_EMBEDDING_SHARDS$/;"	kind:namespace	line:20
+TF_RANDOM_SEED	../tsaplay/constants.py	/^TF_RANDOM_SEED = None$/;"	kind:variable	line:8
+TF_RECORD_SHARDS	../tsaplay/constants.py	/^TF_RECORD_SHARDS = 10$/;"	kind:variable	line:19
+TF_RECORD_SHARDS	../tsaplay/utils/io.py	/^from tsaplay.constants import NP_RANDOM_SEED, TF_RECORD_SHARDS, PAD_TOKEN$/;"	kind:namespace	line:34
+TcLstm	../tsaplay/models/tc_lstm.py	/^class TcLstm(TsaModel):$/;"	kind:class	line:13
+TdLstm	../tsaplay/models/td_lstm.py	/^class TdLstm(TsaModel):$/;"	kind:class	line:8
+Timeline	../tsaplay/utils/io.py	/^from tensorflow.python.client.timeline import Timeline  # pylint: disable=E0611$/;"	kind:namespace	line:30
+TsaModel	../tsaplay/models/ian.py	/^from tsaplay.models.tsa_model import TsaModel$/;"	kind:namespace	line:3
+TsaModel	../tsaplay/models/lcr_rot.py	/^from tsaplay.models.tsa_model import TsaModel$/;"	kind:namespace	line:6
+TsaModel	../tsaplay/models/lstm.py	/^from tsaplay.models.tsa_model import TsaModel$/;"	kind:namespace	line:3
+TsaModel	../tsaplay/models/mem_net.py	/^from tsaplay.models.tsa_model import TsaModel$/;"	kind:namespace	line:3
+TsaModel	../tsaplay/models/ram.py	/^from tsaplay.models.tsa_model import TsaModel$/;"	kind:namespace	line:7
+TsaModel	../tsaplay/models/tc_lstm.py	/^from tsaplay.models.tsa_model import TsaModel$/;"	kind:namespace	line:3
+TsaModel	../tsaplay/models/td_lstm.py	/^from tsaplay.models.tsa_model import TsaModel$/;"	kind:namespace	line:3
+TsaModel	../tsaplay/models/tsa_model.py	/^class TsaModel(ABC):$/;"	kind:class	line:40
+TsaModel	../tsaplay/task.py	/^from tsaplay.models.tsa_model import TsaModel$/;"	kind:namespace	line:29
+W0611	../tsaplay/task.py	/^import comet_ml  # pylint: disable=W0611$/;"	kind:namespace	line:10
+ZIP_DEFLATED	../tsaplay/utils/io.py	/^from zipfile import ZipFile, ZIP_DEFLATED$/;"	kind:namespace	line:10
+ZipFile	../tsaplay/utils/io.py	/^from zipfile import ZipFile, ZIP_DEFLATED$/;"	kind:namespace	line:10
+__init__	../tsaplay/datasets.py	/^    def __init__(self, name, redist=None):$/;"	kind:member	line:19
+__init__	../tsaplay/embeddings.py	/^    def __init__(self, name, filters=None):$/;"	kind:member	line:26
+__init__	../tsaplay/experiments.py	/^    def __init__($/;"	kind:member	line:24
+__init__	../tsaplay/features.py	/^    def __init__(self, datasets, embedding, **kwargs):$/;"	kind:member	line:52
+__init__	../tsaplay/hooks.py	/^    def __init__($/;"	kind:member	line:213
+__init__	../tsaplay/hooks.py	/^    def __init__($/;"	kind:member	line:35
+__init__	../tsaplay/hooks.py	/^    def __init__($/;"	kind:member	line:360
+__init__	../tsaplay/hooks.py	/^    def __init__(self, comet, names, trainables, every_n_iter):$/;"	kind:member	line:182
+__init__	../tsaplay/hooks.py	/^    def __init__(self, mode, comet, epochs=None, epoch_steps=None):$/;"	kind:member	line:139
+__init__	../tsaplay/hooks.py	/^    def __init__(self, summary_writer, save_steps=None, save_batches=None):$/;"	kind:member	line:445
+__init__	../tsaplay/models/tsa_model.py	/^    def __init__(self, params=None, aux_config=None, run_config=None):$/;"	kind:member	line:41
+__init__.py	../tsaplay/__init__.py	1;"	kind:file	line:1
+__init__.py	../tsaplay/models/__init__.py	1;"	kind:file	line:1
+__init__.py	../tsaplay/scripts/__init__.py	1;"	kind:file	line:1
+__init__.py	../tsaplay/utils/__init__.py	1;"	kind:file	line:1
+_copy	../tsaplay/utils/io.py	/^from shutil import rmtree, copytree, copy as _copy, ignore_patterns$/;"	kind:namespace	line:25
+_debug.py	../_debug.py	1;"	kind:file	line:1
+_dep_pipe_filter	../tsaplay/utils/filters.py	/^_dep_pipe_filter = partial(_pipe_filter, pipes=["dep"], attr="dep_")$/;"	kind:variable	line:109
+_export_filter_info	../tsaplay/embeddings.py	/^    def _export_filter_info($/;"	kind:member	line:158
+_filter_fn	../tsaplay/utils/filters.py	/^    def _filter_fn(token):$/;"	kind:function	line:22
+_import_filter_info	../tsaplay/embeddings.py	/^    def _import_filter_info(self, uid):$/;"	kind:member	line:171
+_init_const	../tsaplay/utils/tf.py	/^    def _init_const():$/;"	kind:function	line:614
+_init_corpus	../tsaplay/datasets.py	/^    def _init_corpus(self, mode):$/;"	kind:member	line:146
+_init_corpus	../tsaplay/features.py	/^    def _init_corpus(self, mode):$/;"	kind:member	line:188
+_init_data_dict	../tsaplay/datasets.py	/^    def _init_data_dict(self, mode, redist):$/;"	kind:member	line:127
+_init_data_dict	../tsaplay/features.py	/^    def _init_data_dict(self, mode):$/;"	kind:member	line:171
+_init_dist_info	../tsaplay/datasets.py	/^    def _init_dist_info(self, mode):$/;"	kind:member	line:162
+_init_embedding_params	../tsaplay/features.py	/^    def _init_embedding_params(self):$/;"	kind:member	line:339
+_init_gen_dir	../tsaplay/datasets.py	/^    def _init_gen_dir(self, name):$/;"	kind:member	line:96
+_init_gen_dir	../tsaplay/embeddings.py	/^    def _init_gen_dir(self, name):$/;"	kind:member	line:81
+_init_gen_dir	../tsaplay/features.py	/^    def _init_gen_dir(self):$/;"	kind:member	line:164
+_init_gensim_model	../tsaplay/embeddings.py	/^    def _init_gensim_model(self, filters):$/;"	kind:member	line:102
+_init_part_var	../tsaplay/utils/tf.py	/^    def _init_part_var(shape=shape, dtype=tf.float32, partition_info=None):$/;"	kind:function	line:606
+_init_srcdirs	../tsaplay/datasets.py	/^    def _init_srcdirs(self, mode, redist):$/;"	kind:member	line:112
+_init_tfrecords	../tsaplay/features.py	/^    def _init_tfrecords(self):$/;"	kind:member	line:270
+_init_token_data	../tsaplay/features.py	/^    def _init_token_data(self):$/;"	kind:member	line:237
+_init_uid	../tsaplay/features.py	/^    def _init_uid(self):$/;"	kind:member	line:136
+_init_var	../tsaplay/utils/tf.py	/^    def _init_var(shape=shape, dtype=tf.float32, partition_info=None):$/;"	kind:function	line:611
+_init_vocab	../tsaplay/features.py	/^    def _init_vocab(self):$/;"	kind:member	line:205
+_initialize_estimator	../tsaplay/models/tsa_model.py	/^    def _initialize_estimator(self, feature_provider, **kwargs):$/;"	kind:member	line:225
+_make_experiment_dir	../tsaplay/experiments.py	/^    def _make_experiment_dir(self, job_dir):$/;"	kind:member	line:107
+_model_fn	../tsaplay/models/tsa_model.py	/^    def _model_fn(self, features, labels, mode, params):$/;"	kind:member	line:220
+_ner_pipe_filter	../tsaplay/utils/filters.py	/^_ner_pipe_filter = partial(_pipe_filter, pipes=["ner"], attr="ent_type")$/;"	kind:variable	line:110
+_no_pipe_filter	../tsaplay/utils/filters.py	/^def _no_pipe_filter(token, attrs=None):$/;"	kind:function	line:86
+_pipe_filter	../tsaplay/utils/filters.py	/^def _pipe_filter(token, pipes=None, tags=None, attr=""):$/;"	kind:function	line:95
+_plot_confusion_matrix	../tsaplay/hooks.py	/^    def _plot_confusion_matrix(self, conf_matrix):$/;"	kind:member	line:400
+_pos_pipe_filter	../tsaplay/utils/filters.py	/^_pos_pipe_filter = partial(_pipe_filter, pipes=["pos"], attr="pos_")$/;"	kind:variable	line:108
+_resolve_oov_fn	../tsaplay/features.py	/^    def _resolve_oov_fn(self, oov_arg):$/;"	kind:member	line:504
+_serving_input_receiver_fn	../tsaplay/models/tsa_model.py	/^    def _serving_input_receiver_fn(self):$/;"	kind:member	line:186
+_setup_comet_ml_experiment	../tsaplay/experiments.py	/^    def _setup_comet_ml_experiment(self, api_key, workspace=None):$/;"	kind:member	line:214
+_update_export_models_config	../tsaplay/experiments.py	/^    def _update_export_models_config(self):$/;"	kind:member	line:121
+_vocab_coverage	../tsaplay/features.py	/^    def _vocab_coverage(self):$/;"	kind:member	line:393
+_write_info_file	../tsaplay/features.py	/^    def _write_info_file(self):$/;"	kind:member	line:361
+abspath	../submit_job.py	/^from os.path import join, abspath, basename$/;"	kind:namespace	line:4
+abstractmethod	../tsaplay/models/tsa_model.py	/^from abc import ABC, abstractmethod$/;"	kind:namespace	line:1
+accum_tuple_list_gen	../tsaplay/utils/data.py	/^def accum_tuple_list_gen(gen, sort=True):$/;"	kind:function	line:235
+accumulate_dicts	../tsaplay/utils/data.py	/^def accumulate_dicts(*args, accum_fn=None, default=None, **kwargs):$/;"	kind:function	line:143
+accumulate_dicts	../tsaplay/utils/io.py	/^from tsaplay.utils.data import accumulate_dicts$/;"	kind:namespace	line:35
+addon	../tsaplay/models/ian.py	/^from tsaplay.utils.addons import addon, attn_heatmaps, early_stopping$/;"	kind:namespace	line:13
+addon	../tsaplay/models/lcr_rot.py	/^from tsaplay.utils.addons import addon, attn_heatmaps, early_stopping$/;"	kind:namespace	line:15
+addon	../tsaplay/models/lstm.py	/^from tsaplay.utils.addons import addon, early_stopping$/;"	kind:namespace	line:5
+addon	../tsaplay/models/mem_net.py	/^from tsaplay.utils.addons import addon, attn_heatmaps$/;"	kind:namespace	line:4
+addon	../tsaplay/models/ram.py	/^from tsaplay.utils.addons import addon, attn_heatmaps, early_stopping$/;"	kind:namespace	line:8
+addon	../tsaplay/models/tc_lstm.py	/^from tsaplay.utils.addons import addon, early_stopping$/;"	kind:namespace	line:10
+addon	../tsaplay/models/td_lstm.py	/^from tsaplay.utils.addons import addon, early_stopping$/;"	kind:namespace	line:5
+addon	../tsaplay/utils/addons.py	/^addon = partial(attach, order="POST")  # pylint: disable=C0103$/;"	kind:variable	line:69
+addons.py	../tsaplay/utils/addons.py	1;"	kind:file	line:1
+after_run	../tsaplay/hooks.py	/^    def after_run(self, run_context, run_values):$/;"	kind:member	line:158
+after_run	../tsaplay/hooks.py	/^    def after_run(self, run_context, run_values):$/;"	kind:member	line:196
+after_run	../tsaplay/hooks.py	/^    def after_run(self, run_context, run_values):$/;"	kind:member	line:249
+after_run	../tsaplay/hooks.py	/^    def after_run(self, run_context, run_values):$/;"	kind:member	line:476
+after_run	../tsaplay/hooks.py	/^    def after_run(self, run_context, run_values):$/;"	kind:member	line:79
+alpha_inc	../tsaplay/utils/draw.py	/^    alpha_inc = 1 \/ n_hops$/;"	kind:variable	line:239
+append_snapshot	../tsaplay/utils/tf.py	/^def append_snapshot(container, new_snap, index):$/;"	kind:function	line:414
+arg_with_list	../tsaplay/utils/io.py	/^def arg_with_list(arg):$/;"	kind:function	line:402
+argparse	../generate_boxplots.py	/^import argparse$/;"	kind:namespace	line:3
+argparse	../submit_job.py	/^import argparse$/;"	kind:namespace	line:1
+argparse	../tsaplay/scripts/import_dataset.py	/^import argparse$/;"	kind:namespace	line:1
+argparse	../tsaplay/task.py	/^import argparse$/;"	kind:namespace	line:1
+args_to_dict	../generate_boxplots.py	/^    from tsaplay.utils.io import pickle_file, unpickle_file, args_to_dict$/;"	kind:namespace	line:24
+args_to_dict	../submit_job.py	/^from tsaplay.utils.io import search_dir, copy, clean_dirs, args_to_dict, cprnt$/;"	kind:namespace	line:12
+args_to_dict	../tsaplay/utils/io.py	/^def args_to_dict(args):$/;"	kind:function	line:372
+argument_parser	../generate_boxplots.py	/^def argument_parser():$/;"	kind:function	line:869
+argument_parser	../submit_job.py	/^def argument_parser():$/;"	kind:function	line:26
+argument_parser	../tsaplay/scripts/import_dataset.py	/^def argument_parser():$/;"	kind:function	line:14
+argument_parser	../tsaplay/task.py	/^def argument_parser():$/;"	kind:function	line:33
+argv	../_debug.py	/^from sys import argv$/;"	kind:namespace	line:1
+argv	../tsaplay/task.py	/^from sys import argv$/;"	kind:namespace	line:5
+array_ops	../tsaplay/utils/tf.py	/^from tensorflow.python.ops import array_ops$/;"	kind:namespace	line:17
+attach	../tsaplay/utils/addons.py	/^def attach(addons, modes=None, order="POST"):$/;"	kind:function	line:35
+attach_comet_ml_experiment	../tsaplay/models/tsa_model.py	/^    def attach_comet_ml_experiment(self, api_key, exp_key):$/;"	kind:member	line:85
+attention_unit	../tsaplay/utils/tf.py	/^def attention_unit($/;"	kind:function	line:342
+attn_focus	../tsaplay/utils/tf.py	/^    attn_focus = tf.expand_dims(input=attn_focus, axis=3)$/;"	kind:variable	line:377
+attn_focus	../tsaplay/utils/tf.py	/^    attn_focus = tf.tile(input=attn_focus, multiples=[1, max_seq_len, 1])$/;"	kind:variable	line:376
+attn_heatmaps	../tsaplay/models/ian.py	/^from tsaplay.utils.addons import addon, attn_heatmaps, early_stopping$/;"	kind:namespace	line:13
+attn_heatmaps	../tsaplay/models/lcr_rot.py	/^from tsaplay.utils.addons import addon, attn_heatmaps, early_stopping$/;"	kind:namespace	line:15
+attn_heatmaps	../tsaplay/models/mem_net.py	/^from tsaplay.utils.addons import addon, attn_heatmaps$/;"	kind:namespace	line:4
+attn_heatmaps	../tsaplay/models/ram.py	/^from tsaplay.utils.addons import addon, attn_heatmaps, early_stopping$/;"	kind:namespace	line:8
+attn_heatmaps	../tsaplay/utils/addons.py	/^def attn_heatmaps(model, features, labels, spec, params):$/;"	kind:function	line:119
+attn_layer_run	../tsaplay/models/ram.py	/^        def attn_layer_run(attn_layer_num, episode, attn_snapshots):$/;"	kind:function	line:173
+attn_summary_info	../tsaplay/utils/tf.py	/^    attn_summary_info = tf.tuple([sp_literal, f_score])$/;"	kind:variable	line:396
+attn_vec	../tsaplay/utils/tf.py	/^    attn_vec = masked_softmax(logits=f_score, mask=mask)$/;"	kind:variable	line:393
+attn_vec	../tsaplay/utils/tf.py	/^    attn_vec = tf.expand_dims(attn_vec, axis=3)$/;"	kind:variable	line:398
+author	../setup.py	/^    author="Sean Bugeja",$/;"	kind:variable	line:9
+author_email	../setup.py	/^    author_email="seanbugeja23@gmail.com",$/;"	kind:variable	line:10
+basename	../submit_job.py	/^from os.path import join, abspath, basename$/;"	kind:namespace	line:4
+basename	../tsaplay/scripts/import_dataset.py	/^from os.path import join, exists, normpath, basename$/;"	kind:namespace	line:6
+batch_size	../tsaplay/utils/tf.py	/^    batch_size = tf.shape(h_states)[0]$/;"	kind:variable	line:351
+before_run	../tsaplay/hooks.py	/^    def before_run(self, _):$/;"	kind:member	line:60
+before_run	../tsaplay/hooks.py	/^    def before_run(self, run_context):$/;"	kind:member	line:151
+before_run	../tsaplay/hooks.py	/^    def before_run(self, run_context):$/;"	kind:member	line:188
+before_run	../tsaplay/hooks.py	/^    def before_run(self, run_context):$/;"	kind:member	line:238
+before_run	../tsaplay/hooks.py	/^    def before_run(self, run_context):$/;"	kind:member	line:462
+begin	../tsaplay/hooks.py	/^    def begin(self):$/;"	kind:member	line:145
+begin	../tsaplay/hooks.py	/^    def begin(self):$/;"	kind:member	line:451
+begin	../tsaplay/hooks.py	/^    def begin(self):$/;"	kind:member	line:56
+bias	../tsaplay/utils/tf.py	/^    bias = bias_mask * bias$/;"	kind:variable	line:383
+bias	../tsaplay/utils/tf.py	/^    bias = tf.get_variable($/;"	kind:variable	line:359
+bias	../tsaplay/utils/tf.py	/^    bias = tf.reshape(tensor=bias, shape=[batch_size, -1, 1, 1])$/;"	kind:variable	line:384
+bias_mask	../tsaplay/utils/tf.py	/^    bias_mask = tf.sequence_mask($/;"	kind:variable	line:379
+bulk_add_to_collection	../tsaplay/utils/tf.py	/^def bulk_add_to_collection(collection, *variables):$/;"	kind:function	line:454
+byte_encode_array	../tsaplay/scripts/client.py	/^def byte_encode_array(array):$/;"	kind:function	line:75
+calculate_u_t_w_t	../tsaplay/models/ram.py	/^def calculate_u_t_w_t(seq_lens, max_seq_len, distances):$/;"	kind:function	line:300
+case_insensitive	../tsaplay/embeddings.py	/^    def case_insensitive(self):$/;"	kind:member	line:66
+ceil	../tsaplay/features.py	/^from math import ceil$/;"	kind:namespace	line:6
+ceil	../tsaplay/hooks.py	/^from math import ceil$/;"	kind:namespace	line:4
+ceil	../tsaplay/models/mem_net.py	/^from math import ceil$/;"	kind:namespace	line:1
+cell_text	../tsaplay/utils/draw.py	/^    cell_text = [[pretty_print_decimal(i) for i in j] for j in data.values]$/;"	kind:variable	line:240
+chain	../external/Wang2017/parser.py	/^from itertools import chain$/;"	kind:namespace	line:3
+chain	../tsaplay/utils/data.py	/^from itertools import chain, groupby$/;"	kind:namespace	line:5
+chain	../tsaplay/utils/tf.py	/^from itertools import tee, chain$/;"	kind:namespace	line:4
+class_dist_info	../tsaplay/utils/data.py	/^def class_dist_info(labels, all_classes=None):$/;"	kind:function	line:48
+class_dist_stats	../tsaplay/utils/comet.py	/^from tsaplay.utils.data import class_dist_stats$/;"	kind:namespace	line:10
+class_dist_stats	../tsaplay/utils/data.py	/^def class_dist_stats(classes=None, **data_dicts):$/;"	kind:function	line:191
+class_labels	../tsaplay/datasets.py	/^    def class_labels(self):$/;"	kind:member	line:93
+class_labels	../tsaplay/features.py	/^    def class_labels(self):$/;"	kind:member	line:109
+clean_dirs	../submit_job.py	/^from tsaplay.utils.io import search_dir, copy, clean_dirs, args_to_dict, cprnt$/;"	kind:namespace	line:12
+clean_dirs	../tsaplay/utils/io.py	/^def clean_dirs(*paths):$/;"	kind:function	line:319
+clear_staging_area	../submit_job.py	/^def clear_staging_area():$/;"	kind:function	line:244
+client.py	../tsaplay/scripts/client.py	1;"	kind:file	line:1
+cm	../tsaplay/utils/tf.py	/^from tensorflow.contrib.metrics import confusion_matrix as cm$/;"	kind:namespace	line:19
+cmap	../tsaplay/utils/draw.py	/^    cmap = plt.get_cmap("Oranges")$/;"	kind:variable	line:253
+cmap_int	../tsaplay/utils/draw.py	/^def cmap_int(value, cmap_name="Oranges", alpha=0.8):$/;"	kind:function	line:19
+colored	../tsaplay/utils/io.py	/^from termcolor import colored$/;"	kind:namespace	line:29
+comet.py	../tsaplay/utils/comet.py	1;"	kind:file	line:1
+comet_experiment	../tsaplay/models/tsa_model.py	/^    def comet_experiment(self):$/;"	kind:member	line:66
+comet_ml	../generate_boxplots.py	/^import comet_ml$/;"	kind:namespace	line:10
+comet_ml	../tsaplay/experiments.py	/^import comet_ml$/;"	kind:namespace	line:4
+comet_ml	../tsaplay/models/tsa_model.py	/^import comet_ml$/;"	kind:namespace	line:2
+comet_ml	../tsaplay/task.py	/^import comet_ml  # pylint: disable=W0611$/;"	kind:namespace	line:10
+comet_pretty_log	../tsaplay/utils/comet.py	/^def comet_pretty_log(comet_experiment, data_dict, prefix=None, hparams=False):$/;"	kind:function	line:63
+comet_to_df	../generate_boxplots.py	/^def comet_to_df(workspace, models=None, metrics=None, **kwargs):$/;"	kind:function	line:264
+cometml	../tsaplay/utils/comet.py	/^def cometml(model_fn):$/;"	kind:function	line:14
+comparison	../tsaplay/utils/addons.py	/^                comparison=comparison,$/;"	kind:variable	line:366
+condition	../tsaplay/models/mem_net.py	/^        def condition(hop_num, ext_memory, input_vec, attn_snapshots):$/;"	kind:function	line:78
+condition	../tsaplay/models/ram.py	/^        def condition(attn_layer_num, episode, attn_snapshots):$/;"	kind:function	line:170
+conf_matrix	../tsaplay/utils/addons.py	/^def conf_matrix(model, features, labels, spec, params):$/;"	kind:function	line:141
+console_template	../tsaplay/utils/addons.py	/^        console_template = config.get($/;"	kind:variable	line:232
+constants.py	../tsaplay/constants.py	1;"	kind:file	line:1
+context.py	../tests/context.py	1;"	kind:file	line:1
+copy	../submit_job.py	/^from tsaplay.utils.io import search_dir, copy, clean_dirs, args_to_dict, cprnt$/;"	kind:namespace	line:12
+copy	../tsaplay/utils/io.py	/^def copy($/;"	kind:function	line:290
+copy_dataset_files	../submit_job.py	/^def copy_dataset_files(datasets):$/;"	kind:function	line:178
+copy_embedding_files	../submit_job.py	/^def copy_embedding_files(embedding):$/;"	kind:function	line:192
+copy_feature_files	../submit_job.py	/^def copy_feature_files(feature_provider):$/;"	kind:function	line:201
+copytree	../tsaplay/utils/io.py	/^from shutil import rmtree, copytree, copy as _copy, ignore_patterns$/;"	kind:namespace	line:25
+corpora_vocab	../tsaplay/task.py	/^from tsaplay.utils.data import corpora_vocab$/;"	kind:namespace	line:24
+corpora_vocab	../tsaplay/utils/data.py	/^def corpora_vocab(*corpora, case_insensitive=None, threshold=None):$/;"	kind:function	line:178
+cprnt	../submit_job.py	/^from tsaplay.utils.io import search_dir, copy, clean_dirs, args_to_dict, cprnt$/;"	kind:namespace	line:12
+cprnt	../tsaplay/models/ram.py	/^from tsaplay.utils.io import cprnt$/;"	kind:namespace	line:21
+cprnt	../tsaplay/models/tsa_model.py	/^from tsaplay.utils.io import cprnt$/;"	kind:namespace	line:37
+cprnt	../tsaplay/scripts/import_dataset.py	/^from tsaplay.utils.io import pickle_file, search_dir, cprnt$/;"	kind:namespace	line:7
+cprnt	../tsaplay/utils/debug.py	/^from tsaplay.utils.io import cprnt$/;"	kind:namespace	line:6
+cprnt	../tsaplay/utils/io.py	/^def cprnt(*args, **kwargs):$/;"	kind:function	line:38
+cprnt	../tsaplay/utils/tf.py	/^from tsaplay.utils.io import export_run_metadata, cprnt$/;"	kind:namespace	line:21
+create_snapshots_container	../tsaplay/utils/tf.py	/^def create_snapshots_container(shape_like, n_snaps):$/;"	kind:function	line:432
+csv	../tsaplay/utils/io.py	/^import csv$/;"	kind:namespace	line:5
+data.py	../tsaplay/utils/data.py	1;"	kind:file	line:1
+data_arr	../tsaplay/utils/draw.py	/^    data_arr = np.asarray(data)$/;"	kind:variable	line:236
+datasets	../tsaplay/features.py	/^    def datasets(self):$/;"	kind:member	line:94
+datasets.py	../tsaplay/datasets.py	1;"	kind:file	line:1
+datasets_cli_arg	../tsaplay/utils/io.py	/^def datasets_cli_arg(arg):$/;"	kind:function	line:412
+datetime	../generate_boxplots.py	/^from datetime import datetime$/;"	kind:namespace	line:6
+datetime	../tsaplay/features.py	/^from datetime import datetime$/;"	kind:namespace	line:8
+datetime	../tsaplay/hooks.py	/^from datetime import datetime$/;"	kind:namespace	line:6
+datetime	../tsaplay/utils/comet.py	/^from datetime import datetime$/;"	kind:namespace	line:3
+datetime	../tsaplay/utils/debug.py	/^from datetime import timedelta, datetime$/;"	kind:namespace	line:4
+datetime	../tsaplay/utils/io.py	/^from datetime import datetime, timedelta$/;"	kind:namespace	line:11
+debug.py	../tsaplay/utils/debug.py	1;"	kind:file	line:1
+decorator	../tsaplay/utils/addons.py	/^    def decorator(addon_fn):$/;"	kind:function	line:74
+decorator	../tsaplay/utils/addons.py	/^    def decorator(model_fn):$/;"	kind:function	line:36
+decorator	../tsaplay/utils/tf.py	/^    def decorator(func):$/;"	kind:function	line:150
+deepcopy	../tsaplay/features.py	/^from copy import deepcopy$/;"	kind:namespace	line:7
+default	../tsaplay/utils/addons.py	/^            default=SAVE_SUMMARY_STEPS,$/;"	kind:variable	line:244
+default_token_filter	../tsaplay/utils/filters.py	/^def default_token_filter(token):$/;"	kind:function	line:7
+defaultdict	../external/Wang2017/parser.py	/^from collections import defaultdict$/;"	kind:namespace	line:4
+defaultdict	../tsaplay/utils/data.py	/^from collections import defaultdict, Iterable$/;"	kind:namespace	line:4
+description	../setup.py	/^    description="Targeted Sentiment Analysis Playground",$/;"	kind:variable	line:13
+dim_size	../tsaplay/embeddings.py	/^    def dim_size(self):$/;"	kind:member	line:70
+dirname	../external/Wang2017/parser.py	/^from os.path import join, dirname$/;"	kind:namespace	line:2
+dirname	../tsaplay/embeddings.py	/^from os.path import join, exists, dirname$/;"	kind:namespace	line:2
+dirname	../tsaplay/features.py	/^from os.path import join, exists, dirname$/;"	kind:namespace	line:1
+disable	../tsaplay/hooks.py	/^import matplotlib.pyplot as plt  # noqa pylint: disable=C0411,C0412,C0413$/;"	kind:namespace	line:31
+disable	../tsaplay/models/lcr_rot.py	/^from tensorflow.contrib.rnn import (  # pylint: disable=E0611$/;"	kind:namespace	line:3
+disable	../tsaplay/models/ram.py	/^from tensorflow.contrib.rnn import (  # pylint: disable=E0611$/;"	kind:namespace	line:3
+disable	../tsaplay/models/tsa_model.py	/^from tensorflow.estimator import (  # pylint: disable=E0401$/;"	kind:namespace	line:5
+disable	../tsaplay/models/tsa_model.py	/^from tensorflow.estimator.export import (  # pylint: disable=E0401$/;"	kind:namespace	line:11
+disable	../tsaplay/models/tsa_model.py	/^from tensorflow.python import debug as tf_debug  # pylint: disable=E0611$/;"	kind:namespace	line:4
+disable	../tsaplay/scripts/client.py	/^from tensorflow.contrib.util import make_tensor_proto  # pylint: disable=E0611$/;"	kind:namespace	line:6
+disable	../tsaplay/task.py	/^import comet_ml  # pylint: disable=W0611$/;"	kind:namespace	line:10
+disable	../tsaplay/utils/addons.py	/^from tensorflow.contrib.estimator import (  # pylint: disable=E0611$/;"	kind:namespace	line:11
+disable	../tsaplay/utils/addons.py	/^from tensorflow.estimator import ModeKeys  # pylint: disable=E0401$/;"	kind:namespace	line:7
+disable	../tsaplay/utils/addons.py	/^from tensorflow.estimator.export import (  # pylint: disable=E0401$/;"	kind:namespace	line:15
+disable	../tsaplay/utils/addons.py	/^from tensorflow.saved_model.signature_constants import (  # pylint: disable=E0401$/;"	kind:namespace	line:8
+disable	../tsaplay/utils/io.py	/^from tensorflow.python.client.timeline import Timeline  # pylint: disable=E0611$/;"	kind:namespace	line:30
+docker	../tsaplay/utils/io.py	/^import docker$/;"	kind:namespace	line:33
+dong	../_debug.py	/^dong = Dataset("dong")$/;"	kind:variable	line:17
+dong_parser	../external/DebugDataset/parser.py	/^def dong_parser(path):$/;"	kind:function	line:1
+dong_parser	../external/DebugDatasetV2/parser.py	/^def dong_parser(path):$/;"	kind:function	line:1
+dong_parser	../external/Dong2014/parser.py	/^def dong_parser(path):$/;"	kind:function	line:1
+draw.py	../tsaplay/utils/draw.py	1;"	kind:file	line:1
+draw_attention_heatmap	../tsaplay/utils/draw.py	/^def draw_attention_heatmap(phrases, attn_vecs, **kwargs):$/;"	kind:function	line:70
+draw_boxplot	../generate_boxplots.py	/^def draw_boxplot(models=None, **kwargs):$/;"	kind:function	line:467
+draw_prediction_label	../tsaplay/utils/draw.py	/^def draw_prediction_label(target, label, prediction, classes):$/;"	kind:function	line:174
+draw_venn	../tsaplay/utils/comet.py	/^from tsaplay.utils.draw import plot_distributions, draw_venn$/;"	kind:namespace	line:9
+draw_venn	../tsaplay/utils/draw.py	/^def draw_venn(title, weighted=False, **kwargs):$/;"	kind:function	line:349
+dtype	../tsaplay/utils/tf.py	/^        dtype=tf.float32,$/;"	kind:variable	line:356
+dtype	../tsaplay/utils/tf.py	/^        dtype=tf.float32,$/;"	kind:variable	line:362
+dump	../submit_job.py	/^from json import dump$/;"	kind:namespace	line:5
+dump_json	../tsaplay/utils/io.py	/^def dump_json(path, data):$/;"	kind:function	line:190
+early_stopping	../tsaplay/models/ian.py	/^from tsaplay.utils.addons import addon, attn_heatmaps, early_stopping$/;"	kind:namespace	line:13
+early_stopping	../tsaplay/models/lcr_rot.py	/^from tsaplay.utils.addons import addon, attn_heatmaps, early_stopping$/;"	kind:namespace	line:15
+early_stopping	../tsaplay/models/lstm.py	/^from tsaplay.utils.addons import addon, early_stopping$/;"	kind:namespace	line:5
+early_stopping	../tsaplay/models/ram.py	/^from tsaplay.utils.addons import addon, attn_heatmaps, early_stopping$/;"	kind:namespace	line:8
+early_stopping	../tsaplay/models/tc_lstm.py	/^from tsaplay.utils.addons import addon, early_stopping$/;"	kind:namespace	line:10
+early_stopping	../tsaplay/models/td_lstm.py	/^from tsaplay.utils.addons import addon, early_stopping$/;"	kind:namespace	line:5
+early_stopping	../tsaplay/utils/addons.py	/^def early_stopping(model, features, labels, spec, params):$/;"	kind:function	line:337
+early_stopping_hook_args	../tsaplay/utils/addons.py	/^    early_stopping_hook_args = {$/;"	kind:variable	line:390
+early_stopping_hook_fn	../tsaplay/utils/addons.py	/^    early_stopping_hook_fn = ($/;"	kind:variable	line:385
+embed_sequences	../tsaplay/utils/tf.py	/^def embed_sequences(model_fn):$/;"	kind:function	line:26
+embedding	../tsaplay/features.py	/^    def embedding(self):$/;"	kind:member	line:101
+embedding_initializer_fn	../tsaplay/utils/tf.py	/^def embedding_initializer_fn(vectors, num_shards, structure=None):$/;"	kind:function	line:602
+embedding_params	../tsaplay/features.py	/^    def embedding_params(self):$/;"	kind:member	line:121
+embeddings.py	../tsaplay/embeddings.py	1;"	kind:file	line:1
+end	../tsaplay/hooks.py	/^    def end(self, session):$/;"	kind:member	line:115
+end	../tsaplay/hooks.py	/^    def end(self, session):$/;"	kind:member	line:168
+end	../tsaplay/hooks.py	/^    def end(self, session):$/;"	kind:member	line:205
+end	../tsaplay/hooks.py	/^    def end(self, session):$/;"	kind:member	line:374
+environ	../generate_boxplots.py	/^from os import path, makedirs, getcwd, environ$/;"	kind:namespace	line:4
+environ	../tsaplay/task.py	/^from os import environ, execvpe, sys$/;"	kind:namespace	line:6
+environ	../tsaplay/utils/debug.py	/^from os import environ$/;"	kind:namespace	line:2
+environ	../tsaplay/utils/io.py	/^from os import listdir, system, makedirs, environ$/;"	kind:namespace	line:12
+epoch_steps	../tsaplay/utils/addons.py	/^                epoch_steps=params["epoch_steps"],$/;"	kind:variable	line:250
+epoch_steps	../tsaplay/utils/addons.py	/^                epoch_steps=params["epoch_steps"],$/;"	kind:variable	line:274
+epoch_steps	../tsaplay/utils/addons.py	/^            epoch_steps=params["epoch_steps"],$/;"	kind:variable	line:243
+epochs	../tsaplay/utils/addons.py	/^            epochs=params.get("epochs"),$/;"	kind:variable	line:242
+estimator	../tsaplay/models/tsa_model.py	/^    def estimator(self):$/;"	kind:member	line:70
+eval_hooks	../tsaplay/utils/addons.py	/^        eval_hooks = list(spec.evaluation_hooks) or []$/;"	kind:variable	line:270
+eval_input_fn	../tsaplay/models/tsa_model.py	/^    def eval_input_fn(cls, tfrecords, params):$/;"	kind:member	line:97
+evaluate	../tsaplay/models/tsa_model.py	/^    def evaluate(self, feature_provider):$/;"	kind:member	line:139
+every_n_iter	../tsaplay/utils/addons.py	/^                every_n_iter=config.get("every_n_iter"),$/;"	kind:variable	line:251
+every_n_iter	../tsaplay/utils/addons.py	/^                every_n_iter=model.run_config.save_summary_steps$/;"	kind:variable	line:264
+execvpe	../tsaplay/task.py	/^from os import environ, execvpe, sys$/;"	kind:namespace	line:6
+exists	../tsaplay/datasets.py	/^from os.path import join, exists$/;"	kind:namespace	line:2
+exists	../tsaplay/embeddings.py	/^from os.path import join, exists, dirname$/;"	kind:namespace	line:2
+exists	../tsaplay/experiments.py	/^from os.path import join, isfile, exists$/;"	kind:namespace	line:2
+exists	../tsaplay/features.py	/^from os.path import join, exists, dirname$/;"	kind:namespace	line:1
+exists	../tsaplay/scripts/import_dataset.py	/^from os.path import join, exists, normpath, basename$/;"	kind:namespace	line:6
+experiments.py	../tsaplay/experiments.py	1;"	kind:file	line:1
+export	../tsaplay/models/tsa_model.py	/^    def export(self, directory, feature_provider):$/;"	kind:member	line:178
+export_graph_to_comet	../tsaplay/utils/comet.py	/^                def export_graph_to_comet(sess):$/;"	kind:function	line:32
+export_model	../tsaplay/experiments.py	/^    def export_model(self, overwrite=False, restart_tfserve=False):$/;"	kind:member	line:76
+export_run_metadata	../tsaplay/utils/io.py	/^def export_run_metadata(run_metadata, path):$/;"	kind:function	line:202
+export_run_metadata	../tsaplay/utils/tf.py	/^from tsaplay.utils.io import export_run_metadata, cprnt$/;"	kind:namespace	line:21
+extract_config_subset	../tsaplay/utils/io.py	/^def extract_config_subset(config_objs, keywords):$/;"	kind:function	line:118
+f	../tests/utils_test.py	/^def f():$/;"	kind:function	line:4
+f1_scores	../tsaplay/utils/addons.py	/^def f1_scores(model, features, labels, spec, params):$/;"	kind:function	line:170
+f_score	../tsaplay/utils/tf.py	/^    f_score = tf.nn.tanh($/;"	kind:variable	line:386
+f_score	../tsaplay/utils/tf.py	/^    f_score = tf.squeeze(input=f_score, axis=3)$/;"	kind:variable	line:389
+features.py	../tsaplay/features.py	1;"	kind:file	line:1
+fetch_lookup_ops	../tsaplay/utils/tf.py	/^def fetch_lookup_ops(lookup_table, **tokens_lists):$/;"	kind:function	line:492
+filter_fn_details	../tsaplay/utils/filters.py	/^def filter_fn_details(filter_fn, token=None):$/;"	kind:function	line:42
+filter_info	../tsaplay/embeddings.py	/^    def filter_info(self):$/;"	kind:member	line:78
+filter_vocab_list	../tsaplay/utils/data.py	/^def filter_vocab_list(vocab, filters, case_insensitive=None, incl_report=None):$/;"	kind:function	line:339
+filters.py	../tsaplay/utils/filters.py	1;"	kind:file	line:1
+filters_registry	../tsaplay/utils/filters.py	/^def filters_registry(key):$/;"	kind:function	line:72
+final_rep	../tsaplay/utils/tf.py	/^    final_rep = tf.squeeze(input=weighted_h_states_sum, axis=1)$/;"	kind:variable	line:406
+find_packages	../setup.py	/^from setuptools import find_packages, setup$/;"	kind:namespace	line:1
+fix_requirements_for_machine_types	../submit_job.py	/^def fix_requirements_for_machine_types(machine_types):$/;"	kind:function	line:108
+floor	../tsaplay/utils/io.py	/^from math import floor$/;"	kind:namespace	line:9
+font	../tsaplay/utils/draw.py	/^    font = FontProperties(fname=DEFAULT_FONT, size=12)$/;"	kind:variable	line:250
+freq	../tsaplay/utils/addons.py	/^            freq=config.get("summary_freq"),$/;"	kind:variable	line:241
+func	../tsaplay/utils/draw.py	/^    def func(pct, allvals):$/;"	kind:function	line:307
+gen_dir	../tsaplay/datasets.py	/^    def gen_dir(self):$/;"	kind:member	line:57
+gen_dir	../tsaplay/embeddings.py	/^    def gen_dir(self):$/;"	kind:member	line:54
+gen_dir	../tsaplay/features.py	/^    def gen_dir(self):$/;"	kind:member	line:105
+generate_attn_heatmap_summary	../tsaplay/utils/tf.py	/^def generate_attn_heatmap_summary(*attn_infos):$/;"	kind:function	line:459
+generate_boxplots.py	../generate_boxplots.py	1;"	kind:file	line:1
+generate_corpus	../tsaplay/utils/data.py	/^def generate_corpus(docs, mode=None):$/;"	kind:function	line:246
+generate_dataset_files	../tsaplay/scripts/import_dataset.py	/^def generate_dataset_files(args):$/;"	kind:function	line:107
+gensim	../tsaplay/embeddings.py	/^import gensim.downloader as gensim_data$/;"	kind:namespace	line:4
+gensim_data	../tsaplay/embeddings.py	/^import gensim.downloader as gensim_data$/;"	kind:namespace	line:4
+get_absolute_distance_vector	../tsaplay/models/mem_net.py	/^def get_absolute_distance_vector(target_locs, seq_lens, max_seq_len):$/;"	kind:function	line:170
+get_bounded_distance_vectors	../tsaplay/models/ram.py	/^def get_bounded_distance_vectors($/;"	kind:function	line:268
+get_comet_api	../generate_boxplots.py	/^def get_comet_api(api_key=None, **kwargs):$/;"	kind:function	line:188
+get_dataset_dicts	../tsaplay/scripts/import_dataset.py	/^def get_dataset_dicts(train_file, test_file, parsing_fn):$/;"	kind:function	line:39
+get_exported_models	../tsaplay/experiments.py	/^    def get_exported_models(cls):$/;"	kind:member	line:100
+get_grouped_metric_series	../generate_boxplots.py	/^def get_grouped_metric_series(project, workspace=None, metrics=None, **kwargs):$/;"	kind:function	line:209
+get_image_from_plt	../tsaplay/utils/draw.py	/^from tsaplay.utils.io import get_image_from_plt, pickle_file, platform$/;"	kind:namespace	line:11
+get_image_from_plt	../tsaplay/utils/io.py	/^def get_image_from_plt(plt):$/;"	kind:function	line:278
+get_location_vector_model	../tsaplay/models/mem_net.py	/^def get_location_vector_model(model_num):$/;"	kind:function	line:190
+get_location_weighted_memory	../tsaplay/models/ram.py	/^def get_location_weighted_memory(memory_star, w_t, u_t):$/;"	kind:function	line:314
+get_metric_series	../generate_boxplots.py	/^def get_metric_series(experiment, metric):$/;"	kind:function	line:201
+get_parsing_fn	../tsaplay/scripts/import_dataset.py	/^def get_parsing_fn(path, parser_name=None):$/;"	kind:function	line:51
+get_parsing_fn_candidates	../tsaplay/scripts/import_dataset.py	/^def get_parsing_fn_candidates(parser_module):$/;"	kind:function	line:81
+get_raw_file_paths	../tsaplay/scripts/import_dataset.py	/^def get_raw_file_paths(path):$/;"	kind:function	line:45
+get_seq_lengths	../tsaplay/utils/tf.py	/^def get_seq_lengths(batched_sequences):$/;"	kind:function	line:259
+getcwd	../generate_boxplots.py	/^from os import path, makedirs, getcwd, environ$/;"	kind:namespace	line:4
+getmembers	../tsaplay/task.py	/^from inspect import isclass, isabstract, getmembers$/;"	kind:namespace	line:3
+getmembers	../tsaplay/utils/filters.py	/^from inspect import signature, getmembers$/;"	kind:namespace	line:3
+getsource	../tsaplay/utils/data.py	/^from inspect import getsource$/;"	kind:namespace	line:7
+group_citations	../generate_boxplots.py	/^def group_citations(dataset, metric, model, reported=None):$/;"	kind:function	line:424
+group_filter_fns	../tsaplay/utils/filters.py	/^def group_filter_fns(*filter_fns, stdout_report=False):$/;"	kind:function	line:17
+groupby	../generate_boxplots.py	/^from itertools import groupby$/;"	kind:namespace	line:8
+groupby	../tsaplay/utils/data.py	/^from itertools import chain, groupby$/;"	kind:namespace	line:5
+gru_cell	../tsaplay/utils/tf.py	/^def gru_cell(**params):$/;"	kind:function	line:300
+h_states	../tsaplay/utils/tf.py	/^    h_states = tf.expand_dims(input=h_states, axis=2)$/;"	kind:variable	line:374
+hash_data	../tsaplay/utils/data.py	/^def hash_data(data):$/;"	kind:function	line:278
+histograms	../tsaplay/utils/addons.py	/^def histograms(model, features, labels, spec, params):$/;"	kind:function	line:292
+hooks.py	../tsaplay/hooks.py	1;"	kind:file	line:1
+hop	../tsaplay/models/mem_net.py	/^        def hop(hop_num, ext_memory, input_vec, attn_snapshots):$/;"	kind:function	line:81
+ian.py	../tsaplay/models/ian.py	1;"	kind:file	line:1
+ids_lookup_table	../tsaplay/utils/tf.py	/^def ids_lookup_table(vocab_file_path, oov_buckets=1, vocab_size=None):$/;"	kind:function	line:481
+ignore_patterns	../tsaplay/utils/io.py	/^from shutil import rmtree, copytree, copy as _copy, ignore_patterns$/;"	kind:namespace	line:25
+image	../tsaplay/utils/draw.py	/^    image = get_image_from_plt(plt)$/;"	kind:variable	line:278
+image_to_summary	../tsaplay/hooks.py	/^from tsaplay.utils.tf import image_to_summary$/;"	kind:namespace	line:20
+image_to_summary	../tsaplay/utils/tf.py	/^def image_to_summary(name, image):$/;"	kind:function	line:464
+imp	../tsaplay/scripts/import_dataset.py	/^import imp$/;"	kind:namespace	line:2
+import_dataset.py	../tsaplay/scripts/import_dataset.py	1;"	kind:file	line:1
+include_package_data	../setup.py	/^    include_package_data=True,$/;"	kind:variable	line:16
+init_embeddings	../tsaplay/utils/tf.py	/^            def init_embeddings(sess):$/;"	kind:function	line:67
+initializer	../tsaplay/utils/tf.py	/^        initializer=(bias_init or init),$/;"	kind:variable	line:363
+initializer	../tsaplay/utils/tf.py	/^        initializer=init,$/;"	kind:variable	line:357
+inner_decorator	../tsaplay/utils/debug.py	/^    def inner_decorator(func):$/;"	kind:function	line:27
+input_fn	../tsaplay/utils/tf.py	/^        def input_fn(*args, **kwargs):$/;"	kind:function	line:152
+insecure_channel	../tsaplay/scripts/client.py	/^from grpc import insecure_channel$/;"	kind:namespace	line:3
+inspect	../tsaplay/scripts/import_dataset.py	/^import inspect$/;"	kind:namespace	line:3
+inspect	../tsaplay/utils/comet.py	/^import inspect$/;"	kind:namespace	line:1
+install_requires	../setup.py	/^    install_requires=REQUIREMENTS,$/;"	kind:variable	line:14
+io	../tsaplay/utils/tf.py	/^import io$/;"	kind:namespace	line:2
+io.py	../tsaplay/utils/io.py	1;"	kind:file	line:1
+is_currently_running	../generate_boxplots.py	/^def is_currently_running(experiment):$/;"	kind:function	line:254
+is_valid_parsing_fn	../tsaplay/scripts/import_dataset.py	/^def is_valid_parsing_fn(parsing_fn_candidate):$/;"	kind:function	line:91
+isabstract	../tsaplay/task.py	/^from inspect import isclass, isabstract, getmembers$/;"	kind:namespace	line:3
+isclass	../tsaplay/task.py	/^from inspect import isclass, isabstract, getmembers$/;"	kind:namespace	line:3
+isfile	../tsaplay/experiments.py	/^from os.path import join, isfile, exists$/;"	kind:namespace	line:2
+itemgetter	../generate_boxplots.py	/^from operator import itemgetter$/;"	kind:namespace	line:9
+itemgetter	../tsaplay/utils/data.py	/^from operator import itemgetter$/;"	kind:namespace	line:6
+itertools	../tsaplay/hooks.py	/^import itertools$/;"	kind:namespace	line:3
+join	../external/Wang2017/parser.py	/^from os.path import join, dirname$/;"	kind:namespace	line:2
+join	../submit_job.py	/^from os.path import join, abspath, basename$/;"	kind:namespace	line:4
+join	../tsaplay/constants.py	/^from os.path import join$/;"	kind:namespace	line:2
+join	../tsaplay/datasets.py	/^from os.path import join, exists$/;"	kind:namespace	line:2
+join	../tsaplay/embeddings.py	/^from os.path import join, exists, dirname$/;"	kind:namespace	line:2
+join	../tsaplay/experiments.py	/^from os.path import join, isfile, exists$/;"	kind:namespace	line:2
+join	../tsaplay/features.py	/^from os.path import join, exists, dirname$/;"	kind:namespace	line:1
+join	../tsaplay/scripts/import_dataset.py	/^from os.path import join, exists, normpath, basename$/;"	kind:namespace	line:6
+join	../tsaplay/task.py	/^from os.path import join$/;"	kind:namespace	line:7
+join	../tsaplay/utils/addons.py	/^from os.path import join$/;"	kind:namespace	line:2
+join	../tsaplay/utils/spacy.py	/^from os.path import join$/;"	kind:namespace	line:1
+join_images	../tsaplay/utils/draw.py	/^def join_images(images, v_space=5, border=None, padding=2):$/;"	kind:function	line:46
+json	../generate_boxplots.py	/^import json$/;"	kind:namespace	line:7
+json	../tsaplay/utils/comet.py	/^import json$/;"	kind:namespace	line:2
+json	../tsaplay/utils/io.py	/^import json$/;"	kind:namespace	line:2
+l2_reg	../tsaplay/utils/tf.py	/^        l2_reg = l2_weight * tf.reduce_sum($/;"	kind:variable	line:335
+l2_regularized_loss	../tsaplay/utils/tf.py	/^def l2_regularized_loss($/;"	kind:function	line:326
+labels	../tsaplay/utils/addons.py	/^                labels=labels,$/;"	kind:variable	line:222
+launch_tensorboard	../tsaplay/experiments.py	/^    def launch_tensorboard(self, tb_port=6006, debug=False, debug_port=6064):$/;"	kind:member	line:67
+lcr_rot.py	../tsaplay/models/lcr_rot.py	1;"	kind:file	line:1
+legend_artist	../generate_boxplots.py	/^    def legend_artist(self, legend, orig_handle, fontsize, handlebox):$/;"	kind:member	line:454
+license	../setup.py	/^    license="LICENSE",$/;"	kind:variable	line:12
+list_folders	../tsaplay/utils/io.py	/^def list_folders(path, kind=None):$/;"	kind:function	line:325
+listdir	../tsaplay/experiments.py	/^from os import listdir, makedirs, sys$/;"	kind:namespace	line:1
+listdir	../tsaplay/utils/io.py	/^from os import listdir, system, makedirs, environ$/;"	kind:namespace	line:12
+literal_eval	../tsaplay/features.py	/^from ast import literal_eval$/;"	kind:namespace	line:5
+load_json	../tsaplay/utils/io.py	/^def load_json(path):$/;"	kind:function	line:195
+load_model	../tsaplay/task.py	/^def load_model(model_name, container=None):$/;"	kind:function	line:204
+loads	../external/Saeidi2016/parser.py	/^from json import loads$/;"	kind:namespace	line:1
+loads	../external/Wang2017/parser.py	/^from json import loads$/;"	kind:namespace	line:1
+loads	../external/Xue2018-Laptops-Hard/parser.py	/^from json import loads$/;"	kind:namespace	line:1
+loads	../external/Xue2018-Laptops/parser.py	/^from json import loads$/;"	kind:namespace	line:1
+loads	../external/Xue2018-Restaurants-Hard/parser.py	/^from json import loads$/;"	kind:namespace	line:1
+loads	../external/Xue2018-Restaurants/parser.py	/^from json import loads$/;"	kind:namespace	line:1
+location_vector_model_four	../tsaplay/models/mem_net.py	/^def location_vector_model_four(locs, seq_lens, emb_dim, init, hop=None):$/;"	kind:function	line:261
+location_vector_model_one	../tsaplay/models/mem_net.py	/^def location_vector_model_one(locs, seq_lens, emb_dim, hop, init=None):$/;"	kind:function	line:200
+location_vector_model_three	../tsaplay/models/mem_net.py	/^def location_vector_model_three(locs, seq_lens, emb_dim, init, hop=None):$/;"	kind:function	line:232
+location_vector_model_two	../tsaplay/models/mem_net.py	/^def location_vector_model_two(locs, seq_lens, emb_dim, hop=None, init=None):$/;"	kind:function	line:217
+log_dist_data	../tsaplay/utils/comet.py	/^def log_dist_data(comet_experiment, feature_provider, modes):$/;"	kind:function	line:111
+log_features_asset_data	../tsaplay/utils/comet.py	/^def log_features_asset_data(comet_experiment, feature_provider):$/;"	kind:function	line:161
+log_vocab_venn	../tsaplay/utils/comet.py	/^def log_vocab_venn(comet_experiment, feature_provider):$/;"	kind:function	line:127
+logging	../tsaplay/utils/addons.py	/^def logging(model, features, labels, spec, params):$/;"	kind:function	line:183
+loss	../tsaplay/utils/tf.py	/^        loss = loss_fn(labels=labels, logits=logits)$/;"	kind:variable	line:334
+lower_corpus	../tsaplay/utils/data.py	/^def lower_corpus(corpus):$/;"	kind:function	line:168
+lstm.py	../tsaplay/models/lstm.py	1;"	kind:file	line:1
+lstm_cell	../tsaplay/models/lstm.py	/^from tsaplay.utils.tf import lstm_cell, resolve_optimizer$/;"	kind:namespace	line:4
+lstm_cell	../tsaplay/models/td_lstm.py	/^from tsaplay.utils.tf import sparse_reverse, lstm_cell, resolve_optimizer$/;"	kind:namespace	line:4
+lstm_cell	../tsaplay/utils/tf.py	/^def lstm_cell(**params):$/;"	kind:function	line:314
+main	../generate_boxplots.py	/^def main():$/;"	kind:function	line:878
+main	../submit_job.py	/^def main():$/;"	kind:function	line:257
+main	../tsaplay/scripts/client.py	/^def main():$/;"	kind:function	line:79
+main	../tsaplay/scripts/import_dataset.py	/^def main():$/;"	kind:function	line:129
+main	../tsaplay/task.py	/^def main():$/;"	kind:function	line:365
+make_default_run_cofig	../tsaplay/experiments.py	/^    def make_default_run_cofig(cls, custom_config=None, **kwargs):$/;"	kind:member	line:138
+make_dense_features	../tsaplay/utils/tf.py	/^def make_dense_features(features):$/;"	kind:function	line:131
+make_estimator_spec	../tsaplay/models/tsa_model.py	/^    def make_estimator_spec(cls, mode, logits, optimizer, loss):$/;"	kind:member	line:101
+make_feature_provider	../tsaplay/task.py	/^def make_feature_provider(args):$/;"	kind:function	line:229
+make_input_fn	../tsaplay/utils/tf.py	/^def make_input_fn(mode):$/;"	kind:function	line:149
+make_tensor_proto	../tsaplay/scripts/client.py	/^from tensorflow.contrib.util import make_tensor_proto  # pylint: disable=E0611$/;"	kind:namespace	line:6
+make_tf_examples	../tsaplay/utils/tf.py	/^def make_tf_examples(string_features, int_features, labels):$/;"	kind:function	line:560
+makedirs	../generate_boxplots.py	/^from os import path, makedirs, getcwd, environ$/;"	kind:namespace	line:4
+makedirs	../tsaplay/constants.py	/^from os import makedirs$/;"	kind:namespace	line:1
+makedirs	../tsaplay/datasets.py	/^from os import makedirs$/;"	kind:namespace	line:1
+makedirs	../tsaplay/embeddings.py	/^from os import makedirs$/;"	kind:namespace	line:1
+makedirs	../tsaplay/experiments.py	/^from os import listdir, makedirs, sys$/;"	kind:namespace	line:1
+makedirs	../tsaplay/features.py	/^from os import makedirs, walk$/;"	kind:namespace	line:2
+makedirs	../tsaplay/scripts/import_dataset.py	/^from os import makedirs$/;"	kind:namespace	line:5
+makedirs	../tsaplay/utils/addons.py	/^from os import makedirs$/;"	kind:namespace	line:3
+makedirs	../tsaplay/utils/io.py	/^from os import listdir, system, makedirs, environ$/;"	kind:namespace	line:12
+mask	../tsaplay/utils/tf.py	/^    mask = tf.sequence_mask(lengths=seq_lengths, maxlen=max_seq_len)$/;"	kind:variable	line:391
+masked_softmax	../tsaplay/utils/tf.py	/^def masked_softmax(logits, mask):$/;"	kind:function	line:279
+math	../tsaplay/utils/io.py	/^import math$/;"	kind:namespace	line:4
+matplotlib	../generate_boxplots.py	/^import matplotlib$/;"	kind:namespace	line:12
+matplotlib	../generate_boxplots.py	/^import matplotlib.pyplot as plt$/;"	kind:namespace	line:15
+matplotlib	../generate_boxplots.py	/^import matplotlib.text as mtext$/;"	kind:namespace	line:17
+matplotlib	../tsaplay/hooks.py	/^import matplotlib$/;"	kind:namespace	line:8
+matplotlib	../tsaplay/hooks.py	/^import matplotlib.pyplot as plt  # noqa pylint: disable=C0411,C0412,C0413$/;"	kind:namespace	line:31
+matplotlib	../tsaplay/utils/draw.py	/^import matplotlib$/;"	kind:namespace	line:7
+matplotlib	../tsaplay/utils/draw.py	/^import matplotlib.pyplot as plt$/;"	kind:namespace	line:15
+max_seq_len	../tsaplay/utils/tf.py	/^    max_seq_len = tf.shape(h_states)[1]$/;"	kind:variable	line:352
+maximum_iter	../tsaplay/utils/addons.py	/^                maximum_iter=($/;"	kind:variable	line:380
+md5	../tsaplay/utils/data.py	/^from hashlib import md5$/;"	kind:namespace	line:8
+mem_net.py	../tsaplay/models/mem_net.py	1;"	kind:file	line:1
+memnet_content_attn_unit	../tsaplay/models/mem_net.py	/^def memnet_content_attn_unit($/;"	kind:function	line:278
+merge_corpora	../tsaplay/utils/data.py	/^def merge_corpora(*corpora):$/;"	kind:function	line:157
+metadata	../tsaplay/utils/addons.py	/^def metadata(model, features, labels, spec, params):$/;"	kind:function	line:425
+metric	../tsaplay/utils/addons.py	/^                metric=metric,$/;"	kind:variable	line:365
+metric_variable	../tsaplay/utils/tf.py	/^def metric_variable(shape, dtype, validate_shape=True, name=None):$/;"	kind:function	line:624
+minidom	../external/Pontiki2014-Laptops/parser.py	/^from xml.dom import minidom$/;"	kind:namespace	line:1
+minidom	../external/Pontiki2014-Restaurants/parser.py	/^from xml.dom import minidom$/;"	kind:namespace	line:1
+minimum_iter	../tsaplay/utils/addons.py	/^                minimum_iter=($/;"	kind:variable	line:375
+mkdtemp	../tsaplay/utils/io.py	/^from tempfile import mkdtemp$/;"	kind:namespace	line:24
+mode	../tsaplay/utils/addons.py	/^                mode=ModeKeys.EVAL,$/;"	kind:variable	line:273
+mode	../tsaplay/utils/addons.py	/^                mode=ModeKeys.TRAIN,$/;"	kind:variable	line:249
+model_fn	../tsaplay/models/ian.py	/^    def model_fn(self, features, labels, mode, params):$/;"	kind:member	line:55
+model_fn	../tsaplay/models/lcr_rot.py	/^    def model_fn(self, features, labels, mode, params):$/;"	kind:member	line:43
+model_fn	../tsaplay/models/lstm.py	/^    def model_fn(self, features, labels, mode, params):$/;"	kind:member	line:48
+model_fn	../tsaplay/models/mem_net.py	/^    def model_fn(self, features, labels, mode, params):$/;"	kind:member	line:51
+model_fn	../tsaplay/models/ram.py	/^    def model_fn(self, features, labels, mode, params):$/;"	kind:member	line:85
+model_fn	../tsaplay/models/tc_lstm.py	/^    def model_fn(self, features, labels, mode, params):$/;"	kind:member	line:48
+model_fn	../tsaplay/models/td_lstm.py	/^    def model_fn(self, features, labels, mode, params):$/;"	kind:member	line:42
+model_fn	../tsaplay/models/tsa_model.py	/^    def model_fn(self, features, labels, mode, params):$/;"	kind:member	line:82
+mpl_table	../tsaplay/utils/draw.py	/^    mpl_table = ax.table($/;"	kind:variable	line:242
+mtext	../generate_boxplots.py	/^import matplotlib.text as mtext$/;"	kind:namespace	line:17
+n_hops	../tsaplay/utils/draw.py	/^    n_hops = len(data_arr)$/;"	kind:variable	line:238
+nakov_parser	../external/Nakov2016/parser.py	/^def nakov_parser(path):$/;"	kind:function	line:4
+name	../setup.py	/^    name="tsaplay",$/;"	kind:variable	line:7
+name	../tsaplay/datasets.py	/^    def name(self):$/;"	kind:member	line:49
+name	../tsaplay/embeddings.py	/^    def name(self):$/;"	kind:member	line:46
+name	../tsaplay/features.py	/^    def name(self):$/;"	kind:member	line:86
+name	../tsaplay/models/tsa_model.py	/^    def name(self):$/;"	kind:member	line:62
+name	../tsaplay/utils/addons.py	/^                name="acc_op",$/;"	kind:variable	line:224
+name	../tsaplay/utils/tf.py	/^        name="bias",$/;"	kind:variable	line:360
+name	../tsaplay/utils/tf.py	/^        name="weights",$/;"	kind:variable	line:354
+new_init_fn	../tsaplay/utils/tf.py	/^    def new_init_fn(scaffold, sess):$/;"	kind:function	line:226
+no_currency	../tsaplay/utils/filters.py	/^no_currency = partial(_no_pipe_filter, attrs=["!is_currency"])$/;"	kind:variable	line:116
+no_emails	../tsaplay/utils/filters.py	/^no_emails = partial(_no_pipe_filter, attrs=["!like_email"])$/;"	kind:variable	line:115
+no_numbers	../tsaplay/utils/filters.py	/^no_numbers = partial(_no_pipe_filter, attrs=["!like_num", "is_alpha"])$/;"	kind:variable	line:113
+no_proper_nouns	../tsaplay/utils/filters.py	/^no_proper_nouns = partial(_pos_pipe_filter, tags=["!PROPN"])$/;"	kind:variable	line:121
+no_unknown_pos	../tsaplay/utils/filters.py	/^no_unknown_pos = partial(_pos_pipe_filter, tags=["!X", "!XX"])$/;"	kind:variable	line:120
+no_urls	../tsaplay/utils/filters.py	/^no_urls = partial(_no_pipe_filter, attrs=["!like_url"])$/;"	kind:variable	line:114
+noqa	../tests/context.py	/^import tsaplay  # noqa$/;"	kind:namespace	line:8
+noqa	../tsaplay/hooks.py	/^from tensorflow.estimator import ModeKeys  # noqa$/;"	kind:namespace	line:12
+noqa	../tsaplay/hooks.py	/^from tensorflow.train import SessionRunHook, SessionRunArgs  # noqa$/;"	kind:namespace	line:11
+noqa	../tsaplay/hooks.py	/^import matplotlib.pyplot as plt  # noqa pylint: disable=C0411,C0412,C0413$/;"	kind:namespace	line:31
+noqa	../tsaplay/models/ian.py	/^from tensorflow.estimator import ModeKeys  # noqa$/;"	kind:namespace	line:4
+noqa	../tsaplay/utils/comet.py	/^from tensorflow.estimator import ModeKeys  # noqa$/;"	kind:namespace	line:6
+noqa	../tsaplay/utils/io.py	/^from tensorflow.python_io import TFRecordWriter  # noqa$/;"	kind:namespace	line:31
+noqa	../tsaplay/utils/tf.py	/^from tensorflow.estimator import ModeKeys  # noqa$/;"	kind:namespace	line:8
+normalize	../tsaplay/utils/draw.py	/^from sklearn.preprocessing import normalize$/;"	kind:namespace	line:5
+normpath	../tsaplay/scripts/import_dataset.py	/^from os.path import join, exists, normpath, basename$/;"	kind:namespace	line:6
+np	../generate_boxplots.py	/^import numpy as np$/;"	kind:namespace	line:11
+np	../tsaplay/constants.py	/^import numpy as np$/;"	kind:namespace	line:6
+np	../tsaplay/embeddings.py	/^import numpy as np$/;"	kind:namespace	line:3
+np	../tsaplay/features.py	/^import numpy as np$/;"	kind:namespace	line:10
+np	../tsaplay/hooks.py	/^import numpy as np$/;"	kind:namespace	line:9
+np	../tsaplay/utils/data.py	/^import numpy as np$/;"	kind:namespace	line:11
+np	../tsaplay/utils/draw.py	/^import numpy as np$/;"	kind:namespace	line:4
+np	../tsaplay/utils/io.py	/^import numpy as np$/;"	kind:namespace	line:28
+np	../tsaplay/utils/tf.py	/^import numpy as np$/;"	kind:namespace	line:6
+nvidia_cuda_prof_tools_path_fix	../tsaplay/task.py	/^def nvidia_cuda_prof_tools_path_fix():$/;"	kind:function	line:308
+only	../tsaplay/utils/addons.py	/^def only(modes):$/;"	kind:function	line:73
+only_adjectives	../tsaplay/utils/filters.py	/^only_adjectives = partial(_pos_pipe_filter, tags=["ADJ"])$/;"	kind:variable	line:123
+only_ascii	../tsaplay/utils/filters.py	/^only_ascii = partial(_no_pipe_filter, attrs=["is_ascii"])$/;"	kind:variable	line:117
+ops	../tsaplay/utils/tf.py	/^from tensorflow.python.framework import ops$/;"	kind:namespace	line:18
+os	../tests/context.py	/^import os$/;"	kind:namespace	line:1
+packages	../setup.py	/^    packages=find_packages(),$/;"	kind:variable	line:15
+parse_args	../tsaplay/scripts/client.py	/^def parse_args():$/;"	kind:function	line:16
+parse_batch_file	../tsaplay/task.py	/^def parse_batch_file(batch_file_path, defaults=None):$/;"	kind:function	line:316
+parse_task_args	../submit_job.py	/^def parse_task_args(task_args):$/;"	kind:function	line:162
+parse_tf_example	../tsaplay/utils/tf.py	/^def parse_tf_example(example):$/;"	kind:function	line:106
+parser.py	../external/DebugDataset/parser.py	1;"	kind:file	line:1
+parser.py	../external/DebugDatasetV2/parser.py	1;"	kind:file	line:1
+parser.py	../external/Dong2014/parser.py	1;"	kind:file	line:1
+parser.py	../external/Nakov2016/parser.py	1;"	kind:file	line:1
+parser.py	../external/Pontiki2014-Laptops/parser.py	1;"	kind:file	line:1
+parser.py	../external/Pontiki2014-Restaurants/parser.py	1;"	kind:file	line:1
+parser.py	../external/Rosenthal2015/parser.py	1;"	kind:file	line:1
+parser.py	../external/Saeidi2016/parser.py	1;"	kind:file	line:1
+parser.py	../external/Wang2017/parser.py	1;"	kind:file	line:1
+parser.py	../external/Xue2018-Laptops-Hard/parser.py	1;"	kind:file	line:1
+parser.py	../external/Xue2018-Laptops/parser.py	1;"	kind:file	line:1
+parser.py	../external/Xue2018-Restaurants-Hard/parser.py	1;"	kind:file	line:1
+parser.py	../external/Xue2018-Restaurants/parser.py	1;"	kind:file	line:1
+parsing_fn_predicate	../tsaplay/scripts/import_dataset.py	/^def parsing_fn_predicate(module_member):$/;"	kind:function	line:85
+partial	../tsaplay/constants.py	/^from functools import partial$/;"	kind:namespace	line:3
+partial	../tsaplay/features.py	/^from functools import partial$/;"	kind:namespace	line:3
+partial	../tsaplay/utils/addons.py	/^from functools import wraps, partial$/;"	kind:namespace	line:4
+partial	../tsaplay/utils/data.py	/^from functools import partial, wraps$/;"	kind:namespace	line:9
+partial	../tsaplay/utils/filters.py	/^from functools import partial$/;"	kind:namespace	line:2
+partition_sentences	../tsaplay/utils/data.py	/^def partition_sentences(sentences, targets, offsets=None):$/;"	kind:function	line:210
+partitioner_num_shards	../tsaplay/utils/tf.py	/^def partitioner_num_shards(vocab_size, max_shards=MAX_EMBEDDING_SHARDS):$/;"	kind:function	line:595
+path	../generate_boxplots.py	/^from os import path, makedirs, getcwd, environ$/;"	kind:namespace	line:4
+patience	../tsaplay/utils/addons.py	/^                patience=($/;"	kind:variable	line:372
+pd	../generate_boxplots.py	/^import pandas as pd$/;"	kind:namespace	line:18
+pd	../tsaplay/utils/draw.py	/^import pandas as pd$/;"	kind:namespace	line:3
+pformat	../tsaplay/utils/addons.py	/^from pprint import pformat$/;"	kind:namespace	line:5
+pickle	../tsaplay/utils/io.py	/^import pickle$/;"	kind:namespace	line:3
+pickle_file	../generate_boxplots.py	/^    from tsaplay.utils.io import pickle_file, unpickle_file, args_to_dict$/;"	kind:namespace	line:24
+pickle_file	../tsaplay/scripts/import_dataset.py	/^from tsaplay.utils.io import pickle_file, search_dir, cprnt$/;"	kind:namespace	line:7
+pickle_file	../tsaplay/utils/draw.py	/^from tsaplay.utils.io import get_image_from_plt, pickle_file, platform$/;"	kind:namespace	line:11
+pickle_file	../tsaplay/utils/io.py	/^def pickle_file(path, data):$/;"	kind:function	line:183
+pipe_docs	../tsaplay/utils/data.py	/^from tsaplay.utils.spacy import pipe_docs, word_counts, pipe_vocab$/;"	kind:namespace	line:18
+pipe_docs	../tsaplay/utils/spacy.py	/^def pipe_docs(docs, nlp=None, pbar_desc=None, **kwargs):$/;"	kind:function	line:9
+pipe_vocab	../tsaplay/utils/data.py	/^from tsaplay.utils.spacy import pipe_docs, word_counts, pipe_vocab$/;"	kind:namespace	line:18
+pipe_vocab	../tsaplay/utils/spacy.py	/^def pipe_vocab(vocab, pipes, **kwargs):$/;"	kind:function	line:33
+pkg	../tsaplay/constants.py	/^import pkg_resources as pkg$/;"	kind:namespace	line:5
+pkg	../tsaplay/task.py	/^import pkg_resources as pkg$/;"	kind:namespace	line:9
+platform	../tsaplay/utils/draw.py	/^from tsaplay.utils.io import get_image_from_plt, pickle_file, platform$/;"	kind:namespace	line:11
+platform	../tsaplay/utils/io.py	/^def platform():$/;"	kind:function	line:134
+plot_distributions	../tsaplay/utils/comet.py	/^from tsaplay.utils.draw import plot_distributions, draw_venn$/;"	kind:namespace	line:9
+plot_distributions	../tsaplay/utils/draw.py	/^def plot_distributions(stats, mode):$/;"	kind:function	line:283
+plt	../generate_boxplots.py	/^import matplotlib.pyplot as plt$/;"	kind:namespace	line:15
+plt	../tsaplay/hooks.py	/^import matplotlib.pyplot as plt  # noqa pylint: disable=C0411,C0412,C0413$/;"	kind:namespace	line:31
+plt	../tsaplay/utils/draw.py	/^import matplotlib.pyplot as plt$/;"	kind:namespace	line:15
+pontiki_parser	../external/Pontiki2014-Laptops/parser.py	/^def pontiki_parser(path):$/;"	kind:function	line:4
+pontiki_parser	../external/Pontiki2014-Restaurants/parser.py	/^def pontiki_parser(path):$/;"	kind:function	line:4
+pos_set_one	../tsaplay/utils/filters.py	/^pos_set_one = partial(_pos_pipe_filter, tags=["ADJ", "ADV", "NOUN", "VERB"])$/;"	kind:variable	line:122
+pprint	../tsaplay/utils/io.py	/^import pprint$/;"	kind:namespace	line:7
+prediction_outputs	../tsaplay/utils/addons.py	/^def prediction_outputs(model, features, labels, spec, params):$/;"	kind:function	line:101
+prediction_service_pb2_grpc	../tsaplay/scripts/client.py	/^from tensorflow_serving.apis import prediction_service_pb2_grpc$/;"	kind:namespace	line:11
+predictions	../tsaplay/utils/addons.py	/^                predictions=spec.predictions["class_ids"],$/;"	kind:variable	line:223
+prep_dataset	../tsaplay/utils/tf.py	/^def prep_dataset(tfrecords, params, processing_fn, mode):$/;"	kind:function	line:180
+prepare	../tsaplay/utils/addons.py	/^prepare = partial(attach, order="PRE")  # pylint: disable=C0103$/;"	kind:variable	line:70
+prepare_job_assets	../submit_job.py	/^def prepare_job_assets(args):$/;"	kind:function	line:211
+pretty_print_decimal	../tsaplay/utils/draw.py	/^    def pretty_print_decimal(value, precision=4):$/;"	kind:function	line:231
+process_dataset	../tsaplay/utils/tf.py	/^                def process_dataset(features, labels):$/;"	kind:function	line:163
+processing_fn	../tsaplay/models/ian.py	/^    def processing_fn(cls, features):$/;"	kind:member	line:42
+processing_fn	../tsaplay/models/lstm.py	/^    def processing_fn(cls, features):$/;"	kind:member	line:27
+processing_fn	../tsaplay/models/mem_net.py	/^    def processing_fn(cls, features):$/;"	kind:member	line:37
+processing_fn	../tsaplay/models/ram.py	/^    def processing_fn(cls, features):$/;"	kind:member	line:61
+processing_fn	../tsaplay/models/tc_lstm.py	/^    def processing_fn(cls, features):$/;"	kind:member	line:32
+processing_fn	../tsaplay/models/td_lstm.py	/^    def processing_fn(cls, features):$/;"	kind:member	line:27
+processing_fn	../tsaplay/models/tsa_model.py	/^    def processing_fn(cls, features):$/;"	kind:member	line:78
+pylint	../tsaplay/hooks.py	/^import matplotlib.pyplot as plt  # noqa pylint: disable=C0411,C0412,C0413$/;"	kind:namespace	line:31
+pylint	../tsaplay/models/lcr_rot.py	/^from tensorflow.contrib.rnn import (  # pylint: disable=E0611$/;"	kind:namespace	line:3
+pylint	../tsaplay/models/ram.py	/^from tensorflow.contrib.rnn import (  # pylint: disable=E0611$/;"	kind:namespace	line:3
+pylint	../tsaplay/models/tsa_model.py	/^from tensorflow.estimator import (  # pylint: disable=E0401$/;"	kind:namespace	line:5
+pylint	../tsaplay/models/tsa_model.py	/^from tensorflow.estimator.export import (  # pylint: disable=E0401$/;"	kind:namespace	line:11
+pylint	../tsaplay/models/tsa_model.py	/^from tensorflow.python import debug as tf_debug  # pylint: disable=E0611$/;"	kind:namespace	line:4
+pylint	../tsaplay/scripts/client.py	/^from tensorflow.contrib.util import make_tensor_proto  # pylint: disable=E0611$/;"	kind:namespace	line:6
+pylint	../tsaplay/task.py	/^import comet_ml  # pylint: disable=W0611$/;"	kind:namespace	line:10
+pylint	../tsaplay/utils/addons.py	/^from tensorflow.contrib.estimator import (  # pylint: disable=E0611$/;"	kind:namespace	line:11
+pylint	../tsaplay/utils/addons.py	/^from tensorflow.estimator import ModeKeys  # pylint: disable=E0401$/;"	kind:namespace	line:7
+pylint	../tsaplay/utils/addons.py	/^from tensorflow.estimator.export import (  # pylint: disable=E0401$/;"	kind:namespace	line:15
+pylint	../tsaplay/utils/addons.py	/^from tensorflow.saved_model.signature_constants import (  # pylint: disable=E0401$/;"	kind:namespace	line:8
+pylint	../tsaplay/utils/io.py	/^from tensorflow.python.client.timeline import Timeline  # pylint: disable=E0611$/;"	kind:namespace	line:30
+pytest	../tests/utils_test.py	/^import pytest$/;"	kind:namespace	line:1
+ram.py	../tsaplay/models/ram.py	1;"	kind:file	line:1
+ram_attn_unit	../tsaplay/models/ram.py	/^def ram_attn_unit(seq_lens, attn_focus, weight_dim, w_att, b_att):$/;"	kind:function	line:339
+re	../generate_boxplots.py	/^import re$/;"	kind:namespace	line:5
+re	../tsaplay/features.py	/^import re$/;"	kind:namespace	line:9
+re	../tsaplay/hooks.py	/^import re$/;"	kind:namespace	line:2
+re	../tsaplay/utils/io.py	/^import re$/;"	kind:namespace	line:6
+re_distribute_counts	../tsaplay/utils/data.py	/^def re_distribute_counts(labels, target_dists):$/;"	kind:function	line:66
+read_csv	../tsaplay/utils/io.py	/^def read_csv(path, _format=None):$/;"	kind:function	line:225
+read_vocab_file	../tsaplay/utils/io.py	/^def read_vocab_file(path):$/;"	kind:function	line:367
+redirect_stdout	../tsaplay/utils/data.py	/^from contextlib import redirect_stdout$/;"	kind:namespace	line:1
+remove	../submit_job.py	/^from os import system, remove$/;"	kind:namespace	line:3
+render_mpl_table	../tsaplay/utils/draw.py	/^def render_mpl_table($/;"	kind:function	line:213
+resample_data_dict	../tsaplay/utils/data.py	/^def resample_data_dict(data_dict, target_dists):$/;"	kind:function	line:101
+resolve_frequency_steps	../tsaplay/utils/io.py	/^def resolve_frequency_steps(freq, epochs=None, epoch_steps=None, default=None):$/;"	kind:function	line:96
+resolve_optimizer	../tsaplay/models/lstm.py	/^from tsaplay.utils.tf import lstm_cell, resolve_optimizer$/;"	kind:namespace	line:4
+resolve_optimizer	../tsaplay/models/td_lstm.py	/^from tsaplay.utils.tf import sparse_reverse, lstm_cell, resolve_optimizer$/;"	kind:namespace	line:4
+resolve_optimizer	../tsaplay/utils/tf.py	/^def resolve_optimizer(key):$/;"	kind:function	line:80
+restart_tf_serve_container	../tsaplay/utils/io.py	/^def restart_tf_serve_container():$/;"	kind:function	line:166
+rmtree	../tsaplay/experiments.py	/^from shutil import rmtree$/;"	kind:namespace	line:3
+rmtree	../tsaplay/scripts/import_dataset.py	/^from shutil import rmtree$/;"	kind:namespace	line:4
+rmtree	../tsaplay/utils/io.py	/^from shutil import rmtree, copytree, copy as _copy, ignore_patterns$/;"	kind:namespace	line:25
+rosenthal_parser	../external/Rosenthal2015/parser.py	/^def rosenthal_parser(path):$/;"	kind:function	line:4
+run	../tsaplay/experiments.py	/^    def run(self, job, **kwargs):$/;"	kind:member	line:51
+run_every_steps	../tsaplay/utils/addons.py	/^                run_every_steps=($/;"	kind:variable	line:367
+run_experiment	../tsaplay/task.py	/^def run_experiment(args, experiment_index=None):$/;"	kind:function	line:246
+run_lookups	../tsaplay/utils/tf.py	/^def run_lookups(fetch_dict, metadata_path=None, eager=False):$/;"	kind:function	line:533
+run_next_experiment	../tsaplay/task.py	/^def run_next_experiment(batch_file_path, job_dir=None, defaults=None):$/;"	kind:function	line:337
+saeidi_parser	../external/Saeidi2016/parser.py	/^def saeidi_parser(path):$/;"	kind:function	line:4
+sandbox	../submit_job.py	/^from setuptools import sandbox$/;"	kind:namespace	line:6
+save_plot	../generate_boxplots.py	/^def save_plot(plot, model, plot_metric, **kwargs):$/;"	kind:function	line:234
+scaffold_init_fn_on_spec	../tsaplay/utils/comet.py	/^from tsaplay.utils.tf import scaffold_init_fn_on_spec$/;"	kind:namespace	line:7
+scaffold_init_fn_on_spec	../tsaplay/utils/tf.py	/^def scaffold_init_fn_on_spec(spec, new_fn):$/;"	kind:function	line:220
+scalars	../tsaplay/utils/addons.py	/^def scalars(model, features, labels, spec, params):$/;"	kind:function	line:312
+search	../tsaplay/utils/data.py	/^from re import search$/;"	kind:namespace	line:3
+search_dir	../submit_job.py	/^from tsaplay.utils.io import search_dir, copy, clean_dirs, args_to_dict, cprnt$/;"	kind:namespace	line:12
+search_dir	../tsaplay/scripts/import_dataset.py	/^from tsaplay.utils.io import pickle_file, search_dir, cprnt$/;"	kind:namespace	line:7
+search_dir	../tsaplay/utils/io.py	/^def search_dir(path, query=None, first=False, kind=None, ci=False):$/;"	kind:function	line:248
+set_params	../tsaplay/models/ian.py	/^    def set_params(self):$/;"	kind:member	line:17
+set_params	../tsaplay/models/lcr_rot.py	/^    def set_params(self):$/;"	kind:member	line:19
+set_params	../tsaplay/models/lstm.py	/^    def set_params(self):$/;"	kind:member	line:9
+set_params	../tsaplay/models/mem_net.py	/^    def set_params(self):$/;"	kind:member	line:17
+set_params	../tsaplay/models/ram.py	/^    def set_params(self):$/;"	kind:member	line:25
+set_params	../tsaplay/models/tc_lstm.py	/^    def set_params(self):$/;"	kind:member	line:14
+set_params	../tsaplay/models/td_lstm.py	/^    def set_params(self):$/;"	kind:member	line:9
+set_params	../tsaplay/models/tsa_model.py	/^    def set_params(self):$/;"	kind:member	line:74
+setup	../setup.py	/^from setuptools import find_packages, setup$/;"	kind:namespace	line:1
+setup.py	../setup.py	1;"	kind:file	line:1
+shade_arr	../tsaplay/utils/draw.py	/^    shade_arr = np.asarray(shade_data) if shade_data is not None else data_arr$/;"	kind:variable	line:237
+shape	../tsaplay/utils/tf.py	/^        shape=[1],$/;"	kind:variable	line:361
+shape	../tsaplay/utils/tf.py	/^        shape=[hidden_units, hidden_units],$/;"	kind:variable	line:355
+sharded_saver	../tsaplay/utils/tf.py	/^def sharded_saver(model_fn):$/;"	kind:function	line:89
+signature	../tsaplay/utils/filters.py	/^from inspect import signature, getmembers$/;"	kind:namespace	line:3
+six	../tsaplay/utils/draw.py	/^import six$/;"	kind:namespace	line:2
+size	../tsaplay/utils/draw.py	/^        size = (np.array(data.shape[::-1]) + np.array([0, 1])) * np.array($/;"	kind:variable	line:225
+sns	../generate_boxplots.py	/^import seaborn as sns$/;"	kind:namespace	line:19
+softmax	../tsaplay/utils/draw.py	/^from scipy.special import softmax$/;"	kind:namespace	line:9
+spacy	../tsaplay/utils/spacy.py	/^import spacy$/;"	kind:namespace	line:3
+spacy.py	../tsaplay/utils/spacy.py	1;"	kind:file	line:1
+sparse_reverse	../tsaplay/models/td_lstm.py	/^from tsaplay.utils.tf import sparse_reverse, lstm_cell, resolve_optimizer$/;"	kind:namespace	line:4
+sparse_reverse	../tsaplay/utils/tf.py	/^def sparse_reverse(sp_input):$/;"	kind:function	line:251
+sparse_sequences_to_dense	../tsaplay/utils/tf.py	/^def sparse_sequences_to_dense(sp_sequences):$/;"	kind:function	line:235
+spec	../tsaplay/utils/addons.py	/^        spec = spec._replace(evaluation_hooks=eval_hooks)$/;"	kind:variable	line:286
+spec	../tsaplay/utils/addons.py	/^        spec = spec._replace(training_hooks=train_hooks)$/;"	kind:variable	line:268
+split_list	../tsaplay/utils/data.py	/^def split_list(data, counts=None, parts=None):$/;"	kind:function	line:225
+split_list	../tsaplay/utils/tf.py	/^from tsaplay.utils.data import zero_norm_labels, split_list$/;"	kind:namespace	line:22
+stack_images	../tsaplay/utils/draw.py	/^def stack_images(images, h_space=10):$/;"	kind:function	line:27
+start_tensorboard	../tsaplay/utils/io.py	/^def start_tensorboard($/;"	kind:function	line:143
+std_metrics	../tsaplay/utils/addons.py	/^        std_metrics = {$/;"	kind:variable	line:220
+steps_per_epoch	../tsaplay/features.py	/^    def steps_per_epoch(self, batch_size):$/;"	kind:member	line:128
+streaming_conf_matrix	../tsaplay/utils/addons.py	/^from tsaplay.utils.tf import streaming_f1_scores, streaming_conf_matrix$/;"	kind:namespace	line:26
+streaming_conf_matrix	../tsaplay/utils/tf.py	/^def streaming_conf_matrix(labels, predictions, num_classes):$/;"	kind:function	line:640
+streaming_f1_scores	../tsaplay/utils/addons.py	/^from tsaplay.utils.tf import streaming_f1_scores, streaming_conf_matrix$/;"	kind:namespace	line:26
+streaming_f1_scores	../tsaplay/utils/tf.py	/^def streaming_f1_scores(labels, predictions, num_classes):$/;"	kind:function	line:656
+stringify	../tsaplay/utils/data.py	/^def stringify(list_element):$/;"	kind:function	line:257
+submit_job	../submit_job.py	/^def submit_job(args):$/;"	kind:function	line:250
+submit_job.py	../submit_job.py	1;"	kind:file	line:1
+subprocess	../tsaplay/utils/io.py	/^import subprocess$/;"	kind:namespace	line:8
+summary_freq	../tsaplay/utils/addons.py	/^                summary_freq=summary_freq,$/;"	kind:variable	line:255
+summary_freq	../tsaplay/utils/addons.py	/^        summary_freq = resolve_frequency_steps($/;"	kind:variable	line:240
+summary_writer	../tsaplay/utils/addons.py	/^                summary_writer=tf.summary.FileWriterCache.get($/;"	kind:variable	line:252
+sys	../tests/context.py	/^import sys$/;"	kind:namespace	line:2
+sys	../tsaplay/experiments.py	/^from os import listdir, makedirs, sys$/;"	kind:namespace	line:1
+sys	../tsaplay/task.py	/^from os import environ, execvpe, sys$/;"	kind:namespace	line:6
+sys	../tsaplay/utils/io.py	/^import sys$/;"	kind:namespace	line:1
+system	../submit_job.py	/^from os import system, remove$/;"	kind:namespace	line:3
+system	../tsaplay/utils/io.py	/^from os import listdir, system, makedirs, environ$/;"	kind:namespace	line:12
+tabulate_attention_value	../tsaplay/utils/draw.py	/^def tabulate_attention_value(phrases, attn_vecs):$/;"	kind:function	line:111
+target_offsets	../tsaplay/utils/data.py	/^def target_offsets(sentences, targets):$/;"	kind:function	line:203
+task.py	../tsaplay/task.py	1;"	kind:file	line:1
+tc_lstm.py	../tsaplay/models/tc_lstm.py	1;"	kind:file	line:1
+td_lstm.py	../tsaplay/models/td_lstm.py	1;"	kind:file	line:1
+tee	../tsaplay/utils/tf.py	/^from itertools import tee, chain$/;"	kind:namespace	line:4
+temp_pngs	../tsaplay/utils/comet.py	/^from tsaplay.utils.io import temp_pngs$/;"	kind:namespace	line:8
+temp_pngs	../tsaplay/utils/io.py	/^def temp_pngs(images, names):$/;"	kind:function	line:265
+template	../tsaplay/utils/addons.py	/^                template=($/;"	kind:variable	line:276
+template	../tsaplay/utils/addons.py	/^                template=console_template,$/;"	kind:variable	line:257
+tensors	../tsaplay/utils/addons.py	/^                tensors=tensors_to_log,$/;"	kind:variable	line:263
+tensors	../tsaplay/utils/addons.py	/^                tensors={**tensors_to_log, "summary": tf.summary.merge_all()},$/;"	kind:variable	line:256
+tensors	../tsaplay/utils/addons.py	/^                tensors={k: v[0] for k, v in spec.eval_metric_ops.items()},$/;"	kind:variable	line:275
+tensors_to_log	../tsaplay/utils/addons.py	/^        tensors_to_log = {$/;"	kind:variable	line:227
+test_corpus	../tsaplay/datasets.py	/^    def test_corpus(self):$/;"	kind:member	line:81
+test_dict	../tsaplay/datasets.py	/^    def test_dict(self):$/;"	kind:member	line:73
+test_dist	../tsaplay/datasets.py	/^    def test_dist(self):$/;"	kind:member	line:89
+test_mytest	../tests/utils_test.py	/^def test_mytest():$/;"	kind:function	line:8
+test_srcdir	../tsaplay/datasets.py	/^    def test_srcdir(self):$/;"	kind:member	line:65
+test_tfrecords	../tsaplay/features.py	/^    def test_tfrecords(self):$/;"	kind:member	line:117
+textwrap	../tsaplay/hooks.py	/^import textwrap$/;"	kind:namespace	line:1
+tf	../tsaplay/hooks.py	/^import tensorflow as tf$/;"	kind:namespace	line:10
+tf	../tsaplay/models/ian.py	/^import tensorflow as tf$/;"	kind:namespace	line:2
+tf	../tsaplay/models/lcr_rot.py	/^import tensorflow as tf$/;"	kind:namespace	line:2
+tf	../tsaplay/models/lstm.py	/^import tensorflow as tf$/;"	kind:namespace	line:2
+tf	../tsaplay/models/mem_net.py	/^import tensorflow as tf$/;"	kind:namespace	line:2
+tf	../tsaplay/models/ram.py	/^import tensorflow as tf$/;"	kind:namespace	line:2
+tf	../tsaplay/models/tc_lstm.py	/^import tensorflow as tf$/;"	kind:namespace	line:2
+tf	../tsaplay/models/td_lstm.py	/^import tensorflow as tf$/;"	kind:namespace	line:2
+tf	../tsaplay/models/tsa_model.py	/^import tensorflow as tf$/;"	kind:namespace	line:3
+tf	../tsaplay/task.py	/^    import tensorflow as tf$/;"	kind:namespace	line:14
+tf	../tsaplay/utils/addons.py	/^            tf=True,$/;"	kind:variable	line:205
+tf	../tsaplay/utils/addons.py	/^            tf=True,$/;"	kind:variable	line:213
+tf	../tsaplay/utils/addons.py	/^import tensorflow as tf$/;"	kind:namespace	line:6
+tf	../tsaplay/utils/comet.py	/^import tensorflow as tf$/;"	kind:namespace	line:5
+tf	../tsaplay/utils/debug.py	/^import tensorflow as tf$/;"	kind:namespace	line:5
+tf	../tsaplay/utils/tf.py	/^import tensorflow as tf$/;"	kind:namespace	line:7
+tf.py	../tsaplay/utils/tf.py	1;"	kind:file	line:1
+tf_class_distribution	../tsaplay/utils/debug.py	/^def tf_class_distribution(labels):$/;"	kind:function	line:9
+tf_debug	../tsaplay/models/tsa_model.py	/^from tensorflow.python import debug as tf_debug  # pylint: disable=E0611$/;"	kind:namespace	line:4
+tf_log	../tsaplay/utils/io.py	/^from tensorflow import logging as tf_log$/;"	kind:namespace	line:32
+tf_string	../tsaplay/scripts/client.py	/^from tensorflow import string as tf_string$/;"	kind:namespace	line:5
+time	../tsaplay/hooks.py	/^import time$/;"	kind:namespace	line:7
+time	../tsaplay/utils/debug.py	/^import time$/;"	kind:namespace	line:1
+timedelta	../tsaplay/utils/debug.py	/^from datetime import timedelta, datetime$/;"	kind:namespace	line:4
+timedelta	../tsaplay/utils/io.py	/^from datetime import datetime, timedelta$/;"	kind:namespace	line:11
+timeit	../tsaplay/task.py	/^from tsaplay.utils.debug import timeit$/;"	kind:namespace	line:16
+timeit	../tsaplay/utils/debug.py	/^def timeit(pre="", post=""):$/;"	kind:function	line:26
+timeit	../tsaplay/utils/tf.py	/^from tsaplay.utils.debug import timeit$/;"	kind:namespace	line:23
+timeline	../tsaplay/utils/addons.py	/^def timeline(model, features, labels, spec, params):$/;"	kind:function	line:411
+tokenize_data	../_debug.py	/^from tsaplay.utils.data import tokenize_data$/;"	kind:namespace	line:4
+tokenize_data	../tsaplay/utils/data.py	/^def tokenize_data(include=None, case_insensitive=None, **data_dicts):$/;"	kind:function	line:294
+tokens_by_assigned_id	../tsaplay/utils/data.py	/^def tokens_by_assigned_id(words, ids, start=None, stop=None, keys=None):$/;"	kind:function	line:400
+tqdm	../tsaplay/utils/data.py	/^from tqdm import tqdm$/;"	kind:namespace	line:10
+tqdm	../tsaplay/utils/spacy.py	/^from tqdm import tqdm$/;"	kind:namespace	line:2
+tqdm	../tsaplay/utils/tf.py	/^from tqdm import tqdm$/;"	kind:namespace	line:5
+traceback	../submit_job.py	/^import traceback$/;"	kind:namespace	line:2
+traceback	../tsaplay/task.py	/^import traceback$/;"	kind:namespace	line:2
+train	../tsaplay/models/tsa_model.py	/^    def train(self, feature_provider, **kwargs):$/;"	kind:member	line:126
+train_and_eval	../tsaplay/models/tsa_model.py	/^    def train_and_eval(self, feature_provider, **kwargs):$/;"	kind:member	line:150
+train_corpus	../tsaplay/datasets.py	/^    def train_corpus(self):$/;"	kind:member	line:77
+train_dict	../tsaplay/datasets.py	/^    def train_dict(self):$/;"	kind:member	line:69
+train_dist	../tsaplay/datasets.py	/^    def train_dist(self):$/;"	kind:member	line:85
+train_hooks	../tsaplay/utils/addons.py	/^        train_hooks = list(spec.training_hooks) or []$/;"	kind:variable	line:246
+train_input_fn	../tsaplay/models/tsa_model.py	/^    def train_input_fn(cls, tfrecords, params):$/;"	kind:member	line:92
+train_srcdir	../tsaplay/datasets.py	/^    def train_srcdir(self):$/;"	kind:member	line:61
+train_tfrecords	../tsaplay/features.py	/^    def train_tfrecords(self):$/;"	kind:member	line:113
+tsa_model.py	../tsaplay/models/tsa_model.py	1;"	kind:file	line:1
+tsaplay	../tests/context.py	/^import tsaplay  # noqa$/;"	kind:namespace	line:8
+uid	../tsaplay/datasets.py	/^    def uid(self):$/;"	kind:member	line:53
+uid	../tsaplay/embeddings.py	/^    def uid(self):$/;"	kind:member	line:50
+uid	../tsaplay/features.py	/^    def uid(self):$/;"	kind:member	line:90
+unpickle_file	../generate_boxplots.py	/^    from tsaplay.utils.io import pickle_file, unpickle_file, args_to_dict$/;"	kind:namespace	line:24
+unpickle_file	../tsaplay/utils/io.py	/^def unpickle_file(path):$/;"	kind:function	line:178
+upload_job_to_gcloud	../submit_job.py	/^def upload_job_to_gcloud(args):$/;"	kind:function	line:222
+url	../setup.py	/^    url="https:\/\/github.com\/SijanC147\/Msc",$/;"	kind:variable	line:11
+utils_test.py	../tests/utils_test.py	1;"	kind:file	line:1
+var_len_concatenate	../tsaplay/models/ram.py	/^def var_len_concatenate(seq_lens, memory, v_target, prev_episode):$/;"	kind:function	line:324
+variable_len_batch_mean	../tsaplay/utils/tf.py	/^def variable_len_batch_mean(input_tensor, seq_lengths, op_name):$/;"	kind:function	line:264
+variable_scope	../tsaplay/utils/tf.py	/^from tensorflow.python.ops import variable_scope$/;"	kind:namespace	line:16
+vectors	../tsaplay/embeddings.py	/^    def vectors(self):$/;"	kind:member	line:74
+venn2	../tsaplay/utils/draw.py	/^from matplotlib_venn import venn2, venn2_unweighted, venn3, venn3_unweighted$/;"	kind:namespace	line:16
+venn2_unweighted	../tsaplay/utils/draw.py	/^from matplotlib_venn import venn2, venn2_unweighted, venn3, venn3_unweighted$/;"	kind:namespace	line:16
+venn3	../tsaplay/utils/draw.py	/^from matplotlib_venn import venn2, venn2_unweighted, venn3, venn3_unweighted$/;"	kind:namespace	line:16
+venn3_unweighted	../tsaplay/utils/draw.py	/^from matplotlib_venn import venn2, venn2_unweighted, venn3, venn3_unweighted$/;"	kind:namespace	line:16
+version	../setup.py	/^    version="0.3.dev0",$/;"	kind:variable	line:8
+vocab	../tsaplay/embeddings.py	/^    def vocab(self):$/;"	kind:member	line:58
+vocab_case_insensitive	../tsaplay/utils/data.py	/^def vocab_case_insensitive(vocab):$/;"	kind:function	line:231
+vocab_data	../tsaplay/features.py	/^    def vocab_data(self):$/;"	kind:member	line:125
+vocab_size	../tsaplay/embeddings.py	/^    def vocab_size(self):$/;"	kind:member	line:62
+walk	../tsaplay/features.py	/^from os import makedirs, walk$/;"	kind:namespace	line:2
+wang_parser	../external/Wang2017/parser.py	/^def wang_parser(path):$/;"	kind:function	line:7
+warn	../tsaplay/features.py	/^from warnings import warn$/;"	kind:namespace	line:4
+warn	../tsaplay/hooks.py	/^from warnings import warn$/;"	kind:namespace	line:5
+warnings	../generate_boxplots.py	/^import warnings$/;"	kind:namespace	line:2
+warnings	../tsaplay/task.py	/^import warnings$/;"	kind:namespace	line:8
+weighted_h_states	../tsaplay/utils/tf.py	/^    weighted_h_states = tf.einsum("Baij,Bajk->Baik", attn_vec, h_states)$/;"	kind:variable	line:400
+weighted_h_states_sum	../tsaplay/utils/tf.py	/^    weighted_h_states_sum = tf.reduce_sum($/;"	kind:variable	line:402
+weights	../tsaplay/utils/tf.py	/^    weights = tf.expand_dims(input=weights, axis=0)$/;"	kind:variable	line:366
+weights	../tsaplay/utils/tf.py	/^    weights = tf.get_variable($/;"	kind:variable	line:353
+weights	../tsaplay/utils/tf.py	/^    weights = tf.reshape($/;"	kind:variable	line:370
+weights	../tsaplay/utils/tf.py	/^    weights = tf.tile($/;"	kind:variable	line:367
+word_counts	../tsaplay/utils/data.py	/^from tsaplay.utils.spacy import pipe_docs, word_counts, pipe_vocab$/;"	kind:namespace	line:18
+word_counts	../tsaplay/utils/spacy.py	/^def word_counts(docs, **kwargs):$/;"	kind:function	line:20
+wrap_parsing_fn	../tsaplay/scripts/import_dataset.py	/^from tsaplay.utils.data import wrap_parsing_fn$/;"	kind:namespace	line:8
+wrap_parsing_fn	../tsaplay/utils/data.py	/^def wrap_parsing_fn(parsing_fn):$/;"	kind:function	line:21
+wrapper	../tsaplay/utils/addons.py	/^        def wrapper(*args, **kwargs):$/;"	kind:function	line:76
+wrapper	../tsaplay/utils/addons.py	/^        def wrapper(self, features, labels, mode, params):$/;"	kind:function	line:38
+wrapper	../tsaplay/utils/comet.py	/^    def wrapper(self, features, labels, mode, params):$/;"	kind:function	line:16
+wrapper	../tsaplay/utils/data.py	/^    def wrapper(path):$/;"	kind:function	line:23
+wrapper	../tsaplay/utils/debug.py	/^        def wrapper(*args, **kw):$/;"	kind:function	line:29
+wrapper	../tsaplay/utils/tf.py	/^    def wrapper(self, features, labels, mode, params):$/;"	kind:function	line:28
+wrapper	../tsaplay/utils/tf.py	/^    def wrapper(self, features, labels, mode, params):$/;"	kind:function	line:91
+wraps	../tsaplay/utils/addons.py	/^from functools import wraps, partial$/;"	kind:namespace	line:4
+wraps	../tsaplay/utils/comet.py	/^from functools import wraps$/;"	kind:namespace	line:4
+wraps	../tsaplay/utils/data.py	/^from functools import partial, wraps$/;"	kind:namespace	line:9
+wraps	../tsaplay/utils/debug.py	/^from functools import wraps$/;"	kind:namespace	line:3
+wraps	../tsaplay/utils/tf.py	/^from functools import wraps$/;"	kind:namespace	line:3
+write_csv	../tsaplay/utils/io.py	/^def write_csv(path, data, header=None):$/;"	kind:function	line:209
+write_gcloud_config	../submit_job.py	/^def write_gcloud_config(args):$/;"	kind:function	line:121
+write_tfrecords	../tsaplay/utils/io.py	/^def write_tfrecords(path, tf_examples, num_shards=TF_RECORD_SHARDS):$/;"	kind:function	line:332
+write_vocab_file	../tsaplay/utils/io.py	/^def write_vocab_file(path, vocab, indices=None):$/;"	kind:function	line:352
+write_zippped_file	../tsaplay/utils/io.py	/^def write_zippped_file(path, data):$/;"	kind:function	line:239
+xue_parser	../external/Xue2018-Laptops-Hard/parser.py	/^def xue_parser(path):$/;"	kind:function	line:4
+xue_parser	../external/Xue2018-Laptops/parser.py	/^def xue_parser(path):$/;"	kind:function	line:4
+xue_parser	../external/Xue2018-Restaurants-Hard/parser.py	/^def xue_parser(path):$/;"	kind:function	line:4
+xue_parser	../external/Xue2018-Restaurants/parser.py	/^def xue_parser(path):$/;"	kind:function	line:4
+zero_norm_labels	../tsaplay/utils/data.py	/^def zero_norm_labels(labels):$/;"	kind:function	line:221
+zero_norm_labels	../tsaplay/utils/tf.py	/^from tsaplay.utils.data import zero_norm_labels, split_list$/;"	kind:namespace	line:22
+zip_attn_snapshots_with_literals	../tsaplay/utils/tf.py	/^def zip_attn_snapshots_with_literals(literals, snapshots, num_layers):$/;"	kind:function	line:441

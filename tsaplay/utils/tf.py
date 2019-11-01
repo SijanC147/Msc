@@ -77,6 +77,12 @@ def embed_sequences(model_fn):
     return wrapper
 
 
+def last_checkpoint_step(model_dir):
+    return tf.train.NewCheckpointReader(
+        tf.train.latest_checkpoint(model_dir)
+    ).get_tensor(tf.GraphKeys.GLOBAL_STEP)
+
+
 def resolve_optimizer(key):
     return {
         "SGD": tf.train.GradientDescentOptimizer,

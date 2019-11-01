@@ -1,9 +1,6 @@
 {
-    "jobId": "reproduction_lstm_laptops_cc840_run09",
-    "labels": {
-        "embedding": "commoncrawl840",
-        "miniter": "150"
-    },
+    "jobId": "some_debug_job_take7",
+    "labels": {},
     "trainingInput": {
         "scaleTier": "CUSTOM",
         "masterType": "standard",
@@ -12,7 +9,7 @@
         "region": "europe-west1",
         "args": [
             "batch",
-            "reproducibility-lstm-cc840.txt",
+            "debug.txt",
             "--new",
             "--nocolor"
         ]
