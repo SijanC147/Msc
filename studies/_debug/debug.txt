@@ -1,5 +1,5 @@
 ## RUN WITH DEFAULTS: 
-default: -cmt T1NrVnn32dXWeOxeQWGArkHwc -wrk debugging 
+#default: -cmt T1NrVnn32dXWeOxeQWGArkHwc -wrk debugging 
 default: -aux logging=true attn_heatmaps=false
 ;default: debug=cli
 default: -mp oov_train=1 oov_buckets=1 oov_fn=uniform[-0.1,0.1]
@@ -9,7 +9,7 @@ default: -mp lstm_hidden_units=5 gru_hidden_units=5 hidden_units=5
 ;default: -rc save_summary_steps=0
 #default: -rc tf_random_seed=1234 
 
--em=commoncrawl-840[corpus] -ds=laptops -m=lstm -mp learning_rate=0.1 -contd=letsseeifthisworks3
+-em=commoncrawl-840[corpus] -ds=laptops -m=lstm -mp learning_rate=0.1 -contd=testcontinuation
 ;-em=commoncrawl-840[corpus] -ds=laptops -m=lstm -mp learning_rate=0.1 -contd=lstm-sgd-cc840-laptops-eagames3
 
 ;-em=commoncrawl-42[corpus] -ds=restaurants[33/33/34] -m=ram -mp n_hops=3 -e 5 -contd=testing_venn_2

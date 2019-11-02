@@ -97,10 +97,15 @@ def sharded_saver(model_fn):
     def wrapper(self, features, labels, mode, params):
         spec = model_fn(self, features, labels, mode, params)
         scaffold = spec.scaffold or tf.train.Scaffold()
+        # checkpoint = tf.train.Checkpoint().restore(
+        #     save_path="/Users/seanbugeja/tsaplay-data/experiments/Lstm/testcontinuation/model.ckpt-407"
+        # )
+        # scaffold._saver = checkpoint
         scaffold._saver = tf.train.Saver(  # pylint: disable=W0212
             sharded=True,
             max_to_keep=self.run_config.keep_checkpoint_max,
             keep_checkpoint_every_n_hours=self.run_config.keep_checkpoint_every_n_hours,
+            # filename="/Users/seanbugeja/tsaplay-data/experiments/Lstm/testcontinuation/model.ckpt-407.index",
         )
         spec = spec._replace(scaffold=scaffold)
 
