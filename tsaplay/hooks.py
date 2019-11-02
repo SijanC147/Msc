@@ -74,7 +74,6 @@ class ConsoleLoggerHook(SessionRunHook):
         epoch_steps=None,
         summary_writer=None,
         summary_freq=None,
-        **kwargs
     ):
         self.mode = mode
         self.tensors = tensors
@@ -82,8 +81,6 @@ class ConsoleLoggerHook(SessionRunHook):
         self.epoch_steps = epoch_steps
         self.every_n_iter = every_n_iter or epoch_steps
         self.summary_freq = summary_freq or self.every_n_iter
-        # self.model_dir = kwargs.get("model_dir")
-        # self._req_stop = False
         self._summary_writer = summary_writer
         self._start_time = None
         self._gs = None
@@ -91,13 +88,8 @@ class ConsoleLoggerHook(SessionRunHook):
     def begin(self):
         self._gs = 0
         self._start_time = time.time()
-        # if self.mode == ModeKeys.EVAL:
-        # last_step = last_checkpoint_step(self.model_dir)
-        # self._req_stop = last_step % self.epoch_steps != 0
 
-    def before_run(self, run_context):
-        # if self.mode == ModeKeys.EVAL and self._req_stop:
-        #     run_context.request_stop()
+    def before_run(self, _):
         summary_ops = self.tensors.get("summary", None)
         this_step = self._gs + 1
         fetches = {
@@ -116,7 +108,7 @@ class ConsoleLoggerHook(SessionRunHook):
         }
         return SessionRunArgs(fetches=fetches)
 
-    def after_run(self, run_context, run_values):
+    def after_run(self, _, run_values):
         global_step = run_values.results.pop("global_step")[0]
         if self.mode == ModeKeys.TRAIN:
             self._gs = global_step
@@ -183,18 +175,17 @@ class LogProgressToComet(SessionRunHook):
 
     def begin(self):
         if self.mode == ModeKeys.TRAIN:
-            self.comet.log_other(
-                "START", str(datetime.timestamp(datetime.now()))
-            )
+            _ts = datetime.timestamp(datetime.now())
+            self.comet.log_other("START", str(_ts), include_context=False)
 
-    def before_run(self, run_context):
+    def before_run(self, _):
         return SessionRunArgs(
             fetches={
                 "global_step": tf.get_collection(tf.GraphKeys.GLOBAL_STEP)
             }
         )
 
-    def after_run(self, run_context, run_values):
+    def after_run(self, _, run_values):
         global_step = run_values.results["global_step"][0]
         self.comet.set_step(global_step)
         if self.epoch_steps:
@@ -206,15 +197,15 @@ class LogProgressToComet(SessionRunHook):
 
     def end(self, session):
         global_step = session.run(tf.train.get_global_step())
-        if self.mode == ModeKeys.TRAIN:
-            self.comet.log_other(
-                "END", str(datetime.timestamp(datetime.now()))
-            )
         if self.epoch_steps:
             epoch = ceil(global_step / self.epoch_steps)
             self.comet.log_metric("epoch", epoch, include_context=False)
             if global_step % self.epoch_steps == 0:
                 self.comet.log_epoch_end(epoch)
+        if self.mode == ModeKeys.TRAIN:
+            _ts = datetime.timestamp(datetime.now())
+            self.comet.log_other("END", str(_ts), include_context=False)
+            self.comet.end()
 
 
 class LogHistogramsToComet(SessionRunHook):
@@ -498,7 +489,7 @@ class MetadataHook(SessionRunHook):
                 "Global step should be created to use ProfilerHook."
             )
 
-    def before_run(self, run_context):
+    def before_run(self, _):
         requests = {"global_step": self._global_step_tensor}
         if self._freq != "once":
             self._request_summary = self._counter % self._freq == 0
@@ -512,7 +503,7 @@ class MetadataHook(SessionRunHook):
 
         return SessionRunArgs(requests, options=options)  # noqa
 
-    def after_run(self, run_context, run_values):
+    def after_run(self, _, run_values):
         global_step = run_values.results["global_step"]
         if self._request_summary:
             self._request_summary = False
