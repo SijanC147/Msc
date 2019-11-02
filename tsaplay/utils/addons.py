@@ -27,12 +27,10 @@ from tsaplay.hooks import (
 from tsaplay.utils.tf import streaming_f1_scores, streaming_conf_matrix
 from tsaplay.utils.io import (
     extract_config_subset,
-    resolve_frequency_steps,
     resolve_summary_step_freq,
     str_snippet,
     cprnt,
 )
-from tsaplay.constants import SAVE_SUMMARY_STEPS
 
 
 def attach(addons, modes=None, order="POST"):
@@ -337,12 +335,6 @@ def logging(model, features, labels, spec, params):
             + "duration: {duration:.2f}s"
             + "sec/step: {sec_per_step:.2f}s step/sec: {step_per_sec:.2f}",
         )
-        # summary_freq = resolve_frequency_steps(
-        #     freq=config.get("summary_freq"),
-        #     epochs=params.get("epochs"),
-        #     epoch_steps=params["epoch_steps"],
-        #     default=SAVE_SUMMARY_STEPS,
-        # )
         summary_step_freq = resolve_summary_step_freq(
             config=config,
             epochs=params.get("epochs"),
@@ -412,9 +404,6 @@ def scalars(model, features, labels, spec, params):
 
 @only(["TRAIN", "EVAL"])
 def metadata(model, features, labels, spec, params):
-    # summary_steps = (
-    #     model.run_config.save_summary_steps or params["epoch_steps"]
-    # )
     summary_step_freq = resolve_summary_step_freq(
         config_objs=[params, model.aux_config],
         keywords=["logging", "metadata"],
@@ -452,16 +441,6 @@ def metadata(model, features, labels, spec, params):
 
 @only(["TRAIN"])
 def histograms(model, features, labels, spec, params):
-    # config = extract_config_subset(
-    #     config_objs=[params, model.aux_config],
-    #     keywords=["logging", "histograms"],
-    # )
-    # summary_freq = resolve_frequency_steps(
-    #     freq=config.get("summary_freq"),
-    #     epochs=params.get("epochs"),
-    #     epoch_steps=params["epoch_steps"],
-    #     default=SAVE_SUMMARY_STEPS,
-    # )
     summary_step_freq = resolve_summary_step_freq(
         config_objs=[params, model.aux_config],
         keywords=["logging", "histograms"],
@@ -488,10 +467,6 @@ def histograms(model, features, labels, spec, params):
 
 @only(["TRAIN"])
 def timeline(model, features, labels, spec, params):
-    # config = extract_config_subset(
-    #     config_objs=[params, model.aux_config],
-    #     keywords=["logging", "timeline"],
-    # )
     summary_step_freq = resolve_summary_step_freq(
         config_objs=[params, model.aux_config],
         keywords=["logging", "timeline"],

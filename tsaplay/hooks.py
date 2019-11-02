@@ -2,7 +2,7 @@ import textwrap
 import re
 import itertools
 import os
-from os import path, environ
+from os import path
 from math import ceil
 from warnings import warn
 from datetime import datetime
@@ -54,13 +54,15 @@ class EpochCheckpointListener(CheckpointSaverListener):
                     for fname in tf.gfile.ListDirectory(dir_str)
                     if fname.startswith(query_str)
                 ]
-                for file_path in file_paths:
-                    tf.gfile.Remove(file_path)
-                    cprnt(tf=True, warn="DEL: {}".format(file_path))
+                for old_file_path in file_paths:
+                    new_file_path = old_file_path + ".null"
+                    tf.gfile.Rename(old_file_path, new_file_path)
+                    cprnt(tf=True, warn="REN: {}".format(new_file_path))
             else:
-                for file_path in search_dir(dir_str, query=query_str):
-                    os.remove(file_path)
-                    cprnt(tf=True, warn="DEL: {}".format(file_path))
+                for old_file_path in search_dir(dir_str, query=query_str):
+                    new_file_path = old_file_path + ".null"
+                    os.rename(old_file_path, new_file_path)
+                    cprnt(tf=True, warn="REN: {}".format(new_file_path))
             return True
 
 

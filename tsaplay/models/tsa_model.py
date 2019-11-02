@@ -1,4 +1,6 @@
 from abc import ABC, abstractmethod
+import os
+from os import path
 import comet_ml
 import tensorflow as tf
 from tensorflow.python import debug as tf_debug  # pylint: disable=E0611
@@ -35,7 +37,7 @@ from tsaplay.utils.addons import (
     metadata,
     checkpoint_saver,
 )
-from tsaplay.utils.io import cprnt, pickle_file
+from tsaplay.utils.io import cprnt, pickle_file, search_dir
 
 
 class TsaModel(ABC):
@@ -179,6 +181,22 @@ class TsaModel(ABC):
         except RuntimeError as err:
             if not str(err).endswith("Eval status: missing checkpoint"):
                 raise err
+            if self.run_config.model_dir.startswith("gs://"):
+                nulled_files = [
+                    path.join(self.run_config.model_dir, fname)
+                    for fname in tf.gfile.ListDirectory(
+                        self.run_config.model_dir
+                    )
+                    if fname.endswith(".null")
+                ]
+                for nulled_file_path in nulled_files:
+                    tf.gfile.Rename(nulled_file_path, nulled_file_path[:-5])
+            else:
+                nulled_files = search_dir(
+                    self.run_config.model_dir, query=".null"
+                )
+                for nulled_file_path in nulled_files:
+                    os.rename(nulled_file_path, nulled_file_path[:-5])
 
     def export(self, directory, feature_provider):
         self._initialize_estimator(feature_provider)
