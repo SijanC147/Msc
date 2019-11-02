@@ -252,8 +252,8 @@ def save_plot(plot, model, plot_metric, **kwargs):
 
 
 def is_currently_running(experiment):
-    start = experiment.get_others_summary(other="START")
-    end = experiment.get_others_summary(other="END")
+    start = experiment.get_others_summary(other="train_START")
+    end = experiment.get_others_summary(other="train_END")
     start = float(start[-1]) if len(start) > 0 else None
     end = float(end[-1]) if len(end) > 0 else None
     if end is None:

@@ -262,12 +262,7 @@ class TsaModel(ABC):
             steps = (kwargs.get("steps") or self.params.get("steps")) or None
         else:
             raise ValueError("No steps or epochs specified")
-        all_chkpts = tf.train.get_checkpoint_state(self.run_config.model_dir)
         self._estimator = Estimator(
-            model_fn=self._model_fn,
-            params=self.params,
-            config=self.run_config,
-            # pylint: disable=no-member
-            warm_start_from=all_chkpts.all_model_checkpoint_paths[-2],
+            model_fn=self._model_fn, params=self.params, config=self.run_config
         )
         return steps

@@ -176,7 +176,7 @@ class LogProgressToComet(SessionRunHook):
     def begin(self):
         if self.mode == ModeKeys.TRAIN:
             _ts = datetime.timestamp(datetime.now())
-            self.comet.log_other("START", str(_ts), include_context=False)
+            self.comet.log_other("START", str(_ts))
 
     def before_run(self, _):
         return SessionRunArgs(
@@ -204,7 +204,7 @@ class LogProgressToComet(SessionRunHook):
                 self.comet.log_epoch_end(epoch)
         if self.mode == ModeKeys.TRAIN:
             _ts = datetime.timestamp(datetime.now())
-            self.comet.log_other("END", str(_ts), include_context=False)
+            self.comet.log_other("END", str(_ts))
             self.comet.end()
 
 
