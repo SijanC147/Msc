@@ -296,7 +296,7 @@ def checkpoints(model, features, labels, spec, params):
         [
             DiscardRedundantStopSignalCheckpoint(
                 model_dir=model.run_config.model_dir,
-                epoch_steps=params["epoch_steps"],
+                chkpt_freq=checkpoints_step_freq,
             )
         ]
         if "early_stopping" in applied_addons

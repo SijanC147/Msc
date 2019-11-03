@@ -1,5 +1,6 @@
 # pylint: disable=no-name-in-module
 import io
+import re
 from functools import wraps
 from itertools import tee, chain
 from tqdm import tqdm
@@ -77,10 +78,25 @@ def embed_sequences(model_fn):
     return wrapper
 
 
-def last_checkpoint_step(model_dir):
-    return tf.train.NewCheckpointReader(
-        tf.train.latest_checkpoint(model_dir)
-    ).get_tensor(tf.GraphKeys.GLOBAL_STEP)
+def checkpoints_state_data(model_dir):
+    chkpt_state = tf.train.get_checkpoint_state(model_dir)
+    if chkpt_state is not None:
+        extract_step = lambda p: (
+            int(re.match(r".*-(?P<step>[0-9]+)", p).groupdict().get("step"))
+            if re.match(r".*-(?P<step>[0-9]+)", p) is not None
+            else 0
+        )
+        # pylint: disable=no-member
+        path = chkpt_state.model_checkpoint_path
+        # pylint: disable=no-member
+        all_paths = chkpt_state.all_model_checkpoint_paths
+        return {
+            "restore_path": path,
+            "step": extract_step(path),
+            "all_paths": all_paths,
+            "all_steps": [extract_step(p) for p in all_paths],
+        }
+    return {"step": 0}
 
 
 def resolve_optimizer(key):

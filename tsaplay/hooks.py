@@ -23,7 +23,7 @@ from tsaplay.utils.draw import (
     stack_images,
     tabulate_attention_value,
 )
-from tsaplay.utils.tf import image_to_summary, last_checkpoint_step
+from tsaplay.utils.tf import image_to_summary, checkpoints_state_data
 from tsaplay.utils.io import (
     temp_pngs,
     get_image_from_plt,
@@ -39,12 +39,25 @@ import matplotlib.pyplot as plt  # noqa pylint: disable=C0411,C0412,C0413
 
 
 class DiscardRedundantStopSignalCheckpoint(CheckpointSaverListener):
-    def __init__(self, model_dir, epoch_steps=None):
+    def __init__(self, model_dir, chkpt_freq):
         self.model_dir = model_dir
-        self.epoch_steps = epoch_steps
+        self.chkpt_freq = chkpt_freq
 
-    def after_save(self, _, global_step_value):
-        if self.epoch_steps and global_step_value % self.epoch_steps != 0:
+    # pylint: disable=unused-argument
+    def after_save(self, session, global_step_value):
+        early_stop = (
+            tf.get_default_graph()
+            .get_tensor_by_name("signal_early_stopping/STOP:0")
+            .eval(session=session)
+            .astype(bool)
+        )
+        cprnt(warn="{} -> {}".format(global_step_value, early_stop))
+        chk_steps = checkpoints_state_data(self.model_dir).get("all_steps", [])
+        if (
+            len(chk_steps) >= 2
+            and (chk_steps[-1] - chk_steps[-2]) == 1
+            and chk_steps[-1] % self.chkpt_freq != 0
+        ):
             dir_str, query_str = path.split(
                 tf.train.latest_checkpoint(self.model_dir)
             )

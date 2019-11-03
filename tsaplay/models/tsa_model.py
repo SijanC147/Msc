@@ -19,6 +19,7 @@ from tsaplay.utils.tf import (
     make_dense_features,
     embed_sequences,
     sharded_saver,
+    checkpoints_state_data,
 )
 from tsaplay.utils.comet import (
     cometml,
@@ -184,9 +185,7 @@ class TsaModel(ABC):
                 raise err
             # * Clean up after removing redundant checkpoint
             model_dir = self.run_config.model_dir
-            prev_chck_state = tf.train.get_checkpoint_state(model_dir)
-            # pylint: disable=no-member
-            prev_chck_paths = prev_chck_state.all_model_checkpoint_paths
+            prev_chck_paths = checkpoints_state_data(model_dir)["all_paths"]
             tf.train.update_checkpoint_state(
                 save_dir=model_dir,
                 model_checkpoint_path=prev_chck_paths[-2],

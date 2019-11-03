@@ -4,6 +4,7 @@ from shutil import rmtree
 import re
 import comet_ml
 import tensorflow as tf
+from tsaplay.utils.tf import checkpoints_state_data
 from tsaplay.utils.io import (
     start_tensorboard,
     restart_tf_serve_container,
@@ -122,18 +123,7 @@ class Experiment:
                         dir_parent, exp_dir_name + "_" + str(i)
                     )
             elif self.contd_tag is not None:
-                chkpt_state = tf.train.get_checkpoint_state(experiment_dir)
-                if chkpt_state is not None:
-                    extract_step = re.match(
-                        r".*-(?P<step>[0-9]+)",
-                        # pylint: disable=no-member
-                        chkpt_state.model_checkpoint_path,
-                    )
-                    chkpt = (
-                        int(extract_step.groupdict().get("step"))
-                        if extract_step is not None
-                        else 0
-                    )
+                chkpt = checkpoints_state_data(experiment_dir).get("step")
         self.model.aux_config["chkpt"] = chkpt
         makedirs(experiment_dir, exist_ok=True)
         return experiment_dir
@@ -176,6 +166,7 @@ class Experiment:
             for key, value in custom_config.items()
             if key.split("_")[0] not in session_conf_keywords
         }
+
         default_run_config = {
             **(
                 {"tf_random_seed": TF_RANDOM_SEED}
@@ -231,6 +222,15 @@ class Experiment:
                 warn="TF Random seed is set to {}".format(
                     default_run_config.get("tf_random_seed")
                 ),
+            )
+        if default_run_config.get("keep_checkpoint_max") < 2:
+            default_run_config["keep_checkpoint_max"] = 2
+            cprnt(
+                tf=True,
+                warn=(
+                    "TSAPLAY requires keep_checkpoint_max >=2"
+                    + " got {}, automatically set to 2"
+                ).format(default_run_config.get("keep_checkpoint_max")),
             )
 
         return default_run_config
