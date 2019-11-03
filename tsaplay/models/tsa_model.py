@@ -36,6 +36,7 @@ from tsaplay.utils.addons import (
     scalars,
     metadata,
     checkpoints,
+    summaries,
 )
 from tsaplay.utils.io import cprnt, pickle_file, search_dir
 
@@ -231,9 +232,10 @@ class TsaModel(ABC):
 
     @cometml
     @sharded_saver
-    @addon([scalars, metadata, histograms, conf_matrix, f1_scores, logging])
-    @addon([prediction_outputs])
+    @addon([logging, summaries])
+    @addon([scalars, metadata, histograms, conf_matrix, f1_scores])
     @addon([checkpoints])
+    @addon([prediction_outputs])
     @embed_sequences
     def _model_fn(self, features, labels, mode, params):
         if mode == ModeKeys.EVAL and params.get("keep_prob") is not None:

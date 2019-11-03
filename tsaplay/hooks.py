@@ -63,45 +63,20 @@ class DiscardRedundantStopSignalCheckpoint(CheckpointSaverListener):
                     cprnt(tf=True, warn="DEL: {}".format(old_file_path))
 
 
-class ConsoleLoggerHook(SessionRunHook):
-    def __init__(
-        self,
-        mode,
-        tensors,
-        template,
-        every_n_iter=None,
-        epoch_steps=None,
-        summary_writer=None,
-        summary_freq=None,
-    ):
-        self.mode = mode
-        self.tensors = tensors
-        self.template = template
-        self.epoch_steps = epoch_steps
-        self.every_n_iter = every_n_iter or epoch_steps
-        self.summary_freq = summary_freq or self.every_n_iter
-        self._summary_writer = summary_writer
-        self._start_time = None
-        self._gs = None
-
-    def begin(self):
-        self._gs = 0
-        self._start_time = time.time()
+class SummarySavingHook(SessionRunHook):
+    def __init__(self, ops, every_n_iter, writer, first_step):
+        self.summary_op = ops
+        self.summary_freq = every_n_iter
+        self._summary_writer = writer
+        self._global_step = first_step
 
     def before_run(self, _):
-        summary_ops = self.tensors.get("summary", None)
-        this_step = self._gs + 1
+        this_step = self._global_step + 1
         fetches = {
             "global_step": tf.get_collection(tf.GraphKeys.GLOBAL_STEP),
             **(
-                {k: v for k, v in self.tensors.items() if k != "summary"}
-                if self.mode == ModeKeys.TRAIN
-                else {}
-            ),
-            **(
-                {"summary": summary_ops}
-                if self.mode == ModeKeys.TRAIN
-                and (this_step % self.summary_freq == 0 or this_step == 1)
+                {"summary": self.summary_op}
+                if this_step % self.summary_freq == 0 or this_step == 1
                 else {}
             ),
         }
@@ -109,8 +84,44 @@ class ConsoleLoggerHook(SessionRunHook):
 
     def after_run(self, _, run_values):
         global_step = run_values.results.pop("global_step")[0]
+        self._global_step = global_step
+        if "summary" in [*run_values.results] and (
+            global_step % self.summary_freq == 0 or global_step == 1
+        ):
+            summary_data = run_values.results.pop("summary")
+            self._summary_writer.add_summary(summary_data, global_step)
+            cprnt(
+                tf=True, TRAIN="Saved summary for step {}".format(global_step)
+            )
+
+    def end(self, _):
+        self._summary_writer.flush()
+
+
+class ConsoleLoggerHook(SessionRunHook):
+    def __init__(
+        self, mode, tensors, template, every_n_iter=None, epoch_steps=None
+    ):
+        self.mode = mode
+        self.tensors = tensors
+        self.template = template
+        self.every_n_iter = every_n_iter or epoch_steps
+        self.epoch_steps = epoch_steps
+        self._start_time = None
+
+    def begin(self):
+        self._start_time = time.time()
+
+    def before_run(self, _):
+        fetches = {
+            "global_step": tf.get_collection(tf.GraphKeys.GLOBAL_STEP),
+            **(self.tensors if self.mode == ModeKeys.TRAIN else {}),
+        }
+        return SessionRunArgs(fetches=fetches)
+
+    def after_run(self, _, run_values):
+        global_step = run_values.results.pop("global_step")[0]
         if self.mode == ModeKeys.TRAIN:
-            self._gs = global_step
             if global_step % self.every_n_iter == 0 or global_step == 1:
                 current_time = time.time()
                 duration = current_time - self._start_time
@@ -134,13 +145,6 @@ class ConsoleLoggerHook(SessionRunHook):
                         }
                     ),
                 )
-                if "summary" in [*run_values.results]:
-                    summary_data = run_values.results.pop("summary")
-                    self._summary_writer.add_summary(summary_data, global_step)
-                    cprnt(
-                        tf=True,
-                        TRAIN="Saved summary for step {}".format(global_step),
-                    )
 
     def end(self, session):
         if self.mode == ModeKeys.EVAL:
@@ -160,9 +164,6 @@ class ConsoleLoggerHook(SessionRunHook):
                         }
                     ),
                 )
-        elif self.mode == ModeKeys.TRAIN:
-            if self._summary_writer is not None:
-                self._summary_writer.flush()
 
 
 class LogProgressToComet(SessionRunHook):

@@ -112,7 +112,7 @@ class Experiment:
         exp_dir_name = self.contd_tag or self.feature_provider.name
         exp_dir_name = exp_dir_name.replace(" ", "_")
         experiment_dir = join(dir_parent, exp_dir_name)
-        chkpt = None
+        chkpt = 0
         if exists(experiment_dir):
             if self.contd_tag is None:
                 i = 0
@@ -124,16 +124,15 @@ class Experiment:
             elif self.contd_tag is not None:
                 chkpt_state = tf.train.get_checkpoint_state(experiment_dir)
                 if chkpt_state is not None:
-                    chkpt = int(
-                        (
-                            re.match(
-                                r".*-(?P<step>[0-9]+)",
-                                # pylint: disable=no-member
-                                chkpt_state.model_checkpoint_path,
-                            )
-                            .groupdict()
-                            .get("step")
-                        )
+                    extract_step = re.match(
+                        r".*-(?P<step>[0-9]+)",
+                        # pylint: disable=no-member
+                        chkpt_state.model_checkpoint_path,
+                    )
+                    chkpt = (
+                        int(extract_step.groupdict().get("step"))
+                        if extract_step is not None
+                        else 0
                     )
         self.model.aux_config["chkpt"] = chkpt
         makedirs(experiment_dir, exist_ok=True)
@@ -187,6 +186,12 @@ class Experiment:
             "save_summary_steps": custom_run_config.pop(
                 "save_summary_steps", None
             ),
+            "save_checkpoints_steps": custom_run_config.pop(
+                "save_checkpoints_steps", None
+            ),
+            "log_step_count_steps": custom_run_config.pop(
+                "log_step_count_steps", None
+            ),
             # "session_config": tf.ConfigProto(**default_session_config),
             # **(
             #     {
@@ -219,8 +224,6 @@ class Experiment:
             #     default=LOG_STEP_COUNT_STEPS,
             # ),
         }
-        custom_run_config["save_checkpoints_steps"] = None
-        custom_run_config["log_step_count_steps"] = None
         default_run_config.update(custom_run_config)
         if default_run_config.get("tf_random_seed", False):
             cprnt(

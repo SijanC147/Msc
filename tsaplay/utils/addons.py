@@ -24,6 +24,7 @@ from tsaplay.hooks import (
     LogHistogramsToComet,
     ConsoleLoggerHook,
     DiscardRedundantStopSignalCheckpoint,
+    SummarySavingHook,
 )
 from tsaplay.utils.tf import streaming_f1_scores, streaming_conf_matrix
 from tsaplay.utils.io import (
@@ -102,16 +103,98 @@ def only(modes):
     return decorator
 
 
+@only(["PREDICT"])
+def prediction_outputs(model, features, labels, spec, params):
+    probs = spec.predictions["probabilities"]
+    class_labels = model.aux_config.get(
+        "class_labels", ["Negative", "Neutral", "Positive"]
+    )
+    classes = tf.constant([class_labels])
+    classify_output = ClassificationOutput(classes=classes, scores=probs)
+    predict_output = PredictOutput(spec.predictions)
+    export_outputs = {
+        DEFAULT_SERVING_SIGNATURE_DEF_KEY: classify_output,
+        "inspect": predict_output,
+    }
+    all_export_outputs = spec.export_outputs or {}
+    all_export_outputs.update(export_outputs)
+    return spec._replace(export_outputs=all_export_outputs)
+
+
+@only(["EVAL"])
+def attn_heatmaps(model, features, labels, spec, params):
+    eval_hooks = list(spec.evaluation_hooks) or []
+    eval_hooks += [
+        SaveAttentionWeightVector(
+            labels=labels,
+            predictions=spec.predictions["class_ids"],
+            targets=features["target"],
+            classes=model.aux_config["class_labels"],
+            summary_writer=tf.summary.FileWriterCache.get(
+                join(model.run_config.model_dir, "eval")
+            ),
+            comet=model.comet_experiment,
+            epoch_steps=params.get("epoch_steps"),
+            n_hops=params.get("n_hops"),
+            n_picks=model.aux_config.get("attn_heatmaps_n", 1),
+            freq=model.aux_config.get("attn_heatmaps_freq", 10),
+        )
+    ]
+    return spec._replace(evaluation_hooks=eval_hooks)
+
+
+@only(["EVAL"])
+def conf_matrix(model, features, labels, spec, params):
+    eval_hooks = list(spec.evaluation_hooks) or []
+    eval_metrics = spec.eval_metric_ops or {}
+    eval_metrics.update(
+        {
+            "conf-mat": streaming_conf_matrix(
+                labels=labels,
+                predictions=spec.predictions["class_ids"],
+                num_classes=params["_n_out_classes"],
+            )
+        }
+    )
+    eval_hooks += [
+        SaveConfusionMatrix(
+            class_labels=model.aux_config["class_labels"],
+            tensor_name="total_confusion_matrix",
+            summary_writer=tf.summary.FileWriterCache.get(
+                join(model.run_config.model_dir, "eval")
+            ),
+            comet=model.comet_experiment,
+            epoch_steps=params.get("epoch_steps"),
+        )
+    ]
+    return spec._replace(
+        eval_metric_ops=eval_metrics, evaluation_hooks=eval_hooks
+    )
+
+
+@only(["EVAL"])
+def f1_scores(model, features, labels, spec, params):
+    eval_metrics = spec.eval_metric_ops or {}
+    eval_metrics.update(
+        streaming_f1_scores(
+            labels=labels,
+            predictions=spec.predictions["class_ids"],
+            num_classes=params["_n_out_classes"],
+        )
+    )
+    return spec._replace(eval_metric_ops=eval_metrics)
+
+
 # pylint: disable=too-many-locals
 @only(["TRAIN"])
 def early_stopping(model, features, labels, spec, params):
-    if model.aux_config.get("chkpt") is not None:
+    if model.aux_config["chkpt"] > 0:
         cprnt(
             tf=True,
             warn=(
-                "Early Stopping DISABLED:"
+                "Early Stopping DISABLED: "
                 + "Not a new experiment, "
-                + "restoring from step {}".format(model.aux_config["chkpt"])
+                + "restoring from STEP {}".format(model.aux_config["chkpt"])
             ),
         )
         model.aux_config["applied_addons"].remove("early_stopping")
@@ -199,88 +282,6 @@ def early_stopping(model, features, labels, spec, params):
     return spec._replace(training_hooks=train_hooks)
 
 
-@only(["PREDICT"])
-def prediction_outputs(model, features, labels, spec, params):
-    probs = spec.predictions["probabilities"]
-    class_labels = model.aux_config.get(
-        "class_labels", ["Negative", "Neutral", "Positive"]
-    )
-    classes = tf.constant([class_labels])
-    classify_output = ClassificationOutput(classes=classes, scores=probs)
-    predict_output = PredictOutput(spec.predictions)
-    export_outputs = {
-        DEFAULT_SERVING_SIGNATURE_DEF_KEY: classify_output,
-        "inspect": predict_output,
-    }
-    all_export_outputs = spec.export_outputs or {}
-    all_export_outputs.update(export_outputs)
-    return spec._replace(export_outputs=all_export_outputs)
-
-
-@only(["EVAL"])
-def attn_heatmaps(model, features, labels, spec, params):
-    eval_hooks = list(spec.evaluation_hooks) or []
-    eval_hooks += [
-        SaveAttentionWeightVector(
-            labels=labels,
-            predictions=spec.predictions["class_ids"],
-            targets=features["target"],
-            classes=model.aux_config["class_labels"],
-            summary_writer=tf.summary.FileWriterCache.get(
-                join(model.run_config.model_dir, "eval")
-            ),
-            comet=model.comet_experiment,
-            epoch_steps=params.get("epoch_steps"),
-            n_hops=params.get("n_hops"),
-            n_picks=model.aux_config.get("attn_heatmaps_n", 1),
-            freq=model.aux_config.get("attn_heatmaps_freq", 10),
-        )
-    ]
-    return spec._replace(evaluation_hooks=eval_hooks)
-
-
-@only(["EVAL"])
-def conf_matrix(model, features, labels, spec, params):
-    eval_hooks = list(spec.evaluation_hooks) or []
-    eval_metrics = spec.eval_metric_ops or {}
-    eval_metrics.update(
-        {
-            "conf-mat": streaming_conf_matrix(
-                labels=labels,
-                predictions=spec.predictions["class_ids"],
-                num_classes=params["_n_out_classes"],
-            )
-        }
-    )
-    eval_hooks += [
-        SaveConfusionMatrix(
-            class_labels=model.aux_config["class_labels"],
-            tensor_name="total_confusion_matrix",
-            summary_writer=tf.summary.FileWriterCache.get(
-                join(model.run_config.model_dir, "eval")
-            ),
-            comet=model.comet_experiment,
-            epoch_steps=params.get("epoch_steps"),
-        )
-    ]
-    return spec._replace(
-        eval_metric_ops=eval_metrics, evaluation_hooks=eval_hooks
-    )
-
-
-@only(["EVAL"])
-def f1_scores(model, features, labels, spec, params):
-    eval_metrics = spec.eval_metric_ops or {}
-    eval_metrics.update(
-        streaming_f1_scores(
-            labels=labels,
-            predictions=spec.predictions["class_ids"],
-            num_classes=params["_n_out_classes"],
-        )
-    )
-    return spec._replace(eval_metric_ops=eval_metrics)
-
-
 @only(["TRAIN"])
 def checkpoints(model, features, labels, spec, params):
     checkpoints_step_freq = resolve_summary_step_freq(
@@ -308,6 +309,76 @@ def checkpoints(model, features, labels, spec, params):
             save_steps=checkpoints_step_freq,
             listeners=checkpoint_listeners,
             scaffold=spec.scaffold,
+        )
+    ]
+    return spec._replace(training_hooks=train_hooks)
+
+
+@only(["TRAIN"])
+def histograms(model, features, labels, spec, params):
+    summary_step_freq = resolve_summary_step_freq(
+        config_objs=[params, model.aux_config],
+        keywords=["logging", "histograms"],
+        epochs=params.get("epochs"),
+        epoch_steps=params["epoch_steps"],
+        default=SAVE_SUMMARY_STEPS,
+    )
+    trainables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
+    names = [variable.name.replace(":", "_") for variable in trainables]
+    for (name, variable) in zip(names, trainables):
+        tf.summary.histogram(name, variable)
+    if model.comet_experiment:
+        train_hooks = list(spec.training_hooks) or []
+        train_hooks += [
+            LogHistogramsToComet(
+                comet=model.comet_experiment,
+                names=names,
+                trainables=trainables,
+                every_n_iter=summary_step_freq,
+            )
+        ]
+        spec = spec._replace(training_hooks=train_hooks)
+    return spec
+
+
+@only(["TRAIN"])
+def timeline(model, features, labels, spec, params):
+    summary_step_freq = resolve_summary_step_freq(
+        config_objs=[params, model.aux_config],
+        keywords=["logging", "timeline"],
+        epochs=params.get("epochs"),
+        epoch_steps=params["epoch_steps"],
+        default=SAVE_SUMMARY_STEPS,
+    )
+    train_hooks = list(spec.training_hooks) or []
+    profiler_dir = join(model.run_config.model_dir)
+    makedirs(profiler_dir, exist_ok=True)
+    train_hooks += [
+        tf.train.ProfilerHook(
+            save_steps=summary_step_freq,
+            output_dir=profiler_dir,
+            show_memory=True,
+        )
+    ]
+    return spec._replace(training_hooks=train_hooks)
+
+
+@only(["TRAIN"])
+def summaries(model, features, labels, spec, params):
+    summary_step_freq = resolve_summary_step_freq(
+        config_objs=[params, model.aux_config],
+        keywords=["logging", "summaries"],
+        epochs=params.get("epochs"),
+        epoch_steps=params["epoch_steps"],
+        default=SAVE_SUMMARY_STEPS,
+    )
+    train_hooks = list(spec.training_hooks) or []
+    train_hooks += [
+        SummarySavingHook(
+            ops=tf.summary.merge_all(),
+            every_n_iter=summary_step_freq,
+            writer=tf.summary.FileWriterCache.get(model.run_config.model_dir),
+            first_step=model.aux_config["chkpt"],
         )
     ]
     return spec._replace(training_hooks=train_hooks)
@@ -359,23 +430,13 @@ def logging(model, features, labels, spec, params):
             + "duration: {duration:.2f}s"
             + "sec/step: {sec_per_step:.2f}s step/sec: {step_per_sec:.2f}",
         )
-        summary_step_freq = resolve_summary_step_freq(
-            config=config,
-            epochs=params.get("epochs"),
-            epoch_steps=params["epoch_steps"],
-            default=SAVE_SUMMARY_STEPS,
-        )
         train_hooks = list(spec.training_hooks) or []
         train_hooks += [
             ConsoleLoggerHook(
                 mode=ModeKeys.TRAIN,
                 epoch_steps=params["epoch_steps"],
                 every_n_iter=config.get("every_n_iter"),
-                summary_writer=tf.summary.FileWriterCache.get(
-                    model.run_config.model_dir
-                ),
-                summary_freq=summary_step_freq,
-                tensors={**tensors_to_log, "summary": tf.summary.merge_all()},
+                tensors=tensors_to_log,
                 template=console_template,
             )
         ]
@@ -399,31 +460,6 @@ def logging(model, features, labels, spec, params):
         ]
         spec = spec._replace(evaluation_hooks=eval_hooks)
 
-    return spec
-
-
-@only(["TRAIN", "EVAL"])
-def scalars(model, features, labels, spec, params):
-    std_metrics = {
-        "accuracy": tf.metrics.accuracy(
-            labels=labels,
-            predictions=spec.predictions["class_ids"],
-            name="acc_op",
-        ),
-        "mpc_accuracy": tf.metrics.mean_per_class_accuracy(
-            labels=labels,
-            predictions=spec.predictions["class_ids"],
-            num_classes=params["_n_out_classes"],
-            name="mpc_acc_op",
-        ),
-    }
-    if spec.mode == ModeKeys.EVAL:
-        eval_metrics = spec.eval_metric_ops or {}
-        eval_metrics.update(std_metrics)
-        spec = spec._replace(eval_metric_ops=eval_metrics)
-    else:
-        tf.summary.scalar("loss", spec.loss)
-        tf.summary.scalar("accuracy", std_metrics["accuracy"][1])
     return spec
 
 
@@ -465,50 +501,26 @@ def metadata(model, features, labels, spec, params):
     return spec
 
 
-@only(["TRAIN"])
-def histograms(model, features, labels, spec, params):
-    summary_step_freq = resolve_summary_step_freq(
-        config_objs=[params, model.aux_config],
-        keywords=["logging", "histograms"],
-        epochs=params.get("epochs"),
-        epoch_steps=params["epoch_steps"],
-        default=SAVE_SUMMARY_STEPS,
-    )
-    trainables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
-    names = [variable.name.replace(":", "_") for variable in trainables]
-    for (name, variable) in zip(names, trainables):
-        tf.summary.histogram(name, variable)
-    if model.comet_experiment:
-        train_hooks = list(spec.training_hooks) or []
-        train_hooks += [
-            LogHistogramsToComet(
-                comet=model.comet_experiment,
-                names=names,
-                trainables=trainables,
-                every_n_iter=summary_step_freq,
-            )
-        ]
-        spec = spec._replace(training_hooks=train_hooks)
+@only(["TRAIN", "EVAL"])
+def scalars(model, features, labels, spec, params):
+    std_metrics = {
+        "accuracy": tf.metrics.accuracy(
+            labels=labels,
+            predictions=spec.predictions["class_ids"],
+            name="acc_op",
+        ),
+        "mpc_accuracy": tf.metrics.mean_per_class_accuracy(
+            labels=labels,
+            predictions=spec.predictions["class_ids"],
+            num_classes=params["_n_out_classes"],
+            name="mpc_acc_op",
+        ),
+    }
+    if spec.mode == ModeKeys.EVAL:
+        eval_metrics = spec.eval_metric_ops or {}
+        eval_metrics.update(std_metrics)
+        spec = spec._replace(eval_metric_ops=eval_metrics)
+    else:
+        tf.summary.scalar("loss", spec.loss)
+        tf.summary.scalar("accuracy", std_metrics["accuracy"][1])
     return spec
-
-
-@only(["TRAIN"])
-def timeline(model, features, labels, spec, params):
-    summary_step_freq = resolve_summary_step_freq(
-        config_objs=[params, model.aux_config],
-        keywords=["logging", "timeline"],
-        epochs=params.get("epochs"),
-        epoch_steps=params["epoch_steps"],
-        default=SAVE_SUMMARY_STEPS,
-    )
-    train_hooks = list(spec.training_hooks) or []
-    profiler_dir = join(model.run_config.model_dir)
-    makedirs(profiler_dir, exist_ok=True)
-    train_hooks += [
-        tf.train.ProfilerHook(
-            save_steps=summary_step_freq,
-            output_dir=profiler_dir,
-            show_memory=True,
-        )
-    ]
-    return spec._replace(training_hooks=train_hooks)
