@@ -39,25 +39,18 @@ import matplotlib.pyplot as plt  # noqa pylint: disable=C0411,C0412,C0413
 
 
 class DiscardRedundantStopSignalCheckpoint(CheckpointSaverListener):
-    def __init__(self, model_dir, chkpt_freq):
+    def __init__(self, model_dir):
         self.model_dir = model_dir
-        self.chkpt_freq = chkpt_freq
 
     # pylint: disable=unused-argument
     def after_save(self, session, global_step_value):
-        early_stop = (
+        stopped_early = (
             tf.get_default_graph()
             .get_tensor_by_name("signal_early_stopping/STOP:0")
             .eval(session=session)
             .astype(bool)
         )
-        cprnt(warn="{} -> {}".format(global_step_value, early_stop))
-        chk_steps = checkpoints_state_data(self.model_dir).get("all_steps", [])
-        if (
-            len(chk_steps) >= 2
-            and (chk_steps[-1] - chk_steps[-2]) == 1
-            and chk_steps[-1] % self.chkpt_freq != 0
-        ):
+        if stopped_early:
             dir_str, query_str = path.split(
                 tf.train.latest_checkpoint(self.model_dir)
             )
