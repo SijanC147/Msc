@@ -123,6 +123,9 @@ def prediction_outputs(model, features, labels, spec, params):
 
 @only(["EVAL"])
 def attn_heatmaps(model, features, labels, spec, params):
+    config = extract_config_subset(
+        config_objs=[params, model.aux_config], keywords="attn_heatmaps"
+    )
     eval_hooks = list(spec.evaluation_hooks) or []
     eval_hooks += [
         SaveAttentionWeightVector(
@@ -136,8 +139,8 @@ def attn_heatmaps(model, features, labels, spec, params):
             comet=model.comet_experiment,
             epoch_steps=params.get("epoch_steps"),
             n_hops=params.get("n_hops"),
-            n_picks=model.aux_config.get("attn_heatmaps_n", 1),
-            freq=model.aux_config.get("attn_heatmaps_freq", 10),
+            n_picks=config.get("attn_heatmaps_n", 1),
+            freq=config.get("attn_heatmaps_freq", 10),
         )
     ]
     return spec._replace(evaluation_hooks=eval_hooks)
@@ -224,8 +227,9 @@ def early_stopping(model, features, labels, spec, params):
     minimum_iter = config.get("minimum_iter", 0)
     if spec.mode == ModeKeys.TRAIN:
         cprnt(
-            INFO=(
-                "INFO Early Stopping: \n"
+            tf=True,
+            info=(
+                "Early Stopping: \n"
                 + "\t".join(
                     [
                         "metric: {metric}",
@@ -255,7 +259,7 @@ def early_stopping(model, features, labels, spec, params):
                 maximum_iter=(
                     "{} epoch(s)" if epochs is not None else "{} steps"
                 ).format(epochs if epochs is not None else steps),
-            )
+            ),
         )
     early_stopping_hook_fn = (
         stop_if_no_increase_hook
@@ -288,10 +292,16 @@ def checkpoints(model, features, labels, spec, params):
         config_objs=[params, model.aux_config],
         keywords=["summaries", "logging", "checkpoints"],
     )
-    freq_setting = (
-        {"save_secs": config["secs"]}
-        if config.get("secs") is not None
-        else {
+    if config.get("secs") is not None:
+        freq_setting = {"save_secs": config["secs"]}
+        cprnt(
+            tf=True,
+            info="CHECKPOINTS every {save_secs} seconds".format_map(
+                freq_setting
+            ),
+        )
+    else:
+        freq_setting = {
             "save_steps": resolve_summary_step_freq(
                 config=config,
                 epochs=params.get("epochs"),
@@ -299,7 +309,16 @@ def checkpoints(model, features, labels, spec, params):
                 default=SAVE_CHECKPOINTS_STEPS,
             )
         }
-    )
+        model.aux_config["_resolved_freqs"] = {
+            **model.aux_config.get("_resolved_freqs", {}),
+            "CHECKPOINTS": freq_setting,
+        }
+        cprnt(
+            tf=True,
+            info="CHECKPOINTS every {save_steps} steps".format_map(
+                freq_setting
+            ),
+        )
     applied_addons = model.aux_config.get("applied_addons")
     checkpoint_listeners = (
         [
@@ -324,13 +343,18 @@ def checkpoints(model, features, labels, spec, params):
 
 @only(["TRAIN"])
 def histograms(model, features, labels, spec, params):
-    summary_step_freq = resolve_summary_step_freq(
+    step_freq = resolve_summary_step_freq(
         config_objs=[params, model.aux_config],
         keywords=["summaries", "logging", "histograms"],
         epochs=params.get("epochs"),
         epoch_steps=params["epoch_steps"],
         default=SAVE_SUMMARY_STEPS,
     )
+    model.aux_config["_resolved_freqs"] = {
+        **model.aux_config.get("_resolved_freqs", {}),
+        "HISTOGRAMS": step_freq,
+    }
+    cprnt(tf=True, info="HISTOGRAMS every {} steps".format(step_freq))
     trainables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
     names = [variable.name.replace(":", "_") for variable in trainables]
     for (name, variable) in zip(names, trainables):
@@ -342,7 +366,7 @@ def histograms(model, features, labels, spec, params):
                 comet=model.comet_experiment,
                 names=names,
                 trainables=trainables,
-                every_n_iter=summary_step_freq,
+                every_n_iter=step_freq,
             )
         ]
         spec = spec._replace(training_hooks=train_hooks)
@@ -350,22 +374,25 @@ def histograms(model, features, labels, spec, params):
 
 
 @only(["TRAIN"])
-def timeline(model, features, labels, spec, params):
-    summary_step_freq = resolve_summary_step_freq(
+def profiling(model, features, labels, spec, params):
+    step_freq = resolve_summary_step_freq(
         config_objs=[params, model.aux_config],
-        keywords=["summaries", "logging", "timeline"],
+        keywords=["summaries", "logging", "profiling"],
         epochs=params.get("epochs"),
         epoch_steps=params["epoch_steps"],
         default=SAVE_SUMMARY_STEPS,
     )
+    model.aux_config["_resolved_freqs"] = {
+        **model.aux_config.get("_resolved_freqs", {}),
+        "PROFILING": step_freq,
+    }
+    cprnt(tf=True, info="PROFILING every {} steps".format(step_freq))
     train_hooks = list(spec.training_hooks) or []
     profiler_dir = join(model.run_config.model_dir)
     makedirs(profiler_dir, exist_ok=True)
     train_hooks += [
         tf.train.ProfilerHook(
-            save_steps=summary_step_freq,
-            output_dir=profiler_dir,
-            show_memory=True,
+            save_steps=step_freq, output_dir=profiler_dir, show_memory=True
         )
     ]
     return spec._replace(training_hooks=train_hooks)
@@ -373,18 +400,23 @@ def timeline(model, features, labels, spec, params):
 
 @only(["TRAIN"])
 def summaries(model, features, labels, spec, params):
-    summary_step_freq = resolve_summary_step_freq(
+    step_freq = resolve_summary_step_freq(
         config_objs=[params, model.aux_config],
         keywords=["summaries"],
         epochs=params.get("epochs"),
         epoch_steps=params["epoch_steps"],
         default=SAVE_SUMMARY_STEPS,
     )
+    model.aux_config["_resolved_freqs"] = {
+        **model.aux_config.get("_resolved_freqs", {}),
+        "SUMMARIES": step_freq,
+    }
+    cprnt(tf=True, info="SUMMARIES every {} steps".format(step_freq))
     train_hooks = list(spec.training_hooks) or []
     train_hooks += [
         SummarySavingHook(
             ops=tf.summary.merge_all(),
-            every_n_iter=summary_step_freq,
+            every_n_iter=step_freq,
             writer=tf.summary.FileWriterCache.get(model.run_config.model_dir),
             first_step=model.aux_config["chkpt"],
         )
@@ -404,21 +436,6 @@ def logging(model, features, labels, spec, params):
         else path_split(model.run_config.model_dir)[1]
     )
     if spec.mode == ModeKeys.TRAIN:
-        cprnt(
-            tf=True,
-            INFO=(
-                "\n".join(
-                    [
-                        "INFO Run Configuration:",
-                        pformat(model.run_config.__dict__),
-                        "INFO AUX Configuration:",
-                        pformat(model.aux_config),
-                        "INFO Parameters:",
-                        pformat(model.params),
-                    ]
-                )
-            ),
-        )
         std_metrics = {
             "accuracy": tf.metrics.accuracy(
                 labels=labels,
@@ -434,17 +451,43 @@ def logging(model, features, labels, spec, params):
         console_template = config.get(
             "train_template",
             id_tag
-            + "TRAIN \t STEP: {step} \t EPOCH: {epoch:.1f} \t|\t"
+            + "STEP: {step} \t EPOCH: {epoch:.1f} \t|\t"
             + "acc: {accuracy:.5f} \t loss: {loss:.8f} |\t "
             + "duration: {duration:.2f}s"
             + "sec/step: {sec_per_step:.2f}s step/sec: {step_per_sec:.2f}",
+        )
+        step_freq = resolve_summary_step_freq(
+            config=config,
+            epochs=params.get("epochs"),
+            epoch_steps=params["epoch_steps"],
+            default=SAVE_CHECKPOINTS_STEPS,
+        )
+        model.aux_config["_resolved_freqs"] = {
+            **model.aux_config.get("_resolved_freqs", {}),
+            "LOGGING": step_freq,
+        }
+        cprnt(tf=True, info="LOGGING every {} steps".format(step_freq))
+        cprnt(
+            tf=True,
+            INFO=(
+                "\n".join(
+                    [
+                        "Run Configuration:",
+                        pformat(model.run_config.__dict__),
+                        "AUX Configuration:",
+                        pformat(model.aux_config),
+                        "Hyper Parameters:",
+                        pformat(model.params),
+                    ]
+                )
+            ),
         )
         train_hooks = list(spec.training_hooks) or []
         train_hooks += [
             ConsoleLoggerHook(
                 mode=ModeKeys.TRAIN,
                 epoch_steps=params["epoch_steps"],
-                every_n_iter=config.get("every_n_iter"),
+                every_n_iter=step_freq,
                 tensors=tensors_to_log,
                 template=console_template,
             )
@@ -459,7 +502,7 @@ def logging(model, features, labels, spec, params):
                 tensors={k: v[0] for k, v in spec.eval_metric_ops.items()},
                 template=(
                     id_tag
-                    + "EVAL \t STEP: {step} \t EPOCH: {epoch:.1f} \t|\t"
+                    + "STEP: {step} \t EPOCH: {epoch:.1f} \t|\t"
                     + "acc: {accuracy:.5f} \t mpc_acc: {mpc_accuracy:.5f} \t"
                     + "macro-f1: {macro-f1:.5f} \t"
                     + "weighted-f1: {weighted-f1:.5f}"
@@ -474,23 +517,28 @@ def logging(model, features, labels, spec, params):
 
 @only(["TRAIN", "EVAL"])
 def metadata(model, features, labels, spec, params):
-    summary_step_freq = resolve_summary_step_freq(
-        config_objs=[params, model.aux_config],
-        keywords=["summaries", "logging", "metadata"],
-        epochs=params.get("epochs"),
-        epoch_steps=params["epoch_steps"],
-        default=SAVE_SUMMARY_STEPS,
-    )
     if spec.mode == ModeKeys.TRAIN:
-        train_hooks = list(spec.training_hooks) or []
+        step_freq = resolve_summary_step_freq(
+            config_objs=[params, model.aux_config],
+            keywords=["summaries", "logging", "metadata"],
+            epochs=params.get("epochs"),
+            epoch_steps=params["epoch_steps"],
+            default=SAVE_SUMMARY_STEPS,
+        )
+        model.aux_config["_resolved_freqs"] = {
+            **model.aux_config.get("_resolved_freqs", {}),
+            "METADATA": step_freq,
+        }
+        cprnt(tf=True, info="METADATA every {} steps".format(step_freq))
         metadata_dir = model.run_config.model_dir
         makedirs(metadata_dir, exist_ok=True)
+        train_hooks = list(spec.training_hooks) or []
         train_hooks += [
             MetadataHook(
                 summary_writer=tf.summary.FileWriterCache.get(
                     model.run_config.model_dir
                 ),
-                save_steps=summary_step_freq,
+                save_steps=step_freq,
             )
         ]
         spec = spec._replace(training_hooks=train_hooks)

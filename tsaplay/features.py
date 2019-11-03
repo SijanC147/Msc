@@ -140,7 +140,7 @@ class FeatureProvider:
         uid_data = [self._embedding.uid] + datasets_uids + oov_policy
         cprnt(
             tf=True,
-            INFO="""INFO Feature Data:
+            INFO="""Feature Data:
 Embedding: {embedding_uid} \t CASE-{ci}SENSITIVE
 Dataset(s): {datasets_uids}
 OOV Threshold: {train_oov_threshold}

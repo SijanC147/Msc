@@ -57,6 +57,14 @@ def cprnt(*args, **kwargs):
     for (color_key, string) in kwargs.items():
         if color_key in ["end", "tf"]:
             continue
+        if not isinstance(string, str):
+            string = pprint.pformat(string)
+        string = {
+            "info": "INFO: ",
+            "train": "TRAIN: ",
+            "eval": "EVAL: ",
+            "warn": "WARN: ",
+        }.get(color_key.lower(), "") + string
         color_key = {
             "success": "wog",
             "info": "c",
@@ -64,8 +72,6 @@ def cprnt(*args, **kwargs):
             "eval": "r",
             "warn": "wor",
         }.get(color_key.lower(), color_key)
-        if not isinstance(string, str):
-            string = pprint.pformat(string)
         grey_output += string + " "
         col = "".join(filter(str.isalpha, color_key))
         index = col.find("o")

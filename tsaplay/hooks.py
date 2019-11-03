@@ -97,7 +97,7 @@ class SummarySavingHook(SessionRunHook):
             summary_data = run_values.results.pop("summary")
             self._summary_writer.add_summary(summary_data, global_step)
             cprnt(
-                tf=True, TRAIN="Saved summary for step {}".format(global_step)
+                tf=True, info="Saved summary for step {}".format(global_step)
             )
 
     def end(self, _):

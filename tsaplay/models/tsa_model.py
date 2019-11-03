@@ -231,7 +231,8 @@ class TsaModel(ABC):
 
     @cometml
     @sharded_saver
-    @addon([logging, summaries])
+    @addon([logging])
+    @addon([summaries])
     @addon([scalars, metadata, histograms, conf_matrix, f1_scores])
     @addon([checkpoints])
     @addon([prediction_outputs])

@@ -39,12 +39,8 @@ class Experiment:
         self.contd_tag = contd_tag
         self.model.params.update({"contd_tag": self.contd_tag})
         self.experiment_dir = self._make_experiment_dir(job_dir)
-        run_config = {
-            "model_dir": join(self.experiment_dir),
-            **(run_config or {}),
-        }
         self.model.run_config = self.model.run_config.replace(
-            **self.make_default_run_cofig(run_config, **model.params)
+            **self.make_default_run_cofig(run_config)
         )
         if self.contd_tag and comet_api:
             self._setup_comet_ml_experiment(
@@ -92,12 +88,14 @@ class Experiment:
             )
 
             if prev_exported_models != self.get_exported_models():
-                print("Updating tfserve.conf with new exported model info")
+                cprnt(
+                    info="Updating tfserve.conf with new exported model info"
+                )
                 self._update_export_models_config()
                 if restart_tfserve:
-                    print("Restarting tsaplay docker container")
+                    cprnt(info="Restarting tsaplay docker container")
                     logs = restart_tf_serve_container()
-                    print(logs)
+                    cprnt(info=logs)
 
     @classmethod
     def get_exported_models(cls):
@@ -144,7 +142,7 @@ class Experiment:
         with open(config_file_path, "w") as config_file:
             config_file.write(config_file_str)
 
-    def make_default_run_cofig(self, custom_config=None, **kwargs):
+    def make_default_run_cofig(self, custom_config=None):
         custom_config = custom_config or {}
 
         # setting session config anything other than None in distributed
@@ -180,32 +178,13 @@ class Experiment:
 
         default_run_config = {
             "session_config": tf.ConfigProto(**default_session_config),
+            "model_dir": self.experiment_dir,
             "tf_random_seed": TF_RANDOM_SEED,
+            "log_step_count_steps": LOG_STEP_COUNT_STEPS,
             "keep_checkpoint_max": KEEP_CHECKPOINT_MAX,
             "save_checkpoints_steps": None,
             "save_checkpoints_secs": None,
             "save_summary_steps": None,
-            # "log_step_count_steps": custom_run_config.pop(
-            #     "log_step_count_steps", None
-            # ),
-            # **(
-            #     {
-            #         "save_summary_steps": resolve_frequency_steps(
-            #             custom_run_config.pop("save_summary_steps", None),
-            #             epochs=kwargs.get("epochs"),
-            #             epoch_steps=kwargs.get("epoch_steps"),
-            #             default=SAVE_SUMMARY_STEPS,
-            #         )
-            #     }
-            #     if custom_run_config.get("save_summary_secs") is None
-            #     else {}
-            # ),
-            # "log_step_count_steps": resolve_frequency_steps(
-            #     custom_run_config.pop("log_step_count_steps", None),
-            #     epochs=kwargs.get("epochs"),
-            #     epoch_steps=kwargs.get("epoch_steps"),
-            #     default=LOG_STEP_COUNT_STEPS,
-            # ),
         }
         default_run_config.update(custom_run_config)
         if default_run_config["tf_random_seed"] is not None:
