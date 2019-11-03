@@ -1,11 +1,13 @@
 from os import listdir, makedirs, sys
 from os.path import join, isfile, exists
 from shutil import rmtree
+import re
 import comet_ml
+import tensorflow as tf
 from tsaplay.utils.io import (
     start_tensorboard,
     restart_tf_serve_container,
-    resolve_frequency_steps,
+    extract_config_subset,
     cprnt,
 )
 from tsaplay.constants import (
@@ -110,11 +112,30 @@ class Experiment:
         exp_dir_name = self.contd_tag or self.feature_provider.name
         exp_dir_name = exp_dir_name.replace(" ", "_")
         experiment_dir = join(dir_parent, exp_dir_name)
-        if exists(experiment_dir) and self.contd_tag is None:
-            i = 0
-            while exists(experiment_dir):
-                i += 1
-                experiment_dir = join(dir_parent, exp_dir_name + "_" + str(i))
+        chkpt = None
+        if exists(experiment_dir):
+            if self.contd_tag is None:
+                i = 0
+                while exists(experiment_dir):
+                    i += 1
+                    experiment_dir = join(
+                        dir_parent, exp_dir_name + "_" + str(i)
+                    )
+            elif self.contd_tag is not None:
+                chkpt_state = tf.train.get_checkpoint_state(experiment_dir)
+                if chkpt_state is not None:
+                    chkpt = int(
+                        (
+                            re.match(
+                                r".*-(?P<step>[0-9]+)",
+                                # pylint: disable=no-member
+                                chkpt_state.model_checkpoint_path,
+                            )
+                            .groupdict()
+                            .get("step")
+                        )
+                    )
+        self.model.aux_config["chkpt"] = chkpt
         makedirs(experiment_dir, exist_ok=True)
         return experiment_dir
 
@@ -141,12 +162,10 @@ class Experiment:
         # setting session config anything other than None in distributed
         # setting prevents device filters from being automatically set
         # job hangs indefinitely at final checkpoint
-        session_config_keywords = ["session", "sess"]
-        custom_sess_config = {
-            "_".join(key.split("_")[1:]): value
-            for key, value in custom_config.items()
-            if key.split("_")[0] in session_config_keywords
-        }
+        session_conf_keywords = ["session", "sess"]
+        custom_sess_config = extract_config_subset(
+            config_objs=[custom_config], keywords=session_conf_keywords
+        )
         default_session_config = {
             "allow_soft_placement": True,
             "log_device_placement": False,
@@ -156,7 +175,7 @@ class Experiment:
         custom_run_config = {
             key: value
             for key, value in custom_config.items()
-            if key.split("_")[0] not in session_config_keywords
+            if key.split("_")[0] not in session_conf_keywords
         }
         default_run_config = {
             **(
@@ -181,18 +200,18 @@ class Experiment:
             #     if custom_run_config.get("save_summary_secs") is None
             #     else {}
             # ),
-            **(
-                {
-                    "save_checkpoints_steps": resolve_frequency_steps(
-                        custom_run_config.pop("save_checkpoints_steps", None),
-                        epochs=kwargs.get("epochs"),
-                        epoch_steps=kwargs.get("epoch_steps"),
-                        default=SAVE_CHECKPOINTS_STEPS,
-                    )
-                }
-                if custom_run_config.get("save_checkpoints_secs") is None
-                else {}
-            ),
+            # **(
+            #     {
+            #         "save_checkpoints_steps": resolve_frequency_steps(
+            #             custom_run_config.pop("save_checkpoints_steps", None),
+            #             epochs=kwargs.get("epochs"),
+            #             epoch_steps=kwargs.get("epoch_steps"),
+            #             default=SAVE_CHECKPOINTS_STEPS,
+            #         )
+            #     }
+            #     if custom_run_config.get("save_checkpoints_secs") is None
+            #     else {}
+            # ),
             # "log_step_count_steps": resolve_frequency_steps(
             #     custom_run_config.pop("log_step_count_steps", None),
             #     epochs=kwargs.get("epochs"),

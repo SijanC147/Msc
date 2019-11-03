@@ -32,7 +32,7 @@
   "python.linting.pylintEnabled": true,
   "python.linting.pylintArgs": [
     "--max-line-length=79",
-    "--disable=C0330,C0111,import-error,missing-function-docstring", 		
+    "--disable=C0330,C0111,import-error,missing-function-docstring,unused-import", 		
   ],
   "editor.formatOnSave": true,
   "editor.formatOnSaveTimeout": 3000,

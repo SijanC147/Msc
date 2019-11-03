@@ -38,12 +38,12 @@ if platform() == "MacOS":
 import matplotlib.pyplot as plt  # noqa pylint: disable=C0411,C0412,C0413
 
 
-class EpochCheckpointListener(CheckpointSaverListener):
+class DiscardRedundantStopSignalCheckpoint(CheckpointSaverListener):
     def __init__(self, model_dir, epoch_steps=None):
         self.model_dir = model_dir
         self.epoch_steps = epoch_steps
 
-    def after_save(self, session, global_step_value):
+    def after_save(self, _, global_step_value):
         if self.epoch_steps and global_step_value % self.epoch_steps != 0:
             dir_str, query_str = path.split(
                 tf.train.latest_checkpoint(self.model_dir)
@@ -55,15 +55,12 @@ class EpochCheckpointListener(CheckpointSaverListener):
                     if fname.startswith(query_str)
                 ]
                 for old_file_path in file_paths:
-                    new_file_path = old_file_path + ".null"
-                    tf.gfile.Rename(old_file_path, new_file_path)
-                    cprnt(tf=True, warn="REN: {}".format(new_file_path))
+                    tf.gfile.Remove(old_file_path)
+                    cprnt(tf=True, warn="DEL: {}".format(old_file_path))
             else:
                 for old_file_path in search_dir(dir_str, query=query_str):
-                    new_file_path = old_file_path + ".null"
-                    os.rename(old_file_path, new_file_path)
-                    cprnt(tf=True, warn="REN: {}".format(new_file_path))
-            return True
+                    os.remove(old_file_path)
+                    cprnt(tf=True, warn="DEL: {}".format(old_file_path))
 
 
 class ConsoleLoggerHook(SessionRunHook):
@@ -137,13 +134,13 @@ class ConsoleLoggerHook(SessionRunHook):
                         }
                     ),
                 )
-            if "summary" in [*run_values.results]:
-                summary_data = run_values.results.pop("summary")
-                self._summary_writer.add_summary(summary_data, global_step)
-                cprnt(
-                    tf=True,
-                    TRAIN="Saved summary for step {}".format(global_step),
-                )
+                if "summary" in [*run_values.results]:
+                    summary_data = run_values.results.pop("summary")
+                    self._summary_writer.add_summary(summary_data, global_step)
+                    cprnt(
+                        tf=True,
+                        TRAIN="Saved summary for step {}".format(global_step),
+                    )
 
     def end(self, session):
         if self.mode == ModeKeys.EVAL:

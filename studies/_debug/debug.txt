@@ -1,6 +1,6 @@
 ## RUN WITH DEFAULTS: 
 #default: -cmt T1NrVnn32dXWeOxeQWGArkHwc -wrk debugging 
-default: -aux logging=true attn_heatmaps=false early_stopping=false
+default: -aux logging=true attn_heatmaps=false 
 ;default: debug=cli
 default: -mp oov_train=1 oov_buckets=1 oov_fn=uniform[-0.1,0.1]
 default: -mp early_stopping_minimum_iter=1
@@ -9,12 +9,12 @@ default: -mp lstm_hidden_units=5 gru_hidden_units=5 hidden_units=5
 ;default: -rc save_summary_steps=0
 #default: -rc tf_random_seed=1234 
 
--em=commoncrawl-840[corpus] -ds=laptops -m=lstm -e 20 -mp learning_rate=0.1 -contd=testcontinuation5
+;-em=commoncrawl-840[corpus] -ds=laptops -m=lstm -e 25 -mp learning_rate=0.1 -contd=testcontinuation9
 ;-em=commoncrawl-840[corpus] -ds=laptops -m=lstm -mp learning_rate=0.1 -contd=lstm-sgd-cc840-laptops-eagames3
 
 ;-em=commoncrawl-42[corpus] -ds=restaurants[33/33/34] -m=ram -mp n_hops=3 -e 5 -contd=testing_venn_2
-;-em=wiki-50[corpus] -ds=debug-min -m=lstm -e 125 -contd caniknowifexpfinished6
-#-em=wiki-50[corpus] -ds=debug-min -m=lstm -e 20 -contd two
+-em=wiki-50[corpus] -ds=debug-min -m=lstm -contd canicontinue
+-em=wiki-50[corpus] -ds=debug-min -m=lstm -e 25 -contd canicontinue
 #-em=wiki-50[corpus] -ds=debug-min -m=lstm -s 150 -contd three 
 #-em=wiki-50[corpus] -ds=debug-min -m=lstm -e 31 -contd 31epochs
 #-em=wiki-50[corpus] -ds=debug-min -m=lstm -s 200 -contd something

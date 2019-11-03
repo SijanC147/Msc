@@ -46,13 +46,6 @@ class Lstm(TsaModel):
 
     @addon([early_stopping])
     def model_fn(self, features, labels, mode, params):
-        # if mode == tf.estimator.ModeKeys.TRAIN:
-        #     features["sentence_emb"] = tf.Print(
-        #         input_=features["sentence_emb"],
-        #         data=[tf.train.get_global_step(), features["sentence"]],
-        #         summarize=1e3,
-        #     )
-
         _, final_states = tf.nn.dynamic_rnn(
             cell=lstm_cell(**params, mode=mode),
             inputs=features["sentence_emb"],

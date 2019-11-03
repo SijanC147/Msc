@@ -16,13 +16,14 @@ from tensorflow.estimator.export import (  # pylint: disable=E0401
     PredictOutput,
     ClassificationOutput,
 )
+from tsaplay.constants import SAVE_CHECKPOINTS_STEPS, SAVE_SUMMARY_STEPS
 from tsaplay.hooks import (
     SaveAttentionWeightVector,
     SaveConfusionMatrix,
     MetadataHook,
     LogHistogramsToComet,
     ConsoleLoggerHook,
-    EpochCheckpointListener,
+    DiscardRedundantStopSignalCheckpoint,
 )
 from tsaplay.utils.tf import streaming_f1_scores, streaming_conf_matrix
 from tsaplay.utils.io import (
@@ -52,6 +53,9 @@ def attach(addons, modes=None, order="POST"):
                 for addon in addons
                 if mode in target_modes and aux.get(addon.__name__, True)
             ]
+            self.aux_config["applied_addons"] = self.aux_config.get(
+                "applied_addons", []
+            ) + [addon.__name__ for addon in applicable_addons]
             if order == "PRE":
                 for add_on in applicable_addons:
                     add_on(self, features, labels, mode, params)
@@ -99,7 +103,19 @@ def only(modes):
 
 
 # pylint: disable=too-many-locals
+@only(["TRAIN"])
 def early_stopping(model, features, labels, spec, params):
+    if model.aux_config.get("chkpt") is not None:
+        cprnt(
+            tf=True,
+            warn=(
+                "Early Stopping DISABLED:"
+                + "Not a new experiment, "
+                + "restoring from step {}".format(model.aux_config["chkpt"])
+            ),
+        )
+        model.aux_config["applied_addons"].remove("early_stopping")
+        return spec
     train_hooks = list(spec.training_hooks) or []
     eval_dir = model.estimator.eval_dir()
     makedirs(eval_dir, exist_ok=True)
@@ -266,22 +282,30 @@ def f1_scores(model, features, labels, spec, params):
 
 
 @only(["TRAIN"])
-def checkpoint_saver(model, features, labels, spec, params):
-    train_hooks = list(spec.training_hooks) or []
+def checkpoints(model, features, labels, spec, params):
+    checkpoints_step_freq = resolve_summary_step_freq(
+        config_objs=[params, model.aux_config],
+        keywords=["logging", "checkpoints"],
+        epochs=params.get("epochs"),
+        epoch_steps=params["epoch_steps"],
+        default=SAVE_CHECKPOINTS_STEPS,
+    )
+    applied_addons = model.aux_config.get("applied_addons")
     checkpoint_listeners = (
         [
-            EpochCheckpointListener(
+            DiscardRedundantStopSignalCheckpoint(
                 model_dir=model.run_config.model_dir,
                 epoch_steps=params["epoch_steps"],
             )
         ]
-        if params.get("epochs") is not None
+        if "early_stopping" in applied_addons
         else []
     )
+    train_hooks = list(spec.training_hooks) or []
     train_hooks += [
         tf.train.CheckpointSaverHook(
             model.run_config.model_dir,
-            save_steps=params["epoch_steps"],
+            save_steps=checkpoints_step_freq,
             listeners=checkpoint_listeners,
             scaffold=spec.scaffold,
         )
@@ -339,6 +363,7 @@ def logging(model, features, labels, spec, params):
             config=config,
             epochs=params.get("epochs"),
             epoch_steps=params["epoch_steps"],
+            default=SAVE_SUMMARY_STEPS,
         )
         train_hooks = list(spec.training_hooks) or []
         train_hooks += [
@@ -409,6 +434,7 @@ def metadata(model, features, labels, spec, params):
         keywords=["logging", "metadata"],
         epochs=params.get("epochs"),
         epoch_steps=params["epoch_steps"],
+        default=SAVE_SUMMARY_STEPS,
     )
     if spec.mode == ModeKeys.TRAIN:
         train_hooks = list(spec.training_hooks) or []
@@ -446,6 +472,7 @@ def histograms(model, features, labels, spec, params):
         keywords=["logging", "histograms"],
         epochs=params.get("epochs"),
         epoch_steps=params["epoch_steps"],
+        default=SAVE_SUMMARY_STEPS,
     )
     trainables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
     names = [variable.name.replace(":", "_") for variable in trainables]
@@ -472,6 +499,7 @@ def timeline(model, features, labels, spec, params):
         keywords=["logging", "timeline"],
         epochs=params.get("epochs"),
         epoch_steps=params["epoch_steps"],
+        default=SAVE_SUMMARY_STEPS,
     )
     train_hooks = list(spec.training_hooks) or []
     profiler_dir = join(model.run_config.model_dir)

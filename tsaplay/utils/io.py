@@ -104,7 +104,20 @@ def str_snippet(full_str, maxlen=10, **kwargs):
     )
 
 
-def resolve_frequency_steps(freq, epochs=None, epoch_steps=None, default=None):
+def resolve_summary_step_freq(default, **kwargs):
+    config_objs = kwargs.get("config_objs")
+    keywords = kwargs.get("keywords")
+    config = (
+        extract_config_subset(config_objs, keywords)
+        if kwargs.get("config") is None
+        else kwargs.get("config")
+    )
+    freq = config.get(
+        (kwargs.get("key") if kwargs.get("key") is not None else "freq")
+    )
+    epochs = kwargs.get("epochs")
+    epoch_steps = kwargs.get("epoch_steps")
+
     if freq is None:
         return epoch_steps if epochs is not None else default
     if epochs is None:
@@ -124,24 +137,6 @@ def resolve_frequency_steps(freq, epochs=None, epoch_steps=None, default=None):
             * ((1 / int(freq[1:])) if str(freq).startswith("/") else int(freq))
         ),
     )
-
-
-def resolve_summary_step_freq(**kwargs):
-    config = (
-        extract_config_subset(
-            config_objs=kwargs.get("config_objs"),
-            keywords=kwargs.get("keywords"),
-        )
-        if kwargs.get("config") is None
-        else kwargs.get("config")
-    )
-    summary_freq = resolve_frequency_steps(
-        freq=config.get("summary_freq"),
-        epochs=kwargs.get("epochs"),
-        epoch_steps=kwargs.get("epoch_steps"),
-        default=SAVE_SUMMARY_STEPS,
-    )
-    return summary_freq
 
 
 def extract_config_subset(config_objs, keywords):
