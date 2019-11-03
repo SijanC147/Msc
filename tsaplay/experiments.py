@@ -144,8 +144,7 @@ class Experiment:
         with open(config_file_path, "w") as config_file:
             config_file.write(config_file_str)
 
-    @classmethod
-    def make_default_run_cofig(cls, custom_config=None, **kwargs):
+    def make_default_run_cofig(self, custom_config=None, **kwargs):
         custom_config = custom_config or {}
 
         # setting session config anything other than None in distributed
@@ -166,24 +165,29 @@ class Experiment:
             for key, value in custom_config.items()
             if key.split("_")[0] not in session_conf_keywords
         }
+        if "save_checkpoints_steps" in [*custom_run_config]:
+            self.model.aux_config["checkpoints_freq"] = custom_run_config.pop(
+                "save_checkpoints_steps"
+            )
+        elif "save_checkpoints_secs" in [*custom_run_config]:
+            self.model.aux_config["checkpoints_secs"] = custom_run_config.pop(
+                "save_checkpoints_secs"
+            )
+        if "save_summary_steps" in [*custom_run_config]:
+            self.model.aux_config["summaries_freq"] = custom_run_config.pop(
+                "save_summary_steps"
+            )
 
         default_run_config = {
-            **(
-                {"tf_random_seed": TF_RANDOM_SEED}
-                if TF_RANDOM_SEED is not None
-                else {}
-            ),
+            "session_config": tf.ConfigProto(**default_session_config),
+            "tf_random_seed": TF_RANDOM_SEED,
             "keep_checkpoint_max": KEEP_CHECKPOINT_MAX,
-            "save_summary_steps": custom_run_config.pop(
-                "save_summary_steps", None
-            ),
-            "save_checkpoints_steps": custom_run_config.pop(
-                "save_checkpoints_steps", None
-            ),
-            "log_step_count_steps": custom_run_config.pop(
-                "log_step_count_steps", None
-            ),
-            # "session_config": tf.ConfigProto(**default_session_config),
+            "save_checkpoints_steps": None,
+            "save_checkpoints_secs": None,
+            "save_summary_steps": None,
+            # "log_step_count_steps": custom_run_config.pop(
+            #     "log_step_count_steps", None
+            # ),
             # **(
             #     {
             #         "save_summary_steps": resolve_frequency_steps(
@@ -196,18 +200,6 @@ class Experiment:
             #     if custom_run_config.get("save_summary_secs") is None
             #     else {}
             # ),
-            # **(
-            #     {
-            #         "save_checkpoints_steps": resolve_frequency_steps(
-            #             custom_run_config.pop("save_checkpoints_steps", None),
-            #             epochs=kwargs.get("epochs"),
-            #             epoch_steps=kwargs.get("epoch_steps"),
-            #             default=SAVE_CHECKPOINTS_STEPS,
-            #         )
-            #     }
-            #     if custom_run_config.get("save_checkpoints_secs") is None
-            #     else {}
-            # ),
             # "log_step_count_steps": resolve_frequency_steps(
             #     custom_run_config.pop("log_step_count_steps", None),
             #     epochs=kwargs.get("epochs"),
@@ -216,7 +208,7 @@ class Experiment:
             # ),
         }
         default_run_config.update(custom_run_config)
-        if default_run_config.get("tf_random_seed", False):
+        if default_run_config["tf_random_seed"] is not None:
             cprnt(
                 tf=True,
                 warn="TF Random seed is set to {}".format(

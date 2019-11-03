@@ -284,12 +284,21 @@ def early_stopping(model, features, labels, spec, params):
 
 @only(["TRAIN"])
 def checkpoints(model, features, labels, spec, params):
-    checkpoints_step_freq = resolve_summary_step_freq(
+    config = extract_config_subset(
         config_objs=[params, model.aux_config],
-        keywords=["logging", "checkpoints"],
-        epochs=params.get("epochs"),
-        epoch_steps=params["epoch_steps"],
-        default=SAVE_CHECKPOINTS_STEPS,
+        keywords=["summaries", "logging", "checkpoints"],
+    )
+    freq_setting = (
+        {"save_secs": config["secs"]}
+        if config.get("secs") is not None
+        else {
+            "save_steps": resolve_summary_step_freq(
+                config=config,
+                epochs=params.get("epochs"),
+                epoch_steps=params["epoch_steps"],
+                default=SAVE_CHECKPOINTS_STEPS,
+            )
+        }
     )
     applied_addons = model.aux_config.get("applied_addons")
     checkpoint_listeners = (
@@ -305,7 +314,7 @@ def checkpoints(model, features, labels, spec, params):
     train_hooks += [
         tf.train.CheckpointSaverHook(
             model.run_config.model_dir,
-            save_steps=checkpoints_step_freq,
+            **freq_setting,
             listeners=checkpoint_listeners,
             scaffold=spec.scaffold,
         )
@@ -317,7 +326,7 @@ def checkpoints(model, features, labels, spec, params):
 def histograms(model, features, labels, spec, params):
     summary_step_freq = resolve_summary_step_freq(
         config_objs=[params, model.aux_config],
-        keywords=["logging", "histograms"],
+        keywords=["summaries", "logging", "histograms"],
         epochs=params.get("epochs"),
         epoch_steps=params["epoch_steps"],
         default=SAVE_SUMMARY_STEPS,
@@ -344,7 +353,7 @@ def histograms(model, features, labels, spec, params):
 def timeline(model, features, labels, spec, params):
     summary_step_freq = resolve_summary_step_freq(
         config_objs=[params, model.aux_config],
-        keywords=["logging", "timeline"],
+        keywords=["summaries", "logging", "timeline"],
         epochs=params.get("epochs"),
         epoch_steps=params["epoch_steps"],
         default=SAVE_SUMMARY_STEPS,
@@ -366,7 +375,7 @@ def timeline(model, features, labels, spec, params):
 def summaries(model, features, labels, spec, params):
     summary_step_freq = resolve_summary_step_freq(
         config_objs=[params, model.aux_config],
-        keywords=["logging", "summaries"],
+        keywords=["summaries"],
         epochs=params.get("epochs"),
         epoch_steps=params["epoch_steps"],
         default=SAVE_SUMMARY_STEPS,
@@ -386,7 +395,8 @@ def summaries(model, features, labels, spec, params):
 @only(["TRAIN", "EVAL"])
 def logging(model, features, labels, spec, params):
     config = extract_config_subset(
-        config_objs=[params, model.aux_config], keywords="logging"
+        config_objs=[params, model.aux_config],
+        keywords=["summaries", "logging"],
     )
     id_tag = str_snippet(
         params.get("contd_tag")
@@ -466,7 +476,7 @@ def logging(model, features, labels, spec, params):
 def metadata(model, features, labels, spec, params):
     summary_step_freq = resolve_summary_step_freq(
         config_objs=[params, model.aux_config],
-        keywords=["logging", "metadata"],
+        keywords=["summaries", "logging", "metadata"],
         epochs=params.get("epochs"),
         epoch_steps=params["epoch_steps"],
         default=SAVE_SUMMARY_STEPS,
