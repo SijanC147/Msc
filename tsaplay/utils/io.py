@@ -10,6 +10,7 @@ from math import floor
 from zipfile import ZipFile, ZIP_DEFLATED
 from datetime import datetime, timedelta
 from os import listdir, system, makedirs, environ
+from operator import itemgetter
 from os.path import (
     isfile,
     join,
@@ -110,39 +111,73 @@ def str_snippet(full_str, maxlen=10, **kwargs):
     )
 
 
-def resolve_summary_step_freq(default, **kwargs):
+def resolve_summary_step_freq(default, rnd=None, **kwargs):
     config_objs = kwargs.get("config_objs")
     keywords = kwargs.get("keywords")
+    rnd = True if rnd is None else rnd
     config = (
         extract_config_subset(config_objs, keywords)
         if kwargs.get("config") is None
         else kwargs.get("config")
     )
-    freq = config.get(
-        (kwargs.get("key") if kwargs.get("key") is not None else "freq")
+    freq = str(
+        config.get(
+            (kwargs.get("key") if kwargs.get("key") is not None else "freq")
+        )
     )
-    epochs = kwargs.get("epochs")
-    epoch_steps = kwargs.get("epoch_steps")
 
-    if freq is None:
-        return epoch_steps if epochs is not None else default
-    if epochs is None:
+    using_epochs = kwargs.get("epochs") is not None
+    # * Using steps
+    if not using_epochs:
         try:
+            freq = int(freq)
+            if freq <= 0:
+                raise ValueError
             return int(freq)
         except ValueError:
-            cprnt(
-                WARN="Invalid step frequency {}, using default {}".format(
-                    freq, default
-                )
-            )
+            cprnt(WARN="Invalid freq = {}, using {}".format(freq, default))
             return default
-    return max(
-        1,
-        floor(
-            epoch_steps
-            * ((1 / int(freq[1:])) if str(freq).startswith("/") else int(freq))
-        ),
-    )
+    # * Using epochs
+    epoch_steps = kwargs.get("epoch_steps")
+    if freq is None:
+        return epoch_steps
+    try:
+        if not freq.startswith("/"):
+            freq_mul = int(freq)
+            if freq_mul <= 0:
+                raise ValueError
+            return epoch_steps * freq_mul
+        freq_div = int(freq[1:])
+        if freq_div <= 0:
+            raise ValueError
+        if rnd is False:
+            return max(1, np.floor_divide(epoch_steps, freq_div))
+        diff_fn = {
+            "abs": lambda a, b: np.abs(a - b),
+            "up": lambda a, b: b - a,
+        }.get(rnd, lambda a, b: a - b)
+        options = (
+            [(epoch_steps, diff_fn(freq_div, 1))]
+            if diff_fn(freq_div, 1) >= 0
+            else []
+        )
+        for i in range(1, int(epoch_steps / 2) + 1):
+            if (
+                epoch_steps % i == 0
+                and diff_fn(freq_div, int(epoch_steps / i)) >= 0
+            ):
+                options += [(i, diff_fn(freq_div, int(epoch_steps / i)))]
+        cprnt(options)
+        closest = sorted(options, key=itemgetter(1))[0][0]
+        cprnt(
+            info="Rounding epoch freq(={}) to /{}".format(
+                freq, int(epoch_steps / closest)
+            )
+        )
+        return closest
+    except ValueError:
+        cprnt(warn="Invalid epoch freq={}, using 1 epoch".format(freq))
+        return epoch_steps
 
 
 def extract_config_subset(config_objs, keywords):
@@ -333,8 +368,7 @@ def copy(
                 )
             )
             return dst_path
-        else:
-            rmtree(dst_path, ignore_errors=True)
+        rmtree(dst_path, ignore_errors=True)
         ignore_arg = ignore_patterns(ignore) if ignore else None
         copytree(src_path, dst_path, ignore=ignore_arg)
         return dst_path

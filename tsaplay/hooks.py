@@ -478,45 +478,47 @@ class SaveConfusionMatrix(SessionRunHook):
 
 
 class MetadataHook(SessionRunHook):
-    def __init__(self, summary_writer, save_steps=None, save_batches=None):
-        self._writer = summary_writer
-        self._eval = save_batches is not None
-        self._freq = save_steps or save_batches
-        self._tag = "step-{0}" if not self._eval else "{0}-batch-{1}"
-
-    def begin(self):
-        if self._freq == "once":
-            self._request_summary = True
-        self._counter = 0 if not self._eval else 1
-        self._global_step_tensor = tf.train.get_global_step()
-
-        if self._global_step_tensor is None:
-            raise RuntimeError(
-                "Global step should be created to use ProfilerHook."
-            )
+    def __init__(self, mode, summary_writer, every_n_iter, first_step=None):
+        self.mode = mode
+        self.freq = every_n_iter
+        self.counter = (first_step or 0) if mode == ModeKeys.TRAIN else 1
+        self._summary_writer = summary_writer
 
     def before_run(self, _):
-        requests = {"global_step": self._global_step_tensor}
-        if self._freq != "once":
-            self._request_summary = self._counter % self._freq == 0
-        options = (
-            tf.RunOptions(
-                trace_level=tf.RunOptions.FULL_TRACE  # pylint: disable=E1101
-            )
-            if self._request_summary
-            else None
+        this_step = self.counter + 1
+        log_metadata = (
+            self.mode == ModeKeys.EVAL and self.freq == "once"
+            if isinstance(self.freq, str)
+            else this_step == 1 or this_step % self.freq == 0
+        )
+        return SessionRunArgs(
+            fetches={
+                "global_step": tf.get_collection(tf.GraphKeys.GLOBAL_STEP)
+            },
+            options=(
+                tf.RunOptions(
+                    trace_level=tf.RunOptions.FULL_TRACE  # pylint: disable=E1101
+                )
+                if log_metadata
+                else None
+            ),
         )
 
-        return SessionRunArgs(requests, options=options)  # noqa
-
     def after_run(self, _, run_values):
-        global_step = run_values.results["global_step"]
-        if self._request_summary:
-            self._request_summary = False
-            _id = [global_step] + ([self._counter] if self._eval else [])
-            tag = self._tag.format(*_id)
+        if self.mode == ModeKeys.TRAIN:
+            _counter = run_values.results["global_step"][0]
+            tag = "step-{}".format(_counter)
+        elif self.mode == ModeKeys.EVAL and self.freq != "done":
+            eval_run = run_values.results["global_step"][0]
+            self.counter += 1
+            _counter = self.counter
+            tag = "{}-batch-{}".format(eval_run, _counter)
+        if self.freq == "once" or _counter == 1 or _counter % self.freq == 0:
+            if self.freq == "once":
+                self.freq = "done"
             try:
-                self._writer.add_run_metadata(run_values.run_metadata, tag)
+                self._summary_writer.add_run_metadata(
+                    run_values.run_metadata, tag
+                )
             except ValueError:
                 warn("Skipped metadata with tag {}.".format(tag))
-        self._counter = (self._counter if self._eval else global_step) + 1

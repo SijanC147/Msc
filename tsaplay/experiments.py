@@ -182,6 +182,7 @@ class Experiment:
             "tf_random_seed": TF_RANDOM_SEED,
             "log_step_count_steps": LOG_STEP_COUNT_STEPS,
             "keep_checkpoint_max": KEEP_CHECKPOINT_MAX,
+            # * these settings are delegated to the respective addons
             "save_checkpoints_steps": None,
             "save_checkpoints_secs": None,
             "save_summary_steps": None,
@@ -200,7 +201,7 @@ class Experiment:
                 tf=True,
                 warn=(
                     "TSAPLAY requires keep_checkpoint_max >=2"
-                    + " got {}, automatically set to 2"
+                    + " got {}, using 2"
                 ).format(default_run_config.get("keep_checkpoint_max")),
             )
 

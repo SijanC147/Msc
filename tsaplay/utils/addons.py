@@ -139,8 +139,8 @@ def attn_heatmaps(model, features, labels, spec, params):
             comet=model.comet_experiment,
             epoch_steps=params.get("epoch_steps"),
             n_hops=params.get("n_hops"),
-            n_picks=config.get("attn_heatmaps_n", 1),
-            freq=config.get("attn_heatmaps_freq", 10),
+            n_picks=config.get("n", 1),
+            freq=config.get("freq", 10),
         )
     ]
     return spec._replace(evaluation_hooks=eval_hooks)
@@ -219,10 +219,23 @@ def early_stopping(model, features, labels, spec, params):
     )
     epochs = params.get("epochs")
     steps = params.get("steps")
-    run_every_steps = config.get(
-        "run_every_steps", params.get("epoch_steps") or None
-    )
-    run_every_secs = config.get("run_every_secs", 60)
+    if config.get("run_every_secs") is not None:
+        freq_setting = {"run_every_secs": config["run_every_secs"]}
+    else:
+        freq_setting = {
+            "run_every_steps": resolve_summary_step_freq(
+                config=config,
+                key="run_every_steps",
+                epochs=params.get("epochs"),
+                epoch_steps=params["epoch_steps"],
+                default=SAVE_CHECKPOINTS_STEPS,
+            ),
+            "run_every_secs": None,
+        }
+        model.aux_config["_resolved_freqs"] = {
+            **model.aux_config.get("_resolved_freqs", {}),
+            "EARLYSTOPPING": freq_setting,
+        }
     patience = config.get("patience", 10 if epochs is not None else 1000)
     minimum_iter = config.get("minimum_iter", 0)
     if spec.mode == ModeKeys.TRAIN:
@@ -234,7 +247,7 @@ def early_stopping(model, features, labels, spec, params):
                     [
                         "metric: {metric}",
                         "mode: {comparison}",
-                        "run every: {run_every_steps}",
+                        "run every: {run_every}",
                         "patience: {patience}",
                         "minimum: {minimum_iter}",
                         "maximum: {maximum_iter}",
@@ -243,11 +256,13 @@ def early_stopping(model, features, labels, spec, params):
             ).format(
                 metric=metric,
                 comparison=comparison,
-                run_every_steps=(
-                    "1 epoch ({} steps)" if epochs is not None else "{} steps"
-                ).format(run_every_steps)
-                if run_every_steps
-                else "{} secs".format(run_every_secs),
+                run_every=(
+                    "1 epoch ({run_every_steps} steps)"
+                    if epochs is not None
+                    else "{run_every_steps} steps"
+                ).format_map(freq_setting)
+                if "run_every_steps" in [*freq_setting]
+                else "{run_every_secs} secs".format_map(freq_setting),
                 patience=(
                     "{} epoch(s)" if epochs is not None else "{} steps"
                 ).format(patience),
@@ -274,10 +289,7 @@ def early_stopping(model, features, labels, spec, params):
             minimum_iter
             * (params.get("epoch_steps") if epochs is not None else 1)
         ),
-        "run_every_steps": run_every_steps,
-        "run_every_secs": (
-            None if run_every_steps is not None else run_every_secs
-        ),
+        **freq_setting,
         ("max_steps_without_{}".format(comparison)): (
             patience * (params.get("epoch_steps") if epochs is not None else 1)
         ),
@@ -292,43 +304,49 @@ def checkpoints(model, features, labels, spec, params):
         config_objs=[params, model.aux_config],
         keywords=["summaries", "logging", "checkpoints"],
     )
-    if config.get("secs") is not None:
-        freq_setting = {"save_secs": config["secs"]}
-        cprnt(
-            tf=True,
-            info="CHECKPOINTS every {save_secs} seconds".format_map(
-                freq_setting
-            ),
-        )
-    else:
-        freq_setting = {
-            "save_steps": resolve_summary_step_freq(
-                config=config,
-                epochs=params.get("epochs"),
-                epoch_steps=params["epoch_steps"],
-                default=SAVE_CHECKPOINTS_STEPS,
-            )
-        }
-        model.aux_config["_resolved_freqs"] = {
-            **model.aux_config.get("_resolved_freqs", {}),
-            "CHECKPOINTS": freq_setting,
-        }
-        cprnt(
-            tf=True,
-            info="CHECKPOINTS every {save_steps} steps".format_map(
-                freq_setting
-            ),
-        )
-    applied_addons = model.aux_config.get("applied_addons")
-    checkpoint_listeners = (
-        [
+    if "early_stopping" in model.aux_config.get("applied_addons"):
+        checkpoint_listeners = [
             DiscardRedundantStopSignalCheckpoint(
                 model_dir=model.run_config.model_dir
             )
         ]
-        if "early_stopping" in applied_addons
-        else []
-    )
+        ea_freq_setting = model.aux_config["_resolved_freqs"]["EARLYSTOPPING"]
+        freq_setting = {
+            {
+                "run_every_secs": "save_secs",
+                "run_every_steps": "save_steps",
+            }.get(k): v
+            for k, v in ea_freq_setting.items()
+        }
+    else:
+        checkpoint_listeners = []
+        if config.get("secs") is not None:
+            freq_setting = {"save_secs": config["secs"]}
+            cprnt(
+                tf=True,
+                info="CHECKPOINTS every {save_secs} seconds".format_map(
+                    freq_setting
+                ),
+            )
+        else:
+            freq_setting = {
+                "save_steps": resolve_summary_step_freq(
+                    config=config,
+                    epochs=params.get("epochs"),
+                    epoch_steps=params["epoch_steps"],
+                    default=SAVE_CHECKPOINTS_STEPS,
+                )
+            }
+            model.aux_config["_resolved_freqs"] = {
+                **model.aux_config.get("_resolved_freqs", {}),
+                "CHECKPOINTS": freq_setting,
+            }
+            cprnt(
+                tf=True,
+                info="CHECKPOINTS every {save_steps} steps".format_map(
+                    freq_setting
+                ),
+            )
     train_hooks = list(spec.training_hooks) or []
     train_hooks += [
         tf.train.CheckpointSaverHook(
@@ -535,10 +553,12 @@ def metadata(model, features, labels, spec, params):
         train_hooks = list(spec.training_hooks) or []
         train_hooks += [
             MetadataHook(
+                mode=ModeKeys.TRAIN,
                 summary_writer=tf.summary.FileWriterCache.get(
                     model.run_config.model_dir
                 ),
-                save_steps=step_freq,
+                every_n_iter=step_freq,
+                first_step=model.aux_config["chkpt"],
             )
         ]
         spec = spec._replace(training_hooks=train_hooks)
@@ -548,10 +568,11 @@ def metadata(model, features, labels, spec, params):
         makedirs(metadata_dir, exist_ok=True)
         eval_hooks += [
             MetadataHook(
+                mode=ModeKeys.EVAL,
                 summary_writer=tf.summary.FileWriterCache.get(
                     join(model.run_config.model_dir, "eval")
                 ),
-                save_batches="once",
+                every_n_iter="once",
             )
         ]
         spec = spec._replace(evaluation_hooks=eval_hooks)
