@@ -8,7 +8,7 @@ default: -mp oov_train=1 oov_buckets=1 oov_fn=uniform[-0.1,0.1]
 default: -mp early_stopping_minimum_iter=1
 ;default: -mp oov_train=5 oov_buckets=5 oov_fn=uniform[-0.1,0.1]
 default: -mp lstm_hidden_units=5 gru_hidden_units=5 hidden_units=5
-default: -rc save_summary_steps=0 save_checkpoints_secs=10
+default: -rc save_summary_steps=0 save_checkpoints_steps=2
 
 ;-em=commoncrawl-840[corpus] -ds=laptops -m=lstm -e 25 -mp learning_rate=0.1 -contd=testcontinuation9
 ;-em=commoncrawl-840[corpus] -ds=laptops -m=lstm -mp learning_rate=0.1 -contd=lstm-sgd-cc840-laptops-eagames3

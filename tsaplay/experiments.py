@@ -164,13 +164,13 @@ class Experiment:
             if key.split("_")[0] not in session_conf_keywords
         }
         if "save_checkpoints_steps" in [*custom_run_config]:
-            self.model.aux_config["checkpoints_freq"] = custom_run_config.pop(
-                "save_checkpoints_steps"
-            )
+            self.model.aux_config["checkpoints_freq"] = self.model.aux_config[
+                "early_stopping_freq"
+            ] = custom_run_config.pop("save_checkpoints_steps")
         elif "save_checkpoints_secs" in [*custom_run_config]:
-            self.model.aux_config["checkpoints_secs"] = custom_run_config.pop(
-                "save_checkpoints_secs"
-            )
+            self.model.aux_config["checkpoints_secs"] = self.model.aux_config[
+                "early_stopping_secs"
+            ] = custom_run_config.pop("save_checkpoints_secs")
         if "save_summary_steps" in [*custom_run_config]:
             self.model.aux_config["summaries_freq"] = custom_run_config.pop(
                 "save_summary_steps"

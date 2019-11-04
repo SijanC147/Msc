@@ -219,13 +219,12 @@ def early_stopping(model, features, labels, spec, params):
     )
     epochs = params.get("epochs")
     steps = params.get("steps")
-    if config.get("run_every_secs") is not None:
-        freq_setting = {"run_every_secs": config["run_every_secs"]}
+    if config.get("secs") is not None:
+        freq_setting = {"run_every_secs": config["secs"]}
     else:
         freq_setting = {
             "run_every_steps": resolve_summary_step_freq(
                 config=config,
-                key="run_every_steps",
                 epochs=params.get("epochs"),
                 epoch_steps=params["epoch_steps"],
                 default=SAVE_CHECKPOINTS_STEPS,
