@@ -2,6 +2,7 @@ import textwrap
 import re
 import itertools
 import os
+import traceback
 from os import path
 from math import ceil
 from warnings import warn
@@ -481,7 +482,7 @@ class MetadataHook(SessionRunHook):
     def __init__(self, mode, summary_writer, every_n_iter, first_step=None):
         self.mode = mode
         self.freq = every_n_iter
-        self.counter = (first_step or 0) if mode == ModeKeys.TRAIN else 1
+        self.counter = first_step or 0
         self._summary_writer = summary_writer
 
     def before_run(self, _):
@@ -508,11 +509,13 @@ class MetadataHook(SessionRunHook):
         if self.mode == ModeKeys.TRAIN:
             _counter = run_values.results["global_step"][0]
             tag = "step-{}".format(_counter)
-        elif self.mode == ModeKeys.EVAL and self.freq != "done":
+        elif self.mode == ModeKeys.EVAL:
+            if self.freq == "done":
+                return
             eval_run = run_values.results["global_step"][0]
             self.counter += 1
             _counter = self.counter
-            tag = "{}-batch-{}".format(eval_run, _counter)
+            tag = "step-{}-batch-{}".format(eval_run, _counter)
         if self.freq == "once" or _counter == 1 or _counter % self.freq == 0:
             if self.freq == "once":
                 self.freq = "done"
@@ -520,5 +523,17 @@ class MetadataHook(SessionRunHook):
                 self._summary_writer.add_run_metadata(
                     run_values.run_metadata, tag
                 )
+                cprnt(
+                    tf=True,
+                    info="{} Metadata OK ({})".format(self.mode.upper(), tag),
+                )
             except ValueError:
-                warn("Skipped metadata with tag {}.".format(tag))
+                cprnt(
+                    tf=True,
+                    warn="{} Metadata ERR ({}) \n {}".format(
+                        self.mode.upper(), tag, traceback.format_exc()
+                    ),
+                )
+
+    def end(self, _):
+        self._summary_writer.flush()

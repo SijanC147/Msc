@@ -1,6 +1,8 @@
 {
-    "jobId": "some_debug_job_take8",
-    "labels": {},
+    "jobId": "reproduction_tctdlstm_t200_NEW_bugfix_run01",
+    "labels": {
+        "embedding": "twitter200"
+    },
     "trainingInput": {
         "scaleTier": "CUSTOM",
         "masterType": "standard",
@@ -9,7 +11,7 @@
         "region": "europe-west1",
         "args": [
             "batch",
-            "debug.txt",
+            "tctdlstm.txt",
             "--new",
             "--nocolor"
         ]

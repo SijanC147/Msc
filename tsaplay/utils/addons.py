@@ -321,12 +321,6 @@ def checkpoints(model, features, labels, spec, params):
         checkpoint_listeners = []
         if config.get("secs") is not None:
             freq_setting = {"save_secs": config["secs"]}
-            cprnt(
-                tf=True,
-                info="CHECKPOINTS every {save_secs} seconds".format_map(
-                    freq_setting
-                ),
-            )
         else:
             freq_setting = {
                 "save_steps": resolve_summary_step_freq(
@@ -336,16 +330,18 @@ def checkpoints(model, features, labels, spec, params):
                     default=SAVE_CHECKPOINTS_STEPS,
                 )
             }
-            model.aux_config["_resolved_freqs"] = {
-                **model.aux_config.get("_resolved_freqs", {}),
-                "CHECKPOINTS": freq_setting,
-            }
-            cprnt(
-                tf=True,
-                info="CHECKPOINTS every {save_steps} steps".format_map(
-                    freq_setting
-                ),
-            )
+    model.aux_config["_resolved_freqs"] = {
+        **model.aux_config.get("_resolved_freqs", {}),
+        "CHECKPOINTS": freq_setting,
+    }
+    cprnt(
+        tf=True,
+        info=(
+            "CHECKPOINTS every {save_secs} seconds"
+            if freq_setting.get("save_secs") is not None
+            else "CHECKPOINTS every {save_steps} steps"
+        ).format_map(freq_setting),
+    )
     train_hooks = list(spec.training_hooks) or []
     train_hooks += [
         tf.train.CheckpointSaverHook(
