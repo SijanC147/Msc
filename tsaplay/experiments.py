@@ -177,7 +177,7 @@ class Experiment:
             )
 
         default_run_config = {
-            "session_config": tf.ConfigProto(**default_session_config),
+            # "session_config": tf.ConfigProto(**default_session_config),
             "model_dir": self.experiment_dir,
             "tf_random_seed": TF_RANDOM_SEED,
             "log_step_count_steps": LOG_STEP_COUNT_STEPS,

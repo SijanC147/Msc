@@ -33,15 +33,7 @@ class Lstm(TsaModel):
                     features["right_ids"],
                 ],
                 axis=1,
-            ),
-            "sentence": tf.sparse_concat(
-                sp_inputs=[
-                    # features["left"],
-                    features["target"],
-                    # features["right"],
-                ],
-                axis=1,
-            ),
+            )
         }
 
     @addon([early_stopping])

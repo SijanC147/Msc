@@ -36,7 +36,7 @@ def cometml(model_fn):
                 train_hooks = list(spec.training_hooks) or []
                 train_hooks += [
                     LogProgressToComet(
-                        mode=mode,
+                        mode=ModeKeys.TRAIN,
                         comet=comet,
                         epochs=params.get("epochs"),
                         epoch_steps=params["epoch_steps"],
@@ -47,7 +47,7 @@ def cometml(model_fn):
                 eval_hooks = list(spec.evaluation_hooks) or []
                 eval_hooks += [
                     LogProgressToComet(
-                        mode=mode,
+                        mode=ModeKeys.EVAL,
                         comet=comet,
                         epoch_steps=params["epoch_steps"],
                     )

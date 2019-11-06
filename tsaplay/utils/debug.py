@@ -37,7 +37,10 @@ def timeit(pre="", post=""):
             end_time = time.time()
             time_taken = timedelta(seconds=(end_time - start_time))
             time_stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            cprnt(c=time_stamp, r=name, g=post + " in", row=str(time_taken))
+            if post:
+                cprnt(
+                    c=time_stamp, r=name, g=post + " in", row=str(time_taken)
+                )
             return result
 
         return wrapper

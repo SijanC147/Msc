@@ -208,12 +208,16 @@ def get_metric_series(experiment, metric):
 
 def get_grouped_metric_series(project, workspace=None, metrics=None, **kwargs):
     api = get_comet_api(**kwargs)
-    workspace = workspace or "reproduction"
+    workspace = workspace or "reproduction-new"
     metrics = metrics or ["macro-f1", "micro-f1"]
     grouped_metrics = {}
     experiments = api.get_experiments(workspace, project_name=project)
     unique_experiment_names = np.unique(
-        [e.name for e in experiments if not e.name.startswith("#")]
+        [
+            e.name
+            for e in experiments
+            if e.name is not None and not e.name.startswith("#")
+        ]
     ).tolist()
     for name in unique_experiment_names:
         grouped_metrics[name] = {
@@ -298,11 +302,13 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
     )
     data = []
     for prj in [p for p in api.get_projects(workspace) if p in models]:
-        exp_groups, _ = get_grouped_metric_series(prj, metrics=metrics)
+        exp_groups, _ = get_grouped_metric_series(
+            prj, workspace=workspace, metrics=metrics
+        )
         for _, exp_group_runs in exp_groups.items():
             # ? (APIExperiment, ([{Epoch: Macro-F1}], [{Epoch: Micro-F1}]))
             for (exp, *run_metrics) in zip(*exp_group_runs.values()):
-                if is_currently_running(exp):
+                if kwargs.get("excl_curr", True) and is_currently_running(exp):
                     continue
                 exp_name_clean = exp.name  # pylint: disable=no-member
                 model = exp.project_name  # pylint: disable=no-member
@@ -465,7 +471,8 @@ class AnyObjectHandler(HandlerBase):
 
 
 def draw_boxplot(models=None, **kwargs):
-    df = comet_to_df("reproduction", models=models, **kwargs)
+    workspace = kwargs.get("workspace", "reproduction-new")
+    df = comet_to_df(workspace, models=models, **kwargs)
     plot_metrics = kwargs.get("plot_metrics", ["Macro-F1", "Micro-F1"])
     xticklabel_templates = kwargs.get("xticklabel_templates", dict())
     hparams = kwargs.get("hparams", [*CMT_VALS_MAPPING])
@@ -876,10 +883,27 @@ def argument_parser():
 
 
 def main():
-    parser = argument_parser()
-    args = parser.parse_args()
-    params = args_to_dict(args.params)
-    draw_boxplot(models=args.models, **params)
+    draw_boxplot(
+        models=["lstm"],
+        plot_metrics=["Macro-F1", "Micro-F1"],
+        cited_cmap="Set1",
+        use_cached=False,
+        box_palette="colorblind",
+        mean_facecolor="ghostwhite",
+        xaxis_filters={
+            "Optimizer": "SGD",
+            "OOV Initializer": "Uniform[-0.1,0.1]",
+        },
+        label_xaxis=False,
+        strip=True,
+        # xticklabel_templates={
+        #     "lstm": "{EA Min Epochs}"
+        # }
+    )
+    # parser = argument_parser()
+    # args = parser.parse_args()
+    # params = args_to_dict(args.params)
+    # draw_boxplot(models=args.models, **params)
 
 
 if __name__ == "__main__":

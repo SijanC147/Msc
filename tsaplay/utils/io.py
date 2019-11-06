@@ -135,7 +135,7 @@ def resolve_summary_step_freq(default, rnd=None, **kwargs):
                 raise ValueError
             return int(freq)
         except ValueError:
-            cprnt(WARN="Invalid freq = {}, using {}".format(freq, default))
+            # cprnt(WARN="Invalid freq = {}, using {}".format(freq, default))
             return default
     # * Using epochs
     epoch_steps = kwargs.get("epoch_steps")
@@ -176,7 +176,7 @@ def resolve_summary_step_freq(default, rnd=None, **kwargs):
         )
         return closest
     except ValueError:
-        cprnt(warn="Invalid epoch freq={}, using 1 epoch".format(freq))
+        # cprnt(warn="Invalid epoch freq={}, using 1 epoch".format(freq))
         return epoch_steps
 
 

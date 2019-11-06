@@ -70,7 +70,7 @@
             "program": "${workspaceFolder}/generate_boxplots.py",
             "args": [
                 "--models",
-                "tclstm",
+                "lstm",
             ],
             "console": "integratedTerminal",
             "redirectOutput": false

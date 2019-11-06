@@ -229,12 +229,12 @@ class TsaModel(ABC):
 
         return ServingInputReceiver(input_features, inputs)
 
-    @cometml
     @sharded_saver
-    @addon([logging])
     @addon([summaries])
-    @addon([scalars, metadata, histograms, conf_matrix, f1_scores])
     @addon([checkpoints])
+    @cometml
+    @addon([logging])
+    @addon([scalars, metadata, histograms, conf_matrix, f1_scores])
     @addon([prediction_outputs])
     @embed_sequences
     def _model_fn(self, features, labels, mode, params):

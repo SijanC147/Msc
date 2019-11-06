@@ -33,6 +33,7 @@ from tsaplay.utils.io import (
     str_snippet,
     cprnt,
 )
+from tsaplay.utils.debug import timeit
 
 
 def attach(addons, modes=None, order="POST"):
@@ -190,6 +191,7 @@ def f1_scores(model, features, labels, spec, params):
 
 # pylint: disable=too-many-locals
 @only(["TRAIN"])
+@timeit(pre="")
 def early_stopping(model, features, labels, spec, params):
     if model.aux_config["chkpt"] > 0:
         cprnt(
@@ -298,6 +300,7 @@ def early_stopping(model, features, labels, spec, params):
 
 
 @only(["TRAIN"])
+@timeit(pre="")
 def checkpoints(model, features, labels, spec, params):
     config = extract_config_subset(
         config_objs=[params, model.aux_config],
@@ -306,7 +309,8 @@ def checkpoints(model, features, labels, spec, params):
     if "early_stopping" in model.aux_config.get("applied_addons"):
         checkpoint_listeners = [
             DiscardRedundantStopSignalCheckpoint(
-                model_dir=model.run_config.model_dir
+                model_dir=model.run_config.model_dir,
+                comet=model.comet_experiment,
             )
         ]
         ea_freq_setting = model.aux_config["_resolved_freqs"]["EARLYSTOPPING"]
@@ -355,6 +359,7 @@ def checkpoints(model, features, labels, spec, params):
 
 
 @only(["TRAIN"])
+@timeit(pre="")
 def histograms(model, features, labels, spec, params):
     step_freq = resolve_summary_step_freq(
         config_objs=[params, model.aux_config],
@@ -412,6 +417,7 @@ def profiling(model, features, labels, spec, params):
 
 
 @only(["TRAIN"])
+@timeit(pre="")
 def summaries(model, features, labels, spec, params):
     step_freq = resolve_summary_step_freq(
         config_objs=[params, model.aux_config],
@@ -438,6 +444,7 @@ def summaries(model, features, labels, spec, params):
 
 
 @only(["TRAIN", "EVAL"])
+@timeit(pre="")
 def logging(model, features, labels, spec, params):
     config = extract_config_subset(
         config_objs=[params, model.aux_config],
@@ -466,7 +473,7 @@ def logging(model, features, labels, spec, params):
             id_tag
             + "STEP: {step} \t EPOCH: {epoch:.1f} \t|\t"
             + "acc: {accuracy:.5f} \t loss: {loss:.8f} |\t "
-            + "duration: {duration:.2f}s"
+            + "duration: {duration:.2f}s "
             + "sec/step: {sec_per_step:.2f}s step/sec: {step_per_sec:.2f}",
         )
         step_freq = resolve_summary_step_freq(
@@ -480,21 +487,21 @@ def logging(model, features, labels, spec, params):
             "LOGGING": step_freq,
         }
         cprnt(tf=True, info="LOGGING every {} steps".format(step_freq))
-        cprnt(
-            tf=True,
-            INFO=(
-                "\n".join(
-                    [
-                        "Run Configuration:",
-                        pformat(model.run_config.__dict__),
-                        "AUX Configuration:",
-                        pformat(model.aux_config),
-                        "Hyper Parameters:",
-                        pformat(model.params),
-                    ]
-                )
-            ),
-        )
+        # cprnt(
+        #     tf=True,
+        #     INFO=(
+        #         "\n".join(
+        #             [
+        #                 "Run Configuration:",
+        #                 pformat(model.run_config.__dict__),
+        #                 "AUX Configuration:",
+        #                 pformat(model.aux_config),
+        #                 "Hyper Parameters:",
+        #                 pformat(model.params),
+        #             ]
+        #         )
+        #     ),
+        # )
         train_hooks = list(spec.training_hooks) or []
         train_hooks += [
             ConsoleLoggerHook(
@@ -529,6 +536,7 @@ def logging(model, features, labels, spec, params):
 
 
 @only(["TRAIN", "EVAL"])
+@timeit(pre="")
 def metadata(model, features, labels, spec, params):
     if spec.mode == ModeKeys.TRAIN:
         step_freq = resolve_summary_step_freq(
@@ -575,6 +583,7 @@ def metadata(model, features, labels, spec, params):
 
 
 @only(["TRAIN", "EVAL"])
+@timeit(pre="")
 def scalars(model, features, labels, spec, params):
     std_metrics = {
         "accuracy": tf.metrics.accuracy(
