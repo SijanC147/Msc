@@ -53,11 +53,11 @@ class DiscardRedundantStopSignalCheckpoint(CheckpointSaverListener):
             .eval(session=session)
             .astype(bool)
         )
-        cprnt(
-            train="Discard Chckpt-{}? {}".format(
-                global_step_value, "YEP" if stopped_early else "NOPE"
-            )
-        )
+        # cprnt(
+        #     train="Discard Chckpt-{}? {}".format(
+        #         global_step_value, "YEP" if stopped_early else "NOPE"
+        #     )
+        # )
         if stopped_early:
             dir_str, query_str = path.split(
                 tf.train.latest_checkpoint(self.model_dir)
@@ -79,12 +79,9 @@ class DiscardRedundantStopSignalCheckpoint(CheckpointSaverListener):
                 _ts = datetime.timestamp(datetime.now())
                 self.comet.log_other("END", str(_ts))
                 self.comet.disable_mp()
-            tf.summary.FileWriterCache.get(self.model_dir).flush()
-
-    # pylint: disable=unused-argument
-    # @timeit(pre="")
-    # def end(self, session, global_step_value):
-    #     tf.summary.FileWriterCache.get(self.model_dir).flush()
+                self.comet.end()
+            summary_writer = tf.summary.FileWriterCache.get(self.model_dir)
+            summary_writer.flush()
 
 
 class SummarySavingHook(SessionRunHook):
@@ -95,7 +92,7 @@ class SummarySavingHook(SessionRunHook):
         self._global_step = first_step
 
     def before_run(self, _):
-        cprnt(train="BEFORE Summary Saving ({})".format(self._global_step))
+        # cprnt(train="BEFORE Summary Saving ({})".format(self._global_step))
         this_step = self._global_step + 1
         fetches = {
             "global_step": tf.get_collection(tf.GraphKeys.GLOBAL_STEP),
@@ -108,7 +105,7 @@ class SummarySavingHook(SessionRunHook):
         return SessionRunArgs(fetches=fetches)
 
     def after_run(self, _, run_values):
-        cprnt(train="AFTER Summary Saving ({})".format(self._global_step))
+        # cprnt(train="AFTER Summary Saving ({})".format(self._global_step))
         global_step = run_values.results.pop("global_step")[0]
         self._global_step = global_step
         if "summary" in [*run_values.results] and (
@@ -116,16 +113,17 @@ class SummarySavingHook(SessionRunHook):
         ):
             summary_data = run_values.results.pop("summary")
             self._summary_writer.add_summary(summary_data, global_step)
-            # cprnt(
-            #     tf=True, info="Saved summary for step {}".format(global_step)
-            # )
+            cprnt(
+                tf=True, info="Saved summary for step {}".format(global_step)
+            )
 
     def end(self, _):
-        cprnt(train="END Summary Saving ({})".format(self._global_step))
+        # cprnt(train="END Summary Saving ({})".format(self._global_step))
         self._summary_writer.flush()
 
 
 class ConsoleLoggerHook(SessionRunHook):
+    # pylint: disable=too-many-arguments
     def __init__(
         self, mode, tensors, template, every_n_iter=None, epoch_steps=None
     ):
@@ -140,7 +138,7 @@ class ConsoleLoggerHook(SessionRunHook):
         self._start_time = time.time()
 
     def before_run(self, _):
-        cprnt(**{self.mode: "BEFORE Console Logger"})
+        # cprnt(**{self.mode: "BEFORE Console Logger"})
         fetches = {
             "global_step": tf.get_collection(tf.GraphKeys.GLOBAL_STEP),
             **(self.tensors if self.mode == ModeKeys.TRAIN else {}),
@@ -148,7 +146,7 @@ class ConsoleLoggerHook(SessionRunHook):
         return SessionRunArgs(fetches=fetches)
 
     def after_run(self, _, run_values):
-        cprnt(**{self.mode: "AFTER Console Logger"})
+        # cprnt(**{self.mode: "AFTER Console Logger"})
         global_step = run_values.results.pop("global_step")[0]
         if self.mode == ModeKeys.TRAIN:
             if global_step % self.every_n_iter == 0 or global_step == 1:
@@ -176,7 +174,7 @@ class ConsoleLoggerHook(SessionRunHook):
                 )
 
     def end(self, session):
-        cprnt(**{self.mode: "END Console Logger"})
+        # cprnt(**{self.mode: "END Console Logger"})
         if self.mode == ModeKeys.EVAL:
             run_values = session.run(
                 {"step": tf.train.get_global_step(), **self.tensors}
@@ -209,7 +207,7 @@ class LogProgressToComet(SessionRunHook):
             self.comet.log_other("START", str(_ts))
 
     def before_run(self, _):
-        cprnt(**{self.mode: "BEFORE Comet Progress"})
+        # cprnt(**{self.mode: "BEFORE Comet Progress"})
         return SessionRunArgs(
             fetches={
                 "global_step": tf.get_collection(tf.GraphKeys.GLOBAL_STEP)
@@ -217,7 +215,7 @@ class LogProgressToComet(SessionRunHook):
         )
 
     def after_run(self, _, run_values):
-        cprnt(**{self.mode: "AFTER Comet Progress"})
+        # cprnt(**{self.mode: "AFTER Comet Progress"})
         global_step = run_values.results["global_step"][0]
         self.comet.set_step(global_step)
         if self.epoch_steps:
@@ -228,7 +226,7 @@ class LogProgressToComet(SessionRunHook):
                     self.comet.log_epoch_end(epoch)
 
     def end(self, session):
-        cprnt(**{self.mode: "END Comet Progress"})
+        # cprnt(**{self.mode: "END Comet Progress"})
         global_step = session.run(tf.train.get_global_step())
         if self.epoch_steps:
             epoch = ceil(global_step / self.epoch_steps)
@@ -238,7 +236,8 @@ class LogProgressToComet(SessionRunHook):
         if self.mode == ModeKeys.TRAIN:
             _ts = datetime.timestamp(datetime.now())
             self.comet.log_other("END", str(_ts))
-            cprnt(info="Experiment Ended")
+            self.comet.end()
+            # cprnt(info="Experiment Ended")
 
 
 class LogHistogramsToComet(SessionRunHook):
@@ -249,7 +248,7 @@ class LogHistogramsToComet(SessionRunHook):
         self.every_n_iter = every_n_iter
 
     def before_run(self, _):
-        cprnt(train="BEFORE Comet Histograms")
+        # cprnt(train="BEFORE Comet Histograms")
         return SessionRunArgs(
             fetches={
                 "global_step": tf.get_collection(tf.GraphKeys.GLOBAL_STEP),
@@ -258,7 +257,7 @@ class LogHistogramsToComet(SessionRunHook):
         )
 
     def after_run(self, _, run_values):
-        cprnt(train="AFTER Comet Histograms")
+        # cprnt(train="AFTER Comet Histograms")
         global_step = run_values.results["global_step"][0]
         if global_step % self.every_n_iter == 0 or global_step == 1:
             trainables = run_values.results["trainables"]
@@ -268,7 +267,7 @@ class LogHistogramsToComet(SessionRunHook):
                 )
 
     def end(self, session):
-        cprnt(train="END Comet Histograms")
+        # cprnt(train="END Comet Histograms")
         global_step = session.run(tf.train.get_global_step())
         trainables = session.run(self.trainables)
         for (name, trainable) in zip(self.names, trainables):
@@ -283,7 +282,7 @@ class MetadataHook(SessionRunHook):
         self._summary_writer = summary_writer
 
     def before_run(self, _):
-        cprnt(**{self.mode: "BEFORE Metadata"})
+        # cprnt(**{self.mode: "BEFORE Metadata"})
         this_step = self.counter + 1
         log_metadata = (
             self.mode == ModeKeys.EVAL and self.freq == "once"
@@ -304,7 +303,7 @@ class MetadataHook(SessionRunHook):
         )
 
     def after_run(self, _, run_values):
-        cprnt(**{self.mode: "AFTER Metadata"})
+        # cprnt(**{self.mode: "AFTER Metadata"})
         if self.mode == ModeKeys.TRAIN:
             _counter = run_values.results["global_step"][0]
             tag = "step-{}".format(_counter)
@@ -322,10 +321,9 @@ class MetadataHook(SessionRunHook):
                 self._summary_writer.add_run_metadata(
                     run_values.run_metadata, tag
                 )
-                # cprnt(
-                #     tf=True,
-                #     info="{} Metadata OK ({})".format(self.mode.upper(), tag),
-                # )
+                cprnt(
+                    tf=True, **{self.mode: "Logged Metadata ({})".format(tag)}
+                )
             except ValueError:
                 cprnt(
                     tf=True,
@@ -335,7 +333,7 @@ class MetadataHook(SessionRunHook):
                 )
 
     def end(self, _):
-        cprnt(**{self.mode: "END Metadata"})
+        # cprnt(**{self.mode: "END Metadata"})
         self._summary_writer.flush()
 
 
@@ -365,7 +363,7 @@ class SaveAttentionWeightVector(SessionRunHook):
         self._counter = 0
         self.freq = freq
 
-    def before_run(self, run_context):
+    def before_run(self, _):
         return SessionRunArgs(  # noqa
             fetches={
                 "global_step": tf.get_collection(tf.GraphKeys.GLOBAL_STEP),
@@ -376,7 +374,7 @@ class SaveAttentionWeightVector(SessionRunHook):
             }
         )
 
-    def after_run(self, run_context, run_values):
+    def after_run(self, _, run_values):
         if NP_RANDOM_SEED is not None:
             np.random.seed(NP_RANDOM_SEED)
         if self.n_picks is None:
