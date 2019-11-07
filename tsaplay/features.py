@@ -367,6 +367,7 @@ OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
             "datasets": {
                 dataset.uid: {
                     "name": dataset.name,
+                    "redist": dataset.redist,
                     "train": dataset.train_dist,
                     "test": dataset.test_dist,
                 }

@@ -1,0 +1,18 @@
+## DEFAULTS: 
+default: -cmt T1NrVnn32dXWeOxeQWGArkHwc -wrk reproduction-new
+default: -em=commoncrawl-42[corpus]
+default: -aux logging=true 
+default: -mp oov_train=1 oov_buckets=1 oov_fn=uniform[-0.1,0.1] early_stopping_minimum_iter=150
+###
+
+# Restaurants
+default: -ds=restaurants[33/34/33]
+#-m=lstm -contd=lstm-sgd-cc42-restaurants-balanced-oovt1b1 
+#-m=td_lstm -contd=tdlstm-sgd-cc42-restaurants-balanced-oovt1b1 
+#-m=tc_lstm -contd=tclstm-sgd-cc42-restaurants-balanced-oovt1b1 
+
+# Laptops
+default: -ds=laptops[33/34/33]
+#-m=lstm -contd=lstm-sgd-cc42-laptops-balanced-oovt1b1 
+-m=td_lstm -contd=tdlstm-sgd-cc42-laptops-balanced-oovt1b1 
+#-m=tc_lstm -contd=tclstm-sgd-cc42-laptops-balanced-oovt1b1 

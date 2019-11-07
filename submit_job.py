@@ -176,7 +176,10 @@ def parse_task_args(task_args):
 
 
 def copy_dataset_files(datasets):
-    for mode in ["train", "test"]:
+    # * copy train directory later in case it is redistributed
+    # * and the test data is not, otherwise test data gets
+    # * overwritten
+    for mode in ["test", "train"]:
         for dataset in datasets:
             srcdir_attr = "_{mode}_srcdir".format(mode=mode)
             dataset_srcdir = getattr(dataset, srcdir_attr)
@@ -259,7 +262,11 @@ def main():
     args = parser.parse_args()
     if args.jobs_file:
         for line in open(args.jobs_file, "r"):
-            if len(line.strip()) > 0:
+            if (
+                len(line.strip()) > 0
+                and not line.startswith("#")
+                and not line.startswith(";")
+            ):
                 try:
                     job_args = parser.parse_args(line.split())
                     nruns = args.nruns

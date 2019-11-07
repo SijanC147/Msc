@@ -347,7 +347,7 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
                     [],
                 )
 
-                vocab_coverage = json.loads(
+                exp_info = json.loads(
                     exp.get_asset(
                         asset_id=[
                             f["assetId"]
@@ -356,7 +356,9 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
                         ][0],
                         return_type="text",
                     )
-                ).get("vocab_coverage", {})
+                )
+
+                vocab_coverage = exp_info.get("vocab_coverage", {})
                 get_num = lambda p: int(
                     re.match(
                         r"(?P<number>[0-9]+)\s\((?P<percent>[^\%]+)\%\)", p
@@ -384,13 +386,63 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
                     ),
                 ]
 
+                datasets_info = exp_info["datasets"]
+                for dataset in datasets_info.values():
+                    ds_name = dataset["name"]
+                    redist_str = (
+                        (
+                            "["
+                            + "/".join(
+                                map(str, map(int, dataset["redist"]["train"]))
+                            )
+                            + (
+                                (
+                                    ","
+                                    + "/".join(
+                                        map(
+                                            str,
+                                            map(
+                                                int, dataset["redist"]["test"]
+                                            ),
+                                        )
+                                    )
+                                )
+                                if dataset["redist"].get("test") is not None
+                                else ""
+                            )
+                            + "]"
+                        )
+                        if dataset.get("redist") is not None
+                        else ""
+                    )
+                    dataset_str = "{}{}".format(
+                        ds_name.capitalize(), redist_str
+                    )
+
+                embedding_info = exp_info["embedding"]
+                embedding_str = {
+                    "fasttext-wiki-news-subwords-300": "FastText (300d)",
+                    "glove-twitter-25": "GloVe Twitter (25d)",
+                    "glove-twitter-50": "GloVe Twitter (50d)",
+                    "glove-twitter-100": "GloVe Twitter (100d)",
+                    "glove-twitter-200": "GloVe Twitter (200d)",
+                    "glove-wiki-gigaword-50": "GloVe Wiki (50d)",
+                    "glove-wiki-gigaword-100": "GloVe Wiki (100d)",
+                    "glove-wiki-gigaword-200": "GloVe Wiki (200d)",
+                    "glove-wiki-gigaword-300": "GloVe Wiki (300d)",
+                    "glove-cc42-300": "GloVe CommonCrawl 42b (300d)",
+                    "glove-cc840-300": "GloVe CommonCrawl 840b (300d)",
+                    "word2vec-google-news-300": "Word2Vec Google News (300d)",
+                    "word2vec-ruscorpora-300": "Word2Vec Rus Corpora (300d)",
+                }.get(embedding_info["name"])
+
                 data += [
                     [
                         workspace,
                         exp_name_clean,
                         MODELS.get(model, model),
-                        dataset.capitalize(),
-                        EMBEDDINGS.get(embedding, embedding),
+                        dataset_str,
+                        embedding_str,
                     ]
                     + [
                         round(max(run_metric.values()) * 100, 2)
@@ -409,7 +461,7 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
                             )[0],
                             {},
                         )
-                        .get(dataset, {})
+                        .get(ds_name, {})
                         .get(m)
                         for m in metrics
                     ]
@@ -479,6 +531,7 @@ def draw_boxplot(models=None, **kwargs):
     models = models or [*MODELS]
     models_tiled = sum([[model] * len(plot_metrics) for model in models], [])
     xaxis_filters = kwargs.get("xaxis_filters")
+    box_palette = kwargs.get("box_palette", "muted")
     for (model, plot_metric) in zip(models_tiled, plot_metrics * len(models)):
         dfm = df[(df["Model"] == MODELS.get(model))]
         _xaxis_filters = (
@@ -488,7 +541,7 @@ def draw_boxplot(models=None, **kwargs):
             and model in [*xaxis_filters]
             else xaxis_filters
         )
-        draw_boxplot.dfm = dfm
+        draw_boxplot.dfm = dfm.copy()
         draw_boxplot.flt = _xaxis_filters
         if _xaxis_filters:
             dfm = dfm.loc[
@@ -604,10 +657,9 @@ def draw_boxplot(models=None, **kwargs):
                     )
                 legends[dataset_name] = opp_ax.get_legend_handles_labels()
 
-            this_ax.set_title(dataset_name.capitalize())
+            this_ax.set_title(dataset_name.capitalize().replace("[", "\n["))
             this_ax.grid(True, linestyle="dotted", which="both")
             dfmds = dfm[dfm["Dataset"] == dataset_name]
-            box_palette = kwargs.get("box_palette", "muted")
             bp = sns.boxplot(
                 y=plot_metric,
                 x="Experiment",
@@ -629,17 +681,36 @@ def draw_boxplot(models=None, **kwargs):
                     },
                 ),
             )
-            if kwargs.get("strip", False):
-                bp = sns.stripplot(
+            for handle, label, box_artist in zip(
+                *bp.get_legend_handles_labels(), bp.artists
+            ):
+                if label not in labels:
+                    labels += [label]
+                    handles += [handle]
+                    if hasattr(handle, "get_facecolor"):
+                        colors[label] = handle.get_facecolor()
+                else:
+                    box_artist.set_facecolor(colors[label])
+
+            sp = (
+                sns.stripplot(
                     y=plot_metric,
                     x="Experiment",
                     hue="Embedding",
+                    jitter=True,
                     data=dfmds,
                     ax=this_ax,
                     dodge=True,
-                    palette=box_palette,
+                    palette=sns.set_palette(
+                        sns.color_palette(
+                            [a.get_facecolor() for a in bp.artists]
+                        )
+                    ),
                     edgecolor="grey",
                 )
+                if kwargs.get("strip", False)
+                else None
+            )
 
             label_xaxis = (
                 (len(xticklabel_template) > 0)
@@ -666,13 +737,6 @@ def draw_boxplot(models=None, **kwargs):
                 xaxis_labels_height = -0.25
             this_ax.set_xlabel("")
             this_ax.set_ylabel("")
-
-            for handle, label in zip(*bp.get_legend_handles_labels()):
-                if label not in labels:
-                    labels += [label]
-                    handles += [handle]
-                    if hasattr(handle, "get_facecolor"):
-                        colors[label] = handle.get_facecolor()
             bp.get_legend().remove()
 
             cell_text = [
@@ -883,27 +947,10 @@ def argument_parser():
 
 
 def main():
-    draw_boxplot(
-        models=["lstm"],
-        plot_metrics=["Macro-F1", "Micro-F1"],
-        cited_cmap="Set1",
-        use_cached=False,
-        box_palette="colorblind",
-        mean_facecolor="ghostwhite",
-        xaxis_filters={
-            "Optimizer": "SGD",
-            "OOV Initializer": "Uniform[-0.1,0.1]",
-        },
-        label_xaxis=False,
-        strip=True,
-        # xticklabel_templates={
-        #     "lstm": "{EA Min Epochs}"
-        # }
-    )
-    # parser = argument_parser()
-    # args = parser.parse_args()
-    # params = args_to_dict(args.params)
-    # draw_boxplot(models=args.models, **params)
+    parser = argument_parser()
+    args = parser.parse_args()
+    params = args_to_dict(args.params)
+    draw_boxplot(models=args.models, **params)
 
 
 if __name__ == "__main__":

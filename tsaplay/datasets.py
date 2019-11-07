@@ -18,6 +18,7 @@ from tsaplay.constants import DATASET_DATA_PATH
 class Dataset:
     def __init__(self, name, redist=None):
         self._name = None
+        self._redist = redist
         self._uid = None
         self._gen_dir = None
         self._train_dict = None
@@ -48,6 +49,10 @@ class Dataset:
     @property
     def name(self):
         return self._name
+
+    @property
+    def redist(self):
+        return self._redist
 
     @property
     def uid(self):
@@ -105,9 +110,8 @@ class Dataset:
                     available_datasets, name
                 )
             )
-        else:
-            self._gen_dir = gen_dir
-            self._name = name
+        self._gen_dir = gen_dir
+        self._name = name
 
     def _init_srcdirs(self, mode, redist):
         redist = redist.get(mode) if isinstance(redist, dict) else redist

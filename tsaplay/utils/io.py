@@ -485,6 +485,6 @@ def datasets_cli_arg(arg):
         additional_info = (
             {key: val for key, val in zip(["train", "test"], additional_info)}
             if len(additional_info) == 2
-            else {"train": additional_info[0], "test": additional_info[0]}
+            else {"train": additional_info[0], "test": None}
         )
     return primary_arg, additional_info

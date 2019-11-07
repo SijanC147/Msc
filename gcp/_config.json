@@ -1,5 +1,5 @@
 {
-    "jobId": "reproduction_tctdlstm_t200_NEW_bugfix_run08",
+    "jobId": "reproduction_tctdlstm_t200_balanced_bugfix",
     "labels": {
         "embedding": "twitter200"
     },
