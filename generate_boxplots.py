@@ -310,16 +310,7 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
             for (exp, *run_metrics) in zip(*exp_group_runs.values()):
                 if kwargs.get("excl_curr", True) and is_currently_running(exp):
                     continue
-                exp_name_clean = exp.name  # pylint: disable=no-member
                 model = exp.project_name  # pylint: disable=no-member
-                exp_name_clean = exp_name_clean.replace(model, "")
-                dataset = [ds for ds in datasets if ds in exp_name_clean][0]
-                exp_name_clean = exp_name_clean.replace(dataset, "")
-                embedding = [em for em in embeddings if em in exp_name_clean][
-                    0
-                ]
-                exp_name_clean = exp_name_clean.replace(embedding, "")
-                exp_name_clean = exp_name_clean.replace("-", " ").strip()
                 cmt_params_others_summary = (
                     exp.get_others_summary() + exp.get_parameters_summary()
                 )
@@ -436,10 +427,26 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
                     "word2vec-ruscorpora-300": "Word2Vec Rus Corpora (300d)",
                 }.get(embedding_info["name"])
 
+                exp_name_str = exp.name  # pylint: disable=no-member
+                exp_name_str = exp_name_str.replace(model, "")
+                exp_name_str = exp_name_str.replace(ds_name, "")
+                exp_name_str = exp_name_str.replace("balanced", "")
+                exp_name_str = exp_name_str.replace(
+                    {
+                        "GloVe CommonCrawl 42b (300d)": "cc42",
+                        "GloVe CommonCrawl 840b (300d)": "cc840",
+                        "GloVe Twitter (100d)": "t100",
+                        "GloVe Twitter (200d)": "t200",
+                    }.get(embedding_str),
+                    "",
+                )
+                exp_name_str = exp_name_str.replace("-", " ")
+                exp_name_str = exp_name_str.strip()
+
                 data += [
                     [
                         workspace,
-                        exp_name_clean,
+                        exp_name_str,
                         MODELS.get(model, model),
                         dataset_str,
                         embedding_str,
@@ -692,6 +699,7 @@ def draw_boxplot(models=None, **kwargs):
                 else:
                     box_artist.set_facecolor(colors[label])
 
+            # pylint: disable=unused-variable
             sp = (
                 sns.stripplot(
                     y=plot_metric,
