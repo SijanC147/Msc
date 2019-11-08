@@ -7,18 +7,18 @@ default: -mp oov_train=1 oov_buckets=1 oov_fn=uniform[-0.1,0.1]
 
 # Dong
 default: -ds=dong
--m=lstm -contd=lstm-sgd-cc42-dong-oovt1b1 
--m=td_lstm -contd=tdlstm-sgd-cc42-dong-oovt1b1 
--m=tc_lstm -contd=tclstm-sgd-cc42-dong-oovt1b1 
+#-m=lstm -contd=lstm-sgd-cc42-dong-oovt1b1 
+#-m=td_lstm -contd=tdlstm-sgd-cc42-dong-oovt1b1 
+#-m=tc_lstm -contd=tclstm-sgd-cc42-dong-oovt1b1 
 
 # Restaurants
 default: -ds=restaurants
--m=lstm -contd=lstm-sgd-cc42-restaurants-oovt1b1 -mp early_stopping_minimum_iter=150
--m=td_lstm -contd=tdlstm-sgd-cc42-restaurants-oovt1b1 
--m=tc_lstm -contd=tclstm-sgd-cc42-restaurants-oovt1b1 
+#-m=lstm -contd=lstm-sgd-cc42-restaurants-oovt1b1 -mp early_stopping_minimum_iter=150
+#-m=td_lstm -contd=tdlstm-sgd-cc42-restaurants-oovt1b1 
+#-m=tc_lstm -contd=tclstm-sgd-cc42-restaurants-oovt1b1 
 
 # Laptops
 default: -ds=laptops
 -m=lstm -contd=lstm-sgd-cc42-laptops-oovt1b1 -mp early_stopping_minimum_iter=150
--m=td_lstm -contd=tdlstm-sgd-cc42-laptops-oovt1b1 
--m=tc_lstm -contd=tclstm-sgd-cc42-laptops-oovt1b1 
+#-m=td_lstm -contd=tdlstm-sgd-cc42-laptops-oovt1b1 
+#-m=tc_lstm -contd=tclstm-sgd-cc42-laptops-oovt1b1 

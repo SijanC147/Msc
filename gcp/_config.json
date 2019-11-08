@@ -1,7 +1,7 @@
 {
-    "jobId": "reproduction_tctdlstm_t200_balanced_bugfix",
+    "jobId": "reproduction_lstm_t100_NEW_resub_run03",
     "labels": {
-        "embedding": "twitter200"
+        "embedding": "twitter100"
     },
     "trainingInput": {
         "scaleTier": "CUSTOM",

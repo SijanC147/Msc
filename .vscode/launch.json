@@ -43,11 +43,11 @@
             "program": "${workspaceFolder}/submit_job.py",
             "args": [
                 "-jf", 
-                "jobs/reproduction-tctdlstm-debug.jobs.txt",
-                "-n",
-                "4",
-                "--run-start",
-                "7"
+                "jobs/reproduction-new-lstm-resubs.jobs.txt",
+                // "-n",
+                // "4",
+                // "--run-start",
+                // "7"
                 // "-jid=debuging",
                 // "-t",
                 // "batch",

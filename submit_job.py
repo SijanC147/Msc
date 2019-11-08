@@ -1,5 +1,6 @@
 import argparse
 import traceback
+from copy import deepcopy
 from os import system, remove
 from os.path import join, abspath, basename
 from json import dump
@@ -260,34 +261,48 @@ def submit_job(args):
 def main():
     parser = argument_parser()
     args = parser.parse_args()
+    nruns = args.nruns
+    start = int(args.run_start) if args.run_start else 1
+    jobs_args = []
     if args.jobs_file:
         for line in open(args.jobs_file, "r"):
-            if (
-                len(line.strip()) > 0
-                and not line.startswith("#")
-                and not line.startswith(";")
-            ):
-                try:
-                    job_args = parser.parse_args(line.split())
-                    nruns = args.nruns
-                    if not nruns:
-                        submit_job(job_args)
-                        continue
-                    orig_job_id = job_args.job_id
-                    start = int(args.run_start) if args.run_start else 1
-                    for run_num in range(start, start + int(nruns)):
-                        job_args.job_id = orig_job_id + (
+            comment = line.startswith("#") or line.startswith(";")
+            if len(line.strip()) > 0 and not comment:
+                this_args = parser.parse_args(line.split())
+                this_nruns = this_args.nruns or nruns
+                this_start = (
+                    int(this_args.run_start)
+                    if this_args.run_start is not None
+                    else start
+                )
+                if this_nruns:
+                    orig_job_id = this_args.job_id
+                    for run_num in range(
+                        this_start, this_start + int(this_nruns)
+                    ):
+                        this_args.job_id = orig_job_id + (
                             "_run{:02}".format(run_num)
                         )
-                        submit_job(job_args)
-                except Exception:  # pylint: disable=W0703
-                    cprnt(WARN="Encountered exception in job: {}".format(line))
-                    traceback.print_exc()
-                    continue
-            else:
-                continue
+                        jobs_args += [deepcopy(this_args)]
+                else:
+                    jobs_args += [deepcopy(this_args)]
     else:
-        submit_job(args)
+        if nruns:
+            orig_job_id = args.job_id
+            for run_num in range(start, start + int(nruns)):
+                args.job_id = orig_job_id + ("_run{:02}".format(run_num))
+                jobs_args += [deepcopy(args)]
+        else:
+            jobs_args = [args]
+
+    for job_args in jobs_args:
+        try:
+            submit_job(job_args)
+        except Exception:  # pylint: disable=W0703
+            job_str = " ".join(job_args)
+            cprnt(WARN="Encountered exception in job: {}".format(job_str))
+            traceback.print_exc()
+            continue
 
 
 if __name__ == "__main__":
