@@ -279,8 +279,6 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
     api = get_comet_api(**kwargs)
     workspace = workspace or "reproduction"
     metrics = metrics or ["Macro-F1", "Micro-F1"]
-    datasets = kwargs.get("datasets", ["restaurants", "dong", "laptops"])
-    embeddings = kwargs.get("embeddings", [*EMBEDDINGS])
     cols = (
         ["Workspace", "Experiment", "Model", "Dataset", "Embedding"]
         + metrics

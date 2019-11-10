@@ -3,6 +3,7 @@ default: -cmt T1NrVnn32dXWeOxeQWGArkHwc -wrk reproduction-new
 default: -em=commoncrawl-840[corpus]
 default: -aux logging=true 
 default: -mp oov_train=1 oov_buckets=1 oov_fn=uniform[-0.1,0.1]
+default: -mp early_stopping_minimum_iter=150
 ###
 
 # Dong
@@ -13,12 +14,15 @@ default: -ds=dong
 
 # Restaurants
 default: -ds=restaurants
-#-m=lstm -contd=lstm-sgd-cc840-restaurants-oovt1b1 -mp early_stopping_minimum_iter=150
+#-m=lstm -contd=lstm-sgd-cc840-restaurants-oovt1b1 
 #-m=td_lstm -contd=tdlstm-sgd-cc840-restaurants-oovt1b1 
 #-m=tc_lstm -contd=tclstm-sgd-cc840-restaurants-oovt1b1 
 
 # Laptops
 default: -ds=laptops
--m=lstm -contd=lstm-sgd-cc840-laptops-oovt1b1 -mp early_stopping_minimum_iter=150
-#-m=td_lstm -contd=tdlstm-sgd-cc840-laptops-oovt1b1 
+#-m=lstm -contd=lstm-sgd-cc840-laptops-oovt1b1
 #-m=tc_lstm -contd=tclstm-sgd-cc840-laptops-oovt1b1 
+
+-m=td_lstm -contd=tdlstm-sgd-cc840-laptops-300hu-oovt1b1 -mp hidden_units=300
+-m=td_lstm -contd=tdlstm-sgd-cc840-laptops-01lr-oovt1b1 -mp learning_rate=0.1
+-m=td_lstm -contd=tdlstm-09momentum-cc840-laptops-01lr-oovt1b1 -mp optimizer=momentum learning_rate=0.1 momentum=0.9

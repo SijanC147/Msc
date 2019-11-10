@@ -292,7 +292,15 @@ def run_experiment(args, experiment_index=None):
         job_dir=args.job_dir,
     )
 
-    experiment.run(job="train+eval", steps=args.steps, epochs=args.epochs)
+    try:
+        experiment.run(job="train+eval", steps=args.steps, epochs=args.epochs)
+    except Exception as exception:
+        if experiment.model.comet_experiment is not None:
+            experiment.model.comet_experiment.log_html(
+                "<pre>{}</pre>".format(traceback.format_exc())
+            )
+            experiment.model.comet_experiment.end()
+        raise exception
 
     if args.tb_port:
         try:
@@ -356,7 +364,16 @@ def run_next_experiment(batch_file_path, job_dir=None, defaults=None):
     defaults_arg = (
         "--defaults {}".format(" ".join(defaults)) if defaults else ""
     )
-    next_cmd = """python3 -m tsaplay.task batch {batch_file} {job_dir} {defaults}""".format(
+    next_cmd = " ".join(
+        [
+            "python3 -m",
+            "tsaplay.task",
+            "batch",
+            "{batch_file}",
+            "{job_dir}",
+            "{defaults}",
+        ]
+    ).format(
         batch_file=batch_file_path, job_dir=job_dir_arg, defaults=defaults_arg
     )
     execvpe("python3", next_cmd.split(), environ)

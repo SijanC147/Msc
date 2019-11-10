@@ -1,6 +1,7 @@
 # pylint: disable=no-name-in-module
 import io
 import re
+import inspect
 from functools import wraps
 from itertools import tee, chain
 from tqdm import tqdm
@@ -99,13 +100,20 @@ def checkpoints_state_data(model_dir):
     return {"step": 0}
 
 
-def resolve_optimizer(key):
-    return {
-        "SGD": tf.train.GradientDescentOptimizer,
-        "Adam": tf.train.AdamOptimizer,
-        "Adagrad": tf.train.AdagradOptimizer,
-        "Momentum": tf.train.MomentumOptimizer,
-    }[key]
+def resolve_optimizer(**params):
+    opt_fn = {
+        "sgd": tf.train.GradientDescentOptimizer,
+        "adam": tf.train.AdamOptimizer,
+        "adagrad": tf.train.AdagradOptimizer,
+        "momentum": tf.train.MomentumOptimizer,
+    }[params["optimizer"].lower()]
+    opt_sig = inspect.signature(opt_fn)
+    opt_args = {
+        p.name: params[p.name]
+        for p in opt_sig.parameters.values()
+        if p.kind == p.POSITIONAL_OR_KEYWORD and p.name in [*params]
+    }
+    return opt_fn(**opt_args)
 
 
 def sharded_saver(model_fn):

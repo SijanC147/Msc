@@ -1,7 +1,11 @@
 {
-    "jobId": "reproduction_lstm_t100_NEW_resub_run03",
+    "jobId": "reproduction_tdlstm_cc840_mods_momentum_take3_run04",
     "labels": {
-        "embedding": "twitter100"
+        "model": "tdlstm",
+        "dataset": "laptops",
+        "embedding": "commoncrawl840",
+        "miniter": "150",
+        "optimizer": "momentum"
     },
     "trainingInput": {
         "scaleTier": "CUSTOM",
@@ -11,7 +15,7 @@
         "region": "europe-west1",
         "args": [
             "batch",
-            "tctdlstm.txt",
+            "tdlstm-momentum.txt",
             "--new",
             "--nocolor"
         ]

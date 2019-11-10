@@ -256,9 +256,7 @@ class Ram(TsaModel):
             labels=labels, logits=logits, l2_weight=params["l2_weight"]
         )
 
-        optimizer = resolve_optimizer(params["optimizer"])(
-            learning_rate=params["learning_rate"]
-        )
+        optimizer = resolve_optimizer(**params)
 
         return self.make_estimator_spec(
             mode=mode, logits=logits, optimizer=optimizer, loss=loss
