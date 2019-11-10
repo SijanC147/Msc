@@ -23,6 +23,9 @@ default: -ds=laptops
 #-m=lstm -contd=lstm-sgd-cc42-laptops-oovt1b1 
 #-m=tc_lstm -contd=tclstm-sgd-cc42-laptops-oovt1b1 
 
--m=td_lstm -contd=tdlstm-sgd-cc42-laptops-300hu-oovt1b1 -mp hidden_units=300
--m=td_lstm -contd=tdlstm-sgd-cc42-laptops-01lr-oovt1b1 -mp learning_rate=0.1
--m=td_lstm -contd=tdlstm-09momentum-cc42-laptops-01lr-oovt1b1 -mp optimizer=momentum learning_rate=0.1 momentum=0.9
+#-m=td_lstm -contd=tdlstm-sgd-cc42-laptops-300hu-oovt1b1 -mp hidden_units=300
+#-m=td_lstm -contd=tdlstm-sgd-cc42-laptops-01lr-oovt1b1 -mp learning_rate=0.1
+#-m=td_lstm -contd=tdlstm-09momentum-cc42-laptops-01lr-oovt1b1 -mp optimizer=momentum learning_rate=0.1 momentum=0.9
+
+default: -mp oov_train=5 oov_buckets=100 oov_fn=uniform[-0.1,0.1]
+-m=td_lstm -contd=tdlstm-sgd-cc42-laptops-oovt5b100

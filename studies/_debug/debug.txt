@@ -10,7 +10,7 @@ default: -mp oov_train=1 oov_buckets=1 oov_fn=uniform[-0.1,0.1]
 default: -mp lstm_hidden_units=5 gru_hidden_units=5 hidden_units=5
 #default: -rc save_summary_steps=1 save_checkpoints_steps=2
 
--em=commoncrawl-840[corpus] -ds=laptops -m=lstm -e 25 -mp optimizer=momentum learning_rate=0.1 momentum=0.9 -contd=momentum-test-3 
+-em=commoncrawl-840[corpus] -ds=laptops[33/34/33] -m=lstm -e 25 -mp optimizer=momentum learning_rate=0.1 momentum=0.9 -contd=again
 
 ;-em=commoncrawl-840[corpus] -ds=laptops -m=lstm -mp learning_rate=0.1 -contd=lstm-sgd-cc840-laptops-eagames3
 

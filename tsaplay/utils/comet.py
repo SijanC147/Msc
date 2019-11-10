@@ -1,5 +1,6 @@
 import inspect
 import json
+from collections import OrderedDict
 from datetime import datetime
 from functools import wraps
 import tensorflow as tf
@@ -111,12 +112,91 @@ def comet_pretty_log(comet_experiment, data_dict, prefix=None, hparams=False):
 def log_dist_data(comet_experiment, feature_provider, modes):
     if comet_experiment is None:
         return
+    comet_experiment.log_other(
+        "datasets", ",".join([ds.name for ds in feature_provider.datasets])
+    )
+    all_class_labels = sorted(
+        list(
+            map(
+                str,
+                set(
+                    sum(
+                        [ds.class_labels for ds in feature_provider.datasets],
+                        [],
+                    )
+                ),
+            )
+        )
+    )
     stats = {
         ds.name: class_dist_stats(
             ds.class_labels, train=ds.train_dict, test=ds.test_dict
         )
         for ds in feature_provider.datasets
     }
+    train_tot = sum(
+        [
+            sum(int(v["count"]) for v in d["train"].values())
+            for d in stats.values()
+        ]
+    )
+    test_tot = sum(
+        [
+            sum(int(v["count"]) for v in d["test"].values())
+            for d in stats.values()
+        ]
+    )
+    tot_stats = {
+        "train": {
+            lab: round(
+                (
+                    sum(
+                        [
+                            sum(
+                                int(v["count"])
+                                for l, v in d["train"].items()
+                                if l == str(lab)
+                            )
+                            for d in stats.values()
+                        ]
+                    )
+                    / train_tot
+                )
+                * 100
+            )
+            for lab in all_class_labels
+        },
+        "test": {
+            lab: round(
+                (
+                    sum(
+                        [
+                            sum(
+                                int(v["count"])
+                                for l, v in d["test"].items()
+                                if l == str(lab)
+                            )
+                            for d in stats.values()
+                        ]
+                    )
+                    / test_tot
+                )
+                * 100
+            )
+            for lab in all_class_labels
+        },
+    }
+    comet_experiment.log_other(
+        "datasets_all_class_labels", "/".join(all_class_labels)
+    )
+    comet_experiment.log_other(
+        "datasets_train_dist",
+        "/".join([str(tot_stats["train"][l]) for l in all_class_labels]),
+    )
+    comet_experiment.log_other(
+        "datasets_test_dist",
+        "/".join([str(tot_stats["test"][l]) for l in all_class_labels]),
+    )
     dist_images = [plot_distributions(stats, mode) for mode in modes]
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     dist_image_names = [mode + "_distribution_" + timestamp for mode in modes]

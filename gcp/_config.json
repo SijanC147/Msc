@@ -1,9 +1,9 @@
 {
-    "jobId": "reproduction_tdlstm_cc840_mods_momentum_take3_run04",
+    "jobId": "reproduction_tdlstm_cc42_mods_momentum_take5_run04",
     "labels": {
         "model": "tdlstm",
         "dataset": "laptops",
-        "embedding": "commoncrawl840",
+        "embedding": "commoncrawl42",
         "miniter": "150",
         "optimizer": "momentum"
     },

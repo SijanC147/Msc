@@ -76,14 +76,14 @@
             "redirectOutput": false
         },
         {
-            "name": "batch-defaults-arg-test",
+            "name": "studies/_debug/debug.txt",
             "type": "python",
             "request": "launch",
             "module": "tsaplay.task",
             "args": [
                 "batch",
-                // "studies/debug.txt",
-                "studies/reproduction-models/reproducibility-ram.txt",
+                "studies/_debug/debug.txt",
+                // "studies/reproduction-models/reproducibility-ram.txt",
                 // "--defaults",
                 // "-b",
                 // "5",
