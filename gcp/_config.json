@@ -1,11 +1,10 @@
 {
-    "jobId": "reproduction_tdlstm_cc42_mods_momentum_take5_run04",
+    "jobId": "reproduction_tdlstm_cc42_mods_adam_adagrad_hu_run06",
     "labels": {
         "model": "tdlstm",
         "dataset": "laptops",
         "embedding": "commoncrawl42",
-        "miniter": "150",
-        "optimizer": "momentum"
+        "hiddenunits": "300"
     },
     "trainingInput": {
         "scaleTier": "CUSTOM",
@@ -15,7 +14,7 @@
         "region": "europe-west1",
         "args": [
             "batch",
-            "tdlstm-momentum.txt",
+            "tdlstm-adam-adagrad.txt",
             "--new",
             "--nocolor"
         ]

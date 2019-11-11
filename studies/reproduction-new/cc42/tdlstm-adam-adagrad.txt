@@ -17,5 +17,5 @@ default: -ds=laptops
 #-m=td_lstm -contd=tdlstm-09momentum-cc42-laptops-01lr-oovt1b1 -mp optimizer=momentum learning_rate=0.1 momentum=0.9
 #-m=td_lstm -contd=tdlstm-09momentum-cc42-laptops-01lr-300hu-oovt1b1 -mp hidden_units=300 optimizer=momentum learning_rate=0.1 momentum=0.9
 
-default: -mp oov_train=10 oov_buckets=10 oov_fn=uniform[-0.1,0.1]
--m=td_lstm -contd=tdlstm-09momentum-cc42-laptops-01lr-300hu-oovt10b10 -mp hidden_units=300 optimizer=momentum learning_rate=0.1 momentum=0.9
+-m=td_lstm -contd=tdlstm-adagrad-cc42-laptops-01lr-300hu-oovt1b1 -mp hidden_units=300 optimizer=adagrad learning_rate=0.1 
+-m=td_lstm -contd=tdlstm-adam-cc42-laptops-0001lr-300hu-oovt1b1 -mp hidden_units=300 optimizer=adam learning_rate=0.001 

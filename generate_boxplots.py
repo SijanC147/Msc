@@ -119,6 +119,21 @@ REPORTED = {
 }
 
 CMT_VALS_MAPPING = {
+    "Dataset": {
+        "cmt_regex": r"{}",
+        "cmt_key": "datasets",
+        "df_valfn": lambda v: str(v).capitalize(),
+        "use_xlabel": False,
+    },
+    "Class Labels": {
+        "cmt_regex": r"datasets_{}",
+        "cmt_key": "all_class_labels",
+    },
+    "Train Distribution": {
+        "cmt_regex": r"datasets_{}",
+        "cmt_key": "train_dist",
+    },
+    "Test Distribution": {"cmt_regex": r"datasets_{}", "cmt_key": "test_dist"},
     "Hidden Units": {"cmt_key": "Hidden Units"},
     "LSTM Hidden Units": {"cmt_key": "Lstm Hidden Units"},
     "GRU Hidden Units": {"cmt_key": "Gru Hidden Units"},
@@ -138,9 +153,9 @@ CMT_VALS_MAPPING = {
     "Momentum": {"cmt_key": "Momentum"},
     "Optimizer": {
         "cmt_key": "Optimizer",
-        "df_valfn": lambda v: {"GradientDescent": "SGD"}.get(
-            v.replace("Optimizer", ""), v.replace("Optimizer", "")
-        ),
+        "df_valfn": lambda v: {"GradientDescent": "SGD"}
+        .get(v.replace("Optimizer", ""), v.replace("Optimizer", ""))
+        .capitalize(),
     },
     "Kernel Initializer": {"cmt_key": "Initializer"},
     "Bias Initializer": {"cmt_key": "Bias Initializer"},
@@ -280,7 +295,7 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
     workspace = workspace or "reproduction"
     metrics = metrics or ["Macro-F1", "Micro-F1"]
     cols = (
-        ["Workspace", "Experiment", "Model", "Dataset", "Embedding"]
+        ["Workspace", "Experiment", "Model", "Embedding"]
         + metrics
         + ["Reported {}".format(m) for m in metrics]
         + [*CMT_VALS_MAPPING]
@@ -319,9 +334,9 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
                         else cmt_param_other["df_valfn"](p["valueCurrent"])
                         for p in cmt_params_others_summary
                         if re.match(
-                            r"train_(AUTOPARAM: )?{}".format(
-                                cmt_param_other["cmt_key"]
-                            ),
+                            cmt_param_other.get(
+                                "cmt_regex", r"train_(AUTOPARAM: )?{}"
+                            ).format(cmt_param_other["cmt_key"]),
                             p["name"],
                             re.IGNORECASE,
                         )
@@ -378,35 +393,35 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
                 datasets_info = exp_info["datasets"]
                 for dataset in datasets_info.values():
                     ds_name = dataset["name"]
-                    redist_str = (
-                        (
-                            "["
-                            + "/".join(
-                                map(str, map(int, dataset["redist"]["train"]))
-                            )
-                            + (
-                                (
-                                    ","
-                                    + "/".join(
-                                        map(
-                                            str,
-                                            map(
-                                                int, dataset["redist"]["test"]
-                                            ),
-                                        )
-                                    )
-                                )
-                                if dataset["redist"].get("test") is not None
-                                else ""
-                            )
-                            + "]"
-                        )
-                        if dataset.get("redist") is not None
-                        else ""
-                    )
-                    dataset_str = "{}{}".format(
-                        ds_name.capitalize(), redist_str
-                    )
+                #     redist_str = (
+                #         (
+                #             "["
+                #             + "/".join(
+                #                 map(str, map(int, dataset["redist"]["train"]))
+                #             )
+                #             + (
+                #                 (
+                #                     ","
+                #                     + "/".join(
+                #                         map(
+                #                             str,
+                #                             map(
+                #                                 int, dataset["redist"]["test"]
+                #                             ),
+                #                         )
+                #                     )
+                #                 )
+                #                 if dataset["redist"].get("test") is not None
+                #                 else ""
+                #             )
+                #             + "]"
+                #         )
+                #         if dataset.get("redist") is not None
+                #         else ""
+                #     )
+                #     dataset_str = "{}{}".format(
+                #         ds_name.capitalize(), redist_str
+                #     )
 
                 embedding_info = exp_info["embedding"]
                 embedding_str = {
@@ -446,7 +461,7 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
                         workspace,
                         exp_name_str,
                         MODELS.get(model, model),
-                        dataset_str,
+                        # dataset_str,
                         embedding_str,
                     ]
                     + [
@@ -530,6 +545,7 @@ class AnyObjectHandler(HandlerBase):
 def draw_boxplot(models=None, **kwargs):
     workspace = kwargs.get("workspace", "reproduction-new")
     df = comet_to_df(workspace, models=models, **kwargs)
+    draw_boxplot.df = df.copy()
     plot_metrics = kwargs.get("plot_metrics", ["Macro-F1", "Micro-F1"])
     xticklabel_templates = kwargs.get("xticklabel_templates", dict())
     hparams = kwargs.get("hparams", [*CMT_VALS_MAPPING])
@@ -546,8 +562,6 @@ def draw_boxplot(models=None, **kwargs):
             and model in [*xaxis_filters]
             else xaxis_filters
         )
-        draw_boxplot.dfm = dfm.copy()
-        draw_boxplot.flt = _xaxis_filters
         if _xaxis_filters:
             dfm = dfm.loc[
                 (
@@ -574,8 +588,28 @@ def draw_boxplot(models=None, **kwargs):
                     )
                 )
             ]
+        filter_by_emb = kwargs.get("embeddings")
+        if filter_by_emb:
+            if isinstance(filter_by_emb, str):
+                filter_by_emb = [filter_by_emb]
+            dfm = dfm[
+                (
+                    dfm["Embedding"].isin(
+                        [EMBEDDINGS.get(e, e) for e in filter_by_emb]
+                    )
+                )
+            ]
         dss = dfm["Dataset"].unique().tolist()
         num_plots = len(dss)
+        num_exp_per_ds = [
+            len(dfm[(dfm["Dataset"] == ds)]["Experiment"].unique().tolist())
+            for ds in dss
+        ]
+        wr = kwargs.get("wr", [10, 1])
+        width_ratios = [
+            round((exp_count / sum(num_exp_per_ds)) * wr[0])
+            for exp_count in num_exp_per_ds
+        ] + [wr[1] if len(wr) > 1 else 1]
         common_hparams = [
             (hparam, str(dfm[hparam].unique().tolist()[0]))
             for hparam in hparams
@@ -586,7 +620,11 @@ def draw_boxplot(models=None, **kwargs):
 
         handles, labels, legends, colors = [], [], dict(), dict()
         fig, axes = plt.subplots(
-            1, num_plots + 1, sharey=False, figsize=(16, 7)
+            1,
+            num_plots + 1,
+            sharey=False,
+            figsize=(16, 7),
+            gridspec_kw={"width_ratios": width_ratios},
         )
         fig.suptitle(
             "{}\n({})".format(model.upper(), plot_metric.replace("f1", "F1")),
@@ -616,7 +654,7 @@ def draw_boxplot(models=None, **kwargs):
             ]
             if not xticklabel_factors and _xaxis_filters:
                 xticklabel_factors = [*_xaxis_filters]
-            xticklabel_template = ", ".join(
+            xticklabel_template = "\n".join(
                 [
                     "{{{}}}".format(factor)
                     if not CMT_VALS_MAPPING[factor].get("xtick_label")
@@ -697,7 +735,6 @@ def draw_boxplot(models=None, **kwargs):
                 else:
                     box_artist.set_facecolor(colors[label])
 
-            # pylint: disable=unused-variable
             sp = (
                 sns.stripplot(
                     y=plot_metric,
@@ -726,18 +763,23 @@ def draw_boxplot(models=None, **kwargs):
             if label_xaxis:
                 this_ax.set_xticklabels(
                     [
-                        xticklabel_template.format(
-                            **(
-                                dfm[
+                        xticklabel_template.format_map(
+                            {
+                                k: v if v is not None else "-"
+                                for k, v in dfm[
                                     (dfm["Dataset"] == dataset_name)
                                     & (dfm["Experiment"] == lab.get_text())
-                                ].to_dict("records")[0]
-                            )
+                                ]
+                                .to_dict("records")[0]
+                                .items()
+                            }
                         )
                         for lab in this_ax.get_xticklabels()
                     ]
                 )
-                xaxis_labels_height = -0.3
+                # xaxis_labels_height = -0.3
+                xoff = kwargs.get("xoff", 0.15)
+                xaxis_labels_height = -(xoff * len(xticklabel_factors))
             else:
                 this_ax.set_xticks([])
                 xaxis_labels_height = -0.25
@@ -871,7 +913,7 @@ def draw_boxplot(models=None, **kwargs):
                 rowLabels=["Mean(%)", "Max(%)", "N"],
             )
             table.auto_set_font_size(False)
-            table.set_fontsize(12)
+            table.set_fontsize(8)
 
             for (y_pos, x_pos), cell in table.get_celld().items():
                 if cell.get_text().get_text() == "":
@@ -922,13 +964,13 @@ def draw_boxplot(models=None, **kwargs):
         )
 
         if common_hparams:
-            col_widths = [0.2 * num_plots, 1 - (0.2 * num_plots)]
+            col_widths = [0.1 * num_plots, 1 - (0.1 * num_plots)]
             hparam_table = last_axis.table(
                 cellText=[["Hyper-Parameter Configuration\n", ""]]
                 + list(map(list, common_hparams)),
                 colWidths=col_widths,
                 cellLoc="left",
-                bbox=(-0.2, xaxis_labels_height, 1, 0.3),
+                bbox=(-0.2, xaxis_labels_height, 2, 0.3),
                 edges="open",
             )
             hparam_table.auto_set_font_size(False)
@@ -936,6 +978,8 @@ def draw_boxplot(models=None, **kwargs):
             for (y_pos, x_pos), cell in hparam_table.get_celld().items():
                 if x_pos == 0 and y_pos == 0:
                     cell.set_text_props(fontsize="x-small")
+                if x_pos == 1:
+                    cell._loc = "right"
 
         if kwargs.get("fname", False) or kwargs.get("format", False):
             save_plot(plt, model, plot_metric, **kwargs)
@@ -953,10 +997,11 @@ def argument_parser():
 
 
 def main():
-    parser = argument_parser()
-    args = parser.parse_args()
-    params = args_to_dict(args.params)
-    draw_boxplot(models=args.models, **params)
+    df = comet_to_df("reproduction-new", models=["tdlstm"], use_cached=False)
+    # parser = argument_parser()
+    # args = parser.parse_args()
+    # params = args_to_dict(args.params)
+    # draw_boxplot(models=args.models, **params)
 
 
 if __name__ == "__main__":

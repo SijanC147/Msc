@@ -20,4 +20,3 @@ default: -ds=laptops[33/34/33]
 #-m=td_lstm -contd=tdlstm-sgd-cc42-laptops-balanced-oovt1b1 
 
 -m=td_lstm -contd=tdlstm-sgd-cc42-laptops-balanced-300hu-01lr-oovt1b1 -mp hidden_units=300 learning_rate=0.1
--m=td_lstm -contd=tdlstm-sgd-cc42-laptops-balanced-300hu-oovt1b1 -mp hidden_units=300 
