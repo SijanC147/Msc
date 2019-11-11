@@ -393,35 +393,6 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
                 datasets_info = exp_info["datasets"]
                 for dataset in datasets_info.values():
                     ds_name = dataset["name"]
-                #     redist_str = (
-                #         (
-                #             "["
-                #             + "/".join(
-                #                 map(str, map(int, dataset["redist"]["train"]))
-                #             )
-                #             + (
-                #                 (
-                #                     ","
-                #                     + "/".join(
-                #                         map(
-                #                             str,
-                #                             map(
-                #                                 int, dataset["redist"]["test"]
-                #                             ),
-                #                         )
-                #                     )
-                #                 )
-                #                 if dataset["redist"].get("test") is not None
-                #                 else ""
-                #             )
-                #             + "]"
-                #         )
-                #         if dataset.get("redist") is not None
-                #         else ""
-                #     )
-                #     dataset_str = "{}{}".format(
-                #         ds_name.capitalize(), redist_str
-                #     )
 
                 embedding_info = exp_info["embedding"]
                 embedding_str = {
@@ -461,7 +432,6 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
                         workspace,
                         exp_name_str,
                         MODELS.get(model, model),
-                        # dataset_str,
                         embedding_str,
                     ]
                     + [
