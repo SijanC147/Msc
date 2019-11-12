@@ -27,7 +27,13 @@ from tsaplay.embeddings import Embedding
 from tsaplay.features import FeatureProvider
 from tsaplay.experiments import Experiment
 from tsaplay.models.tsa_model import TsaModel
-from tsaplay.constants import EMBEDDING_SHORTHANDS, ASSETS_PATH, MODELS_PATH
+from tsaplay.constants import (
+    EMBEDDING_TAGS,
+    EMBEDDING_SHORTHANDS,
+    ASSETS_PATH,
+    MODELS_PATH,
+    CONTD_TAG_PARAMS,
+)
 
 
 def argument_parser():
@@ -253,9 +259,10 @@ def run_experiment(args, experiment_index=None):
         cprnt(tf=True, y="Running experiment {}".format(experiment_index + 1))
         cprnt(tf=True, y="Args: {}".format(args))
 
-    if args.comet_api and not args.contd_tag:
-        cprnt(tf="FATAL", warn="comet api provided without contd-tag.")
-        sys.exit(1)
+    contd_tag = args.contd_tag
+    if args.comet_api and not contd_tag:
+        cprnt(tf="WARN", warn="Not contd-tag provided, auto-generating...")
+        contd_tag = "..autogen"
 
     feature_provider = make_feature_provider(args)
 
@@ -282,13 +289,51 @@ def run_experiment(args, experiment_index=None):
     if model.params.get("epochs") is not None:
         model.params.pop("steps", None)
 
+    if contd_tag.startswith(".."):
+        oov_tag = "oovt{}b{}".format(
+            params["oov_train"], params["oov_buckets"]
+        )
+        gen_tag = "-".join(
+            [
+                args.model,
+                model.params["optimizer"],
+                EMBEDDING_TAGS[feature_provider.embedding.name],
+            ]
+            + [
+                "{}[{}]".format(
+                    name,
+                    ",".join(
+                        [
+                            "".join(list(map(str, map(int, vals))))
+                            for vals in redist.values()
+                            if vals is not None
+                        ]
+                    ),
+                )
+                if redist is not None
+                else name
+                for name, redist in args.datasets
+            ]
+        )
+        p_tags = []
+        for p_name, p_arg in params.items():
+            if p_name in [*CONTD_TAG_PARAMS]:
+                p_tags += [
+                    CONTD_TAG_PARAMS[p_name].format(
+                        str(p_arg).replace(".", "")
+                    )
+                ]
+        p_tag = "-".join(p_tags)
+        contd_tag = "-".join([gen_tag, oov_tag, p_tag, contd_tag[2:]])
+        cprnt(tf="INFO", info="CONTD-TAG: {}".format(contd_tag))
+
     experiment = Experiment(
         feature_provider,
         model,
         run_config=args_to_dict(args.run_config),
         comet_api=args.comet_api,
         comet_workspace=args.comet_workspace,
-        contd_tag=args.contd_tag,
+        contd_tag=contd_tag,
         job_dir=args.job_dir,
     )
 

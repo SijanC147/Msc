@@ -76,13 +76,13 @@
             "redirectOutput": false
         },
         {
-            "name": "studies/_debug/debug.txt",
+            "name": "studies/debug.txt",
             "type": "python",
             "request": "launch",
             "module": "tsaplay.task",
             "args": [
                 "batch",
-                "studies/_debug/debug.txt",
+                "studies/debug.txt",
                 // "studies/reproduction-models/reproducibility-ram.txt",
                 // "--defaults",
                 // "-b",

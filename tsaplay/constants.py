@@ -40,6 +40,31 @@ EMBEDDING_SHORTHANDS = {
     "w2v-rus-300": "word2vec-ruscorpora-300",
 }
 
+EMBEDDING_TAGS = {
+    "fasttext-wiki-news-subwords-300": "fstxt",
+    "glove-twitter-25": "t25",
+    "glove-twitter-50": "t50",
+    "glove-twitter-100": "t100",
+    "glove-twitter-200": "t200",
+    "glove-wiki-gigaword-50": "wiki50",
+    "glove-wiki-gigaword-100": "wiki100",
+    "glove-wiki-gigaword-200": "wiki200",
+    "glove-wiki-gigaword-300": "wiki300",
+    "glove-cc42-300": "cc42",
+    "glove-cc840-300": "cc840",
+    "word2vec-google-news-300": "w2vggl",
+    "word2vec-ruscorpora-300": "w2vrus",
+}
+
+CONTD_TAG_PARAMS = {
+    "hidden_units": "{}hu",
+    "lstm_hidden_units": "{}lhu",
+    "gru_hidden_units": "{}ghu",
+    "learning_rate": "{}lr",
+    "momentum": "{}mom",
+}
+
+
 try:
     DATA_PATH = join(Path.home(), "tsaplay-data")
 except TypeError:

@@ -28,18 +28,51 @@
     "statusBarItem.hoverBackground": "#8aaeda",
     "statusBar.foreground": "#15202b"
   },
-  "peacock.color": "#b1c9e6",
+  // "peacock.color": "#b1c9e6",
   "python.linting.pylintEnabled": true,
   "python.linting.pylintArgs": [
     "--max-line-length=79",
-    "--disable=C0330,C0111,import-error,missing-function-docstring,unused-import", 		
+    "--disable=C0330,C0111,import-error,missing-function-docstring,unused-import"
   ],
   "editor.formatOnSave": true,
   "editor.formatOnSaveTimeout": 3000,
-  "python.formatting.blackArgs": [
-    "-l 79",
-    "--fast"
-  ],
+  "python.formatting.blackArgs": ["-l 79", "--fast"],
   "python.jediEnabled": false,
-  "python.analysis.downloadChannel": "release"
+  // "python.analysis.downloadChannel": "release",
+  "highlight.regexFlags": "gm",
+  "highlight.regexes": {
+    "([#;].*)": {
+      "filterFileRegex": ".*\\.(batch|jobs).txt",
+      "decorations": [
+        {
+          "color": "gray"
+          // "fontWeight": "bold"
+        }
+      ]
+    },
+    "(default:)\\s": {
+      "filterFileRegex": ".*\\.(batch|jobs).txt",
+      "decorations": [
+        {
+          "color": "red"
+        }
+      ]
+    },
+    "\\s(-.*?[=\\s])": {
+      "filterFileRegex": ".*\\.(batch|jobs).txt",
+      "decorations": [
+        {
+          "color": "yellow"
+        }
+      ]
+    },
+    "\\s([a-z_]*=)": {
+      "filterFileRegex": ".*\\.(batch|jobs).txt",
+      "decorations": [
+        {
+          "color": "aqua"
+        }
+      ]
+    }
+  }
 }
