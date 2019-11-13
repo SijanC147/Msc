@@ -1,5 +1,5 @@
 {
-    "jobId": "tdlstm_cc42_restaurants_bal_opts_300hu_run06",
+    "jobId": "tdlstm_cc42_laptops_bal_001lr_momentum_300hu_run06",
     "labels": {},
     "trainingInput": {
         "scaleTier": "CUSTOM",
@@ -9,15 +9,18 @@
         "region": "europe-west1",
         "args": [
             "batch",
-            "optimizers.batch.txt",
+            "default.batch.txt",
             "--new",
             "--nocolor",
             "--defaults",
+            "-mp",
+            "hidden_units=300",
             "-m=td_lstm",
             "-em=commoncrawl-42[corpus]",
-            "-ds=restaurants[33/34/33]",
+            "-ds=laptops[33/34/33]",
             "-mp",
-            "hidden_units=300"
+            "optimizer=momentum",
+            "momentum=0.9"
         ]
     }
 }

@@ -265,10 +265,20 @@ def main():
     start = int(args.run_start) if args.run_start else 1
     jobs_args = []
     if args.jobs_file:
+        block_args = []
         for line in open(args.jobs_file, "r"):
-            comment = line.startswith("#") or line.startswith(";")
-            if len(line.strip()) > 0 and not comment:
-                this_args = parser.parse_args(line.split())
+            if len(line.strip()) == 0:
+                block_args = []
+                continue
+            if line.startswith("#") or line.startswith(";"):
+                continue
+            if line.startswith("block"):
+                block_args += line.strip().split()[1:]
+            else:
+                line_cmd = line.split()
+                if block_args and "--defaults" not in line_cmd:
+                    line_cmd += ["--defaults"]
+                this_args = parser.parse_args(line_cmd + block_args)
                 this_nruns = this_args.nruns or nruns
                 this_start = (
                     int(this_args.run_start)

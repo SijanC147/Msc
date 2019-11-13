@@ -80,6 +80,15 @@
         }
       ]
     },
+    "(#/.*)": {
+      "filterFileRegex": ".*\\.(batch|jobs).txt",
+      "decorations": [
+        {
+          "color": "#474747",
+          "textDecoration": "line-through"
+        }
+      ]
+    },
     "([#;].*)": {
       "filterFileRegex": ".*\\.(batch|jobs).txt",
       "decorations": [
@@ -88,8 +97,17 @@
         }
       ]
     },
+    "(block):\\s": {
+      "filterFileRegex": ".*\\.jobs.txt",
+      "decorations": [
+        {
+          "color": "#272822",
+          "backgroundColor": "#F8F8F2"
+        }
+      ]
+    },
     "(default:)\\s": {
-      "filterFileRegex": ".*\\.(batch|jobs).txt",
+      "filterFileRegex": ".*\\.batch.txt",
       "decorations": [
         {
           "color": "red"

@@ -67,6 +67,24 @@
       "redirectOutput": false
     },
     {
+      "name": "jobs/debug.jobs.txt",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/submit_job.py",
+      "args": [
+        "-jf",
+        "jobs/debug.jobs.txt"
+        // "studies/reproduction-models/reproducibility-ram.txt",
+        // "--defaults",
+        // "-b",
+        // "5",
+        // "--job-dir",
+        // "ajobdir"
+      ],
+      "console": "integratedTerminal",
+      "redirectOutput": false
+    },
+    {
       "name": "studies/debug.batch.txt",
       "type": "python",
       "request": "launch",
