@@ -41,12 +41,50 @@
   // "python.analysis.downloadChannel": "release",
   "highlight.regexFlags": "gm",
   "highlight.regexes": {
+    "^(####)([\\s]+)(.*)$": {
+      "filterFileRegex": ".*\\.(batch|jobs).txt",
+      "decorations": [
+        {
+          "color": "#75715E"
+        },
+        {},
+        {
+          "color": "#E6DB74",
+          "textDecoration": "underline dotted"
+        }
+      ]
+    },
+    "^(###)([\\s]+)(.*)$": {
+      "filterFileRegex": ".*\\.(batch|jobs).txt",
+      "decorations": [
+        {
+          "color": "#75715E"
+        },
+        {},
+        {
+          "color": "#E69F66",
+          "textDecoration": "underline"
+        }
+      ]
+    },
+    "^(##)([\\s]+)(.*)$": {
+      "filterFileRegex": ".*\\.(batch|jobs).txt",
+      "decorations": [
+        {
+          "color": "#75715E"
+        },
+        {},
+        {
+          "color": "#FD971F",
+          "textDecoration": "underline double"
+        }
+      ]
+    },
     "([#;].*)": {
       "filterFileRegex": ".*\\.(batch|jobs).txt",
       "decorations": [
         {
-          "color": "gray"
-          // "fontWeight": "bold"
+          "color": "#75715E"
         }
       ]
     },
@@ -62,7 +100,29 @@
       "filterFileRegex": ".*\\.(batch|jobs).txt",
       "decorations": [
         {
-          "color": "yellow"
+          "color": "#66D9EF"
+        }
+      ]
+    },
+    "(\\[)([^\\]]*)(\\])": {
+      "filterFileRegex": ".*\\.(batch|jobs).txt",
+      "decorations": [
+        {},
+        {
+          "color": "#F92672"
+        },
+        {}
+      ]
+    },
+    "(=)([^\\s]*)": {
+      "filterFileRegex": ".*\\.(batch|jobs).txt",
+      "decorations": [
+        {
+          // "color": "white"
+        },
+        {
+          "color": "#A6E22E",
+          "fontWeight": "bold"
         }
       ]
     },
@@ -70,7 +130,8 @@
       "filterFileRegex": ".*\\.(batch|jobs).txt",
       "decorations": [
         {
-          "color": "aqua"
+          "color": "#AE81FF",
+          "fontStyle": "italic"
         }
       ]
     }

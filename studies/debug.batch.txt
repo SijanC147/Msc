@@ -1,33 +1,22 @@
-## RUN WITH DEFAULTS: 
-default: -cmt T1NrVnn32dXWeOxeQWGArkHwc -wrk debugging 
-default: -v FATAL 
-default: -aux logging=true attn_heatmaps=false 
-;default: -aux debug=cli 
-#default: -rc tf_random_seed=1234 
+### Comet Config
+#default: -cmt=T1NrVnn32dXWeOxeQWGArkHwc -wrk=debugging 
+### Tf logging verbosity
+default: -v=INFO 
+### Turn off metadata for performance
+default: -aux metadata=False
+### OOV Policy
 default: -mp oov_train=1 oov_buckets=1 oov_fn=uniform[-0.1,0.1]
-#default: -mp early_stopping_minimum_iter=1 early_stopping_patience=1
-;default: -mp oov_train=5 oov_buckets=5 oov_fn=uniform[-0.1,0.1]
+### debug stuff
 default: -mp hidden_units=5
+
+## Debug Run
+-m=td_lstm -em=commoncrawl-42[corpus] -ds=restaurants[33/34/33] -mp learning_rate=0.1 early_stopping_minimum_iter=150 -contd=..debug6
+
+### old debug configs
+#default: -aux logging=true attn_heatmaps=false 
+#default: -aux debug=cli 
+#default: -rc tf_random_seed=1234
+#default: -mp early_stopping_minimum_iter=1 early_stopping_patience=1
+#default: -mp oov_train=5 oov_buckets=5 oov_fn=uniform[-0.1,0.1]
 #default: -rc save_summary_steps=1 save_checkpoints_steps=2
 
--em=commoncrawl-840[corpus] -ds laptops[33/34/33] -m=lstm -e 25 -mp optimizer=momentum learning_rate=0.1 momentum=0.9  -contd=..balanced
-
-default: -mp lstm_hidden_units=5 gru_hidden_units=5 hidden_units=5
-;-em=commoncrawl-840[corpus] -ds=laptops -m=lstm -mp learning_rate=0.1 -contd=lstm-sgd-cc840-laptops-eagames3
-
-#-em=wiki-50[corpus] -ds=debug-min -m=lstm -contd doesthislogend-2
-#-em=wiki-50[corpus] -ds=debug-min -m=lstm -e 15 -contd canicontinue_local2
-#-em=wiki-50[corpus] -ds=debug-min -m=lstm -e 25 -contd canicontinue_local
-#-em=wiki-50[corpus] -ds=debug-min -m=lstm -s 150 -contd three 
-#-em=wiki-50[corpus] -ds=debug-min -m=lstm -e 31 -contd 31epochs
-#-em=wiki-50[corpus] -ds=debug-min -m=lstm -s 200 -contd something
-#-em=wiki-50[corpus] -ds=debug-min -m=lstm -e 10
-
-;-em=twitter-200[corpus] -ds=debug -m=mem_net -e 5 -contd=checking_posting-2
-;-em=twitter-200[corpus] -ds=dong -m=ram -mp n_hops=5
-;-em=twitter-200[corpus] -ds=restaurants -m=ian -contd=t200-restaurants-evalnoshuff
-;-em=commoncrawl-840[corpus] -ds=dong -m=ian -contd=cc840-dong-evalnoshuff
-;-em=commoncrawl-42[corpus] -ds=dong -m=ian -contd=cc42-dong-evalnoshuff
-;-em=commoncrawl-42[corpus] -ds=laptops -m=mem_net -mp n_hops=7 train_embeddings=True 
-
-;-em=commoncrawl-42[corpus] -ds=restaurants[33/33/34] -m=ram -mp n_hops=3 -e 5 -contd=testing_venn_2

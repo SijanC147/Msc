@@ -295,16 +295,16 @@ def run_experiment(args, experiment_index=None):
         )
         gen_tag = "-".join(
             [
-                args.model,
-                model.params["optimizer"],
+                args.model.replace("_", ""),
+                model.params["optimizer"].lower(),
                 EMBEDDING_TAGS[feature_provider.embedding.name],
             ]
             + [
-                "{}[{}]".format(
+                "{}-{}".format(
                     name,
                     ",".join(
                         [
-                            "".join(list(map(str, map(int, vals))))
+                            "_".join(list(map(str, map(int, vals))))
                             for vals in redist.values()
                             if vals is not None
                         ]
@@ -316,14 +316,14 @@ def run_experiment(args, experiment_index=None):
             ]
         )
         p_tags = []
-        for p_name, p_arg in params.items():
+        for p_name, p_arg in model.params.items():
             if p_name in [*CONTD_TAG_PARAMS]:
                 p_tags += [
                     CONTD_TAG_PARAMS[p_name].format(
                         str(p_arg).replace(".", "")
                     )
                 ]
-        p_tag = "-".join(p_tags)
+        p_tag = "-".join(sorted(p_tags))
         contd_tag = "-".join([gen_tag, oov_tag, p_tag, contd_tag[2:]])
         cprnt(tf="INFO", info="CONTD-TAG: {}".format(contd_tag))
 

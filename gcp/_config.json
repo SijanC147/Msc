@@ -1,11 +1,6 @@
 {
-    "jobId": "reproduction_tdlstm_cc42_mods_adam_adagrad_hu_run06",
-    "labels": {
-        "model": "tdlstm",
-        "dataset": "laptops",
-        "embedding": "commoncrawl42",
-        "hiddenunits": "300"
-    },
+    "jobId": "tdlstm_cc42_restaurants_bal_opts_300hu_run06",
+    "labels": {},
     "trainingInput": {
         "scaleTier": "CUSTOM",
         "masterType": "standard",
@@ -14,9 +9,15 @@
         "region": "europe-west1",
         "args": [
             "batch",
-            "tdlstm-adam-adagrad.txt",
+            "optimizers.batch.txt",
             "--new",
-            "--nocolor"
+            "--nocolor",
+            "--defaults",
+            "-m=td_lstm",
+            "-em=commoncrawl-42[corpus]",
+            "-ds=restaurants[33/34/33]",
+            "-mp",
+            "hidden_units=300"
         ]
     }
 }

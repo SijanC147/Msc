@@ -1,5 +1,5 @@
-## DEFAULTS: 
-default: -cmt T1NrVnn32dXWeOxeQWGArkHwc -wrk reproduction-new
+## DEFAULTS
+default: -cmt=T1NrVnn32dXWeOxeQWGArkHwc -wrk=reproduction-new
 default: -aux logging=true 
 default: -em=commoncrawl-840[corpus]
 default: -ds=laptops[33/34/33]

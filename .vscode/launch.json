@@ -1,201 +1,184 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "Python: Terminal (integrated)",
-            "type": "python",
-            "request": "launch",
-            "program": "${file}",
-            "args": [
-                "-jid=debug",
-                "-t",
-                "-em=wiki-50",
-                "-fe",
-                "-ds=debug2"
-            ],
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "GC-Machine-Type-Arg-Test",
-            "type": "python",
-            "request": "launch",
-            "program": "${workspaceFolder}/submit_job.py",
-            "args": [
-                "--job-id=\"testing_bucket_param\"",
-                "--job-dir=\"debug-data\"",
-                "--staging-bucket=\"tsaplay-bucket-test\"",
-                "--job-labels", 
-                "type=example",
-                // "--machine-types=\"masterType=complex_model_s workerType=complex_model_s\"", 
-                "--task-args",
-                "batch",
-                "batch_tasks.txt"
-            ],
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "Submit Batch Job to GCP with Comet API",
-            "type": "python",
-            "request": "launch",
-            "program": "${workspaceFolder}/submit_job.py",
-            "args": [
-                "-jf", 
-                "jobs/reproduction-new-lstm-resubs.jobs.txt",
-                // "-n",
-                // "4",
-                // "--run-start",
-                // "7"
-                // "-jid=debuging",
-                // "-t",
-                // "batch",
-                // "studies/reproducibility-test.txt",
-                // "--defaults",
-                // "-cmt",
-                // "T1NrVnn32dXWeOxeQWGArkHwc",
-                // "-wrk",
-                // "msc-reproducibility",
-                // "-aux",
-                // "logging=true",
-                // "oov_fn='uniform[-0.1,0.1]'"
-            ],
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "generate-plots",
-            "type": "python",
-            "request": "launch",
-            "program": "${workspaceFolder}/generate_boxplots.py",
-            "args": [
-                "--models",
-                "lstm",
-            ],
-            "console": "integratedTerminal",
-            "redirectOutput": false
-        },
-        {
-            "name": "studies/debug.txt",
-            "type": "python",
-            "request": "launch",
-            "module": "tsaplay.task",
-            "args": [
-                "batch",
-                "studies/debug.txt",
-                // "studies/reproduction-models/reproducibility-ram.txt",
-                // "--defaults",
-                // "-b",
-                // "5",
-                // "--job-dir",
-                // "ajobdir"
-            ],
-            "console": "integratedTerminal",
-            "redirectOutput": false
-        },
-        {
-            "name": "Restaurants offset Exception",
-            "type": "python",
-            "request": "launch",
-            "module": "tsaplay.task",
-            "args": [
-                "single",
-                "-em='commoncrawl-840[corpus]'",
-                "-ds",
-                "restaurants",
-                "-m",
-                "tc_lstm",
-                // "-b",
-                // "100",
-                "-e",
-                "30",
-                "-mp",
-                "oov_train=1",
-                "-cmt",
-                "T1NrVnn32dXWeOxeQWGArkHwc",
-                // "-contd",
-                // "testing-epoch-argument"
-                // "oov_fn='uniform[-0.1,0.1]'",
-                // "hidden_units=5",
-                // "-aux",
-                // "attn_heatmaps=false",
-            ],
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "Dataset-redist-param-test",
-            "type": "python",
-            "request": "launch",
-            "module": "tsaplay.task",
-            "args": [
-                "single",
-                "-em='twitter-50[corpus]'",
-                "-ds", 
-                "'dong[33/34/33,15/70/15]'",
-                "nakov",
-                "-m=lstm",
-                "-b=25",
-                "-s=200",
-                "-mp",
-                "num_oov_buckets=100"
-            ],
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "Python: Current File (Integrated Terminal)",
-            "type": "python",
-            "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "Python: Attach",
-            "type": "python",
-            "request": "attach",
-            "port": 5678,
-            "host": "localhost"
-        },
-        {
-            "name": "Python: Module",
-            "type": "python",
-            "request": "launch",
-            "module": "enter-your-module-name-here",
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "Python: Django",
-            "type": "python",
-            "request": "launch",
-            "program": "${workspaceFolder}/manage.py",
-            "console": "integratedTerminal",
-            "args": [
-                "runserver",
-                "--noreload",
-                "--nothreading"
-            ],
-            "django": true
-        },
-        {
-            "name": "Python: Flask",
-            "type": "python",
-            "request": "launch",
-            "module": "flask",
-            "env": {
-                "FLASK_APP": "app.py"
-            },
-            "args": [
-                "run",
-                "--no-debugger",
-                "--no-reload"
-            ],
-            "jinja": true
-        },
-        {
-            "name": "Python: Current File (External Terminal)",
-            "type": "python",
-            "request": "launch",
-            "program": "${file}",
-            "console": "externalTerminal"
-        }
-    ]
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: Terminal (integrated)",
+      "type": "python",
+      "request": "launch",
+      "program": "${file}",
+      "args": ["-jid=debug", "-t", "-em=wiki-50", "-fe", "-ds=debug2"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "GC-Machine-Type-Arg-Test",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/submit_job.py",
+      "args": [
+        "--job-id=\"testing_bucket_param\"",
+        "--job-dir=\"debug-data\"",
+        "--staging-bucket=\"tsaplay-bucket-test\"",
+        "--job-labels",
+        "type=example",
+        // "--machine-types=\"masterType=complex_model_s workerType=complex_model_s\"",
+        "--task-args",
+        "batch",
+        "batch_tasks.txt"
+      ],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Submit Batch Job to GCP with Comet API",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/submit_job.py",
+      "args": [
+        "-jf",
+        "jobs/reproduction-new-lstm-resubs.jobs.txt"
+        // "-n",
+        // "4",
+        // "--run-start",
+        // "7"
+        // "-jid=debuging",
+        // "-t",
+        // "batch",
+        // "studies/reproducibility-test.txt",
+        // "--defaults",
+        // "-cmt",
+        // "T1NrVnn32dXWeOxeQWGArkHwc",
+        // "-wrk",
+        // "msc-reproducibility",
+        // "-aux",
+        // "logging=true",
+        // "oov_fn='uniform[-0.1,0.1]'"
+      ],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "generate-plots",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/generate_boxplots.py",
+      "args": ["--models", "lstm"],
+      "console": "integratedTerminal",
+      "redirectOutput": false
+    },
+    {
+      "name": "studies/debug.batch.txt",
+      "type": "python",
+      "request": "launch",
+      "module": "tsaplay.task",
+      "args": [
+        "batch",
+        "studies/debug.batch.txt"
+        // "studies/reproduction-models/reproducibility-ram.txt",
+        // "--defaults",
+        // "-b",
+        // "5",
+        // "--job-dir",
+        // "ajobdir"
+      ],
+      "console": "integratedTerminal",
+      "redirectOutput": false
+    },
+    {
+      "name": "Restaurants offset Exception",
+      "type": "python",
+      "request": "launch",
+      "module": "tsaplay.task",
+      "args": [
+        "single",
+        "-em='commoncrawl-840[corpus]'",
+        "-ds",
+        "restaurants",
+        "-m",
+        "tc_lstm",
+        // "-b",
+        // "100",
+        "-e",
+        "30",
+        "-mp",
+        "oov_train=1",
+        "-cmt",
+        "T1NrVnn32dXWeOxeQWGArkHwc"
+        // "-contd",
+        // "testing-epoch-argument"
+        // "oov_fn='uniform[-0.1,0.1]'",
+        // "hidden_units=5",
+        // "-aux",
+        // "attn_heatmaps=false",
+      ],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Dataset-redist-param-test",
+      "type": "python",
+      "request": "launch",
+      "module": "tsaplay.task",
+      "args": [
+        "single",
+        "-em='twitter-50[corpus]'",
+        "-ds",
+        "'dong[33/34/33,15/70/15]'",
+        "nakov",
+        "-m=lstm",
+        "-b=25",
+        "-s=200",
+        "-mp",
+        "num_oov_buckets=100"
+      ],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Python: Current File (Integrated Terminal)",
+      "type": "python",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Python: Attach",
+      "type": "python",
+      "request": "attach",
+      "port": 5678,
+      "host": "localhost"
+    },
+    {
+      "name": "Python: Module",
+      "type": "python",
+      "request": "launch",
+      "module": "enter-your-module-name-here",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Python: Django",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/manage.py",
+      "console": "integratedTerminal",
+      "args": ["runserver", "--noreload", "--nothreading"],
+      "django": true
+    },
+    {
+      "name": "Python: Flask",
+      "type": "python",
+      "request": "launch",
+      "module": "flask",
+      "env": {
+        "FLASK_APP": "app.py"
+      },
+      "args": ["run", "--no-debugger", "--no-reload"],
+      "jinja": true
+    },
+    {
+      "name": "Python: Current File (External Terminal)",
+      "type": "python",
+      "request": "launch",
+      "program": "${file}",
+      "console": "externalTerminal"
+    }
+  ]
 }

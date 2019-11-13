@@ -1,18 +1,22 @@
-## DEFAULTS: 
-default: -cmt T1NrVnn32dXWeOxeQWGArkHwc -wrk reproduction-new
+## DEFAULTS
+default: -cmt=T1NrVnn32dXWeOxeQWGArkHwc -wrk=reproduction-new
 default: -aux logging=true 
+default: -m=td_lstm
 default: -em=commoncrawl-42[corpus]
 default: -ds=restaurants
 default: -mp oov_train=1 oov_buckets=1 oov_fn=uniform[-0.1,0.1]
 ###
 
 ## ALL DEFAULT PARAMS
--m=td_lstm -mp early_stopping_minimum_iter=150
+-mp early_stopping_minimum_iter=150
 
 ## 300 HIDDEN UNITS
 default: -mp hidden_units=300
--m=td_lstm -mp early_stopping_minimum_iter=150
--m=td_lstm -mp learning_rate=0.1
--m=td_lstm -mp optimizer=adagrad learning_rate=0.1 
--m=td_lstm -mp optimizer=momentum learning_rate=0.1 momentum=0.9
--m=td_lstm -mp optimizer=adam learning_rate=0.001 early_stopping_minimum_iter=150
+
+-mp early_stopping_minimum_iter=150
+-mp learning_rate=0.1
+
+## Different Optimizers
+-mp optimizer=adam learning_rate=0.001 
+-mp optimizer=adagrad learning_rate=0.1 
+-mp optimizer=momentum learning_rate=0.1 momentum=0.9
