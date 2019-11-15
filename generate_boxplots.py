@@ -7,6 +7,7 @@ from datetime import datetime
 import json
 from itertools import groupby
 from operator import itemgetter
+from collections import OrderedDict
 import comet_ml
 import numpy as np
 import matplotlib
@@ -198,6 +199,29 @@ CMT_VALS_MAPPING = {
     "EA Max Epochs": {"cmt_key": "Epochs", "use_xlabel": False},
 }
 
+CMT_METRICS_MAPPING = {
+    "Macro-F1": {
+        "contexts": ["eval"],
+        "incl_rep": True,
+        "cmt_keyfn": lambda ctx, m: "{}_{}".format(ctx, m).lower(),
+        "df_keyfn": lambda _, m: "{}".format(m.capitalize()),
+    },
+    "Micro-F1": {
+        "contexts": ["eval"],
+        "incl_rep": True,
+        "cmt_keyfn": lambda ctx, m: "{}_{}".format(ctx, m).lower(),
+        "df_keyfn": lambda _, m: "{}".format(m.capitalize()),
+    },
+    "Loss": {
+        "contexts": ["eval", "train"],
+        "incl_max": False,
+        "cmt_keyfn": lambda ctx, m: "{}_{}".format(ctx, m).lower(),
+        "df_keyfn": lambda ctx, m: "{} {}".format(
+            ctx.capitalize(), m.capitalize()
+        ),
+    },
+}
+
 MODELS = {
     "ian": "IAN",
     "lcrrot": "LCR-Rot",
@@ -231,18 +255,17 @@ def get_comet_api(api_key=None, **kwargs):
     return api
 
 
-def get_metric_series(experiment, metric):
+def get_metric_series(experiment, metric_cmt_key):
     return {
         v["epoch"]: float(v["metricValue"])
         for v in experiment.get_metrics()
-        if v["metricName"] == metric
+        if v["metricName"] == metric_cmt_key
     }
 
 
-def get_grouped_metric_series(project, workspace=None, metrics=None, **kwargs):
+def get_grouped_metric_series(project, metrics, workspace=None, **kwargs):
     api = get_comet_api(**kwargs)
     workspace = workspace or "reproduction-new"
-    metrics = metrics or ["macro-f1", "micro-f1"]
     grouped_metrics = {}
     experiments = api.get_experiments(workspace, project_name=project)
     unique_experiment_names = np.unique(
@@ -252,18 +275,30 @@ def get_grouped_metric_series(project, workspace=None, metrics=None, **kwargs):
             if e.name is not None and not e.name.startswith("#")
         ]
     ).tolist()
+    metrics_cmt_keys = sum(
+        [
+            [
+                CMT_METRICS_MAPPING[m]["cmt_keyfn"](ctx, m)
+                for ctx in CMT_METRICS_MAPPING[m]["contexts"]
+            ]
+            for m in metrics
+        ],
+        [],
+    )
     for name in unique_experiment_names:
-        grouped_metrics[name] = {
-            "experiments": [e for e in experiments if e.name == name],
-            **{
-                m: [
-                    get_metric_series(e, "eval_{}".format(m.lower()))
-                    for e in experiments
-                    if e.name == name
-                ]
-                for m in metrics
-            },
-        }
+        grouped_metrics[name] = OrderedDict(
+            {
+                "experiments": [e for e in experiments if e.name == name],
+                **{
+                    metric_cmt_key: [
+                        get_metric_series(e, metric_cmt_key)
+                        for e in experiments
+                        if e.name == name
+                    ]
+                    for metric_cmt_key in metrics_cmt_keys
+                },
+            }
+        )
 
     return grouped_metrics, metrics
 
@@ -311,12 +346,90 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
         return unpickle_file(cached_data_path)
     api = get_comet_api(**kwargs)
     workspace = workspace or "reproduction"
-    metrics = metrics or ["Macro-F1", "Micro-F1"]
+    metrics = metrics or ["Macro-F1", "Micro-F1", "Loss"]
+    # if isinstance(metrics, list):
+    #     metrics = {"eval": metrics}
+    # metrics = sum(
+    #     [
+    #         ["{}_{}".format(k, val) for val in vals]
+    #         for k, vals in metrics.items()
+    #     ],
+    #     [],
+    # )
+    metrics_max = sum(
+        [
+            [
+                CMT_METRICS_MAPPING[m]["df_keyfn"](ctx, m)
+                for ctx in CMT_METRICS_MAPPING[m]["contexts"]
+            ]
+            for m in metrics
+            if CMT_METRICS_MAPPING[m].get("incl_max", True)
+        ],
+        [],
+    )
+    metrics_reported = sum(
+        [
+            [
+                CMT_METRICS_MAPPING[m]["df_keyfn"](ctx, m) + " Reported"
+                for ctx in CMT_METRICS_MAPPING[m]["contexts"]
+            ]
+            for m in metrics
+            if CMT_METRICS_MAPPING[m].get("incl_rep", True)
+        ],
+        [],
+    )
+    metrics_series = sum(
+        [
+            [
+                CMT_METRICS_MAPPING[m]["df_keyfn"](ctx, m) + " Series"
+                for ctx in CMT_METRICS_MAPPING[m]["contexts"]
+            ]
+            for m in metrics
+            if CMT_METRICS_MAPPING[m].get("incl_series", True)
+        ],
+        [],
+    )
+    # metrics_max = sum(
+    #     [
+    #         [m]
+    #         if len(CMT_METRICS_MAPPING[m]["contexts"]) == 1
+    #         else [
+    #             "{} {}".format(c.capitalize(), m)
+    #             for c in CMT_METRICS_MAPPING[m]["contexts"]
+    #         ]
+    #         for m in metrics
+    #         if CMT_METRICS_MAPPING[m].get("incl_max", True)
+    #     ],
+    #     [],
+    # )
+    # metrics_reported = sum(
+    #     [
+    #         [
+    #             "Reported {}".format(m)
+    #             for m in metrics
+    #             if CMT_METRICS_MAPPING[m].get("incl_rep", False)
+    #         ]
+    #     ],
+    #     [],
+    # )
+    # metrics_series = sum(
+    #     [
+    #         ["{} Series".format(m)]
+    #         if len(CMT_METRICS_MAPPING[m]["contexts"]) == 1
+    #         else [
+    #             "{} {} Series".format(c.capitalize(), m)
+    #             for c in CMT_METRICS_MAPPING[m]["contexts"]
+    #         ]
+    #         for m in metrics
+    #         if CMT_METRICS_MAPPING[m].get("incl_series", True)
+    #     ],
+    #     [],
+    # )
     cols = (
         ["Workspace", "Experiment", "Model", "Embedding"]
-        + metrics
-        + ["Reported {}".format(m) for m in metrics]
-        + ["{} Series".format(m) for m in metrics]
+        + metrics_max
+        + metrics_reported
+        + metrics_series
         + [*CMT_VALS_MAPPING]
         + ["Total Vocabulary Size", "IV Size", "OOV Size"]
         + [
@@ -334,14 +447,20 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
     )
     data = []
     for prj in [p for p in api.get_projects(workspace) if p in models]:
-        exp_groups, _ = get_grouped_metric_series(
-            prj, workspace=workspace, metrics=metrics
+        exp_groups, m_order = get_grouped_metric_series(
+            prj, metrics, workspace
         )
         for _, exp_group_runs in exp_groups.items():
-            # ? (APIExperiment, ([{Epoch: Macro-F1}], [{Epoch: Micro-F1}]))
+            # ? (exp, *run_metrics)->(APIExperiment,([{epoch: val}∀{ctx,met}]))
             for (exp, *run_metrics) in zip(*exp_group_runs.values()):
                 if kwargs.get("excl_curr", True) and is_currently_running(exp):
                     continue
+                run_metrics = {
+                    k: vals for (k, vals) in zip(m_order, run_metrics)
+                }
+                run_metrics_dict = {
+                    m: {**CMT_METRICS_MAPPING[m], "series": series_data}
+                }
                 model = exp.project_name  # pylint: disable=no-member
                 cmt_params_others_summary = (
                     exp.get_others_summary() + exp.get_parameters_summary()
@@ -454,8 +573,9 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
                         embedding_str,
                     ]
                     + [
-                        round(max(run_metric.values()) * 100, 2)
-                        for run_metric in run_metrics
+                        round(max(m_series.values()) * 100, 2)
+                        for (m, m_series) in zip(metrics, run_metrics)
+                        if CMT_METRICS_MAPPING[m].get("incl_max", False)
                     ]
                     + [
                         REPORTED.get(model, {})
@@ -473,8 +593,13 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
                         .get(ds_name, {})
                         .get(m)
                         for m in metrics
+                        if CMT_METRICS_MAPPING[m].get("incl_rep", False)
                     ]
-                    + list(run_metrics)
+                    + [
+                        m_series
+                        for (m, m_series) in zip(metrics, run_metrics)
+                        if CMT_METRICS_MAPPING[m].get("incl_series", True)
+                    ]
                     + cmt_params_others_values
                     + vocab_data
                 ]
@@ -1016,7 +1141,11 @@ def argument_parser():
 
 
 def main():
-    df = comet_to_df("reproduction-new", models=["tdlstm"], use_cached=False)
+    # metrics = {"eval": ["Macro-F1", "Micro-F1", "Loss"], "train": ["Loss"]}
+    # df = comet_to_df(
+    #     "reproduction-new", models=["llstm"], metrics=metrics, use_cached=False
+    # )
+    df = comet_to_df("reproduction-new", models=["llstm"], use_cached=False)
     # parser = argument_parser()
     # args = parser.parse_args()
     # params = args_to_dict(args.params)
