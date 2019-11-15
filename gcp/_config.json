@@ -1,5 +1,5 @@
 {
-    "jobId": "tdlstm_cc42_laptops_bal_001lr_momentum_300hu_run06",
+    "jobId": "tdlstm_cc42_laptops_balanced_missing_run02",
     "labels": {},
     "trainingInput": {
         "scaleTier": "CUSTOM",
@@ -9,18 +9,12 @@
         "region": "europe-west1",
         "args": [
             "batch",
-            "default.batch.txt",
+            "missing2.batch.txt",
             "--new",
             "--nocolor",
             "--defaults",
-            "-mp",
-            "hidden_units=300",
             "-m=td_lstm",
-            "-em=commoncrawl-42[corpus]",
-            "-ds=laptops[33/34/33]",
-            "-mp",
-            "optimizer=momentum",
-            "momentum=0.9"
+            "-em=commoncrawl-42[corpus]"
         ]
     }
 }

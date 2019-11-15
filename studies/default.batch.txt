@@ -7,3 +7,7 @@ default: -mp oov_train=1 oov_buckets=1 oov_fn=uniform[-0.1,0.1]
 
 ### Run with default parameters
 -contd=..default
+
+### Missing TDLSTM Runs
+#-contd=tdlstm-09momentum-cc42-laptops-01lr-oovt1b1 -mp optimizer=momentum momentum=0.9 learning_rate=0.1
+

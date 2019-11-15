@@ -1,3 +1,8 @@
+### Debug Task Settings
+default: --model=td_lstm 
+default: --embedding=commoncrawl-42[corpus] 
+default: --dataset=restaurants[33/34/33]
+
 ### Comet Config
 #default: -cmt=T1NrVnn32dXWeOxeQWGArkHwc -wrk=debugging 
 ### Tf logging verbosity
@@ -6,17 +11,17 @@ default: -v=INFO
 default: -aux metadata=False
 ### OOV Policy
 default: -mp oov_train=1 oov_buckets=1 oov_fn=uniform[-0.1,0.1]
-### debug stuff
+### Debug Parameters
 default: -mp hidden_units=5
-
-## Debug Run
--m=td_lstm -em=commoncrawl-42[corpus] -ds=restaurants[33/34/33] -mp learning_rate=0.1 early_stopping_minimum_iter=150 -contd=..debug6
-
-### old debug configs
-#default: -aux logging=true attn_heatmaps=false 
-#default: -aux debug=cli 
-#default: -rc tf_random_seed=1234
-#default: -mp early_stopping_minimum_iter=1 early_stopping_patience=1
-#default: -mp oov_train=5 oov_buckets=5 oov_fn=uniform[-0.1,0.1]
+default: -mp learning_rate=0.1 early_stopping_minimum_iter=150
+#/default: -aux logging=true attn_heatmaps=false 
+#/default: -aux debug=cli 
+#/default: -rc tf_random_seed=1234
+#/default: -mp early_stopping_minimum_iter=1 early_stopping_patience=1
+#/default: -mp oov_train=5 oov_buckets=5 oov_fn=uniform[-0.1,0.1]
 #/ default: -rc save_summary_steps=1 save_checkpoints_steps=2
+
+## DEBUG TASK TO RUN
+-contd=..debug-task
+
 

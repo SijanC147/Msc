@@ -132,6 +132,14 @@ CMT_VALS_MAPPING = {
     "Train Distribution": {
         "cmt_regex": r"datasets_{}",
         "cmt_key": "train_dist",
+        "use_xlabel": False,
+        "incl_xaxis_label": False,
+    },
+    "Train Balanced": {
+        "cmt_regex": r"datasets_{}",
+        "cmt_key": "train_dist",
+        "df_valfn": lambda v: (v in ["34/33/33", "33/34/33", "33/33/34"]),
+        "xlabel_fn": lambda v: "B" if v else "N",
     },
     "Test Distribution": {"cmt_regex": r"datasets_{}", "cmt_key": "test_dist"},
     "Hidden Units": {"cmt_key": "Hidden Units"},
@@ -156,11 +164,21 @@ CMT_VALS_MAPPING = {
         "df_valfn": lambda v: {"GradientDescent": "SGD"}
         .get(v.replace("Optimizer", ""), v.replace("Optimizer", ""))
         .capitalize(),
+        "xlabel_fn": lambda v: {
+            "momentum": "mnt",
+            "adagrad": "adg",
+            "adam": "adm",
+            "sgd": "sgd",
+        }.get(v.lower(), v),
     },
     "Kernel Initializer": {"cmt_key": "Initializer"},
     "Bias Initializer": {"cmt_key": "Bias Initializer"},
     "Batch Size": {"cmt_key": "Batch Size"},
-    "Epochs Trained": {"cmt_key": "curr_epoch", "use_xlabel": False},
+    "Epochs Trained": {
+        "cmt_key": "curr_epoch",
+        "use_xlabel": False,
+        "df_valfn": int,
+    },
     "OOV Initializer": {
         "cmt_key": "OOV Fn",
         "df_valfn": lambda v: str(v).capitalize(),
@@ -298,6 +316,7 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
         ["Workspace", "Experiment", "Model", "Embedding"]
         + metrics
         + ["Reported {}".format(m) for m in metrics]
+        + ["{} Series".format(m) for m in metrics]
         + [*CMT_VALS_MAPPING]
         + ["Total Vocabulary Size", "IV Size", "OOV Size"]
         + [
@@ -455,6 +474,7 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
                         .get(m)
                         for m in metrics
                     ]
+                    + list(run_metrics)
                     + cmt_params_others_values
                     + vocab_data
                 ]
@@ -523,6 +543,22 @@ def draw_boxplot(models=None, **kwargs):
     models_tiled = sum([[model] * len(plot_metrics) for model in models], [])
     xaxis_filters = kwargs.get("xaxis_filters")
     box_palette = kwargs.get("box_palette", "muted")
+    order_by = kwargs.get(
+        "order_by",
+        {
+            "Hidden Units": "desc",
+            "Train Balanced": "desc",
+            "Optimizer": "asc",
+            "Learning Rate": "asc",
+        },
+    )
+    if isinstance(order_by, list):
+        order_by = {"by": order_by}
+    elif isinstance(order_by, dict):
+        order_by = {
+            "by": [*order_by],
+            "ascending": [v == "asc" for v in order_by.values()],
+        }
     for (model, plot_metric) in zip(models_tiled, plot_metrics * len(models)):
         dfm = df[(df["Model"] == MODELS.get(model))]
         _xaxis_filters = (
@@ -624,6 +660,9 @@ def draw_boxplot(models=None, **kwargs):
             ]
             if not xticklabel_factors and _xaxis_filters:
                 xticklabel_factors = [*_xaxis_filters]
+            xticklabel_factors = [
+                fo for fo in order_by["by"] if fo in xticklabel_factors
+            ] + [ff for ff in xticklabel_factors if ff not in order_by["by"]]
             xticklabel_template = "\n".join(
                 [
                     "{{{}}}".format(factor)
@@ -673,10 +712,14 @@ def draw_boxplot(models=None, **kwargs):
             this_ax.set_title(dataset_name.capitalize().replace("[", "\n["))
             this_ax.grid(True, linestyle="dotted", which="both")
             dfmds = dfm[dfm["Dataset"] == dataset_name]
+            box_order = (
+                dfmds.sort_values(**order_by)["Experiment"].unique().tolist()
+            )
             bp = sns.boxplot(
                 y=plot_metric,
                 x="Experiment",
                 hue="Embedding",
+                order=box_order,
                 data=dfmds,
                 palette=box_palette,
                 ax=this_ax,
@@ -731,11 +774,18 @@ def draw_boxplot(models=None, **kwargs):
                 else kwargs.get("label_xaxis")
             )
             if label_xaxis:
+                label_attribute = lambda k, v: (
+                    CMT_VALS_MAPPING.get(k, {}).get("xlabel_fn")(v)
+                    if CMT_VALS_MAPPING.get(k, {}).get("xlabel_fn") is not None
+                    else v
+                    if v is not None
+                    else "-"
+                )
                 this_ax.set_xticklabels(
                     [
                         xticklabel_template.format_map(
                             {
-                                k: v if v is not None else "-"
+                                k: label_attribute(k, v)
                                 for k, v in dfm[
                                     (dfm["Dataset"] == dataset_name)
                                     & (dfm["Experiment"] == lab.get_text())
@@ -747,7 +797,6 @@ def draw_boxplot(models=None, **kwargs):
                         for lab in this_ax.get_xticklabels()
                     ]
                 )
-                # xaxis_labels_height = -0.3
                 xoff = kwargs.get("xoff", 0.15)
                 xaxis_labels_height = -(xoff * len(xticklabel_factors))
             else:
@@ -854,7 +903,7 @@ def draw_boxplot(models=None, **kwargs):
                 )
             ] * len(cell_text)
 
-            sep_width = 0.03
+            sep_width = kwargs.get("sepw", 0.03)
             num_sepcols = len([c for c in cell_text[0] if len(c) == 0])
             rem_width = 1 - (sep_width * num_sepcols)
             exp_widths = [
