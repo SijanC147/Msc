@@ -103,9 +103,11 @@ def checkpoints_state_data(model_dir):
 def resolve_optimizer(**params):
     opt_fn = {
         "sgd": tf.train.GradientDescentOptimizer,
-        "adam": tf.train.AdamOptimizer,
-        "adagrad": tf.train.AdagradOptimizer,
         "momentum": tf.train.MomentumOptimizer,
+        "adagrad": tf.train.AdagradOptimizer,
+        "adadelta": tf.train.AdadeltaOptimizer,
+        "adam": tf.train.AdamOptimizer,
+        "rmsprop": tf.train.RMSPropOptimizer,
     }[params["optimizer"].lower()]
     opt_sig = inspect.signature(opt_fn)
     opt_args = {

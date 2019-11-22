@@ -199,29 +199,6 @@ CMT_VALS_MAPPING = {
     "EA Max Epochs": {"cmt_key": "Epochs", "use_xlabel": False},
 }
 
-CMT_METRICS_MAPPING = {
-    "Macro-F1": {
-        "contexts": ["eval"],
-        "incl_rep": True,
-        "cmt_keyfn": lambda ctx, m: "{}_{}".format(ctx, m).lower(),
-        "df_keyfn": lambda _, m: "{}".format(m.capitalize()),
-    },
-    "Micro-F1": {
-        "contexts": ["eval"],
-        "incl_rep": True,
-        "cmt_keyfn": lambda ctx, m: "{}_{}".format(ctx, m).lower(),
-        "df_keyfn": lambda _, m: "{}".format(m.capitalize()),
-    },
-    "Loss": {
-        "contexts": ["eval", "train"],
-        "incl_max": False,
-        "cmt_keyfn": lambda ctx, m: "{}_{}".format(ctx, m).lower(),
-        "df_keyfn": lambda ctx, m: "{} {}".format(
-            ctx.capitalize(), m.capitalize()
-        ),
-    },
-}
-
 MODELS = {
     "ian": "IAN",
     "lcrrot": "LCR-Rot",
@@ -238,6 +215,64 @@ EMBEDDINGS = {
     "t200": "GloVe Twitter (200d)",
     "t100": "GloVe Twitter (100d)",
 }
+
+METRIC_COLS = {
+    "rep": {
+        # pylint: disable=unnecessary-lambda
+        "df_keyfn": lambda m: "Reported {}".format(m),
+        "df_valfn": lambda m, x: REPORTED.get(
+            {v: k for k, v in MODELS.items()}.get(x.Model), {}
+        )
+        .get(
+            (
+                [
+                    k
+                    for k in [
+                        *REPORTED.get(
+                            {v: k for k, v in MODELS.items()}.get(x.Model), {}
+                        )
+                    ]
+                    if "original" in k.lower()
+                ]
+                or ["none"]
+            )[0],
+            {},
+        )
+        .get(x.Dataset.lower(), {})
+        .get(m),
+    },
+    "max": {
+        # pylint: disable=unnecessary-lambda
+        "df_keyfn": lambda m: "Max {}".format(m),
+        "df_valfn": lambda m, x: round(max(x[m].values()) * 100, 2),
+    },
+}
+
+CMT_METRICS_MAPPING = {
+    "Macro-F1": {
+        "cmt_keyfn": lambda ctxs=["eval"]: [
+            "{}_Macro-F1".format(ctx).lower() for ctx in ctxs
+        ],
+        "df_keyfn": lambda: ["Macro-F1"],
+        "incl_cols": ["rep", "max"],
+    },
+    "Micro-F1": {
+        "cmt_keyfn": lambda ctxs=["eval"]: [
+            "{}_Micro-F1".format(ctx).lower() for ctx in ctxs
+        ],
+        "df_keyfn": lambda: ["Micro-F1"],
+        "incl_cols": ["rep", "max"],
+    },
+    "Loss": {
+        "cmt_keyfn": lambda ctxs=["train", "eval"]: [
+            "{}_Loss".format(ctx).lower() for ctx in ctxs
+        ],
+        "df_keyfn": lambda ctxs=["train", "eval"]: [
+            "{} Loss".format(ctx.capitalize()) for ctx in ctxs
+        ],
+    },
+}
+
 
 CACHE_DATA_PATH = path.join(path.dirname(__file__), "temp", "comet_dataframes")
 
@@ -276,14 +311,7 @@ def get_grouped_metric_series(project, metrics, workspace=None, **kwargs):
         ]
     ).tolist()
     metrics_cmt_keys = sum(
-        [
-            [
-                CMT_METRICS_MAPPING[m]["cmt_keyfn"](ctx, m)
-                for ctx in CMT_METRICS_MAPPING[m]["contexts"]
-            ]
-            for m in metrics
-        ],
-        [],
+        [CMT_METRICS_MAPPING[m]["cmt_keyfn"]() for m in metrics], []
     )
     for name in unique_experiment_names:
         grouped_metrics[name] = OrderedDict(
@@ -307,7 +335,7 @@ def save_plot(plot, model, plot_metric, **kwargs):
     save_format = kwargs.get("format", "pdf")
     name = kwargs.get("fname")
     fname = "{}{}-{}".format(
-        (name + "-" if name else ""),
+        ((name + "-") if name else ""),
         plot_metric,
         datetime.now().strftime("%d.%m.%Y_%H.%M.%S"),
     )
@@ -315,7 +343,7 @@ def save_plot(plot, model, plot_metric, **kwargs):
         kwargs.get("path", getcwd()),
         "figures",
         "reproduciton",
-        MODELS.get(model),
+        MODELS.get(model, model),
     )
     if not path.exists(target_dir):
         makedirs(target_dir)
@@ -347,89 +375,12 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
     api = get_comet_api(**kwargs)
     workspace = workspace or "reproduction"
     metrics = metrics or ["Macro-F1", "Micro-F1", "Loss"]
-    # if isinstance(metrics, list):
-    #     metrics = {"eval": metrics}
-    # metrics = sum(
-    #     [
-    #         ["{}_{}".format(k, val) for val in vals]
-    #         for k, vals in metrics.items()
-    #     ],
-    #     [],
-    # )
-    metrics_max = sum(
-        [
-            [
-                CMT_METRICS_MAPPING[m]["df_keyfn"](ctx, m)
-                for ctx in CMT_METRICS_MAPPING[m]["contexts"]
-            ]
-            for m in metrics
-            if CMT_METRICS_MAPPING[m].get("incl_max", True)
-        ],
-        [],
+    metric_series_cols = sum(
+        [CMT_METRICS_MAPPING[m]["df_keyfn"]() for m in metrics], []
     )
-    metrics_reported = sum(
-        [
-            [
-                CMT_METRICS_MAPPING[m]["df_keyfn"](ctx, m) + " Reported"
-                for ctx in CMT_METRICS_MAPPING[m]["contexts"]
-            ]
-            for m in metrics
-            if CMT_METRICS_MAPPING[m].get("incl_rep", True)
-        ],
-        [],
-    )
-    metrics_series = sum(
-        [
-            [
-                CMT_METRICS_MAPPING[m]["df_keyfn"](ctx, m) + " Series"
-                for ctx in CMT_METRICS_MAPPING[m]["contexts"]
-            ]
-            for m in metrics
-            if CMT_METRICS_MAPPING[m].get("incl_series", True)
-        ],
-        [],
-    )
-    # metrics_max = sum(
-    #     [
-    #         [m]
-    #         if len(CMT_METRICS_MAPPING[m]["contexts"]) == 1
-    #         else [
-    #             "{} {}".format(c.capitalize(), m)
-    #             for c in CMT_METRICS_MAPPING[m]["contexts"]
-    #         ]
-    #         for m in metrics
-    #         if CMT_METRICS_MAPPING[m].get("incl_max", True)
-    #     ],
-    #     [],
-    # )
-    # metrics_reported = sum(
-    #     [
-    #         [
-    #             "Reported {}".format(m)
-    #             for m in metrics
-    #             if CMT_METRICS_MAPPING[m].get("incl_rep", False)
-    #         ]
-    #     ],
-    #     [],
-    # )
-    # metrics_series = sum(
-    #     [
-    #         ["{} Series".format(m)]
-    #         if len(CMT_METRICS_MAPPING[m]["contexts"]) == 1
-    #         else [
-    #             "{} {} Series".format(c.capitalize(), m)
-    #             for c in CMT_METRICS_MAPPING[m]["contexts"]
-    #         ]
-    #         for m in metrics
-    #         if CMT_METRICS_MAPPING[m].get("incl_series", True)
-    #     ],
-    #     [],
-    # )
     cols = (
-        ["Workspace", "Experiment", "Model", "Embedding"]
-        + metrics_max
-        + metrics_reported
-        + metrics_series
+        ["ID", "Workspace", "Experiment", "Model", "Embedding"]
+        + metric_series_cols
         + [*CMT_VALS_MAPPING]
         + ["Total Vocabulary Size", "IV Size", "OOV Size"]
         + [
@@ -447,20 +398,12 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
     )
     data = []
     for prj in [p for p in api.get_projects(workspace) if p in models]:
-        exp_groups, m_order = get_grouped_metric_series(
-            prj, metrics, workspace
-        )
+        exp_groups, _ = get_grouped_metric_series(prj, metrics, workspace)
         for _, exp_group_runs in exp_groups.items():
             # ? (exp, *run_metrics)->(APIExperiment,([{epoch: val}∀{ctx,met}]))
             for (exp, *run_metrics) in zip(*exp_group_runs.values()):
                 if kwargs.get("excl_curr", True) and is_currently_running(exp):
                     continue
-                run_metrics = {
-                    k: vals for (k, vals) in zip(m_order, run_metrics)
-                }
-                run_metrics_dict = {
-                    m: {**CMT_METRICS_MAPPING[m], "series": series_data}
-                }
                 model = exp.project_name  # pylint: disable=no-member
                 cmt_params_others_summary = (
                     exp.get_others_summary() + exp.get_parameters_summary()
@@ -567,43 +510,24 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
 
                 data += [
                     [
+                        exp.id,
                         workspace,
                         exp_name_str,
                         MODELS.get(model, model),
                         embedding_str,
                     ]
-                    + [
-                        round(max(m_series.values()) * 100, 2)
-                        for (m, m_series) in zip(metrics, run_metrics)
-                        if CMT_METRICS_MAPPING[m].get("incl_max", False)
-                    ]
-                    + [
-                        REPORTED.get(model, {})
-                        .get(
-                            (
-                                [
-                                    k
-                                    for k in [*REPORTED.get(model, {})]
-                                    if "original" in k.lower()
-                                ]
-                                or ["none"]
-                            )[0],
-                            {},
-                        )
-                        .get(ds_name, {})
-                        .get(m)
-                        for m in metrics
-                        if CMT_METRICS_MAPPING[m].get("incl_rep", False)
-                    ]
-                    + [
-                        m_series
-                        for (m, m_series) in zip(metrics, run_metrics)
-                        if CMT_METRICS_MAPPING[m].get("incl_series", True)
-                    ]
+                    + run_metrics
                     + cmt_params_others_values
                     + vocab_data
                 ]
     data_frame = pd.DataFrame(data, columns=cols)
+    for metric in metrics:
+        for incl_col in CMT_METRICS_MAPPING[metric].get("incl_cols", []):
+            mcol_map = METRIC_COLS[incl_col]
+            for m_col in CMT_METRICS_MAPPING[metric]["df_keyfn"]():
+                col_name = mcol_map["df_keyfn"](m_col)
+                col_fn = lambda x, i=mcol_map, m=m_col: i["df_valfn"](m, x)
+                data_frame[col_name] = data_frame.apply(col_fn, axis=1)
     for k, val in CMT_VALS_MAPPING.items():
         default_value = val.get("default")
         if default_value:
@@ -642,6 +566,217 @@ def group_citations(dataset, metric, model, reported=None):
     )
 
 
+def xaxis_order(order_by=None):
+    order_by = order_by or {
+        "Hidden Units": "desc",
+        "Train Balanced": "desc",
+        "Optimizer": "asc",
+        "Learning Rate": "asc",
+    }
+    if isinstance(order_by, list):
+        order_by = {"by": order_by}
+    elif isinstance(order_by, dict):
+        order_by = {
+            "by": [*order_by],
+            "ascending": [v == "asc" for v in order_by.values()],
+        }
+    return order_by
+
+
+def filter_df(data, filter_dict):
+    single_filters = {
+        k: v for k, v in filter_dict.items() if not isinstance(v, list)
+    }
+    dff = (
+        data.loc[
+            (data[[*single_filters]] == pd.Series(single_filters)).all(axis=1)
+        ]
+        if single_filters
+        else data
+    )
+    multi_filters = {
+        k: v for k, v in filter_dict.items() if isinstance(v, list)
+    }
+    for k, vals in multi_filters.items():
+        dff = dff[(dff[k]).isin(vals)]
+    return dff
+
+
+def exp_per_dataset(data, ref_width=10):
+    expcnt = {
+        ds: len(data[(data["Dataset"] == ds)]["Experiment"].unique().tolist())
+        for ds in data["Dataset"].unique().tolist()
+    }
+    width_ratios = [
+        round((v / sum(expcnt.values())) * ref_width) for v in expcnt.values()
+    ] + [1]
+    return expcnt, width_ratios
+
+
+def cmn_diff_hparams(data, hparams=None, order_by=None):
+    hparams = hparams or [*CMT_VALS_MAPPING]
+    hparams = [
+        hp
+        for hp in hparams
+        if hp in [*data] and data[hp].unique().tolist()[0] is not None
+    ]
+    common_hparams = {
+        hp: str(data[hp].unique().tolist()[0])
+        for hp in hparams
+        if len(data[hp].unique().tolist()) == 1
+    }
+    diff_hparams = [hp for hp in hparams if hp not in [*common_hparams]]
+    if order_by:
+        diff_hparams = [dhp for dhp in order_by if dhp in diff_hparams] + [
+            dhp for dhp in diff_hparams if dhp not in order_by
+        ]
+    return common_hparams, diff_hparams
+
+
+def val_or_dict_entry(data, key):
+    if isinstance(data, dict) and key in [*data]:
+        return data[key]
+    return data
+
+
+def x_template_and_factors(templates, hparams, model):
+    template = val_or_dict_entry(templates, model)
+    if template:
+        factors = re.findall(r"\{([^\}]*)?", template)
+    else:
+        factors = [
+            hp
+            for hp in hparams
+            if CMT_VALS_MAPPING[hp].get("use_xlabel", True)
+        ]
+        template = "\n".join(
+            [
+                CMT_VALS_MAPPING[factor].get("xtick_label", False)
+                or "{{{}}}".format(factor)
+                for factor in factors
+            ]
+        )
+    return template, factors
+
+
+def format_xtick_labels(data, labels, template):
+    label_attribute = lambda k, v: (
+        CMT_VALS_MAPPING.get(k, {}).get("xlabel_fn")(v)
+        if CMT_VALS_MAPPING.get(k, {}).get("xlabel_fn") is not None
+        else v
+        if v is not None
+        else "-"
+    )
+    xticklabels = [
+        template.format_map(
+            {
+                k: label_attribute(k, v)
+                for k, v in filter_df(data, {"Experiment": lab})
+                .to_dict("records")[0]
+                .items()
+            }
+        )
+        for lab in labels
+    ]
+    return xticklabels
+
+
+def draw_grid_series(data, model, filters=None, **kwargs):
+    metrics = kwargs.get("metrics", ["Train Loss", "Eval Loss", "Macro-F1"])
+    bands = kwargs.get("bands", "minmax")
+    title = "{} ({})".format(kwargs.get("title", model.upper()), bands)
+    data["Experiment"] = data.apply(
+        lambda x: " ".join([x["Experiment"], x["Dataset"], x["Embedding"]]),
+        axis=1,
+    )
+    data["Embedding(Short)"] = data.apply(
+        lambda x: {v: k for k, v in EMBEDDINGS.items()}.get(x["Embedding"]),
+        axis=1,
+    )
+    data = filter_df(data, {"Model": model, **(filters or {})})
+    common, hparams = cmn_diff_hparams(data)
+    hparams = ["Embedding(Short)"] + hparams
+    exp_groups = data["Experiment"].unique().tolist()
+    height = max(3 * len(exp_groups), 8)
+    fig, axes = plt.subplots(
+        len(exp_groups) + 2, len(metrics) + 1, figsize=(16, height)
+    )
+    cmn_gs = axes[2, 2].get_gridspec()
+    for row in [0, 1]:
+        for ax in axes[row, :]:
+            ax.remove()
+    cmn_ax = fig.add_subplot(cmn_gs[:2, :])
+    cmn_ax.axis("off")
+    cmn_ax.set_title(title)
+    cmn_ax.table(
+        cellText=[[k, v] for k, v in common.items()],
+        cellLoc="center",
+        edges="open",
+        bbox=(0, 0, 1, 1),
+    )
+    for ax_y, group_name in enumerate(exp_groups):
+        group_data = data[(data["Experiment"] == group_name)]
+        info_ax = axes[ax_y + 2, 0]
+        info_ax.axis("off")
+        table_data = [["Count", len(group_data)]]
+        table_data += [
+            [hp, group_data[hp].unique().tolist()[0]]
+            for hp in hparams
+            if (
+                len(group_data[hp].unique().tolist()) == 1
+                and group_data[hp].unique().tolist()[0]
+            )
+        ]
+        info_table = info_ax.table(
+            cellText=table_data, edges="open", bbox=(0, 0, 1, 1)
+        )
+        if kwargs.get("info_font", False):
+            info_table.auto_set_font_size(False)
+            info_table.set_fontsize(kwargs.get("info_font"))
+        for ax_x, metric in enumerate(metrics):
+            this_ax = axes[ax_y + 2, ax_x + 1]
+            if ax_y == 0:
+                this_ax.set_title(metric)
+            this_ax.grid(True, linestyle="dotted", which="both")
+            group_metric = group_data[metric]
+            longest_train = max([len(gm) for gm in group_metric])
+            epochs = range(longest_train)
+            series_data = []
+            for i in range(longest_train):
+                series_data += [
+                    np.array(
+                        [
+                            list(dict(gm).values())[i]
+                            for gm in group_metric
+                            if i < len(list(dict(gm).values()))
+                        ]
+                    )
+                ]
+            mean_metric = np.array([np.mean(e_d) for e_d in series_data])
+            if bands == "stddev":
+                band_min = np.array(
+                    [
+                        m - np.std(e_d)
+                        for m, e_d in zip(mean_metric, series_data)
+                    ]
+                )
+                band_max = np.array(
+                    [
+                        m + np.std(e_d)
+                        for m, e_d in zip(mean_metric, series_data)
+                    ]
+                )
+            else:
+                band_min = np.array([np.min(e_d) for e_d in series_data])
+                band_max = np.array([np.max(e_d) for e_d in series_data])
+            sns.lineplot(epochs, mean_metric, ax=this_ax)
+            this_ax.fill_between(epochs, band_min, band_max, alpha=0.3)
+    if kwargs.get("fname", False) or kwargs.get("format", False):
+        save_plot(plt, model, "Series-{}".format(bands), **kwargs)
+    else:
+        plt.show()
+
+
 # pylint: disable=abstract-method
 class AnyObjectHandler(HandlerBase):
     def legend_artist(self, legend, orig_handle, fontsize, handlebox):
@@ -663,93 +798,27 @@ def draw_boxplot(models=None, **kwargs):
     draw_boxplot.df = df.copy()
     plot_metrics = kwargs.get("plot_metrics", ["Macro-F1", "Micro-F1"])
     xticklabel_templates = kwargs.get("xticklabel_templates", dict())
-    hparams = kwargs.get("hparams", [*CMT_VALS_MAPPING])
     models = models or [*MODELS]
     models_tiled = sum([[model] * len(plot_metrics) for model in models], [])
-    xaxis_filters = kwargs.get("xaxis_filters")
     box_palette = kwargs.get("box_palette", "muted")
-    order_by = kwargs.get(
-        "order_by",
-        {
-            "Hidden Units": "desc",
-            "Train Balanced": "desc",
-            "Optimizer": "asc",
-            "Learning Rate": "asc",
-        },
-    )
-    if isinstance(order_by, list):
-        order_by = {"by": order_by}
-    elif isinstance(order_by, dict):
-        order_by = {
-            "by": [*order_by],
-            "ascending": [v == "asc" for v in order_by.values()],
-        }
+    order_by = xaxis_order(kwargs.get("order_by"))
     for (model, plot_metric) in zip(models_tiled, plot_metrics * len(models)):
-        dfm = df[(df["Model"] == MODELS.get(model))]
-        _xaxis_filters = (
-            xaxis_filters.get(model)
-            if xaxis_filters is not None
-            and isinstance(xaxis_filters, dict)
-            and model in [*xaxis_filters]
-            else xaxis_filters
-        )
-        if _xaxis_filters:
-            dfm = dfm.loc[
-                (
-                    dfm[list(_xaxis_filters)]
-                    == pd.Series(
-                        {
-                            k: (str(v) if not isinstance(v, str) else v)
-                            for k, v in _xaxis_filters.items()
-                        }
-                    )
-                ).all(axis=1)
-            ]
+        plot_metric_dfcol = "Max {}".format(plot_metric)
+        df_filters = {**kwargs.get("filters", {}), "Model": MODELS.get(model)}
+        dfm = filter_df(df, df_filters)
         if dfm.empty:
             warnings.warn("EMPTY DATAFRAME: {}({})".format(model, plot_metric))
             continue
-        filter_by_ds = kwargs.get("datasets")
-        if filter_by_ds:
-            dfm = dfm[
-                (
-                    dfm["Dataset"].isin(
-                        [filter_by_ds]
-                        if isinstance(filter_by_ds, str)
-                        else filter_by_ds
-                    )
-                )
-            ]
-        filter_by_emb = kwargs.get("embeddings")
-        if filter_by_emb:
-            if isinstance(filter_by_emb, str):
-                filter_by_emb = [filter_by_emb]
-            dfm = dfm[
-                (
-                    dfm["Embedding"].isin(
-                        [EMBEDDINGS.get(e, e) for e in filter_by_emb]
-                    )
-                )
-            ]
-        dss = dfm["Dataset"].unique().tolist()
-        num_plots = len(dss)
-        num_exp_per_ds = [
-            len(dfm[(dfm["Dataset"] == ds)]["Experiment"].unique().tolist())
-            for ds in dss
-        ]
-        wr = kwargs.get("wr", [10, 1])
-        width_ratios = [
-            round((exp_count / sum(num_exp_per_ds)) * wr[0])
-            for exp_count in num_exp_per_ds
-        ] + [wr[1] if len(wr) > 1 else 1]
-        common_hparams = [
-            (hparam, str(dfm[hparam].unique().tolist()[0]))
-            for hparam in hparams
-            if hparam in [*dfm]
-            and len(dfm[hparam].unique().tolist()) == 1
-            and dfm[hparam].unique().tolist()[0] is not None
-        ]
-
-        handles, labels, legends, colors = [], [], dict(), dict()
+        common_hparams, diff_hparams = cmn_diff_hparams(
+            dfm, order_by=order_by["by"]
+        )
+        xticklabel_template, xticklabel_factors = x_template_and_factors(
+            xticklabel_templates, diff_hparams, model
+        )
+        expcnt, width_ratios = exp_per_dataset(dfm, kwargs.get("width", 10))
+        num_plots, dss = len(expcnt), [*expcnt]
+        handles, labels = [], []
+        legends, colors = dict(), dict()
         fig, axes = plt.subplots(
             1,
             num_plots + 1,
@@ -762,54 +831,13 @@ def draw_boxplot(models=None, **kwargs):
             fontsize=14,
         )
         fig.subplots_adjust(top=0.85, wspace=(0.4 + (0.025 * num_plots)))
-
-        xticklabel_factors = []
-        xticklabel_template = (
-            xticklabel_templates.get(model)
-            if xticklabel_templates is not None
-            and isinstance(xticklabel_templates, dict)
-            and model in [*xticklabel_templates]
-            else xticklabel_templates
-        )
-        if not xticklabel_template:
-            xticklabel_factors = [
-                f
-                for f in [
-                    C
-                    for C, V in CMT_VALS_MAPPING.items()
-                    if C not in [*map(itemgetter(0), common_hparams)]
-                    and V.get("use_xlabel", True)
-                    and C in [*dfm]
-                ]
-                if dfm[f].unique().tolist()[0] is not None
-            ]
-            if not xticklabel_factors and _xaxis_filters:
-                xticklabel_factors = [*_xaxis_filters]
-            xticklabel_factors = [
-                fo for fo in order_by["by"] if fo in xticklabel_factors
-            ] + [ff for ff in xticklabel_factors if ff not in order_by["by"]]
-            xticklabel_template = "\n".join(
-                [
-                    "{{{}}}".format(factor)
-                    if not CMT_VALS_MAPPING[factor].get("xtick_label")
-                    else CMT_VALS_MAPPING[factor].get("xtick_label")
-                    for factor in xticklabel_factors
-                ]
-            )
-        elif xticklabel_template is not None:
-            xticklabel_factors = re.findall(
-                r"\{([^\}]*)?", xticklabel_template
-            )
-
         for i, dataset_name in enumerate(dss):
             try:
                 this_ax = axes[i % num_plots]
             except TypeError:
                 this_ax = axes
 
-            cited_results = group_citations(
-                dataset=dataset_name, model=model, metric=plot_metric
-            )
+            cited_results = group_citations(dataset_name, plot_metric, model)
             if cited_results:
                 cmap_name = kwargs.get("cited_cmap", "Accent")
                 cmap_colors = matplotlib.cm.get_cmap(cmap_name).colors
@@ -836,12 +864,12 @@ def draw_boxplot(models=None, **kwargs):
 
             this_ax.set_title(dataset_name.capitalize().replace("[", "\n["))
             this_ax.grid(True, linestyle="dotted", which="both")
-            dfmds = dfm[dfm["Dataset"] == dataset_name]
+            dfmds = filter_df(dfm, {"Dataset": dataset_name})
             box_order = (
                 dfmds.sort_values(**order_by)["Experiment"].unique().tolist()
             )
             bp = sns.boxplot(
-                y=plot_metric,
+                y=plot_metric_dfcol,
                 x="Experiment",
                 hue="Embedding",
                 order=box_order,
@@ -872,12 +900,12 @@ def draw_boxplot(models=None, **kwargs):
                         colors[label] = handle.get_facecolor()
                 else:
                     box_artist.set_facecolor(colors[label])
-
             sp = (
                 sns.stripplot(
-                    y=plot_metric,
+                    y=plot_metric_dfcol,
                     x="Experiment",
                     hue="Embedding",
+                    order=box_order,
                     jitter=True,
                     data=dfmds,
                     ax=this_ax,
@@ -893,40 +921,25 @@ def draw_boxplot(models=None, **kwargs):
                 else None
             )
 
-            label_xaxis = (
-                (len(xticklabel_template) > 0)
-                if kwargs.get("label_xaxis") is None
-                else kwargs.get("label_xaxis")
+            label_xaxis = kwargs.get("label_xaxis") or bool(
+                xticklabel_template
             )
             if label_xaxis:
-                label_attribute = lambda k, v: (
-                    CMT_VALS_MAPPING.get(k, {}).get("xlabel_fn")(v)
-                    if CMT_VALS_MAPPING.get(k, {}).get("xlabel_fn") is not None
-                    else v
-                    if v is not None
-                    else "-"
+                current_labels = [
+                    l.get_text() for l in this_ax.get_xticklabels()
+                ]
+                new_labels = format_xtick_labels(
+                    dfmds, current_labels, xticklabel_template
                 )
-                this_ax.set_xticklabels(
-                    [
-                        xticklabel_template.format_map(
-                            {
-                                k: label_attribute(k, v)
-                                for k, v in dfm[
-                                    (dfm["Dataset"] == dataset_name)
-                                    & (dfm["Experiment"] == lab.get_text())
-                                ]
-                                .to_dict("records")[0]
-                                .items()
-                            }
-                        )
-                        for lab in this_ax.get_xticklabels()
-                    ]
-                )
-                xoff = kwargs.get("xoff", 0.15)
-                xaxis_labels_height = -(xoff * len(xticklabel_factors))
+                this_ax.set_xticklabels(new_labels)
             else:
                 this_ax.set_xticks([])
-                xaxis_labels_height = -0.25
+
+            xaxis_labels_height = -1 * (
+                (kwargs.get("xoff", 0.15) * len(xticklabel_factors))
+                if label_xaxis
+                else 0.25
+            )
             this_ax.set_xlabel("")
             this_ax.set_ylabel("")
             bp.get_legend().remove()
@@ -942,7 +955,7 @@ def draw_boxplot(models=None, **kwargs):
                                         dfmds[
                                             (dfmds["Embedding"] == em)
                                             & (dfmds["Experiment"] == exp)
-                                        ][plot_metric].mean(),
+                                        ][plot_metric_dfcol].mean(),
                                         2,
                                     )
                                 )
@@ -967,7 +980,7 @@ def draw_boxplot(models=None, **kwargs):
                                     dfmds[
                                         (dfmds["Embedding"] == em)
                                         & (dfmds["Experiment"] == exp)
-                                    ][plot_metric].max()
+                                    ][plot_metric_dfcol].max()
                                 )
                                 for em in dfmds[(dfmds["Experiment"] == exp)][
                                     "Embedding"
@@ -1111,7 +1124,7 @@ def draw_boxplot(models=None, **kwargs):
             col_widths = [0.1 * num_plots, 1 - (0.1 * num_plots)]
             hparam_table = last_axis.table(
                 cellText=[["Hyper-Parameter Configuration\n", ""]]
-                + list(map(list, common_hparams)),
+                + [[k, v] for k, v in common_hparams.items()],
                 colWidths=col_widths,
                 cellLoc="left",
                 bbox=(-0.2, xaxis_labels_height, 2, 0.3),
@@ -1123,6 +1136,7 @@ def draw_boxplot(models=None, **kwargs):
                 if x_pos == 0 and y_pos == 0:
                     cell.set_text_props(fontsize="x-small")
                 if x_pos == 1:
+                    # pylint: disable=protected-access
                     cell._loc = "right"
 
         if kwargs.get("fname", False) or kwargs.get("format", False):
@@ -1141,15 +1155,10 @@ def argument_parser():
 
 
 def main():
-    # metrics = {"eval": ["Macro-F1", "Micro-F1", "Loss"], "train": ["Loss"]}
-    # df = comet_to_df(
-    #     "reproduction-new", models=["llstm"], metrics=metrics, use_cached=False
-    # )
-    df = comet_to_df("reproduction-new", models=["llstm"], use_cached=False)
-    # parser = argument_parser()
-    # args = parser.parse_args()
-    # params = args_to_dict(args.params)
-    # draw_boxplot(models=args.models, **params)
+    parser = argument_parser()
+    args = parser.parse_args()
+    params = args_to_dict(args.params)
+    draw_boxplot(models=args.models, **params)
 
 
 if __name__ == "__main__":

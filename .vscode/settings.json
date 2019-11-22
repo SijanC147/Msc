@@ -38,7 +38,7 @@
   "editor.formatOnSaveTimeout": 3000,
   "python.formatting.blackArgs": ["-l 79", "--fast"],
   "python.jediEnabled": false,
-  // "python.analysis.downloadChannel": "release",
+  "python.analysis.downloadChannel": "release",
   "highlight.regexFlags": "gm",
   "highlight.regexes": {
     "^(####)([\\s]+)(.*)$": {

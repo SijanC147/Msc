@@ -5,6 +5,8 @@ default: -aux metadata=False
 ### OOV Policy
 default: -mp oov_train=1 oov_buckets=1 oov_fn=uniform[-0.1,0.1]
 
--mp optimizer=adam learning_rate=0.001 
--mp optimizer=adagrad learning_rate=0.1 
 -mp optimizer=momentum learning_rate=0.1 momentum=0.9
+-mp optimizer=adagrad learning_rate=0.1 
+-mp optimizer=adadelta learning_rate=0.001 
+-mp optimizer=adam learning_rate=0.001 
+-mp optimizer=rmsprop learning_rate=0.001 
