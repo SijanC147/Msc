@@ -1,5 +1,6 @@
 # pylint: disable=invalid-name,unused-argument
 from functools import partial
+import re
 from inspect import signature, getmembers
 from tsaplay.constants import DELIMITER
 
@@ -10,6 +11,8 @@ def default_token_filter(token):
     if token.like_email:
         return False
     if token.text in ["\uFE0F"]:
+        return False
+    if re.match(r"https?://t\.co", token.text):
         return False
     return True
 

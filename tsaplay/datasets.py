@@ -157,7 +157,15 @@ class Dataset:
         else:
             dict_attr = "_{mode}_dict".format(mode=mode)
             data_dict = getattr(self, dict_attr)
-            docs = data_dict["sentences"]
+            # docs = data_dict["sentences"]
+            docs = [
+                " ".join([s[:o].strip(), t, s[(o + len(t)) :].strip()])
+                for s, t, o in zip(
+                    data_dict["sentences"],
+                    data_dict["targets"],
+                    data_dict["offsets"],
+                )
+            ]
             corpus = generate_corpus(docs, mode)
             pickle_file(data=corpus, path=corpus_pkl_path)
         corpus_attr = "_{mode}_corpus".format(mode=mode)

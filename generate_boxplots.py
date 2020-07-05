@@ -92,13 +92,18 @@ REPORTED = {
     "ian": {
         # ! Scores from original paper
         "Dehong Ma et al. 2017 (Original)": {
-            "laptops": {"Micro-F1": 74.49, "Macro-F1": 71.35},
-            "restaurants": {"Micro-F1": 80.23, "Macro-F1": 70.8},
-        },
-        # ! Scores from LCR-ROT
-        "Zheng et al. 2018": {
             "laptops": {"Micro-F1": 72.1},
             "restaurants": {"Micro-F1": 78.6},
+        },
+        # # ! Scores from LCR-ROT
+        # "Zheng et al. 2018": {
+        #     "laptops": {"Micro-F1": 72.1},
+        #     "restaurants": {"Micro-F1": 78.6},
+        # },
+        # ! Scores from https://arxiv.org/abs/2005.06607
+        "Navonil et al. 2020": {
+            "laptops": {"Macro-F1": 64.86},
+            "restaurants": {"Macro-F1": 66.41},
         },
     },
     "ram": {
@@ -209,11 +214,18 @@ MODELS = {
     "ram": "RAM",
 }
 
+# EMBEDDINGS = {
+#     "cc42": "GloVe CommonCrawl 42b (300d)",
+#     "cc840": "GloVe CommonCrawl 840b (300d)",
+#     "t200": "GloVe Twitter (200d)",
+#     "t100": "GloVe Twitter (100d)",
+# }
+
 EMBEDDINGS = {
-    "cc42": "GloVe CommonCrawl 42b (300d)",
-    "cc840": "GloVe CommonCrawl 840b (300d)",
-    "t200": "GloVe Twitter (200d)",
-    "t100": "GloVe Twitter (100d)",
+    "cc840": "300d 840b CommonCrawl GloVe ",
+    "cc42": "300d 42b CommonCrawl GloVe",
+    "t200": "200d Twitter GloVe",
+    "t100": "100d Twitter GloVe",
 }
 
 METRIC_COLS = {
@@ -290,12 +302,28 @@ def get_comet_api(api_key=None, **kwargs):
     return api
 
 
-def get_metric_series(experiment, metric_cmt_key):
-    return {
-        v["epoch"]: float(v["metricValue"])
-        for v in experiment.get_metrics()
-        if v["metricName"] == metric_cmt_key
-    }
+# DEPRECATED, need to use metrics_for_chart now
+# def get_metric_series(experiment, metric_cmt_key):
+#     return {
+#         v["epoch"]: float(v["metricValue"])
+#         for v in experiment.get_metrics()
+#         if v["metricName"] == metric_cmt_key
+#     }
+
+
+def get_metric_series(experiment, metric_cmt_key, api):
+    series_data_full = api.get_metrics_for_chart(
+        experiment_keys=[experiment.id], metrics=[metric_cmt_key]
+    )
+    metric_series_data = [
+        {
+            ep: float(val)
+            for (ep, val) in zip(metrics["epochs"], metrics["values"])
+        }
+        for metrics in series_data_full[experiment.id]["metrics"]
+        if metrics["metricName"] == metric_cmt_key
+    ]
+    return metric_series_data[0]
 
 
 def get_grouped_metric_series(project, metrics, workspace=None, **kwargs):
@@ -319,7 +347,7 @@ def get_grouped_metric_series(project, metrics, workspace=None, **kwargs):
                 "experiments": [e for e in experiments if e.name == name],
                 **{
                     metric_cmt_key: [
-                        get_metric_series(e, metric_cmt_key)
+                        get_metric_series(e, metric_cmt_key, api)
                         for e in experiments
                         if e.name == name
                     ]
@@ -480,14 +508,14 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
                     "fasttext-wiki-news-subwords-300": "FastText (300d)",
                     "glove-twitter-25": "GloVe Twitter (25d)",
                     "glove-twitter-50": "GloVe Twitter (50d)",
-                    "glove-twitter-100": "GloVe Twitter (100d)",
-                    "glove-twitter-200": "GloVe Twitter (200d)",
+                    "glove-twitter-100": EMBEDDINGS["t100"],
+                    "glove-twitter-200": EMBEDDINGS["t200"],
                     "glove-wiki-gigaword-50": "GloVe Wiki (50d)",
                     "glove-wiki-gigaword-100": "GloVe Wiki (100d)",
                     "glove-wiki-gigaword-200": "GloVe Wiki (200d)",
                     "glove-wiki-gigaword-300": "GloVe Wiki (300d)",
-                    "glove-cc42-300": "GloVe CommonCrawl 42b (300d)",
-                    "glove-cc840-300": "GloVe CommonCrawl 840b (300d)",
+                    "glove-cc42-300": EMBEDDINGS["cc42"],
+                    "glove-cc840-300": EMBEDDINGS["cc840"],
                     "word2vec-google-news-300": "Word2Vec Google News (300d)",
                     "word2vec-ruscorpora-300": "Word2Vec Rus Corpora (300d)",
                 }.get(embedding_info["name"])
@@ -497,12 +525,13 @@ def comet_to_df(workspace, models=None, metrics=None, **kwargs):
                 exp_name_str = exp_name_str.replace(ds_name, "")
                 exp_name_str = exp_name_str.replace("balanced", "")
                 exp_name_str = exp_name_str.replace(
-                    {
-                        "GloVe CommonCrawl 42b (300d)": "cc42",
-                        "GloVe CommonCrawl 840b (300d)": "cc840",
-                        "GloVe Twitter (100d)": "t100",
-                        "GloVe Twitter (200d)": "t200",
-                    }.get(embedding_str),
+                    {v: k for k, v in EMBEDDINGS.items()}.get(embedding_str),
+                    # {
+                    #     "GloVe CommonCrawl 42b (300d)": "cc42",
+                    #     "GloVe CommonCrawl 840b (300d)": "cc840",
+                    #     "GloVe Twitter (100d)": "t100",
+                    #     "GloVe Twitter (200d)": "t200",
+                    # }.get(embedding_str),
                     "",
                 )
                 exp_name_str = exp_name_str.replace("-", " ")

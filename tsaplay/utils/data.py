@@ -1,6 +1,6 @@
 from contextlib import redirect_stdout
 from io import StringIO
-from re import search
+from re import search, IGNORECASE
 from collections import defaultdict, Iterable
 from itertools import chain, groupby
 from operator import itemgetter
@@ -24,22 +24,27 @@ def wrap_parsing_fn(parsing_fn):
         try:
             sentences, targets, offsets, labels = parsing_fn(path)
             return {
-                "sentences": sentences,
+                "sentences": [
+                    s[:o] + t + s[(o + len(t)) :]
+                    for s, t, o in zip(sentences, targets, offsets)
+                ],
                 "targets": targets,
                 "offsets": offsets,
                 "labels": labels,
             }
         except ValueError:
             sentences, targets, labels = parsing_fn(path)
-            offsets = [
-                sentence.lower().find(target.lower())
-                for sentence, target in zip(sentences, targets)
-            ]
+            offsets = target_offsets(sentences, targets)
+            # invalid = [i for i, o in enumerate(offsets) if o < 0]
             return {
-                "sentences": sentences,
-                "targets": targets,
-                "offsets": offsets,
-                "labels": labels,
+                "sentences": [
+                    s[:o] + t + s[(o + len(t)) :]
+                    for (s, t, o) in zip(sentences, targets, offsets)
+                    if o >= 0
+                ],
+                "targets": [t for t, o in zip(targets, offsets) if o >= 0],
+                "offsets": [o for o in offsets if o >= 0],
+                "labels": [l for l, o in zip(labels, offsets) if o >= 0],
             }
 
     return wrapper
@@ -202,7 +207,9 @@ def class_dist_stats(classes=None, **data_dicts):
 
 def target_offsets(sentences, targets):
     return [
-        sentence.lower().find(target.lower())
+        search(r"\b{}\b".format(target), sentence, IGNORECASE).span()[0]
+        if search(r"\b{}\b".format(target), sentence, IGNORECASE)
+        else sentence.lower().find(target.lower())
         for (sentence, target) in zip(sentences, targets)
     ]
 

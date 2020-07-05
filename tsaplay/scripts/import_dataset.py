@@ -132,8 +132,8 @@ def main():
     try:
         ds_name = generate_dataset_files(args)
         cprnt(success="Imported '{}' successfully.".format(ds_name))
-    except Exception:
-        cprnt(warn="Error importing dataset. {}".format(Exception))
+    except Exception as e:
+        cprnt(warn="Error importing dataset. {}".format(e))
 
 
 if __name__ == "__main__":

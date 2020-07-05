@@ -1,5 +1,5 @@
 {
-    "jobId": "tdlstm_cc42_laptops_balanced_missing_run02",
+    "jobId": "tdlstm_cc840_nakexptrnbal_oovt3b10_run06",
     "labels": {},
     "trainingInput": {
         "scaleTier": "CUSTOM",
@@ -9,12 +9,13 @@
         "region": "europe-west1",
         "args": [
             "batch",
-            "missing2.batch.txt",
+            "oovt3b10.trnbalanced.batch.txt",
             "--new",
             "--nocolor",
             "--defaults",
             "-m=td_lstm",
-            "-em=commoncrawl-42[corpus]"
+            "-em=commoncrawl-840[corpus]",
+            "-ds=nakov-clean[33/34/33]"
         ]
     }
 }

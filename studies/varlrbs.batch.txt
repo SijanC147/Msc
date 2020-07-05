@@ -1,0 +1,14 @@
+### Comet Config
+default: -cmt=T1NrVnn32dXWeOxeQWGArkHwc -wrk=reproduction-new
+### Turn off metadata for performance
+default: -aux metadata=False
+### OOV Policy
+default: -mp oov_train=1 oov_buckets=1 oov_fn=uniform[-0.1,0.1]
+
+### Run with different learning rates and smaller batch size 
+-contd=..varlrbs -b=32 -mp learning_rate=0.01
+
+### Run with different learning rates and no WE continued training with smaller batch size
+-contd=..varlrnotrnembs -b=32 -mp learning_rate=0.01 train_embeddings=false 
+
+

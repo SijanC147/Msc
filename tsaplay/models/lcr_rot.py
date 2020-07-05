@@ -29,6 +29,7 @@ class LcrRot(TsaModel):
             "bias_initializer": tf.initializers.zeros(),
             "lstm_initial_bias": 0,
             # ? Suggestions from https://github.com/NUSTM/ABSC/tree/master/models/ABSC_Zozoz
+            "train_embeddings": False,
             "batch-size": 25,
             # "epochs": 50,
             "early_stopping_minimum_iter": 50,

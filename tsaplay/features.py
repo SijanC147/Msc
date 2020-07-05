@@ -210,7 +210,8 @@ OOV Init Fn: {function} \t args: {args} \t kwargs: {kwargs}
         if not exists(self._vocab_file):
             self._vocab = deepcopy(self._embedding.vocab)
             #! include training vocabulary terms above the specified
-            #! occurrance count if 0, all training vocab will be assigned
+            #! occurrance count.
+            #! if 0, all training vocab will be assigned
             #! buckets
             if self._oov_train_threshold > 0:
                 train_vocab = set(

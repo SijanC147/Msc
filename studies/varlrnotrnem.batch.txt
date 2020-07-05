@@ -5,6 +5,8 @@ default: -aux metadata=False
 ### OOV Policy
 default: -mp oov_train=1 oov_buckets=1 oov_fn=uniform[-0.1,0.1]
 
-### Run with default parameters
--contd=..default
+### Run with different learning rates and no WE continued training
+-contd=..varlrnotrnem -mp learning_rate=0.01 train_embeddings=false
+-contd=..varlrnotrnem -mp learning_rate=0.001 train_embeddings=false
+
 

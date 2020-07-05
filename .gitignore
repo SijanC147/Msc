@@ -109,5 +109,6 @@ data/glove.twitter.27B.100d.txt
 .DS_Store
 _debug.py
 _batch_job.py
+_jupyter_debug.py
 figures
 jobs

@@ -6,5 +6,9 @@ default: -aux metadata=False
 default: -mp oov_train=1 oov_buckets=1 oov_fn=uniform[-0.1,0.1]
 
 ### Run with default parameters
--contd=..default
+-contd=..varbs -b=32
+
+### Run without training embeddings 
+-contd=..notrnembs -b=32 -mp train_embeddings=false
+
 

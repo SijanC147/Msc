@@ -1,0 +1,13 @@
+### Comet Config
+default: -cmt=T1NrVnn32dXWeOxeQWGArkHwc -wrk=oov-policies
+### Turn off metadata for performance
+default: -aux metadata=False
+### OOV Policy
+default: -mp oov_train=3 oov_buckets=10 oov_fn=uniform[-0.1,0.1]
+
+### Run with default parameters
+-contd=..nakovexp_trnbal
+-contd=..nakovexp_trnbal -mp hidden_units=300
+-contd=..nakovexp_trnbal -mp learning_rate=0.1
+-contd=..nakovexp_trnbal -mp hidden_units=300 learning_rate=0.1
+
